@@ -1,6 +1,6 @@
 object DetachedVideoForm: TDetachedVideoForm
-  Left = 204
-  Top = 465
+  Left = 311
+  Top = 105
   BorderStyle = bsNone
   Caption = 'Video'
   ClientHeight = 240
@@ -13,6 +13,7 @@ object DetachedVideoForm: TDetachedVideoForm
   Font.Style = []
   FormStyle = fsStayOnTop
   OldCreateOrder = False
+  Position = poDefaultPosOnly
   OnMouseDown = FormMouseDown
   PixelsPerInch = 96
   TextHeight = 13
