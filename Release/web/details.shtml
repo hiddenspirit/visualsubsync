@@ -6,24 +6,9 @@
 		<style type="text/css">
 		body {
 			text-align:center;
-		}		
-		.DetailsTable {
-			width: 100%;
-		}				
-		.HeaderIndex { background-color: #BBDDFF; }
-		.HeaderFrom { background-color: #DDEEFF; }
-		.HeaderTo { background-color: #DDEEFF; }
-		.HeaderText { background-color: #DDEEFF; vertical-align: top; }
-		.HeaderListen { background-color: #BBDDFF; }
-		.HeaderSuggestion { background-color: #DDEEFF; vertical-align: top; }
-
-		.CellIndex { background-color: #DDDDDD; }
-		.CellFrom { background-color: #EEEEEE; }
-		.CellTo { background-color: #EEEEEE; }
-		.CellText { background-color: #EEEEEE; }
-		.CellListen { background-color: #DDDDDD; }
-		.CellSuggestion { background-color: #EEEEEE; }		
+		}
 		</style>
+		<link rel="stylesheet" type="text/css" href="details.css">
 </head>
 <body onload="window.focus()">
 
