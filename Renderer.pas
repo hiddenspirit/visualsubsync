@@ -530,25 +530,28 @@ begin
   FDisplayWindow := WinHwnd;
   if (WinHwnd <> 0) then
   begin
-    // Subclass new window to handle resize
-    FDisplayWindowProc := MakeObjectInstance(DisplayWindowProc);
-    FDisplayWindowOldProc := Pointer(GetWindowLong(FDisplayWindow, GWL_WNDPROC));
-    SetWindowLong(FDisplayWindow, GWL_WNDPROC, LongInt(FDisplayWindowProc));
+    FLastResult := FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
+    if Succeeded(FLastResult) and Assigned(FVideoWindow) then
+    begin
+      // Subclass new window to handle resize
+      FDisplayWindowProc := MakeObjectInstance(DisplayWindowProc);
+      FDisplayWindowOldProc := Pointer(GetWindowLong(FDisplayWindow, GWL_WNDPROC));
+      SetWindowLong(FDisplayWindow, GWL_WNDPROC, LongInt(FDisplayWindowProc));
 
-    FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
-    FVideoWindow.put_Owner(FDisplayWindow);
-    //FVideoWindow.put_AutoShow(False);
-    FVideoWindow.put_MessageDrain(FDisplayWindow);
-    FVideoWindow.put_WindowStyle(WS_CHILD + WS_CLIPSIBLINGS + WS_CLIPCHILDREN);
-    //FVideoWindow.put_Visible(True);
+      FVideoWindow.put_Owner(FDisplayWindow);
+      //FVideoWindow.put_AutoShow(False);
+      FVideoWindow.put_MessageDrain(FDisplayWindow);
+      FVideoWindow.put_WindowStyle(WS_CHILD + WS_CLIPSIBLINGS + WS_CLIPCHILDREN);
+      //FVideoWindow.put_Visible(True);
 
-    UpdateDisplayWindow;
+      UpdateDisplayWindow;
+    end;
 
     if (State = State_Running) then
       FMediaControl.Run
     else if(State = State_Paused) then
       FMediaControl.Pause;
-  end;      
+  end;     
 end;
 
 //------------------------------------------------------------------------------
@@ -558,7 +561,8 @@ var Rect : TRect;
     WinWidth, WinHeight : Integer;
     NewWidth, NewHeight : Integer;
 begin
-  if (FDisplayWindow = 0) or (not Assigned(FVideoWindow)) then
+  if (FDisplayWindow = 0) or (not Assigned(FVideoWindow)) or
+     (FVideoWidth = 0) or (FVideoHeight = 0) then
     Exit;
 
   if(GetWindowRect(FDisplayWindow, Rect) = False) then
