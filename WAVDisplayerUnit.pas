@@ -88,7 +88,7 @@ type
   // ----------
 
   TSelectionMode = (smCoolEdit, smSSA);
-  TMouseWheelModifier = (mwmNone, mwmShift = Ord(ssShift), mwmAlt = Ord(ssAlt), mwmCtrl = Ord(ssCtrl));
+  TMouseWheelModifier = (mwmShift = Ord(ssShift), mwmAlt = Ord(ssAlt), mwmCtrl = Ord(ssCtrl), mwmNone);
 
   TUpdateViewFlag = (uvfCursor, uvfSelection, uvfRange, uvfPosition, uvfPageSize, uvfPlayCursor);
   TUpdateViewFlags = set of TUpdateViewFlag;
@@ -472,6 +472,10 @@ begin
   FIsPlaying := False;
   FPeakDataLoaded := False;
   FVerticalScaling := 100;
+
+  FWheelTimeScroll := mwmNone;
+  FWheelVZoom := mwmShift;
+  FWheelHZoom := mwmCtrl;
 end;
 
 //------------------------------------------------------------------------------
@@ -1479,7 +1483,7 @@ begin
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
-  if Ord(FWheelTimeScroll) in bShift then
+  if (FWheelHZoom = mwmNone) or (Ord(FWheelHZoom) in bShift) then
   begin
     NewPageSize := Round(FPageSizeMs * 80 / 100);
 
@@ -1493,12 +1497,12 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if Ord(FWheelVZoom) in bShift then
+  else if (FWheelVZoom = mwmNone) or (Ord(FWheelVZoom) in bShift) then
   begin
     if Inrange(FVerticalScaling, 0, 395) then
       Inc(FVerticalScaling, 5);
   end
-  else if Ord(FWheelHZoom) in bShift then
+  else if (FWheelTimeScroll = mwmNone) or (Ord(FWheelTimeScroll) in bShift) then
     SetPositionMs(FPositionMs - (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
     Exit;
@@ -1527,7 +1531,7 @@ begin
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
 
-  if Ord(FWheelTimeScroll) in bShift then
+  if (FWheelHZoom = mwmNone) or (Ord(FWheelHZoom) in bShift) then
   begin
     NewPageSize := Round(FPageSizeMs * 125 / 100);
 
@@ -1541,12 +1545,12 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if Ord(FWheelVZoom) in bShift then
+  else if (FWheelVZoom = mwmNone) or (Ord(FWheelVZoom) in bShift) then
   begin
     if Inrange(FVerticalScaling, 5, 400) then
       Dec(FVerticalScaling, 5);
   end
-  else if Ord(FWheelHZoom) in bShift then
+  else if (FWheelTimeScroll = mwmNone) or (Ord(FWheelTimeScroll) in bShift) then
     SetPositionMs(FPositionMs + (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
     Exit;
