@@ -71,6 +71,7 @@ begin
   FPageSize := 10;
   FThumbMinSize := 5;
 
+  ParentBackground := False; // Control is transparent on WinXP if true
   FColorNormal := $00A56E3A;
   FColorDown := $00D5965E;
 
@@ -80,6 +81,7 @@ begin
 
   FThumb := TMiniScrollBarThumb.Create(Self);
   FThumb.Parent := Self;
+  FThumb.ParentBackground := False; // Control is transparent on WinXP if true
   FThumb.Color := FColorNormal;
   FThumb.BevelOuter := bvNone;
 
