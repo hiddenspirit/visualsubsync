@@ -166,27 +166,29 @@ type
     bttCheckErrors: TSpeedButton;
     bttShowSuggestions: TSpeedButton;
     bttShowHideVideo: TSpeedButton;
-    MemoSubPopupMenu: TPopupMenu;
-    pmiMemoSubCopy: TMenuItem;
-    pmiMemoSubCut: TMenuItem;
-    pmiMemoSubPaste: TMenuItem;
+    MemoSubPopupMenu: TTntPopupMenu;
+    pmiMemoSubCopy: TTntMenuItem;
+    pmiMemoSubCut: TTntMenuItem;
+    pmiMemoSubPaste: TTntMenuItem;
     EditCut1: TTntEditCut;
     EditCopy1: TTntEditCopy;
     EditPaste1: TTntEditPaste;
     EditSelectAll1: TTntEditSelectAll;
     EditUndo1: TTntEditUndo;
     EditDelete1: TTntEditDelete;
-    Undo1: TMenuItem;
-    N9: TMenuItem;
-    Delete1: TMenuItem;
-    N10: TMenuItem;
-    SelectAll1: TMenuItem;
+    Undo1: TTntMenuItem;
+    N9: TTntMenuItem;
+    Delete1: TTntMenuItem;
+    N10: TTntMenuItem;
+    SelectAll1: TTntMenuItem;
     MenuItemHelpIndex: TTntMenuItem;
     MenuItemHelpIndexWAVDisplayControl: TTntMenuItem;
     pmiWAVDispSetSubtitleTime: TTntMenuItem;
     N11: TTntMenuItem;
     ActionInsertTextFile: TTntAction;
     Inserttextfile1: TTntMenuItem;
+    ActionUnselectSubtitle: TTntAction;
+    PanelPlaybackControl: TPanel;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -255,6 +257,10 @@ type
     procedure MenuItemHelpIndexWAVDisplayControlClick(Sender: TObject);
     procedure pmiWAVDispSetSubtitleTimeClick(Sender: TObject);
     procedure ActionInsertTextFileExecute(Sender: TObject);
+    procedure ActionUnselectSubtitleExecute(Sender: TObject);
+    procedure Splitter1CanResize(Sender: TObject; var NewSize: Integer;
+      var Accept: Boolean);
+    procedure FormResize(Sender: TObject);
 
   private
     { Private declarations }
@@ -274,6 +280,8 @@ type
 
     MRUList : TMRUList;
     ConfigObject : TConfigObject;
+
+    Swapped : Boolean;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -300,6 +308,8 @@ type
     procedure LoadSettings;
     procedure ShowPreferences(TabSheet : TTntTabSheet);
     procedure LoadProject(Filename : string);
+    procedure SwapSubList(SwapSizeAlso : Boolean = True);
+    procedure FinishLoadSettings;
   end;
 
 var
@@ -347,13 +357,15 @@ begin
   ServerRootDir := ExtractFilePath(Application.ExeName);
   ServerRootDir := IncludeTrailingPathDelimiter(ServerRootDir) + 'web\';
 
-  Self.Constraints.MinHeight := 480;
-  Self.Constraints.MinWidth := 640;
+  vtvSubsList.Constraints.MinWidth := 600;
+  PanelMiddle.Constraints.MinHeight := 140;
+  PanelBottom.Constraints.MinHeight := 60;
+  Splitter1.MinSize := 1;
 
   // Clear speed button caption text filled by action :p
-  for i := 0 to Pred(PanelMiddle.ControlCount) do
-      if PanelMiddle.Controls[i] is TSpeedButton then
-        TSpeedButton(PanelMiddle.Controls[i]).Caption := '';
+  for i := 0 to Pred(PanelPlaybackControl.ControlCount) do
+      if PanelPlaybackControl.Controls[i] is TSpeedButton then
+        TSpeedButton(PanelPlaybackControl.Controls[i]).Caption := '';
 
   SubRangeFactory := TSubtitleRangeFactory.Create;
 
@@ -524,6 +536,14 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.FinishLoadSettings;
+begin
+  if(ConfigObject.SwapSubtitlesList) then
+    Self.SwapSubList(False);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.InitVTV;
 var Column : TVirtualTreeColumn;
 begin
@@ -539,6 +559,10 @@ begin
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
     Header.Options := Header.Options + [hoVisible] - [hoDrag];
     Header.Style := hsFlatButtons;
+    Column := Header.Columns.Add;
+    Column.Text := '#';
+    Column.Width := 50;
+    Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 80;
@@ -938,11 +962,13 @@ var
   NodeData: PTreeData;
 begin
   NodeData := Sender.GetNodeData(Node);
+
   case Column of
     -1: CellText := ''; // -1 if columns are hidden
-    0: CellText := TimeMsToString(NodeData.Range.StartTime);
-    1: CellText := TimeMsToString(NodeData.Range.StopTime);
-    2: CellText := NodeData.Range.Text;
+    0: CellText := IntToStr(Node.Index+1);
+    1: CellText := TimeMsToString(NodeData.Range.StartTime);
+    2: CellText := TimeMsToString(NodeData.Range.StopTime);
+    3: CellText := NodeData.Range.Text;
   end;
 end;
 
@@ -2113,7 +2139,9 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ShowPreferences(TabSheet : TTntTabSheet);
+var OldSwapState : Boolean;
 begin
+  OldSwapState := ConfigObject.SwapSubtitlesList;
   PreferencesForm.LoadConfig(ConfigObject);
   if TabSheet <> nil then
     PreferencesForm.TntPageControl1.ActivePage := TabSheet;
@@ -2122,6 +2150,8 @@ begin
     PreferencesForm.SaveConfig(ConfigObject);
     if Assigned(Server) then
       Server.EnableCompression := ConfigObject.EnableCompression;
+    if(ConfigObject.SwapSubtitlesList <> OldSwapState) then
+      Self.SwapSubList;
   end;
 end;
 
@@ -2279,6 +2309,78 @@ begin
     end;
     FS.Free;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SwapSubList(SwapSizeAlso : Boolean);
+var SavHeight, SavHeight2 : Integer;
+begin
+  if Swapped then
+  begin
+    SavHeight := vtvSubsList.Height;
+    SavHeight2 := MemoLinesCounter.Height;
+
+    vtvSubsList.Parent := PanelMiddle;
+    MemoLinesCounter.Parent := PanelBottom;
+    MemoSubtitleText.Parent := PanelBottom;
+
+    PanelBottom.Align := alBottom;
+    Splitter1.Align := alBottom;
+    PanelMiddle.Align := alClient;
+    if(SwapSizeAlso) then
+      PanelBottom.Height := SavHeight2;
+    TntStatusBar1.Top := MaxInt; // make sure status bar stay at bottom
+  end
+  else
+  begin
+    SavHeight := vtvSubsList.Height;
+    SavHeight2 := MemoLinesCounter.Height;
+
+    vtvSubsList.Parent := PanelBottom;
+    MemoLinesCounter.Parent := PanelMiddle;
+    MemoSubtitleText.Parent := PanelMiddle;
+
+    PanelMiddle.Align := alTop;
+    Splitter1.Align := alTop;
+    PanelBottom.Align := alClient;
+
+    if(SwapSizeAlso) then
+      PanelMiddle.Height := PanelMiddle.Height - SavHeight + SavHeight2;
+    TntStatusBar1.Top := MaxInt; // make sure status bar stay at bottom      
+  end;
+  Swapped := not Swapped;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionUnselectSubtitleExecute(Sender: TObject);
+begin
+  WAVDisplayer.ClearSelection;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.Splitter1CanResize(Sender: TObject;
+  var NewSize: Integer; var Accept: Boolean);
+begin
+  if (Swapped) then
+  begin
+    Accept := (NewSize > PanelMiddle.Constraints.MinHeight) and
+      ((PanelBottom.Height + PanelMiddle.Height - NewSize) > PanelBottom.Constraints.MinHeight);
+  end
+  else
+  begin
+    Accept := ((PanelMiddle.Height + PanelBottom.Height - NewSize) > PanelMiddle.Constraints.MinHeight) and
+      (NewSize > PanelBottom.Constraints.MinHeight);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.FormResize(Sender: TObject);
+begin
+  // TODO : add some autoresizing maybe
 end;
 
 //------------------------------------------------------------------------------
