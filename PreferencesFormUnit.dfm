@@ -23,7 +23,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 353
     Height = 273
-    ActivePage = tsHotKeys
+    ActivePage = tsMouse
     TabOrder = 0
     object tsGeneral: TTntTabSheet
       BorderWidth = 2
@@ -289,6 +289,143 @@ object PreferencesForm: TPreferencesForm
         Caption = 'Clear'
         TabOrder = 3
         OnClick = bttClearHotkeyClick
+      end
+    end
+    object tsMouse: TTntTabSheet
+      BorderWidth = 4
+      Caption = 'Mouse'
+      object GroupBox2: TGroupBox
+        Left = 0
+        Top = 0
+        Width = 337
+        Height = 121
+        Caption = ' Mouse wheel control : '
+        TabOrder = 0
+        object Label1: TLabel
+          Left = 12
+          Top = 44
+          Width = 121
+          Height = 13
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Time scrolling :'
+        end
+        object Label2: TLabel
+          Left = 12
+          Top = 68
+          Width = 121
+          Height = 13
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Vertical Zoom :'
+        end
+        object Label3: TLabel
+          Left = 12
+          Top = 92
+          Width = 121
+          Height = 13
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Horizontal Zoom :'
+        end
+        object Label4: TLabel
+          Left = 12
+          Top = 22
+          Width = 121
+          Height = 13
+          Alignment = taCenter
+          AutoSize = False
+          Caption = 'Actions'
+          Color = clBtnText
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clHighlightText
+          Font.Height = -11
+          Font.Name = 'MS Sans Serif'
+          Font.Style = [fsBold]
+          ParentColor = False
+          ParentFont = False
+        end
+        object Label5: TLabel
+          Left = 140
+          Top = 22
+          Width = 177
+          Height = 13
+          Alignment = taCenter
+          AutoSize = False
+          Caption = 'Modifiers'
+          Color = clBtnText
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clHighlightText
+          Font.Height = -11
+          Font.Name = 'MS Sans Serif'
+          Font.Style = [fsBold]
+          ParentColor = False
+          ParentFont = False
+        end
+        object ComboWheelTimeScrollModifier: TComboBox
+          Left = 140
+          Top = 40
+          Width = 177
+          Height = 21
+          Style = csDropDownList
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'MS Sans Serif'
+          Font.Style = []
+          ItemHeight = 13
+          ParentFont = False
+          TabOrder = 0
+          Items.Strings = (
+            'Shift'
+            'Alt'
+            'Ctrl'
+            'None')
+        end
+        object ComboWheelVZoomModifier: TComboBox
+          Left = 140
+          Top = 64
+          Width = 177
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          TabOrder = 1
+          Items.Strings = (
+            'Shift'
+            'Alt'
+            'Ctrl'
+            'None')
+        end
+        object ComboWheelHZoomModifier: TComboBox
+          Left = 140
+          Top = 88
+          Width = 177
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          TabOrder = 2
+          Items.Strings = (
+            'Shift'
+            'Alt'
+            'Ctrl'
+            'None')
+        end
+      end
+      object GroupBox3: TGroupBox
+        Left = 0
+        Top = 132
+        Width = 337
+        Height = 105
+        Caption = ' Misc : '
+        TabOrder = 1
+        object chkEnableSSATimingMode: TCheckBox
+          Left = 16
+          Top = 24
+          Width = 305
+          Height = 17
+          Caption = 'Left/right mouse button set start/stop time in Timing Mode'
+          TabOrder = 0
+        end
       end
     end
   end

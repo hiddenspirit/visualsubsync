@@ -26,7 +26,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, TntStdCtrls, ComCtrls, TntComCtrls, CheckLst,
-  TntCheckLst, IniFiles, ExtCtrls, TntExtCtrls, TntActnList, Menus;
+  TntCheckLst, IniFiles, ExtCtrls, TntExtCtrls, TntActnList, Menus,
+  WAVDisplayerUnit;
 
 type
   TErrorListElemType = (eletNoParam, eletIntParam);
@@ -98,6 +99,11 @@ type
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
+    // Mouse
+    MouseWheelTimeScrollModifier : TMouseWheelModifier;
+    MouseWheelVZoomModifier : TMouseWheelModifier;
+    MouseWheelHZoomModifier : TMouseWheelModifier;
+    MouseEnableSSATimingMode : Boolean;
 
     constructor Create;
     destructor Destroy; override;
@@ -146,6 +152,18 @@ type
     TntLabel5: TTntLabel;
     bttResetAllHotkeys: TTntButton;
     TntLabel6: TTntLabel;
+    tsMouse: TTntTabSheet;
+    GroupBox2: TGroupBox;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    ComboWheelTimeScrollModifier: TComboBox;
+    ComboWheelVZoomModifier: TComboBox;
+    ComboWheelHZoomModifier: TComboBox;
+    GroupBox3: TGroupBox;
+    chkEnableSSATimingMode: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -237,6 +255,11 @@ begin
   ErrorTooLongDisplayTimeValue := 5;
   ErrorTooLongLineEnabled := True;
   ErrorTooLongLineValue := 60;
+  // Mouse
+  MouseWheelTimeScrollModifier := mwmCtrl;
+  MouseWheelVZoomModifier := mwmShift;
+  MouseWheelHZoomModifier := mwmNone;
+  MouseEnableSSATimingMode := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -323,6 +346,12 @@ begin
       HLID.Action.Name + '[Timing]',
       HLID.TimingShortCut);
   end;
+
+  // Mouse
+  IniFile.WriteInteger('Mouse','WheelTimeScrollModifier',Ord(MouseWheelTimeScrollModifier));
+  IniFile.WriteInteger('Mouse','WheelVZoomModifier',Ord(MouseWheelVZoomModifier));
+  IniFile.WriteInteger('Mouse','WheelHZoomModifier',Ord(MouseWheelHZoomModifier));
+  IniFile.WriteBool('Mouse','EnableSSATimingMode',MouseEnableSSATimingMode);
 end;
 
 //------------------------------------------------------------------------------
@@ -379,6 +408,16 @@ begin
           ShortCutToText(HLID.TimingShortCut)));
     end;
   end;
+
+  // Mouse
+  MouseWheelTimeScrollModifier := TMouseWheelModifier(IniFile.ReadInteger('Mouse',
+    'WheelTimeScrollModifier',Ord(MouseWheelTimeScrollModifier)));
+  MouseWheelVZoomModifier := TMouseWheelModifier(IniFile.ReadInteger('Mouse',
+    'WheelVZoomModifier',Ord(MouseWheelVZoomModifier)));
+  MouseWheelHZoomModifier := TMouseWheelModifier(IniFile.ReadInteger('Mouse',
+    'WheelHZoomModifier',Ord(MouseWheelHZoomModifier)));
+  MouseEnableSSATimingMode := IniFile.ReadBool('Mouse',
+    'EnableSSATimingMode',MouseEnableSSATimingMode);
 end;
 
 // =============================================================================
@@ -447,6 +486,12 @@ begin
   // Default hotkeys never change once loaded
   // we just keep a pointer
   ListDefaultHotkeys := Config.ListDefaultHotkeys;
+
+  // Mouse
+  ComboWheelTimeScrollModifier.ItemIndex := Ord(Config.MouseWheelTimeScrollModifier);
+  ComboWheelVZoomModifier.ItemIndex := Ord(Config.MouseWheelVZoomModifier);
+  ComboWheelHZoomModifier.ItemIndex := Ord(Config.MouseWheelHZoomModifier);
+  chkEnableSSATimingMode.Enabled := Config.MouseEnableSSATimingMode;
 end;
 
 //------------------------------------------------------------------------------
@@ -480,6 +525,12 @@ begin
     HLID := ListHotkeys.Items.Item[i].Data;
     THotkeyListItemData(Config.ListHotkeys[i]).Assign(HLID);
   end;
+
+  // Mouse
+  Config.MouseWheelTimeScrollModifier := TMouseWheelModifier(ComboWheelTimeScrollModifier.ItemIndex);
+  Config.MouseWheelVZoomModifier := TMouseWheelModifier(ComboWheelVZoomModifier.ItemIndex);
+  Config.MouseWheelHZoomModifier := TMouseWheelModifier(ComboWheelHZoomModifier.ItemIndex);
+  Config.MouseEnableSSATimingMode := chkEnableSSATimingMode.Enabled;
 end;
 
 //------------------------------------------------------------------------------

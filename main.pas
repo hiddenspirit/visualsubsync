@@ -374,7 +374,8 @@ type
     procedure OffsetCurrentSubtitleStartTime(Offset : Integer);
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
 
-    procedure ColorizeOrDeleteTextPipe;    
+    procedure ColorizeOrDeleteTextPipe;
+    procedure ApplyMouseSettings;       
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -597,6 +598,7 @@ begin
   MRUList.LoadIni(IniFile, 'MRUList');
   ConfigObject.LoadIni(IniFile);
   SetShortcut(False);
+  ApplyMouseSettings;
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
@@ -924,7 +926,7 @@ end;
 
 procedure TMainForm.LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
 var
-  S,SS: string;
+  S: string;
   BOM : array[0..3] of BYTE;
   i : integer;
   Start, Stop : Integer;
@@ -963,8 +965,6 @@ begin
     IsUTF8 := False;  
     FS.Seek(0,soFromBeginning);
   end;
-
-  EndOfFile := False;
 
   // Skip lines until a timestamps line
   repeat
@@ -2258,6 +2258,7 @@ begin
     if(ConfigObject.SwapSubtitlesList <> OldSwapState) then
       Self.SwapSubList;
     SetShortcut(PreferencesForm.GetMode);
+    ApplyMouseSettings;
   end;
 end;
 
@@ -2484,7 +2485,10 @@ begin
     bttWorkingMode.Caption := 'Timing mode';
     bttWorkingMode.Font.Color := clRed;
     bttWorkingMode.Tag := 1;
-    WAVDisplayer.SelMode := smSSA;
+    if ConfigObject.MouseEnableSSATimingMode then
+      WAVDisplayer.SelMode := smSSA
+    else
+      WAVDisplayer.SelMode := smCoolEdit;
   end
   else
   begin
@@ -2795,7 +2799,6 @@ end;
 procedure TMainForm.ColorizeOrDeleteTextPipe;
 var NewSelLen : Integer;
     NewColor : TColor;
-    NodeData : PTreeData;
 begin
   if pmiAutoColorizeText.Checked then
   begin
@@ -2838,6 +2841,24 @@ begin
   begin
     MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
     ColorizeOrDeleteTextPipe;
+  end;
+end;
+
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ApplyMouseSettings;
+begin
+  WAVDisplayer.WheelTimeScroll := ConfigObject.MouseWheelTimeScrollModifier;
+  WAVDisplayer.WheelVZoom := ConfigObject.MouseWheelVZoomModifier;
+  WAVDisplayer.WheelHZoom := ConfigObject.MouseWheelHZoomModifier;
+  if (PreferencesForm.GetMode = True) then
+  begin
+    // Timing mode
+    if ConfigObject.MouseEnableSSATimingMode then
+      WAVDisplayer.SelMode := smSSA
+    else
+      WAVDisplayer.SelMode := smCoolEdit;
   end;
 end;
 
