@@ -4,10 +4,17 @@
 	margin-bottom: 2em;			
 	margin-right: auto;
 	margin-left: auto;
-	background: #eee;
 	padding: 1em;
-	border: 1px solid #aaa;
+	border: 1px solid #aaa;	
+	background-color: #eee;
 }
+
+.TopLeftCorner {
+	float: left;
+	margin-right: 1em;
+	margin-bottom: 1em;
+}
+
 .MainTitle {
 	font-size: 180%;
 	margin-bottom: 1em;
@@ -40,4 +47,12 @@ a:visited {
 a:hover {
 	color: #2288CC;
 	background: #EEE;
+}
+ul {
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+}
+.new {
+	color: #f00;
+	font-weight: bold;
 }
