@@ -1,0 +1,9 @@
+*.~*
+*.dcu
+*.bpl
+*.dcp
+*.ddp
+*.dsm
+*.gex
+*.bkm
+.cvsignore
