@@ -236,6 +236,8 @@ type
     pmiAutoColorizeText: TTntMenuItem;
     pmiAutoDeleteText: TTntMenuItem;
     pmiAutoDeleteAllTextBefore: TTntMenuItem;
+    ActionReplaceFromPipe: TTntAction;
+    pmiReplaceSubtitleFromPipe: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -329,6 +331,7 @@ type
     procedure ActionSaveTextPipeAsExecute(Sender: TObject);
     procedure ActionAddSubFromPipeExecute(Sender: TObject);
     procedure MemoTextPipePopupMenuPopup(Sender: TObject);
+    procedure ActionReplaceFromPipeExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -371,6 +374,8 @@ type
 
     procedure OffsetCurrentSubtitleStartTime(Offset : Integer);
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
+
+    procedure ColorizeOrDeleteTextPipe;    
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -1720,12 +1725,12 @@ begin
     MaxLineLen := 0;
     for j := 1 to Length(SubRange.Text) do
     begin
-      if SubRange.Text[j] = '|' then
+      if SubRange.Text[j] = #13 then
       begin
         if (LineLen > MaxLineLen) then
           MaxLineLen := LineLen;
         LineLen := 0;
-        Inc(TotalCharCount,2); // new line count twice :)
+        Inc(TotalCharCount,1); // new line count twice :)
       end
       else
       begin
@@ -2786,35 +2791,42 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionAddSubFromPipeExecute(Sender: TObject);
-var NewSelLen : Integer;
-    NewColor : TColor;
-    NodeData : PTreeData;
 begin
   if (MemoTextPipe.SelLength > 0) and (not WavDisplayer.SelectionIsEmpty) then
   begin
     ActionAddSubtitle.Execute;
     MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
-    if pmiAutoColorizeText.Checked then
+    ColorizeOrDeleteTextPipe;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ColorizeOrDeleteTextPipe;
+var NewSelLen : Integer;
+    NewColor : TColor;
+    NodeData : PTreeData;
+begin
+  if pmiAutoColorizeText.Checked then
+  begin
+    NewColor := clRed;
+    if Assigned(vtvSubsList.FocusedNode) then
     begin
-      NewColor := clRed;
-      if Assigned(vtvSubsList.FocusedNode) then
-      begin
-        if (vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) = 0 then
-          NewColor := $003333FF
-        else
-          NewColor := $00FF8000;
-      end;
-      MemoTextPipe.SelAttributes.Color := NewColor;
-    end
-    else if pmiAutoDeleteText.Checked then
-      MemoTextPipe.ClearSelection
-    else if pmiAutoDeleteAllTextBefore.Checked then
-    begin
-      NewSelLen := MemoTextPipe.SelLength + MemoTextPipe.SelStart;
-      MemoTextPipe.SelStart := 0;
-      MemoTextPipe.SelLength := NewSelLen;
-      MemoTextPipe.ClearSelection;
+      if (vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) = 0 then
+        NewColor := $003333FF
+      else
+        NewColor := $00FF8000;
     end;
+    MemoTextPipe.SelAttributes.Color := NewColor;
+  end
+  else if pmiAutoDeleteText.Checked then
+    MemoTextPipe.ClearSelection
+  else if pmiAutoDeleteAllTextBefore.Checked then
+  begin
+    NewSelLen := MemoTextPipe.SelLength + MemoTextPipe.SelStart;
+    MemoTextPipe.SelStart := 0;
+    MemoTextPipe.SelLength := NewSelLen;
+    MemoTextPipe.ClearSelection;
   end;
 end;
 
@@ -2824,6 +2836,19 @@ procedure TMainForm.MemoTextPipePopupMenuPopup(Sender: TObject);
 begin
   pmiAddAsSubtitle.Enabled := (MemoTextPipe.SelLength > 0) and
     (not WavDisplayer.SelectionIsEmpty);
+  pmiReplaceSubtitleFromPipe.Enabled := (MemoTextPipe.SelLength > 0) and
+    (vtvSubsList.FocusedNode <> nil)
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionReplaceFromPipeExecute(Sender: TObject);
+begin
+  if (MemoTextPipe.SelLength > 0) and (vtvSubsList.FocusedNode <> nil) then
+  begin
+    MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
+    ColorizeOrDeleteTextPipe;
+  end;
 end;
 
 //------------------------------------------------------------------------------

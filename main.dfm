@@ -48,6 +48,7 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvLowered
     Caption = 'PanelWAV_Video'
+    DockSite = True
     FullRepaint = False
     TabOrder = 0
     object SplitterWAVDisplay_Video: TSplitter
@@ -1627,6 +1628,11 @@ object MainForm: TMainForm
       Caption = 'Add subtitle from pipe'
       OnExecute = ActionAddSubFromPipeExecute
     end
+    object ActionReplaceFromPipe: TTntAction
+      Tag = 1
+      Caption = 'Replace subtitle from pipe'
+      OnExecute = ActionReplaceFromPipeExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia
@@ -3055,6 +3061,9 @@ object MainForm: TMainForm
     Top = 184
     object pmiAddAsSubtitle: TTntMenuItem
       Action = ActionAddSubFromPipe
+    end
+    object pmiReplaceSubtitleFromPipe: TTntMenuItem
+      Action = ActionReplaceFromPipe
     end
     object pmiLoadTextPipe: TTntMenuItem
       Action = ActionLoadTextPipe
