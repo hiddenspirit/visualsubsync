@@ -256,6 +256,12 @@ type
     pmiInsertKaraokeMarker: TTntMenuItem;
     pmiCreateKaraoke: TTntMenuItem;
     pmiClearKaraoke: TTntMenuItem;
+    ActionShowStartFrame: TTntAction;
+    ActionShowStopFrame: TTntAction;
+    ActionShowFrameAtCursor: TTntAction;
+    N16: TTntMenuItem;
+    ActionExportToSSA: TTntAction;
+    MenuItemExportToSSA: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -268,6 +274,8 @@ type
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
     procedure WAVDisplayer1StartPlaying(Sender: TObject);
     procedure WAVDisplayer1KaraokeChanged(Sender: TObject;
+        Range : TRange);
+    procedure WAVDisplayer1SelectedKaraokeRange(Sender: TObject;
         Range : TRange);
     procedure vtvSubsListGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
@@ -369,6 +377,10 @@ type
     procedure ActionInsertKaraokeMarkerExecute(Sender: TObject);
     procedure pmiCreateKaraokeClick(Sender: TObject);
     procedure pmiClearKaraokeClick(Sender: TObject);
+    procedure ActionShowStartFrameExecute(Sender: TObject);
+    procedure ActionShowStopFrameExecute(Sender: TObject);
+    procedure ActionShowFrameAtCursorExecute(Sender: TObject);
+    procedure ActionExportToSSAExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -425,6 +437,7 @@ type
 
     procedure AddSubtitle(StartTime, StopTime : Integer;
       AutoSelect : Boolean);
+    procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);      
 
   public
     { Public declarations }
@@ -444,6 +457,7 @@ type
 
 const
   StartEndPlayingDuration: Integer = 500;
+  EnableExperimentalKaraoke: Boolean = True;
 
 var
   MainForm: TMainForm;
@@ -482,11 +496,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
 begin
   // Enable/disable experimental karaoke stuff
-  pmiInsertKaraokeMarker.Visible := True;
-  pmiCreateKaraoke.Visible := pmiInsertKaraokeMarker.Visible;
-  pmiClearKaraoke.Visible := pmiInsertKaraokeMarker.Visible;
-
-
+  pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
+  pmiClearKaraoke.Visible := EnableExperimentalKaraoke;
 
   plCursorPos.DoubleBuffered := True;
   LogForm := TLogForm.Create(nil);
@@ -531,6 +542,7 @@ begin
   WAVDisplayer.OnAutoScrollChange := WAVDisplayer1AutoScrollChange;
   WAVDisplayer.OnStartPlaying := WAVDisplayer1StartPlaying;
   WAVDisplayer.OnKaraokeChanged := WAVDisplayer1KaraokeChanged;
+  WAVDisplayer.OnSelectedKaraokeRange := WAVDisplayer1SelectedKaraokeRange;
   WAVDisplayer.Enabled := False;
   WAVDisplayer.PopupMenu := WAVDisplayPopupMenu;
 
@@ -710,7 +722,7 @@ begin
     TreeOptions.PaintOptions := TreeOptions.PaintOptions -
       [toShowTreeLines,toShowRoot] +
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
-    Header.Options := Header.Options + [hoVisible] - [hoDrag];
+    Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
     Column := Header.Columns.Add;
     Column.Text := '#';
@@ -732,10 +744,12 @@ begin
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column.Width := 500;
     Column.MinWidth := 100;
+
     //FocusedColumn := 2;
 
     OnGetText := vtvSubsListGetText;
   end;
+
 end;
 
 //------------------------------------------------------------------------------
@@ -793,6 +807,10 @@ begin
   ActionDetachVideo.Enabled := Enable;
   ActionProjectProperties.Enabled := Enable;
   ActionSaveAs.Enabled := Enable;
+  ActionExportToSSA.Enabled := Enable;
+  ActionShowStartFrame.Enabled := Enable;
+  ActionShowStopFrame.Enabled := Enable;
+  ActionShowFrameAtCursor.Enabled := Enable;
 
   vtvSubsList.Enabled := Enable;
   MemoLinesCounter.Enabled := Enable;
@@ -1086,7 +1104,7 @@ begin
       else
         TSubtitleRange(NewRange).Text := Text;
 
-      if (pmiInsertKaraokeMarker.Visible = True) then
+      if (EnableExperimentalKaraoke = True) then
         NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
 
       WAVDisplayer.RangeList.AddAtEnd(NewRange);
@@ -1172,7 +1190,7 @@ begin
     NodeData.Range.Text := MemoSubtitleText.Text;
 
     NeedUpdate := False;
-    if (pmiInsertKaraokeMarker.Visible = True) then
+    if (EnableExperimentalKaraoke = True) then
       NeedUpdate := NodeData.Range.UpdateSubTimeFromText(NodeData.Range.Text);
 
     vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
@@ -1834,6 +1852,18 @@ procedure TMainForm.ActionDelayExecute(Sender: TObject);
 var DelayInMs : Integer;
     Node : PVirtualNode;
     NodeData : PTreeData;
+
+    procedure DelaySub(Range : TRange; DelayInMs : Integer);
+    var i : Integer;
+    begin
+      Range.StartTime := Range.StartTime + DelayInMs;
+      Range.StopTime := Range.StopTime + DelayInMs;
+      for i:=0 to Length(Range.SubTime)-1 do
+      begin
+        Range.SubTime[i] := Range.SubTime[i] + DelayInMs;
+      end;
+    end;
+
 begin
   DelayForm := TDelayForm.Create(nil);
 
@@ -1862,8 +1892,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            NodeData.Range.StartTime := NodeData.Range.StartTime + DelayInMs;
-            NodeData.Range.StopTime := NodeData.Range.StopTime + DelayInMs;
+            DelaySub(NodeData.Range, DelayInMs);
             Node := vtvSubsList.GetNext(Node);
           end;
         end;
@@ -1873,8 +1902,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            NodeData.Range.StartTime := NodeData.Range.StartTime + DelayInMs;
-            NodeData.Range.StopTime := NodeData.Range.StopTime + DelayInMs;
+            DelaySub(NodeData.Range, DelayInMs);
             Node := vtvSubsList.GetNextSelected(Node);
           end;
           FullSortTreeAndSubList;
@@ -1885,8 +1913,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            NodeData.Range.StartTime := NodeData.Range.StartTime + DelayInMs;
-            NodeData.Range.StopTime := NodeData.Range.StopTime + DelayInMs;
+            DelaySub(NodeData.Range, DelayInMs);
             Node := vtvSubsList.GetNext(Node);
           end;
           FullSortTreeAndSubList;
@@ -2712,6 +2739,12 @@ begin
   CurrentProject.IsDirty := True;
 
   g_WebRWSynchro.EndWrite;
+
+  if (vtvSubsList.ChildCount[nil] = 1) then
+  begin
+    vtvSubsList.Header.AutoFitColumns(False);
+    vtvSubsList.Repaint;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -3421,12 +3454,13 @@ end;
 //------------------------------------------------------------------------------
 
 // TODO : auto clear karaoke timing that are out of subtitle bound
-// TODO : when double clicking to select karoke subtime maybe select subtitle in vtv ?
 // TODO : update documentation (timing button)
-// TODO : save as ssa
+// TODO : delay for karaoke times
+// TODO : inc/dec start/stop time for karaoke time
 
 //------------------------------------------------------------------------------
 
+// Split on white space and on '/' that is used to separate sylables
 procedure WhiteSpaceSplit(Text : WideString; var WordArray : WideStringArray);
 var i, j : Integer;
 begin
@@ -3434,10 +3468,14 @@ begin
   j := 1;
   for i:=1 to Length(Text) do
   begin
-    if (Text[i] = ' ') or (Text[i] = #10) then
+    if (Text[i] = ' ') or (Text[i] = #10) or (Text[i] = '/') then
     begin
       SetLength(WordArray, Length(WordArray)+1);
-      WordArray[Length(WordArray)-1] := Copy(Text, j, i-j+1);
+      WordArray[Length(WordArray)-1] := StringReplace(
+        Copy(Text, j, i-j+1),
+        '/',
+        '',
+        [rfReplaceAll]);
       j := (i + 1);
     end;
   end;
@@ -3448,6 +3486,8 @@ begin
   end;
 end;
 
+// -----
+
 function KaraLen(Text : WideString) : Integer;
 var i : Integer;
 begin
@@ -3456,6 +3496,8 @@ begin
     if (Text[i] <> #13) and (Text[i] <> #10) then
       Inc(Result);
 end;
+
+// -----
 
 procedure TMainForm.pmiCreateKaraokeClick(Sender: TObject);
 var Node : PVirtualNode;
@@ -3471,7 +3513,7 @@ begin
   begin
     NodeData := vtvSubsList.GetNodeData(Node);
     tpl := (NodeData.Range.StopTime - NodeData.Range.StartTime) /
-      KaraLen(NodeData.Range.Text);
+      KaraLen(StringReplace(NodeData.Range.Text, '/', '', [rfReplaceAll]));
     WhiteSpaceSplit(NodeData.Range.Text, WordArray);
 
     NodeData.Range.ClearSubTimes;
@@ -3479,12 +3521,16 @@ begin
     // Recreate string with karaoke timing
     s :='';
     total := 0;
-    for i:=0 to Length(WordArray)-1 do
+    if Length(WordArray) > 0 then
     begin
-      j := Round(tpl * KaraLen(WordArray[i]) / 10);
-      total := total + j;
-      NodeData.Range.AddSubTime(NodeData.Range.StartTime + (total*10));
-      s := s + Format('{\k%d}%s', [j, WordArray[i]]);
+      for i:=0 to Length(WordArray)-1 do
+      begin
+        j := Round(tpl * KaraLen(WordArray[i]) / 10);
+        total := total + j;
+        if (i < Length(WordArray)-1) then
+          NodeData.Range.AddSubTime(NodeData.Range.StartTime + (total*10));
+        s := s + Format('{\k%d}%s', [j, WordArray[i]]);
+      end;
     end;
 
     // total should match duration (but we work in ms :] ?)
@@ -3543,7 +3589,7 @@ var Sub : TSubtitleRange;
 begin
   g_WebRWSynchro.BeginWrite;
   Sub := Range as TSubtitleRange;
-  KaraSplit(Sub.Text, WordArray, TimeArray);
+  KaraSplit2(Sub.Text, WordArray, TimeArray);
   if (Length(Sub.SubTime) > 0) and
      (Length(Sub.SubTime) = (Length(TimeArray) - 1)) then
   begin
@@ -3558,13 +3604,131 @@ begin
     NewText := WordArray[0];
     for i:=0 to Length(TimeArray)-1 do
     begin
-      NewText := NewText + '{\k' + IntToStr(TimeArray[i]) + '}' + WordArray[i+1];
+      NewText := NewText + IntToStr(TimeArray[i]) + WordArray[i+1];
     end;
     Sub.Text := NewText;
   end;
+  CurrentProject.IsDirty := True;  
   g_WebRWSynchro.EndWrite;
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowStartFrameExecute(Sender: TObject);
+var NodeData: PTreeData;
+begin
+  if Assigned(VideoRenderer) and Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    // +50 to make sure we are inside the subtitle (duration of 1 frame) 
+    VideoRenderer.ShowImageAt(NodeData.Range.StartTime + 50);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowStopFrameExecute(Sender: TObject);
+var NodeData: PTreeData;
+begin
+  if Assigned(VideoRenderer) and Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    VideoRenderer.ShowImageAt(NodeData.Range.StopTime);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowFrameAtCursorExecute(Sender: TObject);
+var NodeData: PTreeData;
+begin
+  if Assigned(VideoRenderer) then
+  begin
+    VideoRenderer.ShowImageAt(WAVDisplayer.GetCursorPos);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
+var i : integer;
+    SubRange : TSubtitleRange;
+    FS : TFileStream;
+    s : WideString;
+const
+    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + #13#10;
+      Stream.Write(s[1],Length(s));
+    end;
+begin
+  FS := TFileStream.Create(Filename, fmCreate);
+  if InUTF8 then
+  begin
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
+  end;
+
+  WriteStringLnStream('[Script Info]', FS);
+  WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
+  WriteStringLnStream('Title: <untitled>', FS);
+  WriteStringLnStream('Original Script: <unknown>', FS);
+  WriteStringLnStream('ScriptType: v4.00', FS);
+  WriteStringLnStream('', FS);
+  WriteStringLnStream('[V4 Styles]', FS);
+  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
+  WriteStringLnStream('Style: Default,Arial,28,65535,255,16744448,-2147483640,-1,0,1,3,0,2,30,30,30,0,128', FS);
+  WriteStringLnStream('', FS);
+  WriteStringLnStream('[Events]', FS);
+  WriteStringLnStream('Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
+
+  //Dialogue: Marked=0,0:00:05.00,0:00:07.00,*Default,,0000,0000,0000,,toto tata
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    s := Format('Dialogue: Marked=0,%s,%s,*Default,,0000,0000,0000,,',
+      [TimeMsToSSAString(SubRange.StartTime),
+       TimeMsToSSAString(SubRange.StopTime)]);
+    if InUTF8 then
+      s := s + UTF8Encode(Subrange.Text)
+    else
+      s := s + Subrange.Text;
+    WriteStringLnStream(s, FS);
+  end;
+  FS.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionExportToSSAExecute(Sender: TObject);
+begin
+  TntSaveDialog1.Filter := 'Subtitles files (*.ssa)|*.SSA' + '|' +
+    'All files (*.*)|*.*';
+  TntSaveDialog1.FileName := WideChangeFileExt(CurrentProject.SubtitlesFile, '.ssa');
+  if TntSaveDialog1.Execute then
+  begin
+    SaveSubtitlesAsSSA(TntSaveDialog1.FileName, CurrentProject.IsUTF8);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.WAVDisplayer1SelectedKaraokeRange(Sender: TObject;
+  Range : TRange);
+var Node : PVirtualNode;
+begin
+  if Assigned(Range) then
+  begin
+    Node := TSubtitleRange(Range).Node;
+    vtvSubsList.ScrollIntoView(Node, True);
+    vtvSubsList.FocusedNode := Node;
+    vtvSubsList.ClearSelection;
+    vtvSubsList.Selected[Node] := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------

@@ -1093,6 +1093,9 @@ object MainForm: TMainForm
         Action = ActionSaveAs
         Caption = 'Save As...'
       end
+      object MenuItemExportToSSA: TTntMenuItem
+        Action = ActionExportToSSA
+      end
       object N2: TTntMenuItem
         Caption = '-'
       end
@@ -1679,6 +1682,25 @@ object MainForm: TMainForm
     object ActionInsertKaraokeMarker: TTntAction
       Caption = 'Insert karaoke marker'
       OnExecute = ActionInsertKaraokeMarkerExecute
+    end
+    object ActionShowStartFrame: TTntAction
+      Tag = 1
+      Caption = 'Show start frame'
+      OnExecute = ActionShowStartFrameExecute
+    end
+    object ActionShowStopFrame: TTntAction
+      Tag = 1
+      Caption = 'Show stop frame'
+      OnExecute = ActionShowStopFrameExecute
+    end
+    object ActionShowFrameAtCursor: TTntAction
+      Tag = 1
+      Caption = 'Show frame at cursor'
+      OnExecute = ActionShowFrameAtCursorExecute
+    end
+    object ActionExportToSSA: TTntAction
+      Caption = 'Export to SSA'
+      OnExecute = ActionExportToSSAExecute
     end
   end
   object ImageList1: TImageList
@@ -3044,6 +3066,7 @@ object MainForm: TMainForm
     end
     object pmiInsertKaraokeMarker: TTntMenuItem
       Action = ActionInsertKaraokeMarker
+      Visible = False
     end
   end
   object SubListPopupMenu: TTntPopupMenu
@@ -3064,6 +3087,9 @@ object MainForm: TMainForm
     end
     object pmiFixError: TTntMenuItem
       Action = ActionFixErrorMain
+    end
+    object N16: TTntMenuItem
+      Caption = '-'
     end
     object pmiCreateKaraoke: TTntMenuItem
       Caption = 'Create Karaoke'
