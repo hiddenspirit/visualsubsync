@@ -834,7 +834,7 @@ begin
           if NewCursorPos > FSelection.StartTime + ((FSelection.StopTime - FSelection.StartTime) div 2) then
           begin
             // We are close to the end of the selection
-            if Self.SelectionIsEmpty then
+            if SelectionIsEmpty then
             begin
               if NewCursorPos > FCursorMs then
               begin
@@ -891,22 +891,65 @@ begin
 
       if ssLeft in Shift then
       begin
-        with FSelection do
+        if SelectionIsEmpty then
         begin
-          StartTime := NewCursorPos;
-          if StartTime > StopTime then
-            StopTime := StartTime;
-          FSelectionOrigin := StopTime;
+          if NewCursorPos < FCursorMs then
+          begin
+            FSelection.StartTime := NewCursorPos;
+            FSelection.StopTime := FCursorMs;
+            FSelectionOrigin := FCursorMs;
+          end
+          else
+            FSelectionOrigin := NewCursorPos;
+        end
+        else
+        begin
+          if NewCursorPos < FSelection.StopTime then
+          begin
+            FSelection.StartTime := NewCursorPos;
+            FSelectionOrigin := FSelection.StopTime;
+          end
+          else
+          begin
+            FSelectedRange := nil;
+            FSelectionOrigin := NewCursorPos;
+            FSelection.StartTime := 0;
+            FSelection.StopTime := 0;
+            if Assigned(FOnSelectionChange) then
+              FOnSelectionChange(Self);
+          end;
         end;
       end;
 
       if (ssRight in Shift) and not(ssShift in Shift) then
       begin
-        with FSelection do
+        if SelectionIsEmpty then
         begin
-          if NewCursorPos > StartTime then
-            StopTime := NewCursorPos;
-          FSelectionOrigin := StartTime;
+          if NewCursorPos > FCursorMs then
+          begin
+            FSelection.StopTime := NewCursorPos;
+            FSelection.StartTime := FCursorMs;
+            FSelectionOrigin := FCursorMs;
+          end
+          else
+            FSelectionOrigin := NewCursorPos;
+        end
+        else
+        begin
+          if NewCursorPos > FSelection.StartTime then
+          begin
+            FSelection.StopTime := NewCursorPos;
+            FSelectionOrigin := FSelection.StartTime;
+          end
+          else
+          begin
+            FSelectedRange := nil;
+            FSelectionOrigin := NewCursorPos;
+            FSelection.StartTime := 0;
+            FSelection.StopTime := 0;
+            if Assigned(FOnSelectionChange) then
+              FOnSelectionChange(Self);
+          end;
         end;
       end;
 
@@ -926,7 +969,7 @@ begin
         Include(UpdateFlags, uvfSelection);
       end;
 
-      if (FCursorMs <> NewCursorPos) then
+      if (FCursorMs <> NewCursorPos) and (not (ssMiddle in Shift)) then
       begin
         FCursorMs := NewCursorPos;
         if Assigned(FOnCursorChange) then
