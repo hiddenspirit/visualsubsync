@@ -3065,6 +3065,14 @@ object MainForm: TMainForm
     object pmiFixError: TTntMenuItem
       Action = ActionFixErrorMain
     end
+    object pmiCreateKaraoke: TTntMenuItem
+      Caption = 'Create Karaoke'
+      OnClick = pmiCreateKaraokeClick
+    end
+    object pmiClearKaraoke: TTntMenuItem
+      Caption = 'Clear Karaoke'
+      OnClick = pmiClearKaraokeClick
+    end
   end
   object TimerStatusBarMsg: TTimer
     Enabled = False

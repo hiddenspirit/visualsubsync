@@ -42,6 +42,11 @@ uses Windows, Messages, Classes, Controls, Graphics, WAVFileUnit,
 type
   // ----------
 
+  WideStringArray = array of WideString;
+  IntegerArray = array of Integer;
+
+  // ----------
+
   TRange = class
   public
     StartTime : Integer;
@@ -54,6 +59,7 @@ type
     // !!! Indexes used below are index of the interval between markers !!!
     function  GetSubTimeRange(const PosMS : Integer; Range : TRange) : Integer;
     procedure GetSubTimeRangeAt(const Idx : Integer; Range : TRange);
+    function UpdateSubTimeFromText(Text : WideString) : Boolean;
   end;
 
   TRangeFactory = class
@@ -113,6 +119,8 @@ type
 
   TDynamicEditMode = (demNone, demStart, demStop, demKaraoke);
 
+  TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
+
   TWAVDisplayer = class(TCustomPanel)
   private
     { Private declarations }
@@ -155,6 +163,8 @@ type
     FOnAutoScrollChange : TNotifyEvent;
     FOnStartPlaying : TNotifyEvent;
     FOnStopPlaying : TNotifyEvent;
+    FOnKaraokeChange : TNotifyEvent;
+    FOnKaraokeChanged : TKaraokeTimeChangedEvent;
 
     FRenderer : TRenderer;
     FUpdateCursorTimer : TTimer;
@@ -213,7 +223,7 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure WM_EraseBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure Paint; override;
-    
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -263,6 +273,8 @@ type
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
     property OnStartPlaying : TNotifyEvent read FOnStartPlaying write FOnStartPlaying;
     property OnStopPlaying : TNotifyEvent read FOnStopPlaying write FOnStopPlaying;
+    property OnKaraokeChange : TNotifyEvent read FOnKaraokeChange write FOnKaraokeChange;
+    property OnKaraokeChanged : TKaraokeTimeChangedEvent read FOnKaraokeChanged write FOnKaraokeChanged;
 
     property Align;
     property Anchors;
@@ -282,10 +294,58 @@ type
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
+function KaraSplit(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray) : Boolean;
 
 implementation
 
 uses SysUtils, Types, MiscToolsUnit;
+
+// =============================================================================
+
+function KaraSplit(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray) : Boolean;
+var
+  i, i1, i2 : integer;
+  s : string;
+begin
+  SetLength(WordArray, 0);
+  SetLength(TimeArray, 0);
+  s := Text;
+  while (Length(s) > 0) do
+  begin
+    i1 := Pos('{\k', s);
+    i2 := Pos('{\K', s);
+    if (i1 = 0) or (i2 = 0) then
+      i := i1 + i2
+    else
+      i := Min(i1, i2);
+    if (i > 0) then
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := Copy(s, 1, i-1);
+      Delete(s, 1, i-1);
+      i := Pos('}', s);
+      if(i > 0) then
+      begin
+        SetLength(TimeArray, Length(TimeArray)+1);
+        TimeArray[Length(TimeArray)-1] := StrToIntDef(Copy(s, 4, i-4),0);
+        Delete(s, 1, i);
+      end
+      else
+      begin
+        WordArray[Length(WordArray)-1] := WordArray[Length(WordArray)-1] + s;
+        s := '';
+      end;
+    end
+    else
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := s;
+      s := '';
+    end;
+  end;
+end;
 
 // =============================================================================
 
@@ -397,6 +457,73 @@ begin
     Range.StartTime := SubTime[Idx-1];
     Range.StopTime := SubTime[Idx];
   end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TRange.UpdateSubTimeFromText(Text : WideString) : Boolean;
+var
+  WordArray : WideStringArray;
+  KTimeArray : IntegerArray;
+  AbsTimeArray : IntegerArray;
+  AccuTime : Integer;
+  i : Integer;
+  AreTimesDifferent : Boolean;
+begin
+  // Parse text
+  KaraSplit(Text, WordArray, KTimeArray);
+
+  if Length(KTimeArray) = 0 then
+  begin
+    if Length(SubTime) > 0 then
+    begin
+      ClearSubTimes;
+      Result := True;
+    end
+    else
+      Result := True;
+    Exit;
+  end;
+
+  // Convert \k time (we forget last time)
+  SetLength(AbsTimeArray, Length(KTimeArray)-1);
+  AccuTime := StartTime;
+  for i:=0 to Length(KTimeArray)-2 do
+  begin
+    AccuTime := AccuTime + (KTimeArray[i] * 10);
+    AbsTimeArray[i] := AccuTime;
+  end;
+
+  // Compare times array
+  AreTimesDifferent := False;
+  if (Length(AbsTimeArray) <> Length(SubTime)) then
+  begin
+    // Length mismatch
+    AreTimesDifferent := True;
+  end
+  else
+  begin
+    i := 0;
+    while (i < Length(AbsTimeArray)) do
+    begin
+      if (AbsTimeArray[i] <> SubTime[i]) then
+      begin
+        AreTimesDifferent := True;
+        Break;
+      end;
+      Inc(i);
+    end;
+  end;
+
+  if (AreTimesDifferent = True) then
+  begin
+    // Update array
+    SetLength(SubTime, Length(AbsTimeArray));
+    for i:=0 to Length(AbsTimeArray)-1 do
+      SubTime[i] := AbsTimeArray[i];
+  end;
+
+  Result := AreTimesDifferent;
 end;
 
 // =============================================================================
@@ -1155,6 +1282,7 @@ var NewCursorPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
+
     if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
     begin
       if (FDynamicEditTime >= 0) and (FDynamicEditTime < System.Length(FDynamicSelRange.SubTime)) then
@@ -1173,8 +1301,8 @@ begin
         else
           x2 := TimeToPixel(FDynamicSelRange.StopTime - FPositionMs);
 
-        ClipKaraokeRect.Left := (x1 + 1);
-        ClipKaraokeRect.Right := x2;
+        ClipKaraokeRect.Left := (x1 + 3);
+        ClipKaraokeRect.Right := (x2 - 2);
         ClipKaraokeRect.Top := 0;
         ClipKaraokeRect.Bottom := Height;
         // Convert in screen coordinate
@@ -1419,7 +1547,7 @@ begin
       y2 := (CanvasHeight * 9) div 10;
       if (Y > y1) and (Y < y2) then
       begin
-        // TODO : improve that when marker are close to each other
+        // todo : search for the closer time
         for i:=0 to System.Length(Range.SubTime)-1 do
         begin
           if(Abs(CursorPosMs - Range.SubTime[i]) < RangeSelWindow) then
@@ -1491,6 +1619,8 @@ begin
                 // Update selection according to selected karaoke range
                 FDynamicSelRange.GetSubTimeRangeAt(FSelectedKaraokeRange, FSelection);
                 if Assigned(FOnSelectionChange) then
+                  FOnSelectionChange(Self);
+                if Assigned(FOnKaraokeChange) then
                   FOnSelectionChange(Self);
                 Include(UpdateFlags, uvfSelection);
               end;
@@ -1597,7 +1727,8 @@ begin
       // Find a subtitle under the mouse
       Constrain(X, 0, Width);
       CursorPosMs := PixelToTime(X) + FPositionMs;
-      RangeSelWindow := PixelToTime(5);
+      RangeSelWindow := PixelToTime(4);
+
       // First pass : check only inside sub
       RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs, 0);
       while Assigned(RangeUnder) do
@@ -1606,7 +1737,9 @@ begin
           Exit;
         RangeUnder := FRangeList.FindNextRange;
       end;
+
       // 2nd pass : Wider search
+      RangeSelWindow := PixelToTime(2);
       RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs, RangeSelWindow);
       while Assigned(RangeUnder) do
       begin
@@ -1614,7 +1747,9 @@ begin
           Exit;
         RangeUnder := FRangeList.FindNextRange;
       end;
+
       // Check selection
+      RangeSelWindow := PixelToTime(4);
       if (not SelectionIsEmpty) then
       begin
         if CheckSubtitleForDynamicSelection(FSelection, CursorPosMs, RangeSelWindow, X, Y) then
@@ -1645,8 +1780,15 @@ begin
   begin
     FRangeList.FullSort; // TODO : re-sort only selected sub
     FNeedToSortSelectedSub := False;
-    // TODO : auto clear karoke timing that are out of subtitle bound ???
   end;
+
+    // TODO : auto clear karoke timing that are out of subtitle bound ???
+
+  if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
+  begin
+    FOnKaraokeChanged(Self, FDynamicSelRange);
+  end;
+
 
   FSelectionOrigin := -1;
   FScrollOrigin := -1;
