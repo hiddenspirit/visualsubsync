@@ -732,9 +732,11 @@ TWaitCompletionThread_Restart:
     // Check position
     FRenderer.FMediaSeeking.GetCurrentPosition(CurrentPos);
     if ((CurrentPos >= FRenderer.StopTime) or
-       ((Abs(CurrentPos - FRenderer.StopTime)) <= 40)) or
-       (CurrentPos < FRenderer.StartTime) then
+       ((Abs(CurrentPos - FRenderer.StopTime)) <= (20*10000))) or
+       ((CurrentPos + 20*10000) < FRenderer.StartTime) then
+    begin
       bDone := True;
+    end;
   end;
 
   if bDone then
