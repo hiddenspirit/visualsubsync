@@ -589,6 +589,7 @@ begin
   SaveFormPosition(IniFile,MainForm);
   SaveFormPosition(IniFile,ErrorReportForm);
   SaveFormPosition(IniFile,SuggestionForm);
+  SaveFormPosition(IniFile,DetachedVideoForm);
 
   IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
   IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
@@ -609,6 +610,7 @@ begin
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
+  LoadFormPosition(IniFile,DetachedVideoForm);
 
   Show;
 
@@ -1336,16 +1338,17 @@ begin
       if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
         AudioOnlyRenderer.KillVideo;
     end;
-    if ShowingVideo then
-      WAVDisplayer.SetRenderer(VideoRenderer)
-    else
-      WAVDisplayer.SetRenderer(AudioOnlyRenderer);
 
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
       UpdateVideoRendererWindow;
     end;
+
+    if ShowingVideo then
+      WAVDisplayer.SetRenderer(VideoRenderer)
+    else
+      WAVDisplayer.SetRenderer(AudioOnlyRenderer);
 
     if WideFileExists(WideChangeFileExt(CurrentProject.Filename,'.vssscript')) then
     begin
@@ -2946,6 +2949,8 @@ begin
     SplitterWAVDisplay_Video.Visible := False;
     if VideoRenderer.IsOpen then
       VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle);
+    if ShowingVideo then
+      ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
     DetachedVideoForm.Visible := ShowingVideo;
   end;
   MenuItemDetachVideoWindow.Checked := not MenuItemDetachVideoWindow.Checked;

@@ -320,8 +320,6 @@ begin
     FWaitThread.Free;
     FWaitThread := nil;
   end;
-  if (FDisplayWindow <> 0) then
-    SetDisplayWindow(0);
   Close;
   DeleteCriticalSection(FStartStopAccessCS);
   inherited;
@@ -513,7 +511,10 @@ begin
   if Assigned(FVideoWindow) then
   begin
     FVideoWindow.put_Visible(False);
-    FVideoWindow.put_Owner(0);
+    FVideoWindow.put_MessageDrain(0);
+    // This steal the focus, so we do it only that before releasing the graph
+    if WinHwnd = 0 then
+      FVideoWindow.put_Owner(0);
     FVideoWindow := nil;
   end;
 
@@ -526,14 +527,14 @@ begin
     FDisplayWindowOldProc := nil;
   end;
 
+  FDisplayWindow := WinHwnd;
   if (WinHwnd <> 0) then
   begin
     // Subclass new window to handle resize
     FDisplayWindowProc := MakeObjectInstance(DisplayWindowProc);
-    FDisplayWindowOldProc := Pointer(GetWindowLong(WinHwnd, GWL_WNDPROC));
-    SetWindowLong(WinHwnd, GWL_WNDPROC, LongInt(FDisplayWindowProc));
+    FDisplayWindowOldProc := Pointer(GetWindowLong(FDisplayWindow, GWL_WNDPROC));
+    SetWindowLong(FDisplayWindow, GWL_WNDPROC, LongInt(FDisplayWindowProc));
 
-    FDisplayWindow := WinHwnd;
     FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
     FVideoWindow.put_Owner(FDisplayWindow);
     //FVideoWindow.put_AutoShow(False);
@@ -658,12 +659,7 @@ procedure TDShowRenderer.Close;
 begin
   FIsOpen := False;
   if Assigned(FMediaControl) then FMediaControl.Stop;
-  if Assigned(FVideoWindow) then
-  begin
-    FVideoWindow.put_Visible(False);
-    FVideoWindow.put_Owner(0);
-    FVideoWindow := nil;
-  end;
+  SetDisplayWindow(0);
   if Assigned(FMediaControl) then FMediaControl := nil;
   if Assigned(FMediaEventEx) then FMediaEventEx := nil;
   if Assigned(FMediaSeeking) then FMediaSeeking := nil;
