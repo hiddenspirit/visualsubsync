@@ -103,7 +103,13 @@ object MainForm: TMainForm
       Width = 250
       Height = 223
       Align = alLeft
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = '@Arial Unicode MS'
+      Font.Style = []
       HideSelection = False
+      ParentFont = False
       PopupMenu = MemoTextPipePopupMenu
       ScrollBars = ssVertical
       TabOrder = 2
@@ -1096,6 +1102,9 @@ object MainForm: TMainForm
       object MenuItemExportToSSA: TTntMenuItem
         Action = ActionExportToSSA
       end
+      object MenuItemExportToWAV: TTntMenuItem
+        Action = ActionExportToWAV
+      end
       object N2: TTntMenuItem
         Caption = '-'
       end
@@ -1245,6 +1254,12 @@ object MainForm: TMainForm
       end
       object Loopselectionend1: TTntMenuItem
         Action = ActionLoopSelEnd
+      end
+      object Playselectionstart1: TTntMenuItem
+        Action = ActionPlaySelStart
+      end
+      object Playselectionend1: TTntMenuItem
+        Action = ActionPlaySelEnd
       end
       object N12: TTntMenuItem
         Caption = '-'
@@ -1701,6 +1716,22 @@ object MainForm: TMainForm
     object ActionExportToSSA: TTntAction
       Caption = 'Export to SSA'
       OnExecute = ActionExportToSSAExecute
+    end
+    object ActionExportToWAV: TTntAction
+      Caption = 'Export to WAV'
+      OnExecute = ActionExportToWAVExecute
+    end
+    object ActionPlaySelStart: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Play selection start'
+      OnExecute = ActionPlaySelStartExecute
+    end
+    object ActionPlaySelEnd: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Play selection end'
+      OnExecute = ActionPlaySelEndExecute
     end
   end
   object ImageList1: TImageList

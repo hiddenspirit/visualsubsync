@@ -262,6 +262,12 @@ type
     N16: TTntMenuItem;
     ActionExportToSSA: TTntAction;
     MenuItemExportToSSA: TTntMenuItem;
+    MenuItemExportToWAV: TTntMenuItem;
+    ActionExportToWAV: TTntAction;
+    ActionPlaySelStart: TTntAction;
+    ActionPlaySelEnd: TTntAction;
+    Playselectionstart1: TTntMenuItem;
+    Playselectionend1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -381,6 +387,9 @@ type
     procedure ActionShowStopFrameExecute(Sender: TObject);
     procedure ActionShowFrameAtCursorExecute(Sender: TObject);
     procedure ActionExportToSSAExecute(Sender: TObject);
+    procedure ActionExportToWAVExecute(Sender: TObject);
+    procedure ActionPlaySelStartExecute(Sender: TObject);
+    procedure ActionPlaySelEndExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -438,7 +447,6 @@ type
     procedure AddSubtitle(StartTime, StopTime : Integer;
       AutoSelect : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);      
-
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -452,7 +460,7 @@ type
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
     function CanFixError(PluginFilename : WideString) : Boolean;
-    procedure FixErrorInList(ErrorList : TList);    
+    procedure FixErrorInList(ErrorList : TList);
   end;
 
 const
@@ -467,7 +475,7 @@ implementation
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows, JavaScriptPluginUnit,
-  LogWindowFormUnit, CursorManager;
+  LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit;
 
 {$R *.dfm}
 
@@ -731,13 +739,13 @@ begin
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Start';
-    Column.Width := 80;
-    Column.MinWidth := 80;
+    Column.Width := 100;
+    Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
-    Column.Width := 80;
-    Column.MinWidth := 80;
+    Column.Width := 100;
+    Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Text';
@@ -808,6 +816,7 @@ begin
   ActionProjectProperties.Enabled := Enable;
   ActionSaveAs.Enabled := Enable;
   ActionExportToSSA.Enabled := Enable;
+  ActionExportToWAV.Enabled := Enable;
   ActionShowStartFrame.Enabled := Enable;
   ActionShowStopFrame.Enabled := Enable;
   ActionShowFrameAtCursor.Enabled := Enable;
@@ -1179,6 +1188,44 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
+var savSelStart, savSelLength : Integer;
+    i, j : Integer;
+    WordArray : WideStringArray;
+begin
+  if (Pos('{\k', RichEdit.Text) + Pos('{\K', RichEdit.Text)) = 0 then
+    Exit;
+
+  RichEdit.Tag := 0;
+  RichEdit.Lines.BeginUpdate;
+  savSelStart := RichEdit.SelStart;
+  savSelLength := RichEdit.SelLength;
+
+  KaraSplit3(RichEdit.Text, WordArray);
+
+  j := 0;
+  for i:=0 to Length(WordArray)-1 do
+  begin
+    RichEdit.SelStart := j;
+    RichEdit.SelLength := Length(WordArray[i]);
+    if (i = (TagIndex*2)+1) then
+      RichEdit.SelAttributes.Color := clRed
+    else if (i mod 2) = 0 then
+      RichEdit.SelAttributes.Color := clWindowText
+    else
+      RichEdit.SelAttributes.Color := clGrayText;
+    Inc(j, Length(WordArray[i]));
+  end;
+
+  RichEdit.SelStart := savSelStart;
+  RichEdit.SelLength := savSelLength;
+
+  RichEdit.Lines.EndUpdate;
+  RichEdit.Tag := 1;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.MemoSubtitleTextChange(Sender: TObject);
 var NodeData: PTreeData;
     NeedUpdate : Boolean;
@@ -1199,7 +1246,8 @@ begin
     if (NeedUpdate = True) then
     begin
       WAVDisplayer.UpdateView([uvfRange]);
-    end;    
+    end;
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
   end;
   UpdateLinesCounter;
 end;
@@ -1853,14 +1901,27 @@ var DelayInMs : Integer;
     Node : PVirtualNode;
     NodeData : PTreeData;
 
-    procedure DelaySub(Range : TRange; DelayInMs : Integer);
+    procedure DelaySub(Range : TRange; DelayInMs : Integer;
+      ShiftType : Integer);
     var i : Integer;
     begin
-      Range.StartTime := Range.StartTime + DelayInMs;
-      Range.StopTime := Range.StopTime + DelayInMs;
-      for i:=0 to Length(Range.SubTime)-1 do
+      // ShiftType : 0 -> start & end
+      //             1 -> start only
+      //             2 -> end only
+      if (ShiftType = 0) or (ShiftType = 1) then
       begin
-        Range.SubTime[i] := Range.SubTime[i] + DelayInMs;
+        Range.StartTime := Range.StartTime + DelayInMs;
+      end;
+      if (ShiftType = 0) or (ShiftType = 2) then
+      begin
+        Range.StopTime := Range.StopTime + DelayInMs;
+      end;
+      if (ShiftType = 0) then
+      begin
+        for i:=0 to Length(Range.SubTime)-1 do
+        begin
+          Range.SubTime[i] := Range.SubTime[i] + DelayInMs;
+        end;
       end;
     end;
 
@@ -1892,7 +1953,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
             Node := vtvSubsList.GetNext(Node);
           end;
         end;
@@ -1902,7 +1963,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
             Node := vtvSubsList.GetNextSelected(Node);
           end;
           FullSortTreeAndSubList;
@@ -1913,7 +1974,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
             Node := vtvSubsList.GetNext(Node);
           end;
           FullSortTreeAndSubList;
@@ -1922,6 +1983,8 @@ begin
     CurrentProject.IsDirty := True;
     g_WebRWSynchro.EndWrite;    
     WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.InvalidateColumn(1);
+    vtvSubsList.InvalidateColumn(2);    
   end;
   DelayForm.Free;
   DelayForm := nil;
@@ -2291,7 +2354,7 @@ end;
 
 procedure TMainForm.SelectNodeFromTimestamps(Start, Stop : Integer);
 var i : integer;
-    SubRange : TSubtitleRange; 
+    SubRange : TSubtitleRange;
 begin
   SubRange := nil;
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
@@ -2740,11 +2803,11 @@ begin
 
   g_WebRWSynchro.EndWrite;
 
-  if (vtvSubsList.ChildCount[nil] = 1) then
-  begin
-    vtvSubsList.Header.AutoFitColumns(False);
-    vtvSubsList.Repaint;
-  end;
+//  if (vtvSubsList.ChildCount[nil] = 1) then
+//  begin
+//    vtvSubsList.Header.AutoFitColumns(False);
+//    vtvSubsList.Repaint;
+//  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -2967,6 +3030,12 @@ begin
     ActionAddSubtitle.Execute;
     MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
     ColorizeOrDeleteTextPipe;
+//    // If this is the first subtitle, readjust columns
+//    if (vtvSubsList.ChildCount[nil] = 1) then
+//    begin
+//      vtvSubsList.Header.AutoFitColumns(False);
+//      vtvSubsList.Repaint;
+//    end;
   end;
 end;
 
@@ -3259,10 +3328,16 @@ var NodeData: PTreeData;
 begin
   if (Node <> nil) then
   begin
+
     NodeData := Sender.GetNodeData(Node);
     MemoSubtitleText.Tag := 0;
     MemoSubtitleText.Text := NodeData.Range.Text;
     MemoSubtitleText.Tag := 1;
+    if (WAVDisplayer.KaraokeSekectedRange = NodeData.Range) then
+      TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex)
+    else
+      TagHighlight(MemoSubtitleText, -1);
+
   end
   else
   begin
@@ -3453,9 +3528,8 @@ end;
 
 //------------------------------------------------------------------------------
 
-// TODO : auto clear karaoke timing that are out of subtitle bound
+// TODO : auto clear karaoke timing that are out of subtitle bound ???
 // TODO : update documentation (timing button)
-// TODO : delay for karaoke times
 // TODO : inc/dec start/stop time for karaoke time
 
 //------------------------------------------------------------------------------
@@ -3586,6 +3660,7 @@ var Sub : TSubtitleRange;
     i : Integer;
     AccuTime : Integer;
     NewText : WideString;
+    savSelStart, savSelLength : Integer;
 begin
   g_WebRWSynchro.BeginWrite;
   Sub := Range as TSubtitleRange;
@@ -3608,10 +3683,14 @@ begin
     end;
     Sub.Text := NewText;
   end;
-  CurrentProject.IsDirty := True;  
+  CurrentProject.IsDirty := True;
   g_WebRWSynchro.EndWrite;
+  savSelStart := MemoSubtitleText.SelStart;
+  savSelLength := MemoSubtitleText.SelLength;
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
+  MemoSubtitleText.SelStart := savSelStart;
+  MemoSubtitleText.SelLength := savSelLength;
 end;
 
 //------------------------------------------------------------------------------
@@ -3642,7 +3721,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowFrameAtCursorExecute(Sender: TObject);
-var NodeData: PTreeData;
 begin
   if Assigned(VideoRenderer) then
   begin
@@ -3729,8 +3807,88 @@ begin
     vtvSubsList.ClearSelection;
     vtvSubsList.Selected[Node] := True;
   end;
+  TagHighlight(MemoSubtitleText,WAVDisplayer.KaraokeSelectedIndex);  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionExportToWAVExecute(Sender: TObject);
+var
+  SelectedDir: string;
+  WAVFile : TWAVFile;
+  Node : PVirtualNode;
+  NodeData: PTreeData;
+  Filename : string;
+  FS : TFileStream;
+  PP : TPageProcessor;
+  DummyEnvVars : TStringList;
+  CM : ICursorManager;
+begin
+  if Trim(CurrentProject.WAVFile) = '' then
+  begin
+    MessageBoxW(Handle, PWideChar(WideString('You need to create a project with a WAV file')),
+      PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
+  end
+  else
+  begin
+    if SelectDirectory('Select the folder where to place wav files', '', SelectedDir) = True then
+    begin
+      SelectedDir := IncludeTrailingPathDelimiter(SelectedDir);
+      WAVFile := TWAVFile.Create;
+      if WAVFile.Open(CurrentProject.WAVFile) then
+      begin
+        CM := TCursorManager.Create(crHourGlass);
+        ShowStatusBarMessage('Exporting to wav files, please wait...');
+        Node := vtvSubsList.GetFirst;
+        while (Node <> nil) do
+        begin
+          NodeData := vtvSubsList.GetNodeData(Node);
+          Filename := Format('%s%6.6d.wav', [SelectedDir, Node.Index+1]);
+          FS := TFileStream.Create(Filename, fmCreate);
+          WAVFile.ExtractToStream(NodeData.Range.StartTime,
+            NodeData.Range.StopTime, FS);
+          FS.Free;
+          Node := vtvSubsList.GetNext(Node);
+        end;
+        PP := TPageProcessor.Create;
+        DummyEnvVars := TStringList.Create;
+        FS := TFileStream.Create(SelectedDir + 'index_wav.html', fmCreate);
+        PP.ProcessPage(ServerRootDir + 'index_wav_export.shtml', FS, DummyEnvVars);
+        PP.Free;
+        FS.Free;
+        DummyEnvVars.Free;
+      end;
+      WAVFile.Free;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPlaySelStartExecute(Sender: TObject);
+begin
+  if not WAVDisplayer.SelectionIsEmpty then
+  begin
+    PlayingMode := pmtSelectionStart;
+    WAVDisplayer.PlayRange(WAVDisplayer.Selection.StartTime,
+      Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration, WAVDisplayer.Selection.StopTime));
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPlaySelEndExecute(Sender: TObject);
+begin
+  if not WAVDisplayer.SelectionIsEmpty then
+  begin
+    PlayingMode := pmtSelectionEnd;
+    WAVDisplayer.PlayRange(
+      Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
+      WAVDisplayer.Selection.StopTime);
+  end;
 end;
 
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
+

@@ -185,7 +185,9 @@ type
     FDynamicSelRangeOld : TRange;
     FDynamicEditTime : Integer;
 
-    FSelectedKaraokeRange : Integer; // Index of the range, 0 -> [StartTime,SubTime[0]]
+    FSelectedKaraokeIndex : Integer; // Index of the range, 0 -> [StartTime,SubTime[0]]
+    FSelectedKaraokeRange : TRange;
+
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -262,6 +264,8 @@ type
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
+    property KaraokeSelectedIndex : Integer read FSelectedKaraokeIndex;
+    property KaraokeSekectedRange : TRange read FSelectedKaraokeRange; 
 
   published
     { Published declarations }
@@ -297,10 +301,11 @@ type
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
-function KaraSplit(Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray) : Boolean;
-function KaraSplit2(Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray) : Boolean;
+procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray);
+procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray);
+procedure KaraSplit3(Text : WideString; var WordArray : WideStringArray);
 
 implementation
 
@@ -308,8 +313,8 @@ uses SysUtils, Types, MiscToolsUnit;
 
 // =============================================================================
 
-function KaraSplit(Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray) : Boolean;
+procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
   s : string;
@@ -353,8 +358,8 @@ begin
 end;
 
 // include tag in text
-function KaraSplit2(Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray) : Boolean;
+procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
   s : string;
@@ -397,6 +402,48 @@ begin
   end;
 end;
 
+// just separate tag from text
+procedure KaraSplit3(Text : WideString; var WordArray : WideStringArray);
+var
+  i, i1, i2 : integer;
+  s : string;
+begin
+  SetLength(WordArray, 0);
+  s := Text;
+  while (Length(s) > 0) do
+  begin
+    i1 := Pos('{\k', s);
+    i2 := Pos('{\K', s);
+    if (i1 = 0) or (i2 = 0) then
+      i := i1 + i2
+    else
+      i := Min(i1, i2);
+    if (i > 0) then
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := Copy(s, 1, i - 1);
+      Delete(s, 1, i - 1);
+      i := Pos('}', s);
+      if(i > 0) then
+      begin
+        SetLength(WordArray, Length(WordArray)+1);
+        WordArray[Length(WordArray)-1] := Copy(s, 1, i);
+        Delete(s, 1, i);
+      end
+      else
+      begin
+        WordArray[Length(WordArray)-1] := WordArray[Length(WordArray)-1] + s;
+        s := '';
+      end;
+    end
+    else
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := s;
+      s := '';
+    end;
+  end;
+end;
 // =============================================================================
 
 procedure TRange.AddSubTime(const NewTime : Integer);
@@ -841,6 +888,8 @@ begin
   TabStop := True;
   FSelectionOrigin := -1;
   FDynamicEditMode := demNone;
+  FSelectedKaraokeIndex := -1;
+  FSelectedKaraokeRange := nil;
 
   FOffscreen := TBitmap.Create;
   FOffscreenWAV := TBitmap.Create;
@@ -1368,7 +1417,13 @@ begin
       Exit;
     end;
 
-    FSelectedKaraokeRange := -1;    
+    if(FSelectedKaraokeIndex <> -1) then
+    begin
+      FSelectedKaraokeIndex := -1;
+      FSelectedKaraokeRange := nil;
+      if Assigned(FOnSelectedKaraokeRange) then
+        FOnSelectedKaraokeRange(Self, nil);
+    end;
 
     // Re-adjust mouse cursor position
     if (FDynamicEditMode = demStart) or (FDynamicEditMode = demStop) then
@@ -1450,7 +1505,13 @@ procedure TWAVDisplayer.MouseDownSSA(Button: TMouseButton;
 var NewCursorPos : Integer;
 begin
   NewCursorPos := PixelToTime(X) + FPositionMs;
-  FSelectedKaraokeRange := -1;
+  if(FSelectedKaraokeIndex <> -1) then
+  begin
+    FSelectedKaraokeIndex := -1;
+    FSelectedKaraokeRange := nil;
+    if Assigned(FOnSelectedKaraokeRange) then
+      FOnSelectedKaraokeRange(Self, nil);
+  end;
 
   if (ssLeft in Shift) then
   begin
@@ -1598,6 +1659,7 @@ begin
     end
     else
     begin
+      // Karaoke check
       CanvasHeight := GetWavCanvasHeight;
       y1 := CanvasHeight div 10;
       y2 := (CanvasHeight * 9) div 10;
@@ -1670,14 +1732,14 @@ begin
             begin
               FDynamicSelRange.SubTime[FDynamicEditTime] := NewCursorPos;
               Include(UpdateFlags, uvfRange);
-              if (FSelectedKaraokeRange <> -1) then
+              if (FSelectedKaraokeIndex <> -1) then
               begin
                 // Update selection according to selected karaoke range
-                FDynamicSelRange.GetSubTimeRangeAt(FSelectedKaraokeRange, FSelection);
+                FDynamicSelRange.GetSubTimeRangeAt(FSelectedKaraokeIndex, FSelection);
                 if Assigned(FOnSelectionChange) then
                   FOnSelectionChange(Self);
                 if Assigned(FOnKaraokeChange) then
-                  FOnSelectionChange(Self);
+                  FOnKaraokeChange(Self);
                 Include(UpdateFlags, uvfSelection);
               end;
             end;
@@ -2420,13 +2482,14 @@ begin
     if (MouseCursorPT.Y > y1) and (MouseCursorPT.Y < y2) and
        (System.Length(Range.SubTime) > 0) then
     begin
-      FSelectedKaraokeRange := Range.GetSubTimeRange(FCursorMs, FSelection);
+      FSelectedKaraokeIndex := Range.GetSubTimeRange(FCursorMs, FSelection);
       UpdateView([uvfSelection,uvfRange]);
       if Assigned(FOnSelectionChange) then
         FOnSelectionChange(Self);
       if Assigned(FOnSelectedKaraokeRange) then
         FOnSelectedKaraokeRange(Self, Range);
       FSelectedRange := nil;
+      FSelectedKaraokeRange := Range;
     end
     else
     begin

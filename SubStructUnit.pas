@@ -82,7 +82,9 @@ begin
       Result := IntToStr(i div 1024) + ' KB'
     else
       Result := IntToStr(i div 1024 div 1024) + ' MB';
-  end;
+  end
+  else if (Name = 'index-padded') then
+    Result := Format('%6.6d',[Index])
 end;
 
 //==============================================================================
