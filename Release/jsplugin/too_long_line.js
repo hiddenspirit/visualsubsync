@@ -184,7 +184,7 @@ VSSPlugin = {
   		previousLineDiff = LineDiff;
   	}
   	
-  	if(!found && fallBackPoint > 0 && fallBackPoint > j)
+  	if(!found && (fallBackPoint > 0) && (fallBackPoint < j))
   	{
   		// Use fallBackPoint
 	  	if(DebugMode)
@@ -204,7 +204,7 @@ VSSPlugin = {
   		if(DebugMode)
   			ScriptLog('<'+NewText+'>');
   		CurrentSub.Text = NewText;
-  	}
+  	} 	
   	
   	if(DebugMode)
 			ScriptLog('<===== too_long_lines.js : Leaving FixError.');
