@@ -56,6 +56,8 @@ type
   TRangeList = class
   private
     FList : TList;
+    FSearchStartAt : Integer;
+    FSearchIdx : Integer;
     function GetItem(const Index: Integer) : TRange;
     function GetCount : Integer;
 
@@ -67,13 +69,15 @@ type
     procedure AddAtEnd(Range : TRange);
     procedure FullSort;
     function FindInsertPos(Range : TRange) : Integer;
-    function FindInsertPosSS(Start,Stop : Integer) : Integer;
+    function FindInsertPosSS(Start,Stop : Integer) : Integer;  
     function GetRangeIdxAt(PosMs : Integer) : Integer;
     procedure Delete(Index : Integer);
     function IndexOf(Range : TRange) : Integer;
     procedure Move(CurIndex, NewIndex: Integer);
     procedure Clear;
-    property Count : Integer read GetCount;  
+    function FindFirstRangeAt(PosMs : Integer) : TRange;
+    function FindNextRange : TRange;
+    property Count : Integer read GetCount;
     property Ranges[const Index: Integer]: TRange read GetItem; default;
   end;
 
@@ -469,6 +473,42 @@ begin
     TRange(FList[i]).Free;
   end;
   FList.Clear;
+end;
+
+//------------------------------------------------------------------------------
+
+function TRangeList.FindFirstRangeAt(PosMs : Integer) : TRange;
+begin
+  FSearchStartAt := PosMs;
+  FSearchIdx := FindInsertPosSS(FSearchStartAt, -1);
+  Constrain(FSearchIdx, 0, FList.Count-1);
+  while (FSearchIdx >= 0) and
+        (TRange(FList[FSearchIdx]).StopTime > FSearchStartAt) do
+  begin
+    Dec(FSearchIdx);
+  end;
+  Result := FindNextRange;
+end;
+
+//------------------------------------------------------------------------------
+
+function TRangeList.FindNextRange : TRange;
+var Range : TRange;
+begin
+  Result := nil;
+  while (FSearchIdx < FList.Count) do
+  begin
+    Range := FList[FSearchIdx];
+    Inc(FSearchIdx);
+    if(Range.StartTime > FSearchStartAt) then
+      Exit
+    else if (Range.StartTime <= FSearchStartAt) and
+            (Range.StopTime >= FSearchStartAt) then
+    begin
+      Result := Range;
+      Exit;
+    end;
+  end;
 end;
 
 // =============================================================================
@@ -1119,7 +1159,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.MouseMove(Shift: TShiftState; X, Y: Integer);
-var NewCursorPos, CursorPosMs, RangeIdx, RangeSelWindow : Integer;
+var NewCursorPos, CursorPosMs, RangeSelWindow : Integer;
     ScrollDiff : Integer;
     DiffMuliplier : Integer;
     UpdateFlags : TUpdateViewFlags;
@@ -1237,10 +1277,9 @@ begin
       // Find a subtitle under the mouse
       Constrain(X, 0, Width);
       CursorPosMs := PixelToTime(X) + FPositionMs;
-      RangeIdx := FRangeList.GetRangeIdxAt(CursorPosMs);
-      if (RangeIdx <> -1) then
+      RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs);
+      while Assigned(RangeUnder) do
       begin
-        RangeUnder := FRangeList[RangeIdx];
         RangeSelWindow := PixelToTime(6);
         if (((RangeUnder.StopTime - RangeUnder.StartTime) / RangeSelWindow) > 2) then
         begin
@@ -1259,6 +1298,7 @@ begin
             Exit;
           end;
         end;
+        RangeUnder := FRangeList.FindNextRange;
       end;
     end;
     Cursor := crIBeam;
