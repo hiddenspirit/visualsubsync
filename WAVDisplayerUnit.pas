@@ -158,6 +158,7 @@ type
 
     FDynamicEditMode : TDynamicEditMode;
     FDynamicSelRange : TRange;
+    FDynamicEditTime : Integer;
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -988,13 +989,18 @@ begin
       if (ssLeft in Shift) then
       begin
         if not InRange(X, 0, Width) then Exit;
+        if(FDynamicEditMode <> demNone) then
+        begin
+          X := TimeToPixel(FDynamicEditTime - FPositionMs);
+          Windows.SetCursorPos(X + ClientOrigin.X,Y + ClientOrigin.Y);          
+        end;
         NewCursorPos := PixelToTime(X) + FPositionMs;
 
         if (ssShift in Shift) or (FDynamicEditMode <> demNone) then
         begin
           if Assigned(FDynamicSelRange) then
           begin
-            SetSelectedRangeEx(FDynamicSelRange,False);
+            SetSelectedRangeEx(FDynamicSelRange, False);
             Include(UpdateFlags, uvfSelection);
           end;
           
@@ -1172,10 +1178,16 @@ begin
   begin
     if ((CursorPosMs - Range.StartTime) < RangeSelWindow) and
        ((CursorPosMs - Range.StartTime) >= 0) then
-      NewDynamicEditMode := demStart
+    begin
+      NewDynamicEditMode := demStart;
+      FDynamicEditTime := Range.StartTime;
+    end
     else if ((Range.StopTime - CursorPosMs) < RangeSelWindow) and
             ((Range.StopTime - CursorPosMs) >= 0) then
+    begin
       NewDynamicEditMode := demEnd;
+      FDynamicEditTime := Range.StopTime;
+    end;
   end;
 
   if (NewDynamicEditMode <> demNone) then
@@ -1189,6 +1201,8 @@ begin
       FDynamicSelRange := nil;
   end;
 end;
+
+//------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.MouseMove(Shift: TShiftState; X, Y: Integer);
 var NewCursorPos, CursorPosMs : Integer;
