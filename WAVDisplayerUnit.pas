@@ -131,6 +131,7 @@ type
     FSelMode : TSelectionMode;
     FScrollOrigin : Integer;
     FSelectedRange : TRange;
+    FNeedToSortSelectedSub : Boolean;
 
     FScrollBar : TMiniScrollBar;
 
@@ -176,7 +177,8 @@ type
     procedure SetPlayCursorPos(NewPos : Integer);
     procedure SetAutoScroll(Value : Boolean);
     procedure SetVerticalScaling(Value : Integer);
-
+    function CheckSubtitleForDynamicSelection(Range : TRange; CursorPosMs : Integer) : Boolean;
+    
   protected
     procedure DblClick; override;
     procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
@@ -482,7 +484,7 @@ begin
   FSearchStartAt := PosMs;
   FSearchIdx := FindInsertPosSS(FSearchStartAt, -1);
   Constrain(FSearchIdx, 0, FList.Count-1);
-  while (FSearchIdx >= 0) and
+  while (FSearchIdx > 0) and
         (TRange(FList[FSearchIdx]).StopTime > FSearchStartAt) do
   begin
     Dec(FSearchIdx);
@@ -496,7 +498,7 @@ function TRangeList.FindNextRange : TRange;
 var Range : TRange;
 begin
   Result := nil;
-  while (FSearchIdx < FList.Count) do
+  while (FSearchIdx >= 0) and (FSearchIdx < FList.Count) do
   begin
     Range := FList[FSearchIdx];
     Inc(FSearchIdx);
@@ -530,6 +532,7 @@ begin
   FSelection := TRange.Create;
   FSelection.StartTime := 0;
   FSelection.StopTime := 0;
+  FNeedToSortSelectedSub := False;
 
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
@@ -962,9 +965,7 @@ begin
   begin
     UpdateView([uvfPageSize]);
   end;
-  //Canvas.Lock;
   Canvas.Draw(0, 0, FOffscreen);
-  //Canvas.Unlock;
 end;
 
 //------------------------------------------------------------------------------
@@ -1022,7 +1023,7 @@ begin
           end;
           if Assigned(FSelectedRange) then
           begin
-            // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+            FNeedToSortSelectedSub := True;
             FSelectedRange.StartTime := FSelection.StartTime;
             FSelectedRange.StopTime := FSelection.StopTime;
             Include(UpdateFlags, uvfRange);
@@ -1124,7 +1125,7 @@ begin
       begin
         if Assigned(FSelectedRange) then
         begin
-          // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+          FNeedToSortSelectedSub := True;
           FSelectedRange.StartTime := FSelection.StartTime;
           FSelectedRange.StopTime := FSelection.StopTime;
           Include(UpdateFlags, uvfRange);
@@ -1158,8 +1159,39 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TWAVDisplayer.CheckSubtitleForDynamicSelection(Range : TRange;
+  CursorPosMs : Integer) : Boolean;
+var RangeSelWindow : Integer;
+    NewDynamicEditMode : TDynamicEditMode;
+begin
+  RangeSelWindow := PixelToTime(6);
+  Result := False;
+  NewDynamicEditMode := demNone;
+
+  if (((Range.StopTime - Range.StartTime) / RangeSelWindow) > 2) then
+  begin
+    if ((CursorPosMs - Range.StartTime) < RangeSelWindow) and
+       ((CursorPosMs - Range.StartTime) >= 0) then
+      NewDynamicEditMode := demStart
+    else if ((Range.StopTime - CursorPosMs) < RangeSelWindow) and
+            ((Range.StopTime - CursorPosMs) >= 0) then
+      NewDynamicEditMode := demEnd;
+  end;
+
+  if (NewDynamicEditMode <> demNone) then
+  begin
+    Result := True;
+    Cursor := crHSplit;
+    FDynamicEditMode := NewDynamicEditMode;
+    if (Range <> FSelection) then
+      FDynamicSelRange := Range
+    else
+      FDynamicSelRange := nil;
+  end;
+end;
+
 procedure TWAVDisplayer.MouseMove(Shift: TShiftState; X, Y: Integer);
-var NewCursorPos, CursorPosMs, RangeSelWindow : Integer;
+var NewCursorPos, CursorPosMs : Integer;
     ScrollDiff : Integer;
     DiffMuliplier : Integer;
     UpdateFlags : TUpdateViewFlags;
@@ -1198,7 +1230,7 @@ begin
               end;
               if Assigned(FSelectedRange) then
               begin
-                // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+                FNeedToSortSelectedSub := True;
                 FSelectedRange.StartTime := FSelection.StartTime;
                 FSelectedRange.StopTime := FSelection.StopTime;
                 Include(UpdateFlags,uvfRange);
@@ -1239,7 +1271,7 @@ begin
               end;
               if Assigned(FSelectedRange) then
               begin
-                // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+                FNeedToSortSelectedSub := True;
                 FSelectedRange.StartTime := FSelection.StartTime;
                 FSelectedRange.StopTime := FSelection.StopTime;
                 Include(UpdateFlags,uvfRange);
@@ -1280,25 +1312,15 @@ begin
       RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs);
       while Assigned(RangeUnder) do
       begin
-        RangeSelWindow := PixelToTime(6);
-        if (((RangeUnder.StopTime - RangeUnder.StartTime) / RangeSelWindow) > 2) then
-        begin
-          if Abs(RangeUnder.StartTime - CursorPosMs) < RangeSelWindow then
-          begin
-            Cursor := crHSplit;
-            FDynamicEditMode := demStart;
-            FDynamicSelRange := RangeUnder;
-            Exit;
-          end
-          else if Abs(RangeUnder.StopTime - CursorPosMs) < RangeSelWindow then
-          begin
-            Cursor := crHSplit;
-            FDynamicEditMode := demEnd;
-            FDynamicSelRange := RangeUnder;
-            Exit;
-          end;
-        end;
+        if CheckSubtitleForDynamicSelection(RangeUnder, CursorPosMs) then
+          Exit;
         RangeUnder := FRangeList.FindNextRange;
+      end;
+      // Check selection
+      if (not SelectionIsEmpty) then
+      begin
+        if CheckSubtitleForDynamicSelection(FSelection, CursorPosMs) then
+          Exit;
       end;
     end;
     Cursor := crIBeam;
@@ -1314,6 +1336,13 @@ end;
 procedure TWAVDisplayer.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
+
+  // The selected sub has changed, we need to keep range list sorted
+  if FNeedToSortSelectedSub then
+  begin
+    FRangeList.FullSort; // TODO : re-sort only selected sub
+    FNeedToSortSelectedSub := False;
+  end;
 
   FSelectionOrigin := -1;
   FScrollOrigin := -1;
