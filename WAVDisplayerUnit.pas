@@ -163,6 +163,8 @@ type
     function GetPlayCursorPos : Integer;
     function AddRange(NewRange : TRange; UpdateDisplay : Boolean = True) : Integer;
     procedure ZoomRange(Range : TRange);
+    procedure ZoomRange2(Start, Stop : Integer);
+    procedure ZoomCenteredOn(Center, PageSize : Integer);
     procedure ZoomAll;
     procedure ZoomIn;
     procedure ZoomOut;
@@ -173,6 +175,8 @@ type
     procedure DeleteRangeAtIdx(Idx : Integer; UpdateDisplay : Boolean = True);    
 
     procedure PlayRange(Range : TRange; Loop : Boolean = False);
+    procedure PlayRange2(Start, Stop : Integer; Loop : Boolean = False);    
+    procedure UpdatePlayRange(Start, Stop : Integer);    
     procedure Stop;
     function SelectionIsEmpty : Boolean;
     procedure UpdateView(UpdateViewFlags : TUpdateViewFlags);
@@ -181,7 +185,7 @@ type
     procedure SetRenderer(Renderer : TRenderer);
     procedure ClearSelection;
     function GetWAVAverageBytePerSecond : Integer;
-
+    
   published
     { Published declarations }
     property OnCursorChange : TNotifyEvent read FOnCursorChange write FOnCursorChange;
@@ -477,7 +481,7 @@ begin
   StartPositionInPeaks := ((FPositionMs / 1000.0) * FWavFormat.nSamplesPerSec) / FSamplesPerPeak;
 
   x1_update := 0;
-  x2_update := Width-1;
+  x2_update := Width;
 
   if TryOptimize and (FOldPageSizeMs = FPageSizeMs) then
   begin
@@ -485,9 +489,9 @@ begin
     if (FPositionMs > FOldPositionMs) then
     begin
       x_optim := TimeToPixel(FPositionMs - FOldPositionMs);
-      x2_update := Width-1;
+      x2_update := Width;
       x1_update := x2_update - x_optim;
-      Constrain(x1_update, 0, Width-1);
+      Constrain(x1_update, 0, Width);
       if (x1_update <> 0) then
         BitBlt(ACanvas.Handle, 0, 0, x1_update, Height,
           ACanvas.Handle, x_optim, 0, SRCCOPY);
@@ -497,9 +501,9 @@ begin
       x_optim := TimeToPixel(FOldPositionMs - FPositionMs);
       x1_update := 0;
       x2_update := x_optim;
-      Constrain(x2_update, 0, Width-1);
-      if (x2_update <> Width-1) then
-        BitBlt(ACanvas.Handle, x_optim, 0, Width-1-x_optim, Height,
+      Constrain(x2_update, 0, Width);
+      if (x2_update <> Width) then
+        BitBlt(ACanvas.Handle, x_optim, 0, Width-x_optim, Height,
           ACanvas.Handle, 0, 0, SRCCOPY);
     end;
   end;
@@ -1260,6 +1264,30 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TWAVDisplayer.ZoomRange2(Start, Stop : Integer);
+var Range : TRange;
+begin
+  Range := TRange.Create;
+  Range.StartTime := Start;
+  Range.StopTime := Stop;
+  ZoomRange(Range);
+  Range.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.ZoomCenteredOn(Center, PageSize : Integer);
+var Range : TRange;
+begin
+  Range := TRange.Create;
+  Range.StartTime := Center - (PageSize div 2);
+  Range.StopTime :=  Center + (PageSize div 2);
+  ZoomRange(Range);
+  Range.Free;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TWAVDisplayer.ZoomAll;
 var Range : TRange;
 begin
@@ -1401,10 +1429,25 @@ end;
 
 procedure TWAVDisplayer.PlayRange(Range : TRange; Loop : Boolean);
 begin
+  PlayRange2(Range.StartTime,Range.StopTime, Loop);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.PlayRange2(Start, Stop : Integer; Loop : Boolean);
+begin
   FRenderer.OnStopPlaying := OnStopPlaying;
-  FRenderer.PlayRange(Range.StartTime,Range.StopTime, Loop);
+  FRenderer.PlayRange(Start,Stop, Loop);
   FUpdateCursorTimer.Enabled := True;
   FIsPlaying := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.UpdatePlayRange(Start, Stop : Integer);
+begin
+  if FIsPlaying then
+    FRenderer.UpdatePlayRange(Start,Stop);
 end;
 
 //------------------------------------------------------------------------------
