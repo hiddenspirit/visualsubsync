@@ -99,6 +99,7 @@ type
     FPositionMs : Integer;
     FPageSizeMs : Integer;
     FLengthMs : Integer;
+    FVerticalScaling : Integer; // 1..400%
 
     FOldPositionMs : Integer; // Used to optimize drawing
     FOldPageSizeMs : Integer;    
@@ -140,6 +141,7 @@ type
     procedure SetSelectedRangeEx(Value : TRange; UpdateDisplay : Boolean = True);
     procedure SetPlayCursorPos(NewPos : Integer);
     procedure SetAutoScroll(Value : Boolean);
+    procedure SetVerticalScaling(Value : Integer);
 
   protected
     { Protected declarations }
@@ -205,7 +207,8 @@ type
     property IsPlaying : Boolean read FIsPlaying;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;        
     property PopupMenu;
-    property AutoScrolling: Boolean read FAutoScrolling write SetAutoScroll;
+    property AutoScrolling : Boolean read FAutoScrolling write SetAutoScroll;
+    property VerticalScaling : Integer read FVerticalScaling write SetVerticalScaling;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -226,8 +229,16 @@ end;
 function TRangeFactory.CreateRangeSS(Start, Stop : Integer) : TRange;
 begin
   Result := CreateRange;
-  Result.StartTime := Start;
-  Result.StopTime := Stop;
+  if (Start <= Stop) then
+  begin
+    Result.StartTime := Start;
+    Result.StopTime := Stop;
+  end
+  else
+  begin
+    Result.StartTime := Stop;
+    Result.StopTime := Start;
+  end;
 end;
 
 // =============================================================================
@@ -438,6 +449,7 @@ begin
   FUpdateCursorTimer.OnTimer := OnUpdateCursor;
   FIsPlaying := False;
   FPeakDataLoaded := False;
+  FVerticalScaling := 100;
 end;
 
 //------------------------------------------------------------------------------
@@ -540,9 +552,9 @@ begin
       if FPeakTab[i].Min < PeakMin then
         PeakMin := FPeakTab[i].Min;
     end;
-    
-    y1 := (PeakMax * Height) div 65536;
-    y2 := (PeakMin * Height) div 65536;
+
+    y1 := Round((((PeakMax * FVerticalScaling) / 100) * Height) / 65536);
+    y2 := Round((((PeakMin * FVerticalScaling) / 100) * Height) / 65536);
 
     ACanvas.MoveTo(x,Middle-y1);
     ACanvas.LineTo(x,Middle-y2);
@@ -920,6 +932,7 @@ var Buffer8 : array of Shortint;
     i,j : Integer;
     PeakMax, PeakMin : SmallInt;
     PeakMaxMax, PeakMinMin : SmallInt;
+    MaxAbsoluteValue : Integer; 
     NormFactor : Single;
 begin
   if Assigned(FOnPeakFileCreation) then
@@ -965,8 +978,8 @@ begin
         FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
     end;
     // Calc. normalize factor
-    PeakMaxMax := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 127 / PeakMaxMax;
+    MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
+    NormFactor := 127 / MaxAbsoluteValue;
   end
   else if (WAVFile.BitsPerSample = 16) then
   begin
@@ -999,8 +1012,8 @@ begin
         FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
     end;
     // Calc. normalize factor
-    PeakMaxMax := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 32767 / PeakMaxMax;
+    MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
+    NormFactor := 32767 / MaxAbsoluteValue;
   end;
   // Normalize peak tab
   for i:=0 to FPeakTabSize-1 do
@@ -1610,7 +1623,7 @@ end;
 
 procedure TWAVDisplayer.SetAutoScroll(Value : Boolean);
 begin
-  if Value <> FAutoScrolling then
+  if (Value <> FAutoScrolling) then
   begin
     FAutoScrolling := Value;
     if Assigned(FOnAutoScrollChange) then
@@ -1662,6 +1675,18 @@ function TWAVDisplayer.GetWAVAverageBytePerSecond : Integer;
 begin
   Result := FWavFormat.nSamplesPerSec * FWavFormat.nChannels *
     (FWavFormat.wBitsPerSample div 8);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SetVerticalScaling(Value : Integer);
+begin
+  Constrain(Value, 1, 400);
+  if (Value <> FVerticalScaling) then
+  begin
+    FVerticalScaling := Value;
+    UpdateView([uvfPageSize]); // redraw all
+  end;
 end;
 
 //------------------------------------------------------------------------------
