@@ -459,6 +459,8 @@ begin
   WAVDisplayer.Free;
   SubRangeFactory.Free;
   MRUList.Free;
+  ConfigObject.Free;
+  CurrentProject.Free;
 end;
 
 //------------------------------------------------------------------------------
