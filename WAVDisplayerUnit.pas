@@ -120,6 +120,7 @@ type
   TDynamicEditMode = (demNone, demStart, demStop, demKaraoke);
 
   TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
+  TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
 
   TWAVDisplayer = class(TCustomPanel)
   private
@@ -165,6 +166,7 @@ type
     FOnStopPlaying : TNotifyEvent;
     FOnKaraokeChange : TNotifyEvent;
     FOnKaraokeChanged : TKaraokeTimeChangedEvent;
+    FOnSelectedKaraokeRange : TSelectedKaraokeRangeEvent;
 
     FRenderer : TRenderer;
     FUpdateCursorTimer : TTimer;
@@ -268,13 +270,14 @@ type
     property OnSelectionChange : TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnViewChange : TNotifyEvent read FOnViewChange write FOnViewChange;
     property OnSelectedRange : TNotifyEvent read FOnSelectedRange write FOnSelectedRange;
-    property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;    
+    property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;
     property OnPeakFileCreation : TPeakFileCreationEvent read FOnPeakFileCreation write FOnPeakFileCreation;
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
     property OnStartPlaying : TNotifyEvent read FOnStartPlaying write FOnStartPlaying;
     property OnStopPlaying : TNotifyEvent read FOnStopPlaying write FOnStopPlaying;
     property OnKaraokeChange : TNotifyEvent read FOnKaraokeChange write FOnKaraokeChange;
     property OnKaraokeChanged : TKaraokeTimeChangedEvent read FOnKaraokeChanged write FOnKaraokeChanged;
+    property OnSelectedKaraokeRange : TSelectedKaraokeRangeEvent read FOnSelectedKaraokeRange write FOnSelectedKaraokeRange;
 
     property Align;
     property Anchors;
@@ -295,6 +298,8 @@ type
 
 function CompareRanges(R1, R2: TRange): Integer;
 function KaraSplit(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray) : Boolean;
+function KaraSplit2(Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray) : Boolean;
 
 implementation
@@ -331,6 +336,51 @@ begin
         SetLength(TimeArray, Length(TimeArray)+1);
         TimeArray[Length(TimeArray)-1] := StrToIntDef(Copy(s, 4, i-4),0);
         Delete(s, 1, i);
+      end
+      else
+      begin
+        WordArray[Length(WordArray)-1] := WordArray[Length(WordArray)-1] + s;
+        s := '';
+      end;
+    end
+    else
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := s;
+      s := '';
+    end;
+  end;
+end;
+
+// include tag in text
+function KaraSplit2(Text : WideString; var WordArray : WideStringArray;
+  var TimeArray : IntegerArray) : Boolean;
+var
+  i, i1, i2 : integer;
+  s : string;
+begin
+  SetLength(WordArray, 0);
+  SetLength(TimeArray, 0);
+  s := Text;
+  while (Length(s) > 0) do
+  begin
+    i1 := Pos('{\k', s);
+    i2 := Pos('{\K', s);
+    if (i1 = 0) or (i2 = 0) then
+      i := i1 + i2
+    else
+      i := Min(i1, i2);
+    if (i > 0) then
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := Copy(s, 1, i + Length('{\k') - 1);
+      Delete(s, 1, i + Length('{\k') - 1);
+      i := Pos('}', s);
+      if(i > 0) then
+      begin
+        SetLength(TimeArray, Length(TimeArray)+1);
+        TimeArray[Length(TimeArray)-1] := StrToIntDef(Copy(s, 1, i-1),0);
+        Delete(s, 1, i-1);
       end
       else
       begin
@@ -1064,10 +1114,16 @@ begin
              (r.SubTime[j] <= r.StopTime) then
           begin
             x1 := TimeToPixel(r.SubTime[j] - FPositionMs);
-            if (FDynamicEditMode = demKaraoke) and (FDynamicEditTime = j) then
+            if (FDynamicEditMode = demKaraoke) and
+               (FDynamicEditTime = j) and
+               (FDynamicSelRange = r) then
+            begin
               ACanvas.Pen.Style := psSolid
+            end
             else
+            begin
               ACanvas.Pen.Style := psDot;
+            end;
             ACanvas.MoveTo(x1, y1);
             ACanvas.LineTo(x1, y2);
           end;
@@ -1804,10 +1860,11 @@ end;
 
 procedure TWAVDisplayer.CreatePeakTab(WAVFile : TWAVFile);
 var
-    Buffer8 : array of ShortInt;
+    Buffer8 : array of Byte;
     Buffer16 : array of SmallInt;
     i,j : Integer;
     PeakMax, PeakMin : SmallInt;
+    PeakMax8, PeakMin8 : Byte;
     PeakMaxMax, PeakMinMin : SmallInt;
     MaxAbsoluteValue : Integer; 
     NormFactor : Single;
@@ -1824,39 +1881,47 @@ begin
   FPeakTab := nil;
   SetLength(FPeakTab, FPeakTabSize);
 
+// WAV Data format  Maximum value    Minimum value	    Midpoint value
+//     8-bit PCM	  255 (0xFF)       0	                128 (0x80)
+//     16-bit PCM	  32,767 (0x7FFF)  - 32,768 (0x8000)	0
+
   if (WAVFile.BitsPerSample = 8) then
   begin
     // Allocate the small buffer
     SetLength(Buffer8, FSamplesPerPeak * WAVFile.Channels);
-    PeakMaxMax := -128;
-    PeakMinMin := 127;
+    PeakMaxMax := -32768;
+    PeakMinMin := 32767;
     for i:=0 to FPeakTabSize-1 do
     begin
       ZeroMemory(Buffer8, FSamplesPerPeak * SizeOf(Shortint) * WAVFile.Channels);
       WAVFile.Read(Buffer8, FSamplesPerPeak * SizeOf(Shortint) * WAVFile.Channels);
-      PeakMax := -128;
-      PeakMin := 127;
+      PeakMax8 := 0;
+      PeakMin8 := 255;
       for j:=0 to (FSamplesPerPeak * WAVFile.Channels)-1 do
       begin
-        if Buffer8[j] > PeakMax then
-          PeakMax := Buffer8[j];
-        if Buffer8[j] < PeakMin then
-          PeakMin := Buffer8[j];
+        if Buffer8[j] > PeakMax8 then
+          PeakMax8 := Buffer8[j];
+        if Buffer8[j] < PeakMin8 then
+          PeakMin8 := Buffer8[j];
       end;
-      FPeakTab[i].Max := PeakMax shl 16;
-      FPeakTab[i].Min := PeakMin shl 16;
+      // Convert 8 bits to 16 bits
+      PeakMax := ((PeakMax8 - 128) shl 8);
+      PeakMin := ((PeakMin8 - 128) shl 8);
 
-      if PeakMax > PeakMaxMax then
+      FPeakTab[i].Max := PeakMax;
+      FPeakTab[i].Min := PeakMin;
+
+      if (PeakMax > PeakMaxMax) then
         PeakMaxMax := PeakMax;
-      if PeakMin < PeakMinMin then
-        PeakMinMin := PeakMin;      
+      if (PeakMin < PeakMinMin) then
+        PeakMinMin := PeakMin;
 
       if Assigned(FOnPeakFileCreation) then
         FOnPeakFileCreation(Self, pfcevtProgress, (i*100) div Integer(FPeakTabSize));
     end;
     // Calc. normalize factor
     MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 127 / MaxAbsoluteValue;
+    NormFactor := 32767 / MaxAbsoluteValue;
   end
   else if (WAVFile.BitsPerSample = 16) then
   begin
@@ -2337,6 +2402,7 @@ var idx : Integer;
     CanvasHeight, y1, y2 : Integer;
 begin
   inherited;
+
   // Disable subtitle selection for SSA mode
   if (not FPeakDataLoaded) or (SelMode = smSSA) then
     Exit;
@@ -2358,6 +2424,8 @@ begin
       UpdateView([uvfSelection,uvfRange]);
       if Assigned(FOnSelectionChange) then
         FOnSelectionChange(Self);
+      if Assigned(FOnSelectedKaraokeRange) then
+        FOnSelectedKaraokeRange(Self, Range);
       FSelectedRange := nil;
     end
     else
