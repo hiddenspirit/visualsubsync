@@ -1,6 +1,6 @@
 object PreferencesForm: TPreferencesForm
-  Left = 229
-  Top = 214
+  Left = 204
+  Top = 215
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Preferences'
@@ -23,7 +23,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 353
     Height = 273
-    ActivePage = tsGeneral
+    ActivePage = tsHotKeys
     TabOrder = 0
     object tsGeneral: TTntTabSheet
       BorderWidth = 2
@@ -98,6 +98,14 @@ object PreferencesForm: TPreferencesForm
           ShowHint = True
           TabOrder = 0
           OnClick = chkAssociateExtClick
+        end
+        object chkSwapSubList: TCheckBox
+          Left = 16
+          Top = 40
+          Width = 113
+          Height = 17
+          Caption = 'Swap subtitles list'
+          TabOrder = 1
         end
       end
     end
@@ -184,6 +192,9 @@ object PreferencesForm: TPreferencesForm
         OnChange = EditErrorValueChange
         OnKeyPress = EditDigitOnlyKeyPress
       end
+    end
+    object tsHotKeys: TTntTabSheet
+      Caption = 'HotKeys'
     end
   end
   object bttOk: TTntButton

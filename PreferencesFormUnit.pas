@@ -81,6 +81,8 @@ type
     ErrorTooLongDisplayTimeValue : Integer;
     ErrorTooLongLineEnabled : Boolean;
     ErrorTooLongLineValue : Integer;
+    // Misc
+    SwapSubtitlesList : Boolean;
 
     constructor Create;
     procedure SetDefault;
@@ -110,6 +112,8 @@ type
     ShapeErrorColor: TShape;
     TntLabel4: TTntLabel;
     chkEnableCompression: TCheckBox;
+    chkSwapSubList: TCheckBox;
+    tsHotKeys: TTntTabSheet;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -147,6 +151,8 @@ end;
 
 procedure TConfigObject.SetDefault;
 begin
+  // Misc
+  SwapSubtitlesList := False;
   // Web server
   ServerPort := 80;
   EnableCompression := True;
@@ -164,6 +170,8 @@ end;
 
 procedure TConfigObject.SaveIni(IniFile : TIniFile);
 begin
+  // Misc
+  IniFile.WriteBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
   IniFile.WriteBool('WebServer','EnableCompression',EnableCompression);
@@ -185,6 +193,9 @@ end;
 
 procedure TConfigObject.LoadIni(IniFile : TIniFile);
 begin
+  // Misc
+  SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
+
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
   EnableCompression := IniFile.ReadBool('WebServer','EnableCompression',EnableCompression);
@@ -227,6 +238,9 @@ end;
 
 procedure TPreferencesForm.LoadConfig(Config : TConfigObject);
 begin
+  // Misc
+  chkSwapSubList.Checked := Config.SwapSubtitlesList;
+
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
   chkEnableCompression.Checked := Config.EnableCompression;
@@ -248,6 +262,9 @@ end;
 
 procedure TPreferencesForm.SaveConfig(Config : TConfigObject);
 begin
+  // Misc
+  Config.SwapSubtitlesList := chkSwapSubList.Checked;
+  
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;
