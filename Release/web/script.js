@@ -8,7 +8,8 @@ function Highlighter(word)
 {
 	var count = 0;
 	if(word!=null && word.length > 0)
-	{			
+	{
+		word = word.toLowerCase();
 	  var all = document.all ? document.all.tags('TD') : document.getElementsByTagName('TD');  
 	  for (var e = 0; e < all.length; e++)
 	  {
