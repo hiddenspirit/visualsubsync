@@ -44,6 +44,7 @@ type
 
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
   function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string = '.') : string;
+  function TimeMsToSSAString(TimeMS: Cardinal) : string;  
   function TimeStringToMs(Time : string) : Integer;
   function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;  
   function StringConvertPipeToCRLF(s : WideString) : WideString;
@@ -99,6 +100,21 @@ begin
   sec := ms mod 3600 mod 60;
   ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
   Result := Format('%2.2d:%2.2d:%2.2d%s%3.3d', [hh, min, sec, DecimalSeparator, ms])
+end;
+
+// -----------------------------------------------------------------------------
+
+function TimeMsToSSAString(TimeMS: Cardinal) : string;
+var
+  hh, min, sec, ms, cs: Cardinal;
+begin
+  ms := TimeMs div 1000;
+  hh := ms div 3600;
+  min := ms mod 3600 div 60;
+  sec := ms mod 3600 mod 60;
+  ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
+  cs := ms div 10;
+  Result := Format('%d:%2.2d:%2.2d%s%2.2d', [hh, min, sec, '.', cs])
 end;
 
 //------------------------------------------------------------------------------
