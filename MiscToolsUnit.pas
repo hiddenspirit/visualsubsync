@@ -67,6 +67,12 @@ type
   function Font2String(Font : TFont) : string;
   procedure String2Font(s : string; Font : TFont);
 
+type
+  TExplodeArray = array of String;
+  //function Explode(const cSeparator: String; const vString: String): TExplodeArray;
+  function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
+  function Implode(const cSeparator: String; const cArray: TExplodeArray): String;
+  
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils;
@@ -551,20 +557,57 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure String2Font(s : string; Font : TFont);
-var sl : TStringList;
+var ea : TExplodeArray;
 begin
-  sl := TStringList.Create;
-  sl.Delimiter := ',';
-  sl.DelimitedText := s;
-  if (sl.Count = 5) then
+  Explode(',', s, ea);
+  if (Length(ea) = 5) and Assigned(Font) then
   begin
-    Font.Name := sl[0];
-    Font.Size := StrToIntDef(sl[1], 12);
-    Font.Style := TFontStyles(Byte(StrToIntDef(sl[2], 0)));
-    Font.Charset := StrToIntDef(sl[3], 0);
-    Font.Color := StringToColor(sl[4]);
+    Font.Name := Trim(ea[0]);
+    Font.Size := StrToIntDef(Trim(ea[1]), 12);
+    Font.Style := TFontStyles(Byte(StrToIntDef(Trim(ea[2]), 0)));
+    Font.Charset := StrToIntDef(Trim(ea[3]), 0);
+    Font.Color := StringToColor(Trim(ea[4]));
   end;
-  sl.Free;
+end;
+
+// =============================================================================
+// Implode/Explode from http://www.swissdelphicenter.ch/en/showcode.php?id=1326
+// =============================================================================
+
+function Implode(const cSeparator: String; const cArray: TExplodeArray): String;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 0 to Length(cArray) -1 do begin
+    Result := Result + cSeparator + cArray[i];
+  end;
+  System.Delete(Result, 1, Length(cSeparator));
+end;
+
+// -----------------------------------------------------------------------------
+
+function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
+var
+  i: Integer;
+  S: String;
+begin
+  S := vString;
+  SetLength(WordArray, 0);
+  i := 0;
+  while Pos(cSeparator, S) > 0 do begin
+    SetLength(WordArray, Length(WordArray) +1);
+    WordArray[i] := Copy(S, 1, Pos(cSeparator, S) -1);
+    Inc(i);
+    S := Copy(S, Pos(cSeparator, S) + Length(cSeparator), Length(S));
+  end;
+  SetLength(WordArray, Length(WordArray) +1);
+  WordArray[i] := Copy(S, 1, Length(S));
+
+  if (Length(S) = 0) then
+    Result := 0
+  else
+    Result := Length(WordArray);
 end;
 
 // -----------------------------------------------------------------------------

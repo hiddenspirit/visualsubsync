@@ -12,6 +12,7 @@ object MainForm: TMainForm
   Font.Style = []
   Menu = TntMainMenu1
   OldCreateOrder = False
+  Position = poDefault
   OnActivate = TntFormActivate
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -130,16 +131,6 @@ object MainForm: TMainForm
     Caption = 'PanelBottom'
     FullRepaint = False
     TabOrder = 2
-    object MemoLinesCounter: TTntMemo
-      Left = 0
-      Top = 0
-      Width = 35
-      Height = 65
-      TabStop = False
-      Align = alLeft
-      ReadOnly = True
-      TabOrder = 0
-    end
     object MemoSubtitleText: TTntRichEdit
       Left = 35
       Top = 0
@@ -158,6 +149,17 @@ object MainForm: TMainForm
       OnChange = MemoSubtitleTextChange
       OnMouseDown = MemoSubtitleTextMouseDown
       OnSelectionChange = MemoSubtitleTextSelectionChange
+    end
+    object MemoLinesCounter: TTntRichEdit
+      Left = 0
+      Top = 0
+      Width = 35
+      Height = 65
+      TabStop = False
+      Align = alLeft
+      Alignment = taRightJustify
+      ReadOnly = True
+      TabOrder = 0
     end
   end
   object PanelMiddle: TPanel

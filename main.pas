@@ -104,7 +104,6 @@ type
     N5: TTntMenuItem;
     MenuItemPreferences: TTntMenuItem;
     PanelBottom: TPanel;
-    MemoLinesCounter: TTntMemo;
     MemoSubtitleText: TTntRichEdit;
     PanelMiddle: TPanel;
     bttPlay: TSpeedButton;
@@ -247,6 +246,7 @@ type
     ActionShowHideLogs: TTntAction;
     pmiFixError: TTntMenuItem;
     ActionFixErrorMain: TTntAction;
+    MemoLinesCounter: TTntRichEdit;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -666,7 +666,7 @@ begin
     NodeDataSize := SizeOf(TTreeData);
     TreeOptions.MiscOptions := TreeOptions.MiscOptions + [toReportMode];
     TreeOptions.SelectionOptions := TreeOptions.SelectionOptions +
-      [toFullRowSelect,toMultiSelect{,toExtendedFocus}];
+      [toFullRowSelect, toMultiSelect {,toExtendedFocus}];
     TreeOptions.PaintOptions := TreeOptions.PaintOptions -
       [toShowTreeLines,toShowRoot] +
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
@@ -1488,7 +1488,7 @@ begin
   WAVDisplayer.AutoScrolling := True;
   if WAVDisplayer.SelectionIsEmpty then
   begin
-    PlayingMode := pmtAll;  
+    PlayingMode := pmtAll;
     WAVDisplayer.PlayRange(WAVDisplayer.GetCursorPos,WAVDisplayer.Length,True)
   end
   else
@@ -1862,7 +1862,7 @@ var DelayInMs : Integer;
     NodeData : PTreeData;
 begin
   DelayForm := TDelayForm.Create(nil);
-  
+
   // Prefill the dialog
   if (vtvSubsList.SelectedCount > 1) then
   begin
@@ -2368,11 +2368,29 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ApplyFontSettings;
+var DC : HDC;
+    MLCanvas : TCanvas;
+    TxtWidth : Integer;
+    R : TRect;
 begin
   String2Font(ConfigObject.SubListFont, vtvSubsList.Font);
   vtvSubsList.Header.AutoFitColumns(False);
+
   String2Font(ConfigObject.SubTextFont, MemoSubtitleText.Font);
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
+
+  // Update line counter size so we have at least 3 digit
+  DC := GetDC(MemoLinesCounter.Handle);
+  if(DC <> 0) then
+  begin
+    MLCanvas := TCanvas.Create;
+    MLCanvas.Font.Assign(MemoLinesCounter.Font);
+    MLCanvas.Handle := DC;
+    TxtWidth := MLCanvas.TextWidth('000');
+    MLCanvas.Free;
+    ReleaseDC(0,DC);
+    MemoLinesCounter.Width := TxtWidth + 2*4;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -3164,8 +3182,9 @@ begin
     FreeAndNil(JPlugin);
   end;
   JSPEnum.Free;
-  vtvSubsList.Repaint;
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+  WAVDisplayer.Repaint;  
 end;
 
 //------------------------------------------------------------------------------
@@ -3263,6 +3282,7 @@ begin
   end;
   JSPEnum.Free;
   vtvSubsList.Repaint;
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
 end;
 
@@ -3291,5 +3311,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
 end.
 //------------------------------------------------------------------------------

@@ -184,7 +184,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 112
         Width = 417
-        Height = 65
+        Height = 73
         BevelOuter = bvLowered
         TabOrder = 1
         object TntLabel3: TTntLabel
@@ -204,7 +204,7 @@ object PreferencesForm: TPreferencesForm
           Left = 8
           Top = 21
           Width = 345
-          Height = 31
+          Height = 44
           AutoSize = False
           Caption = '-'
           WordWrap = True
@@ -236,15 +236,15 @@ object PreferencesForm: TPreferencesForm
           Left = 352
           Top = 8
           Width = 9
-          Height = 49
+          Height = 57
           Shape = bsRightLine
         end
       end
       object ListPluginParam: TVirtualStringTree
         Left = 0
-        Top = 183
+        Top = 192
         Width = 418
-        Height = 105
+        Height = 96
         Align = alBottom
         EditDelay = 40
         Header.AutoSizeIndex = 1

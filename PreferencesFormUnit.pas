@@ -400,8 +400,8 @@ begin
   EnableBackup := True;
   AutoBackupEvery := 0;
   // Fonts
-  SubListFont := 'Arial, 8, 0, 0, clWindowText';
-  SubTextFont := 'Arial, 10, 1, 0, clWindowText';
+  SubListFont := 'Arial,8,0,0,clWindowText';
+  SubTextFont := 'Arial,10,1,0,clWindowText';
 end;
 
 //------------------------------------------------------------------------------
