@@ -1,1 +1,1 @@
-rar a -r -ed -ag archives\vss -xarchives -xRedist -xBackup -x*.dcu -x*.ddp -x*.~* -x*.exe -x*.dll -x*.bmp -x*.png -x*.psd -x*.bak -x*.map -x*.rar -x*.o -x*.lib -x*.pdb -x*.ncb -x*.opt -x*.plg -x*.pch -x*.obj -x*.exp -x*.idb -x*.ilk -x*.aqt
+rar a -r -ed -ag archives\vss -xarchives -xRedist -xBackup -x*.dcu -x*.ddp -x*.~* -x*.exe -x*.dll -x*.bmp -x*.png -x*.psd -x*.bak -x*.map -x*.rar -x*.o -x*.lib -x*.pdb -x*.ncb -x*.opt -x*.plg -x*.pch -x*.obj -x*.exp -x*.idb -x*.ilk -x*.aqt -x*.dsm
