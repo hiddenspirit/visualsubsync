@@ -23,7 +23,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 353
     Height = 273
-    ActivePage = tsErrorChecking
+    ActivePage = tsGeneral
     TabOrder = 0
     object tsGeneral: TTntTabSheet
       BorderWidth = 2
@@ -48,16 +48,28 @@ object PreferencesForm: TPreferencesForm
           Width = 89
           Height = 21
           TabOrder = 0
-          Text = '0'
+          Text = '1'
           OnKeyPress = EditDigitOnlyKeyPress
         end
         object UpDownServerPort: TTntUpDown
           Left = 137
           Top = 20
-          Width = 15
+          Width = 16
           Height = 21
           Associate = EditServerPort
+          Min = 1
+          Max = 32767
+          Position = 1
           TabOrder = 1
+          Thousands = False
+        end
+        object chkEnableCompression: TCheckBox
+          Left = 208
+          Top = 24
+          Width = 121
+          Height = 17
+          Caption = 'Enable compression'
+          TabOrder = 2
         end
       end
       object GroupBox1: TGroupBox

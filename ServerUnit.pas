@@ -32,6 +32,7 @@ type
     FRunning : Boolean;
     FListenSock : TSocket;
     FPort : Integer;
+    FEnableCompression : Boolean;
   protected
     procedure Execute; override;
   public
@@ -39,6 +40,8 @@ type
     destructor Destroy; override;
     procedure Start;
     procedure Stop;
+  published
+    property EnableCompression : Boolean read FEnableCompression write FEnableCompression;
   end;
 
   THTTPRequestThreadProcessor = class(TThread)
@@ -51,6 +54,8 @@ type
     FFileToSend : string;
     FTokenizer : TStringList;
     FEnvVars : THashedStringList;
+    FCanUseGzip : Boolean;
+    FUseGzip : Boolean;
 
     function ReadLine : string;
     procedure ReceiveRequest;
@@ -70,6 +75,7 @@ type
     ClientSock : TSocket;
     ClientAddrIn : TSockAddrIn;
     RootDir : string;
+    EnableCompression : Boolean;
 
     constructor Create;
     destructor Destroy; override;    
@@ -89,7 +95,7 @@ const
   MIMETable: array[0..11] of MIME_REC = (
     (ext: '.html'; mime: 'text/html'),
     (ext: '.htm'; mime: 'text/html'),
-    (ext: '.shtml'; mime: 'text/html'),    
+    (ext: '.shtml'; mime: 'text/html'),
     (ext: '.css'; mime: 'text/css'),
     (ext: '.xml'; mime: 'text/xml'),
     (ext: '.txt'; mime: 'text/plain'),
@@ -104,7 +110,7 @@ const
 implementation
 
 uses SysUtils, StrUtils, PageProcessorUnit, GlobalUnit, WAVFileUnit,
-  MiscToolsUnit, SuggestionFormUnit;
+  MiscToolsUnit, SuggestionFormUnit, ZLib;
 
 // =============================================================================
 
@@ -202,6 +208,7 @@ begin
     RequestThreadProcessor.ClientSock := ClientSock;
     RequestThreadProcessor.ClientAddrIn := ClientAddrIn;
     RequestThreadProcessor.RootDir := FRootDir;
+    RequestThreadProcessor.EnableCompression := FEnableCompression;
     RequestThreadProcessor.Resume;
   end;
 end;
@@ -244,6 +251,8 @@ begin
   FAnswerStream.Clear;
   FEnvVars.Clear;
   FPostVars.Clear;
+  FUseGzip := False;
+  FCanUseGzip := False;
 
   ReceiveRequest;
   ProcessRequestHeaderFields;
@@ -305,6 +314,33 @@ end;
 
 //------------------------------------------------------------------------------
 
+function MoreDataOnSocket(Socket : TSocket) : Boolean;
+var ReadFDS : TFDSet;
+    TimeOut : TTimeVal;
+    SelectRet : Integer;
+begin
+  FD_ZERO(ReadFDS);
+  FD_SET(Socket,ReadFDS);
+  TimeOut.tv_sec := 0;
+  TimeOut.tv_usec := 0;
+  SelectRet := select(1,@ReadFDS,nil,nil,@TimeOut);
+  Result := (SelectRet > 0) and FD_ISSET(Socket,ReadFDS);
+end;
+
+//----------
+
+procedure FlushSocket(Socket : TSocket);
+var c : Char;
+begin
+  while MoreDataOnSocket(Socket) do
+  begin
+    recv(Socket, c, 1, 0);
+  end;
+end;
+
+//----------
+
+
 procedure THTTPRequestThreadProcessor.ProcessRequest;
 var Line : string;
     Error : Boolean;
@@ -326,12 +362,14 @@ begin
         if (FTokenizer[0] = 'GET') then
         begin
           Error := False;
+          FlushSocket(ClientSock); // should not be usefull but we never know :D
           ProcessGet(FTokenizer[1]);
         end
         else if (FTokenizer[0] = 'POST') then
         begin
           Error := False;
           ProcessPost(FTokenizer[1]);
+          FlushSocket(ClientSock); // IE fix :p
           ProcessGet(FTokenizer[1]);
         end;
       end;
@@ -421,6 +459,10 @@ begin
     end;
   end;
 
+  // 'Accept-Encoding: gzip, deflate';
+  FCanUseGzip := EnableCompression and
+    (Pos('deflate',FRequestHeader.Values['accept-encoding']) <> 0);
+
   Filename := RootDir + StringReplace(Path,'/','\',[rfReplaceAll]);
 
   i := Pos('#', Filename);
@@ -477,15 +519,15 @@ begin
     begin
       Start := GetTickCount;
       ProcessDynamicPage(Filename);
-      {      
+      {
       for i:=0 to FEnvVars.Count-1 do
       begin
         s := FEnvVars.Names[i] + ' = ' + FEnvVars.ValueFromIndex[i] + #10#13;
-        FStreamToSend.Write(s[1], Length(s));
+        FAnswerStream.Write(s[1], Length(s));
       end;
       Stop := GetTickCount;
       s := 'Generated in ' + IntToStr(Stop-Start) + ' ms.';
-      FStreamToSend.Write(s[1], Length(s));
+      FAnswerStream.Write(s[1], Length(s));
       }
     end
     else
@@ -569,12 +611,18 @@ begin
   else
     MessageSize := FAnswerStream.Size;
 
-  // Send answer header
+  // Send answer header  
+  if (FUseGzip) then
+  begin
+    FAnswerHeader.Insert(1, 'Content-encoding: deflate');
+    FAnswerHeader.Insert(2, 'Vary: Accept-Encoding');
+  end;
+
   FAnswerHeader.Insert(1, 'Content-Length: ' + IntToStr(MessageSize));
   FAnswerHeader.Insert(1, 'Server: VisualSubSync/'+ g_ApplicationVersion.VersionString);
-  FAnswerHeader.Insert(1, 'Connection: Keep-Alive');
+  //FAnswerHeader.Insert(1, 'Connection: Keep-Alive');
   //FAnswerHeader.Insert(1, 'Connection: close');
-  //FAnswerHeader.Insert(1, 'Pragma: no-cache');  
+  //FAnswerHeader.Insert(1, 'Pragma: no-cache');
   FAnswerHeader.Insert(1, 'Date: ' + GetDateString);
 
   s := FAnswerHeader.Text;
@@ -610,11 +658,24 @@ end;
 
 procedure THTTPRequestThreadProcessor.ProcessDynamicPage(Filename : string);
 var PP : TPageProcessor;
+    CStream : TCompressionStream;
 begin
   PP := TPageProcessor.Create;
-  g_WebRWSynchro.BeginRead;
-  PP.ProcessPage(Filename, FAnswerStream, FEnvVars);
-  g_WebRWSynchro.EndRead;
+  if (FCanUseGzip) then
+  begin
+    FUseGzip := True;
+    CStream := TCompressionStream.Create(clDefault,FAnswerStream);
+    g_WebRWSynchro.BeginRead;
+    PP.ProcessPage(Filename, CStream, FEnvVars);
+    g_WebRWSynchro.EndRead;
+    CStream.Free;
+  end
+  else
+  begin
+    g_WebRWSynchro.BeginRead;
+    PP.ProcessPage(Filename, FAnswerStream, FEnvVars);
+    g_WebRWSynchro.EndRead;
+  end;
   PP.Free;
 end;
 
@@ -641,7 +702,7 @@ var i, ContentLen : Integer;
     Start, Stop : Integer;
 begin
   // 'Content-Type' must be application/x-www-form-urlencoded
-  if FRequestHeader.Values['content-type'] = 'application/x-www-form-urlencoded' then
+  if (FRequestHeader.Values['content-type'] = 'application/x-www-form-urlencoded') then
   begin
     ContentLen := StrToIntDef(FRequestHeader.Values['content-length'],0);
     if (ContentLen > 0) then
@@ -663,7 +724,7 @@ begin
   if (FPostVars.Values['vss-command'] = 'SUGGESTION') then
   begin
     ParseTimeHexa(FPostVars.Values['time-index'],Start,Stop);
-    SuggestionForm.AddSuggestion(nil, Start, Stop, FPostVars.Values['text']);
+    SuggestionForm.AddSuggestion(nil, Start, Stop, UTF8Decode(FPostVars.Values['text']));
     FEnvVars.Values['post-result'] := 'Suggestion sent successfully.';
   end
   else

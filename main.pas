@@ -2089,6 +2089,7 @@ begin
     if not Assigned(Server) then
     begin
       Server := THTTPServer.Create(ServerRootDir,ConfigObject.ServerPort);
+      Server.EnableCompression := ConfigObject.EnableCompression;
       Server.Start;
     end;
     MenuItemStartWebServer.Checked := True;
@@ -2119,6 +2120,8 @@ begin
   if (PreferencesForm.ShowModal = mrOk) then
   begin
     PreferencesForm.SaveConfig(ConfigObject);
+    if Assigned(Server) then
+      Server.EnableCompression := ConfigObject.EnableCompression;
   end;
 end;
 

@@ -72,6 +72,7 @@ type
   TConfigObject = class
     // Web server
     ServerPort : Integer;
+    EnableCompression : Boolean;
     // Error
     ErrorOverlappingEnabled : Boolean;
     ErrorTooShortDisplayTimeEnabled : Boolean;
@@ -108,6 +109,7 @@ type
     chkAssociateExt: TCheckBox;
     ShapeErrorColor: TShape;
     TntLabel4: TTntLabel;
+    chkEnableCompression: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -147,6 +149,7 @@ procedure TConfigObject.SetDefault;
 begin
   // Web server
   ServerPort := 80;
+  EnableCompression := True;
   // Error
   ErrorOverlappingEnabled := True;
   ErrorTooShortDisplayTimeEnabled := True;
@@ -163,6 +166,7 @@ procedure TConfigObject.SaveIni(IniFile : TIniFile);
 begin
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
+  IniFile.WriteBool('WebServer','EnableCompression',EnableCompression);
 
   // Error
   IniFile.WriteBool('ErrorChecking','OverlappingEnabled',ErrorOverlappingEnabled);
@@ -183,6 +187,7 @@ procedure TConfigObject.LoadIni(IniFile : TIniFile);
 begin
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
+  EnableCompression := IniFile.ReadBool('WebServer','EnableCompression',EnableCompression);
 
   // Error
   ErrorOverlappingEnabled := IniFile.ReadBool('ErrorChecking','OverlappingEnabled',ErrorOverlappingEnabled);
@@ -224,6 +229,7 @@ procedure TPreferencesForm.LoadConfig(Config : TConfigObject);
 begin
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
+  chkEnableCompression.Checked := Config.EnableCompression;
 
   // Error
   ListErrorChecking.Checked[0] := Config.ErrorOverlappingEnabled;
@@ -244,6 +250,7 @@ procedure TPreferencesForm.SaveConfig(Config : TConfigObject);
 begin
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
+  Config.EnableCompression := chkEnableCompression.Checked;
 
   // Error
   Config.ErrorOverlappingEnabled := ListErrorChecking.Checked[0];
