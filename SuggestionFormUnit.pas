@@ -52,9 +52,10 @@ type
     procedure vtvSuggestionsLstDblClick(Sender: TObject);
   private
     { Private declarations }
-    CriticalSection : TRtlCriticalSection;
-    BoldFont : HFONT;
-    NormalFont : HFONT;
+    FCriticalSection : TRtlCriticalSection;
+    FBoldFont : HFONT;
+    FNormalFont : HFONT;
+    
     procedure CreateFont;
     function CalculateNodeHeight : Integer;
   public
@@ -95,7 +96,7 @@ begin
   end;
   CreateFont;
   vtvSuggestionsLst.DefaultNodeHeight := CalculateNodeHeight;
-  InitializeCriticalSection(CriticalSection);
+  InitializeCriticalSection(FCriticalSection);
 end;
 
 // -----------------------------------------------------------------------------
@@ -103,28 +104,29 @@ end;
 procedure TSuggestionForm.CreateFont;
 var FontLOG : LOGFONT;
 begin
-  if BoldFont <> 0 then
-    DeleteObject(BoldFont);
-  if NormalFont <> 0 then
-    DeleteObject(NormalFont);
+  if (FBoldFont <> 0) then
+    DeleteObject(FBoldFont);
+  if (FNormalFont <> 0) then
+    DeleteObject(FNormalFont);
   ZeroMemory(@FontLOG, SizeOf(FontLOG));
   StrCopy(FontLOG.lfFaceName,PChar(vtvSuggestionsLst.Canvas.Font.Name));
   FontLOG.lfHeight := vtvSuggestionsLst.Canvas.Font.Height;
   FontLOG.lfCharSet := vtvSuggestionsLst.Canvas.Font.Charset;
   FontLOG.lfWeight := FW_BOLD;
-  BoldFont := CreateFontIndirect(FontLOG);
+  FBoldFont := CreateFontIndirect(FontLOG);
   FontLOG.lfWeight := FW_NORMAL;
-  NormalFont := CreateFontIndirect(FontLOG);
+  FNormalFont := CreateFontIndirect(FontLOG);
 end;
 
 // -----------------------------------------------------------------------------
 
 procedure TSuggestionForm.FormDestroy(Sender: TObject);
 begin
-  if BoldFont <> 0 then
-    DeleteObject(BoldFont);
-  if NormalFont <> 0 then
-    DeleteObject(NormalFont);
+  if (FBoldFont <> 0) then
+    DeleteObject(FBoldFont);
+  if (FNormalFont <> 0) then
+    DeleteObject(FNormalFont);
+  DeleteCriticalSection(FCriticalSection);
 end;
 
 //------------------------------------------------------------------------------
@@ -137,10 +139,10 @@ begin
   Result := 0;
   DC := vtvSuggestionsLst.Canvas.Handle;
   Result := Result + NodeTopMargin;
-  OldFont := SelectObject(DC, BoldFont);
+  OldFont := SelectObject(DC, FBoldFont);
   GetTextExtentPoint32W(DC, 'W', 1, xysize);
   Result := Round(Result + (xysize.cy * NodeInterline));
-  SelectObject(DC, NormalFont);
+  SelectObject(DC, FNormalFont);
   GetTextExtentPoint32W(DC, 'W', 1, xysize);
   Result := Round(Result + (xysize.cy * NodeInterline));
   SelectObject(DC, OldFont);
@@ -174,7 +176,7 @@ begin
     SetTextColor(DC, ColorToRGB(clWindowText));
   SetBKMode(DC, TRANSPARENT);
 
-  OldFont := SelectObject(DC, BoldFont);
+  OldFont := SelectObject(DC, FBoldFont);
 
   if Assigned(pSuggestionData.Range) then
   begin
@@ -190,7 +192,7 @@ begin
   GetTextExtentPoint32W(DC, PWideChar(Msg), Length(Msg), xysize);
   y := Round(y + (xysize.cy * NodeInterline));
 
-  SelectObject(DC, NormalFont);
+  SelectObject(DC, FNormalFont);
   Msg := StringConvertCRLFToPipe(pSuggestionData.Text);
   TextOutW(DC, x, y, PWideChar(Msg), Length(Msg));
 
@@ -221,7 +223,7 @@ procedure TSuggestionForm.AddSuggestion(Range : TSubtitleRange;
 var Node : PVirtualNode;
     pSuggestion : PSuggestionTreeData;
 begin
-  EnterCriticalSection(CriticalSection);
+  EnterCriticalSection(FCriticalSection);
   Node := vtvSuggestionsLst.AddChild(nil);
   pSuggestion := vtvSuggestionsLst.GetNodeData(Node);
   pSuggestion.StartTime := Start;
@@ -229,7 +231,7 @@ begin
   pSuggestion.Range := Range;
   pSuggestion.Text := Text;
   pSuggestion.AddTime := GetTickCount;
-  LeaveCriticalSection(CriticalSection);
+  LeaveCriticalSection(FCriticalSection);
   vtvSuggestionsLst.Repaint;  
 end;
 
@@ -242,7 +244,7 @@ var Node : PVirtualNode;
     i : integer;
 begin
   DeleteLst := TList.Create;
-  EnterCriticalSection(CriticalSection);
+  EnterCriticalSection(FCriticalSection);
   Node := vtvSuggestionsLst.GetFirst;
   while Assigned(Node) do
   begin
@@ -255,7 +257,7 @@ begin
   begin
     vtvSuggestionsLst.DeleteNode(DeleteLst[i]);
   end;
-  LeaveCriticalSection(CriticalSection);
+  LeaveCriticalSection(FCriticalSection);
   vtvSuggestionsLst.FocusedNode := nil;
   vtvSuggestionsLst.Repaint;
   MemoSuggPreview.Text := '';
@@ -278,9 +280,9 @@ end;
 
 procedure TSuggestionForm.Clear;
 begin
-  EnterCriticalSection(CriticalSection);
+  EnterCriticalSection(FCriticalSection);
   vtvSuggestionsLst.Clear;
-  LeaveCriticalSection(CriticalSection);
+  LeaveCriticalSection(FCriticalSection);
 end;
 
 // -----------------------------------------------------------------------------
