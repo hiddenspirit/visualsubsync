@@ -202,6 +202,7 @@ begin
   begin
     SizeOfClientAddrIn := SizeOf(ClientAddrIn);
     ClientSock := accept(FListenSock, @ClientAddrIn, @SizeOfClientAddrIn);
+    OutputDebugString('THTTPServer.Execute : new connection');
     if (ClientSock = INVALID_SOCKET) then
       Continue;
     RequestThreadProcessor := THTTPRequestThreadProcessor.Create();
@@ -259,6 +260,7 @@ begin
   ProcessRequest;
   SendAnswer;
 
+  OutputDebugString('THTTPRequestThreadProcessor.Execute : Closing socket.');
   closesocket(ClientSock);
 end;
 
@@ -266,17 +268,21 @@ end;
 
 function THTTPRequestThreadProcessor.ReadLine : string;
 var c : Char;
+    FinishedNormally : Boolean;
 begin
   Result := '';
-  while recv(ClientSock, c, 1, 0) > 0 do
+  FinishedNormally := False;
+  while (recv(ClientSock, c, 1, 0) > 0) do
   begin
     if (c = CR) then
     begin
-      recv(ClientSock, c, 1, 0); // read the LF
+      FinishedNormally := (recv(ClientSock, c, 1, 0) > 0); // read the LF
       Break;
     end;
     Result := Result + c;
   end;
+  if not FinishedNormally then
+    Result := '';
 end;
 
 //------------------------------------------------------------------------------
@@ -284,6 +290,7 @@ end;
 procedure THTTPRequestThreadProcessor.ReceiveRequest;
 var Line : string;
 begin
+  OutputDebugString('THTTPRequestThreadProcessor.ReceiveRequest');
   while True do
   begin
     Line := ReadLine;
@@ -331,15 +338,16 @@ end;
 
 procedure FlushSocket(Socket : TSocket);
 var c : Char;
+    RecvOK : Boolean;
 begin
-  while MoreDataOnSocket(Socket) do
+  RecvOK := True;
+  while MoreDataOnSocket(Socket) and RecvOK do
   begin
-    recv(Socket, c, 1, 0);
+    RecvOK := (recv(Socket, c, 1, 0) > 0);
   end;
 end;
 
 //----------
-
 
 procedure THTTPRequestThreadProcessor.ProcessRequest;
 var Line : string;
@@ -569,14 +577,17 @@ procedure THTTPRequestThreadProcessor.SendFile(Filename : string);
 var F : THandle;
     Buffer : array[0..4095] of Char;
     BytesRead : Cardinal;
+    SendOk : Boolean;
 begin
+  OutputDebugString(PAnsiChar('THTTPRequestThreadProcessor.SendFile' + Filename));
+  SendOk := True;
   F := CreateFile(PAnsiChar(Filename), GENERIC_READ, FILE_SHARE_READ, nil,
     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (F <> INVALID_HANDLE_VALUE) then
   begin
-    while ReadFile(F, Buffer, 4096, BytesRead, nil) and (BytesRead > 0) do
+    while ReadFile(F, Buffer, 4096, BytesRead, nil) and (BytesRead > 0) and SendOk do
     begin
-      send(ClientSock, Buffer, BytesRead, 0);
+      SendOk := (send(ClientSock, Buffer, BytesRead, 0) > 0);
     end;
     CloseHandle(F);
   end;
@@ -684,13 +695,16 @@ end;
 procedure THTTPRequestThreadProcessor.SendStream(Stream : TStream);
 var Buffer : array[0..4095] of Char;
     BytesRead : Cardinal;
+    SendOk : Boolean;
 begin
+  OutputDebugString(PAnsiChar('THTTPRequestThreadProcessor.SendStream'));
   Stream.Seek(0,0);
   BytesRead := 4096;
-  while (BytesRead = 4096) do
+  SendOk := True;
+  while (BytesRead = 4096) and SendOk do
   begin
     BytesRead := Stream.Read(Buffer, 4096);
-    send(ClientSock, Buffer, BytesRead, 0);
+    SendOk := (send(ClientSock, Buffer, BytesRead, 0) > 0);
   end;
 end;
 
@@ -739,6 +753,7 @@ var s, StrStart, StrStop : string;
     Start, Stop : Integer;
     WAVFile : TWAVFile;
 begin
+  OutputDebugString('THTTPRequestThreadProcessor.ProcessVirtualWav');
   Result := False;
   s := Copy(VirtualPath, 6, Length(VirtualPath)-9);
   i := Pos('-',s);
