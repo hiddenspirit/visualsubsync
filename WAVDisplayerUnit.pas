@@ -19,6 +19,19 @@
 //  http://www.gnu.org/copyleft/gpl.html
 // -----------------------------------------------------------------------------
 
+{
+  Updates:
+
+  13 aug 2004 (committed by Kaiousama)
+
+  + Two SelectionModes : Cooledit-like (default) and SSA-like
+  + MouseWheel performs Time scrolling
+  + Shift_Wheel performs Vertical zoom the waveform
+  + Ctrl_Wheel performs Horizontal zoom the waveform
+  * PlayRange2() overloaded with PlayRange
+  * ZoomRange2() overloaded with ZoomRange
+}
+
 unit WAVDisplayerUnit;
 
 interface
@@ -74,6 +87,8 @@ type
 
   // ----------
 
+  TSelectionMode = (smCoolEdit, smSSA);
+
   TUpdateViewFlag = (uvfCursor, uvfSelection, uvfRange, uvfPosition, uvfPageSize, uvfPlayCursor);
   TUpdateViewFlags = set of TUpdateViewFlag;
 
@@ -106,6 +121,7 @@ type
 
     FSelection : TRange;
     FSelectionOrigin : Integer;
+    FSelMode : TSelectionMode;
     FScrollOrigin : Integer;
     FSelectedRange : TRange;
 
@@ -144,18 +160,17 @@ type
     procedure SetVerticalScaling(Value : Integer);
 
   protected
-    { Protected declarations }
-    procedure WMEraseBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
-    procedure Paint; override;
+    procedure DblClick; override;
+    procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
+    function DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean; override;
+    function DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
-    function DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean; override;
-    function DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean; override;
-    procedure DblClick; override;
+    procedure WM_EraseBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure Paint; override;
 
   public
-    { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function LoadWAV(filename : string) : Boolean;
@@ -164,8 +179,8 @@ type
     procedure SetCursorPos(NewPos : Integer);
     function GetPlayCursorPos : Integer;
     function AddRange(NewRange : TRange; UpdateDisplay : Boolean = True) : Integer;
-    procedure ZoomRange(Range : TRange);
-    procedure ZoomRange2(Start, Stop : Integer);
+    procedure ZoomRange(Range : TRange); overload;
+    procedure ZoomRange(Start, Stop : Integer); overload;
     procedure ZoomCenteredOn(Center, PageSize : Integer);
     procedure ZoomAll;
     procedure ZoomIn;
@@ -176,8 +191,8 @@ type
     procedure DeleteRangeAt(Pos : Integer; UpdateDisplay : Boolean = True);
     procedure DeleteRangeAtIdx(Idx : Integer; UpdateDisplay : Boolean = True);    
 
-    procedure PlayRange(Range : TRange; Loop : Boolean = False);
-    procedure PlayRange2(Start, Stop : Integer; Loop : Boolean = False);    
+    procedure PlayRange(Range : TRange; Loop : Boolean = False); overload;
+    procedure PlayRange(Start, Stop : Integer; Loop : Boolean = False); overload;
     procedure UpdatePlayRange(Start, Stop : Integer);    
     procedure Stop;
     function SelectionIsEmpty : Boolean;
@@ -198,16 +213,17 @@ type
     property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;    
     property OnPeakFileCreation : TPeakFileCreationEvent read FOnPeakFileCreation write FOnPeakFileCreation;
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
-    property ScrollBar : TMiniScrollBar read FScrollBar write SetScrollBar;
-    property Selection : TRange read FSelection;
-    property PageSize : Integer read FPageSizeMs;
-    property Position : Integer read FPositionMs;    
-    property Length : Integer read FLengthMs;
-    property RangeList : TRangeList read FRangeList;
-    property IsPlaying : Boolean read FIsPlaying;
-    property SelectedRange : TRange read FSelectedRange write SetSelectedRange;        
-    property PopupMenu;
     property AutoScrolling : Boolean read FAutoScrolling write SetAutoScroll;
+    property IsPlaying : Boolean read FIsPlaying;
+    property Length : Integer read FLengthMs;
+    property PageSize : Integer read FPageSizeMs;
+    property PopupMenu;
+    property Position : Integer read FPositionMs;
+    property RangeList : TRangeList read FRangeList;
+    property ScrollBar : TMiniScrollBar read FScrollBar write SetScrollBar;
+    property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
+    property Selection : TRange read FSelection;
+    property SelMode : TSelectionMode read FSelMode write FSelMode default smCoolEdit;
     property VerticalScaling : Integer read FVerticalScaling write SetVerticalScaling;
   end;
 
@@ -469,7 +485,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TWAVDisplayer.WMEraseBKGND(var Msg: TWMEraseBkgnd);
+procedure TWAVDisplayer.WM_EraseBKGND(var Msg: TWMEraseBkgnd);
 begin
   Msg.Result := 1;
 end;
@@ -773,74 +789,129 @@ begin
   if (ssDouble in Shift) or (not FPeakDataLoaded) then
     Exit;
 
-  if ssLeft in Shift then
-  begin
-    if (X < 0) then Exit;
-    if (X >= Width) then Exit;
-    NewCursorPos := PixelToTime(X) + FPositionMs;
-
-    if ssShift in Shift then
+  Case FSelMode of
+  smCoolEdit :
     begin
-      // Selection modification using shift key
-      if NewCursorPos > FSelection.StartTime + ((FSelection.StopTime - FSelection.StartTime) div 2) then
+      if ssLeft in Shift then
       begin
-        // We are close to the end of the selection
-        if Self.SelectionIsEmpty then
+        if not InRange(X, 0, Width) then Exit;
+        NewCursorPos := PixelToTime(X) + FPositionMs;
+
+        if ssShift in Shift then
         begin
-          if NewCursorPos > FCursorMs then
+          // Selection modification using shift key
+          if NewCursorPos > FSelection.StartTime + ((FSelection.StopTime - FSelection.StartTime) div 2) then
           begin
-            FSelection.StopTime := NewCursorPos;
-            FSelection.StartTime := FCursorMs;
+            // We are close to the end of the selection
+            if Self.SelectionIsEmpty then
+            begin
+              if NewCursorPos > FCursorMs then
+              begin
+                FSelection.StopTime := NewCursorPos;
+                FSelection.StartTime := FCursorMs;
+              end else begin
+                FSelection.StopTime := FCursorMs;
+                FSelection.StartTime := NewCursorPos;
+              end;
+            end
+            else
+              FSelection.StopTime := NewCursorPos;
+            FSelectionOrigin := FSelection.StartTime;
           end else begin
-            FSelection.StopTime := FCursorMs;
+            // We are close to the start of the selection
             FSelection.StartTime := NewCursorPos;
+            FSelectionOrigin := FSelection.StopTime;
           end;
-        end
-        else
-          FSelection.StopTime := NewCursorPos;
-        FSelectionOrigin := FSelection.StartTime;
-      end else begin
-        // We are close to the start of the selection
-        FSelection.StartTime := NewCursorPos;
-        FSelectionOrigin := FSelection.StopTime;
+          if Assigned(FSelectedRange) then
+          begin
+            // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+            FSelectedRange.StartTime := FSelection.StartTime;
+            FSelectedRange.StopTime := FSelection.StopTime;
+            Include(UpdateFlags, uvfRange);
+            if Assigned(FOnSelectedRangeChange) then
+              FOnSelectedRangeChange(Self);
+          end;
+          if Assigned(FOnSelectionChange) then
+            FOnSelectionChange(Self);
+          Include(UpdateFlags, uvfSelection);
+        end else begin
+          if FSelection.StartTime <> FSelection.StopTime then
+            Include(UpdateFlags, uvfSelection); // clear selection
+          FSelectedRange := nil;
+          FSelectionOrigin := NewCursorPos;
+          FSelection.StartTime := 0;
+          FSelection.StopTime := 0;
+          if Assigned(FOnSelectionChange) then
+            FOnSelectionChange(Self);
+        end;
+        if (FCursorMs <> NewCursorPos) then
+        begin
+          FCursorMs := NewCursorPos;
+          if Assigned(FOnCursorChange) then
+            FOnCursorChange(Self);
+          Include(UpdateFlags, uvfCursor);
+        end;
       end;
-      if Assigned(FSelectedRange) then
-      begin
-        // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
-        FSelectedRange.StartTime := FSelection.StartTime;
-        FSelectedRange.StopTime := FSelection.StopTime;
-        Include(UpdateFlags, uvfRange);
-        if Assigned(FOnSelectedRangeChange) then
-          FOnSelectedRangeChange(Self);
-      end;
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
-      Include(UpdateFlags, uvfSelection);
-    end else begin
-      if FSelection.StartTime <> FSelection.StopTime then
-        Include(UpdateFlags, uvfSelection); // clear selection
-      FSelectedRange := nil;
-      FSelectionOrigin := NewCursorPos;
-      FSelection.StartTime := 0;
-      FSelection.StopTime := 0;
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
     end;
-
-    if (FCursorMs <> NewCursorPos) then
+  smSSA :
     begin
-      FCursorMs := NewCursorPos;
-      if Assigned(FOnCursorChange) then
-        FOnCursorChange(Self);
-      Include(UpdateFlags, uvfCursor);
+        if not Inrange(X, 0, Width) then Exit;
+        NewCursorPos := PixelToTime(X) + FPositionMs;
+
+        if ssLeft in Shift then
+        begin
+          with FSelection do
+          begin
+            StartTime := NewCursorPos;
+            if StartTime > StopTime then
+              StopTime := StartTime;
+            FSelectionOrigin := StopTime;
+          end;
+        end;
+
+        if (ssRight in Shift) and not(ssShift in Shift) then
+        begin
+          with FSelection do
+          begin
+            if NewCursorPos > StartTime then
+              StopTime := NewCursorPos;
+            FSelectionOrigin := StartTime;
+          end;
+        end;
+
+        if (ssRight in Shift) or (ssLeft in Shift) then
+        begin
+          if Assigned(FSelectedRange) then
+          begin
+            // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+            FSelectedRange.StartTime := FSelection.StartTime;
+            FSelectedRange.StopTime := FSelection.StopTime;
+            Include(UpdateFlags, uvfRange);
+            if Assigned(FOnSelectedRangeChange) then
+              FOnSelectedRangeChange(Self);
+          end;
+          if Assigned(FOnSelectionChange) then
+            FOnSelectionChange(Self);
+          Include(UpdateFlags, uvfSelection);
+        end;
+
+        if (FCursorMs <> NewCursorPos) then
+        begin
+          FCursorMs := NewCursorPos;
+          if Assigned(FOnCursorChange) then
+            FOnCursorChange(Self);
+          Include(UpdateFlags, uvfCursor);
+        end;
     end;
-  end
-  else if ssMiddle in Shift then
+  end; // case
+
+  if ssMiddle in Shift then // Middle button = precision time scrolling activated
   begin
     Cursor := crHandPoint;
     MouseCapture := True;
     FScrollOrigin := PixelToTime(X);
   end;
+
   UpdateView(UpdateFlags);
 end;
 
@@ -854,50 +925,96 @@ var NewCursorPos : Integer;
 begin
   inherited;
 
-  if (ssDouble in Shift) or (not FPeakDataLoaded) then
-    Exit;
+  if (ssDouble in Shift) or (not FPeakDataLoaded) then Exit;
 
   UpdateFlags := [];
 
-  if ssLeft in Shift then
-  begin
-    Constrain(X,0,Width);
-    NewCursorPos := PixelToTime(X) + FPositionMs;
-    if (FCursorMs <> NewCursorPos) then
+  case FSelMode of
+  smCoolEdit :
     begin
-      FCursorMs := NewCursorPos;
-
-      if FSelectionOrigin <> -1 then
+      if ssLeft in Shift then
       begin
-        // Update selection
-        if FCursorMs > FSelectionOrigin then
+        Constrain(X,0,Width);
+        NewCursorPos := PixelToTime(X) + FPositionMs;
+        if (FCursorMs <> NewCursorPos) then
         begin
-            FSelection.StartTime := FSelectionOrigin;
-            FSelection.StopTime := FCursorMs;
-        end else begin
-            FSelection.StartTime := FCursorMs;
-            FSelection.StopTime := FSelectionOrigin;
-        end;
-        if Assigned(FSelectedRange) then
-        begin
-          // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
-          FSelectedRange.StartTime := FSelection.StartTime;
-          FSelectedRange.StopTime := FSelection.StopTime;
-          Include(UpdateFlags,uvfRange);
-          if Assigned(FOnSelectedRangeChange) then
-            FOnSelectedRangeChange(Self);
-        end;
-        if Assigned(FOnSelectionChange) then
-          FOnSelectionChange(Self);
-        Include(UpdateFlags,uvfSelection);
-      end;
+          FCursorMs := NewCursorPos;
 
-      if Assigned(FOnCursorChange) then
-        FOnCursorChange(Self);
-      Include(UpdateFlags,uvfCursor);
+          if FSelectionOrigin <> -1 then
+          begin
+            // Update selection
+            if FCursorMs > FSelectionOrigin then
+            begin
+                FSelection.StartTime := FSelectionOrigin;
+                FSelection.StopTime := FCursorMs;
+            end else begin
+                FSelection.StartTime := FCursorMs;
+                FSelection.StopTime := FSelectionOrigin;
+            end;
+            if Assigned(FSelectedRange) then
+            begin
+              // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+              FSelectedRange.StartTime := FSelection.StartTime;
+              FSelectedRange.StopTime := FSelection.StopTime;
+              Include(UpdateFlags,uvfRange);
+              if Assigned(FOnSelectedRangeChange) then
+                FOnSelectedRangeChange(Self);
+            end;
+            if Assigned(FOnSelectionChange) then
+              FOnSelectionChange(Self);
+            Include(UpdateFlags,uvfSelection);
+          end;
+
+          if Assigned(FOnCursorChange) then
+            FOnCursorChange(Self);
+          Include(UpdateFlags,uvfCursor);
+        end;
+      end;
     end;
-  end
-  else if ssMiddle in Shift then
+  smSSA :
+    begin
+      if (ssLeft in Shift) or (ssRight in Shift) then
+      begin
+        Constrain(X,0,Width);
+        NewCursorPos := PixelToTime(X) + FPositionMs;
+        if (FCursorMs <> NewCursorPos) then
+        begin
+          FCursorMs := NewCursorPos;
+
+          if FSelectionOrigin <> -1 then
+          begin
+            // Update selection
+            if FCursorMs > FSelectionOrigin then
+            begin
+                FSelection.StartTime := FSelectionOrigin;
+                FSelection.StopTime := FCursorMs;
+            end else begin
+                FSelection.StartTime := FCursorMs;
+                FSelection.StopTime := FSelectionOrigin;
+            end;
+            if Assigned(FSelectedRange) then
+            begin
+              // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+              FSelectedRange.StartTime := FSelection.StartTime;
+              FSelectedRange.StopTime := FSelection.StopTime;
+              Include(UpdateFlags,uvfRange);
+              if Assigned(FOnSelectedRangeChange) then
+                FOnSelectedRangeChange(Self);
+            end;
+            if Assigned(FOnSelectionChange) then
+              FOnSelectionChange(Self);
+            Include(UpdateFlags,uvfSelection);
+          end;
+
+          if Assigned(FOnCursorChange) then
+            FOnCursorChange(Self);
+          Include(UpdateFlags,uvfCursor);
+        end;
+      end;
+    end;
+  end; // case
+
+  if ssMiddle in Shift then
   begin
     // pseudo "pixel accurate" scrolling
     SetAutoScroll(False);
@@ -906,6 +1023,7 @@ begin
     SetPositionMs(FPositionMs - (ScrollDiff*DiffMuliplier));
     FScrollOrigin := PixelToTime(X);
   end;
+
   UpdateView(UpdateFlags);
 end;
 
@@ -914,10 +1032,9 @@ end;
 procedure TWAVDisplayer.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
-
+  
   if (not FPeakDataLoaded) then
     Exit;
-
   FSelectionOrigin := -1;
   FScrollOrigin := -1;  
   Cursor := crIBeam;
@@ -927,7 +1044,8 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.CreatePeakTab(WAVFile : TWAVFile);
-var Buffer8 : array of Shortint;
+var
+    Buffer8 : array of ShortInt;
     Buffer16 : array of SmallInt;
     i,j : Integer;
     PeakMax, PeakMin : SmallInt;
@@ -1277,7 +1395,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TWAVDisplayer.ZoomRange2(Start, Stop : Integer);
+procedure TWAVDisplayer.ZoomRange(Start, Stop : Integer);
 var Range : TRange;
 begin
   Range := TRange.Create;
@@ -1340,55 +1458,83 @@ end;
 //------------------------------------------------------------------------------
 
 function TWAVDisplayer.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
-var RelativePos : TPoint;
+var
+  RelativePos : TPoint;
     Range : TRange;
-    NewPageSize : Integer;
-    MouseCursorPosTime : Integer;
-    NewMouseCursorPosTime : Integer;
+  NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
 begin
   Result := inherited DoMouseWheelUp(Shift, MousePos);
   RelativePos := ScreenToClient(MousePos);
-  if (RelativePos.X < 0) then Exit;
-  if (RelativePos.X >= Width) then Exit;
+  if not InRange(RelativePos.X, 0, Width) then Exit;
 
-  NewPageSize := Round(FPageSizeMs * 80 / 100);
+  // Ctrl + Wheel  = Horizontal Zoom
+  // Shift + Wheel = Vertical Zoom
+  // Wheel only    = Time scrolling
+  if ssCtrl in Shift then
+  begin
+    NewPageSize := Round(FPageSizeMs * 80 / 100);
 
-  MouseCursorPosTime := PixelToTime(RelativePos.X) + FPositionMs;
-  // convert pixel to time in new time representation  
-  NewMouseCursorPosTime := Round( RelativePos.X * (NewPageSize / Width) );
+    MouseCursorPosTime := PixelToTime(RelativePos.X) + FPositionMs;
+    // convert pixel to time in new time representation
+    NewMouseCursorPosTime := Round( RelativePos.X * (NewPageSize / Width) );
 
-  Range := TRange.Create;
-  Range.StartTime := MouseCursorPosTime - NewMouseCursorPosTime;
-  Range.StopTime := MouseCursorPosTime + (NewPageSize - NewMouseCursorPosTime);
-  ZoomRange(Range);
-  Range.Free;
+    Range := TRange.Create;
+    Range.StartTime := MouseCursorPosTime - NewMouseCursorPosTime;
+    Range.StopTime := MouseCursorPosTime + (NewPageSize - NewMouseCursorPosTime);
+    ZoomRange(Range);
+    FreeAndNil(Range);
+  end
+  else if ssShift in Shift then
+  begin
+    if Inrange(FVerticalScaling, 0, 395) then
+      Inc(FVerticalScaling, 5);
+  end
+  else
+    SetPositionMs(FPositionMs - (FPageSizeMs div 4)); // scroll amount = 1/4 of visible interval
+
+  UpdateView([uvfPageSize]);
+  Result := True;
 end;
 
 //------------------------------------------------------------------------------
 
 function TWAVDisplayer.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean;
-var RelativePos : TPoint;
-    Range : TRange;
-    NewPageSize : Integer;
-    MouseCursorPosTime : Integer;
-    NewMouseCursorPosTime : Integer;
+var
+  RelativePos : TPoint;
+  Range : TRange;
+  NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
 begin
   Result := inherited DoMouseWheelDown(Shift, MousePos);
   RelativePos := ScreenToClient(MousePos);
-  if (RelativePos.X < 0) then Exit;
-  if (RelativePos.X >= Width) then Exit;
+  if not InRange(RelativePos.X, 0, Width) then Exit;
 
-  NewPageSize := Round(FPageSizeMs * 125 / 100);
+  // Ctrl + Wheel  = Horizontal Zoom
+  // Shift + Wheel = Vertical Zoom
+  // Wheel only    = Time scrolling
+  if ssCtrl in Shift then
+  begin
+    NewPageSize := Round(FPageSizeMs * 125 / 100);
 
-  MouseCursorPosTime := PixelToTime(RelativePos.X) + FPositionMs;
-  // convert pixel to time in new time representation  
-  NewMouseCursorPosTime := Round( RelativePos.X * (NewPageSize / Width) );
+    MouseCursorPosTime := PixelToTime(RelativePos.X) + FPositionMs;
+    // convert pixel to time in new time representation
+    NewMouseCursorPosTime := Round( RelativePos.X * (NewPageSize / Width) );
 
-  Range := TRange.Create;
-  Range.StartTime := MouseCursorPosTime - NewMouseCursorPosTime;
-  Range.StopTime := MouseCursorPosTime + (NewPageSize - NewMouseCursorPosTime);
-  ZoomRange(Range);
-  Range.Free;
+    Range := TRange.Create;
+    Range.StartTime := MouseCursorPosTime - NewMouseCursorPosTime;
+    Range.StopTime := MouseCursorPosTime + (NewPageSize - NewMouseCursorPosTime);
+    ZoomRange(Range);
+    FreeAndNil(Range);
+  end
+  else if ssShift in Shift then
+  begin
+    if Inrange(FVerticalScaling, 5, 400) then
+      Dec(FVerticalScaling, 5);
+  end
+  else
+    SetPositionMs(FPositionMs + (FPageSizeMs div 4)); // scroll amount = 1/4 of visible interval
+
+  UpdateView([uvfPageSize]); // Refresh waveform
+  Result := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -1442,12 +1588,12 @@ end;
 
 procedure TWAVDisplayer.PlayRange(Range : TRange; Loop : Boolean);
 begin
-  PlayRange2(Range.StartTime,Range.StopTime, Loop);
+  PlayRange(Range.StartTime,Range.StopTime, Loop);
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TWAVDisplayer.PlayRange2(Start, Stop : Integer; Loop : Boolean);
+procedure TWAVDisplayer.PlayRange(Start, Stop : Integer; Loop : Boolean);
 begin
   FRenderer.OnStopPlaying := OnStopPlaying;
   FRenderer.PlayRange(Start,Stop, Loop);
@@ -1524,9 +1670,9 @@ begin
   if (WheelDelta <> 0) and PtInRect(Self.ClientRect,ClientPos) then
   begin
     if (WheelDelta > 0) then
-      Self.DoMouseWheelUp(Shift,MousePos)
+      DoMouseWheelUp(Shift,MousePos)
     else
-      Self.DoMouseWheelDown(Shift,MousePos);
+      DoMouseWheelDown(Shift,MousePos);
     Result := True;
   end
   else
@@ -1687,6 +1833,15 @@ begin
     FVerticalScaling := Value;
     UpdateView([uvfPageSize]); // redraw all
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.DoContextPopup(MousePos: TPoint; var Handled: Boolean);
+begin
+  inherited DoContextPopup(MousePos, Handled);
+  // Because R_Click was used for other duties
+  Handled := Handled or ((FSelMode = smSSA) and (GetKeyState(VK_SHIFT) >= 0));
 end;
 
 //------------------------------------------------------------------------------

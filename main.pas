@@ -1408,7 +1408,7 @@ begin
   if WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtAll;
-    WAVDisplayer.PlayRange2(WAVDisplayer.GetCursorPos,WAVDisplayer.Length)
+    WAVDisplayer.PlayRange(WAVDisplayer.GetCursorPos,WAVDisplayer.Length)
   end
   else
   begin
@@ -1432,7 +1432,7 @@ begin
   if WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtAll;  
-    WAVDisplayer.PlayRange2(WAVDisplayer.GetCursorPos,WAVDisplayer.Length,True)
+    WAVDisplayer.PlayRange(WAVDisplayer.GetCursorPos,WAVDisplayer.Length,True)
   end
   else
   begin
@@ -2496,12 +2496,14 @@ begin
     bttWorkingMode.Caption := 'Timing mode';
     bttWorkingMode.Font.Color := clRed;
     bttWorkingMode.Tag := 1;
+    WAVDisplayer.SelMode := smSSA;
   end
   else
   begin
     bttWorkingMode.Caption := 'Normal mode';
     bttWorkingMode.Tag := 0;
-    bttWorkingMode.Font.Color := clWindowText;   
+    bttWorkingMode.Font.Color := clWindowText;
+    WAVDisplayer.SelMode := smCoolEdit;       
   end;
   PreferencesForm.SetMode(bttWorkingMode.Tag = 1);
   SetShortcut(PreferencesForm.GetMode);
@@ -2530,7 +2532,7 @@ begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtSelectionStart;
-    WAVDisplayer.PlayRange2(WAVDisplayer.Selection.StartTime,
+    WAVDisplayer.PlayRange(WAVDisplayer.Selection.StartTime,
       Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration, WAVDisplayer.Selection.StopTime),
       True);
   end;
@@ -2543,7 +2545,7 @@ begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtSelectionEnd;
-    WAVDisplayer.PlayRange2(
+    WAVDisplayer.PlayRange(
       Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
       WAVDisplayer.Selection.StopTime,
       True);
@@ -2837,7 +2839,7 @@ begin
   pmiAddAsSubtitle.Enabled := (MemoTextPipe.SelLength > 0) and
     (not WavDisplayer.SelectionIsEmpty);
   pmiReplaceSubtitleFromPipe.Enabled := (MemoTextPipe.SelLength > 0) and
-    (vtvSubsList.FocusedNode <> nil)
+    (vtvSubsList.FocusedNode <> nil);
 end;
 
 //------------------------------------------------------------------------------
