@@ -482,6 +482,13 @@ procedure TDShowRenderer.SetDisplayWindow(WinHwnd : THandle);
 begin
   FDisplayWindow := WinHwnd;
 
+  if Assigned(FVideoWindow) then
+  begin
+    FVideoWindow.put_Visible(False);
+    FVideoWindow.put_Owner(0);
+    FVideoWindow := nil;
+  end;  
+
   FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
   FVideoWindow.put_Owner(FDisplayWindow);
   FVideoWindow.put_MessageDrain(FDisplayWindow);
@@ -499,8 +506,9 @@ var Rect : TRect;
 begin
   if (FDisplayWindow = 0) or (not Assigned(FVideoWindow)) then
     Exit;
-    
-  GetWindowRect(FDisplayWindow, Rect);
+
+  if(GetWindowRect(FDisplayWindow, Rect) = False) then
+    Exit;
   WinWidth := Rect.Right - Rect.Left;
   WinHeight := Rect.Bottom - Rect.Top;
 
