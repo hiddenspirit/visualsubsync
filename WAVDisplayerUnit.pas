@@ -921,6 +921,8 @@ begin
   if Assigned(FOnPeakFileCreation) then
     FOnPeakFileCreation(Self,pfcevtStart,0);
 
+  NormFactor := 1.0;
+
   // Get 1 peak value every ~10ms
   FSamplesPerPeak := WAVFile.SamplesPerSecond div 100;
   FPeakTabSize := Ceil((WAVFile.SamplesCount / FSamplesPerPeak) / WAVFile.Channels);
