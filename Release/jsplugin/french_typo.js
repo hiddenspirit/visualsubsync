@@ -1,3 +1,5 @@
+var DebugMode = true;
+
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'French typography',
@@ -35,8 +37,6 @@ VSSPlugin = {
 		{ re : /[A-Z]{2,}[a-z]{2,}/mg, msg : "Erreur de majuscule"}
 	),
 	
-	DebugMode : true,
-
   // ----- HasError method called for each subtitle during the error checking -----
   // If there is an error on CurrentSub return a string containing the error description.
   // Otherwise return an empty string.
@@ -46,7 +46,7 @@ VSSPlugin = {
   	for(i=0; i < this.Rules.length; i++) {
   		if(this.Rules[i].re.test(SubText)) {
 
-  			if(this.DebugMode && this.Rules[i].replaceby != null) {
+  			if(DebugMode && this.Rules[i].replaceby != null) {
   				ScriptLog(SubText.replace(this.Rules[i].re, this.Rules[i].replaceby));
   				ScriptLog('');
   			} 			
