@@ -37,7 +37,6 @@ object ErrorReportForm: TErrorReportForm
     Header.Font.Style = []
     Header.MainColumn = -1
     Header.Options = [hoColumnResize, hoDrag]
-    ParentBackground = False
     PopupMenu = ErrorListPopupMenu
     TabOrder = 0
     TreeOptions.SelectionOptions = [toMultiSelect]
