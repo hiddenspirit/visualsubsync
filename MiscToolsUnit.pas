@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes;
+uses Classes, Graphics;
 
 type
   TFileVersion = class
@@ -63,7 +63,10 @@ type
 
   function ReadLineStream(Stream : TStream; var s : string) : Boolean;
   function RPos(Substr: string; S: string): Integer;
-  
+
+  function Font2String(Font : TFont) : string;
+  procedure String2Font(s : string; Font : TFont);
+
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils;
@@ -532,6 +535,36 @@ begin
     Dec(i);
   end;
   Result := 0;
+end;
+
+// -----------------------------------------------------------------------------
+
+function Font2String(Font : TFont) : string;
+begin
+  Result := Font.Name + ',' +
+    IntToStr(Font.Size) + ',' +
+    IntToStr(Byte(Font.Style)) + ',' +
+    IntToStr(Byte(Font.Charset)) + ',' +
+    ColorToString(Font.Color);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure String2Font(s : string; Font : TFont);
+var sl : TStringList;
+begin
+  sl := TStringList.Create;
+  sl.Delimiter := ',';
+  sl.DelimitedText := s;
+  if (sl.Count = 5) then
+  begin
+    Font.Name := sl[0];
+    Font.Size := StrToIntDef(sl[1], 12);
+    Font.Style := TFontStyles(Byte(StrToIntDef(sl[2], 0)));
+    Font.Charset := StrToIntDef(sl[3], 0);
+    Font.Color := StringToColor(sl[4]);
+  end;
+  sl.Free;
 end;
 
 // -----------------------------------------------------------------------------
