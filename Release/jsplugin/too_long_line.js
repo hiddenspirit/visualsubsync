@@ -1,7 +1,7 @@
 // Too long line
 // (christophe.paris <at> free.fr)
 
-var DebugMode = true;
+var DebugMode = false;
 
 VSSPlugin = {
   // ----- Plugin constant -----
@@ -102,8 +102,8 @@ VSSPlugin = {
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
   			 RegExpEndWithL1.test(WordArray[i]))
   		{
-  			if(DebugMode)
-  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			if(DebugMode)  			
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i] + ', ' + SumFromStartArray[i] + '-' + SumFromEndArray[i]);
   			CutList[j++] = {idx : i, lvl : 1};
   		}
   	}
@@ -116,8 +116,8 @@ VSSPlugin = {
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
   			 RegExpEndWithL2.test(WordArray[i]))
   		{
-  			if(DebugMode)
-  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			if(DebugMode)  			
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i] + ', ' + SumFromStartArray[i] + '-' + SumFromEndArray[i]);
   			CutList[j++] = {idx : i, lvl : 2};
   		}
   	}
@@ -130,8 +130,8 @@ VSSPlugin = {
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
   			 RegExpEndWithL3.test(WordArray[i]))
   		{
-  			if(DebugMode)
-  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			if(DebugMode)  			
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i] + ', ' + SumFromStartArray[i] + '-' + SumFromEndArray[i]);
   			CutList[j++] = {idx : i, lvl : 3};
   		}
   	}
@@ -142,8 +142,8 @@ VSSPlugin = {
   		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value)
   		{
-  			if(DebugMode)
-  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			if(DebugMode)  			
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i] + ', ' + SumFromStartArray[i] + '-' + SumFromEndArray[i]);
   			CutList[j++] = {idx : i, lvl : 4};
   		}
   	}
@@ -153,10 +153,13 @@ VSSPlugin = {
   	var DiffPercent = 0;
   	
   	// Find a "good" cut point
-  	for(i=0; i < j; i++)
+  	var found = false;
+  	var fallBackPoint = 0;
+  	var previousLineDiff = 0;
+  	for(i=0; i < j && !found; i++)
   	{
   		LineDiff = Math.abs(SumFromStartArray[CutList[i].idx] - SumFromEndArray[CutList[i].idx]);
-      DiffPercent = CutList[i].lvl == 4 ? 0.2 : 0.6;
+      DiffPercent = (CutList[i].lvl == 4) ? 0.2 : 0.6;
   		if(LineDiff < (TextWOLFLen * DiffPercent))
   		{
   			// ok, build new text
@@ -174,9 +177,35 @@ VSSPlugin = {
   			if(DebugMode)
   				ScriptLog('<'+NewText+'>');
   			CurrentSub.Text = NewText;
-  			break;
+  			found = true;
   		}
+  		if(previousLineDiff > LineDiff)  		
+  			fallBackPoint = i;  		
+  		previousLineDiff = LineDiff;
   	}
+  	
+  	if(!found && fallBackPoint > 0 && fallBackPoint > j)
+  	{
+  		// Use fallBackPoint
+	  	if(DebugMode)
+				ScriptLog('Using fallBackPoint = ' + fallBackPoint);
+  		
+  		for(k=0; k < WordArrayLen; k++)
+  		{
+  			if(k == WordArrayLen-1)
+  			{
+  				NewText += WordArray[k];
+  			} else if(k == CutList[fallBackPoint].idx) {
+  				NewText += (WordArray[k] + '\r\n');
+  			} else {
+  				NewText += (WordArray[k] + ' ');
+  			}
+  		}
+  		if(DebugMode)
+  			ScriptLog('<'+NewText+'>');
+  		CurrentSub.Text = NewText;
+  	}
+  	
   	if(DebugMode)
 			ScriptLog('<===== too_long_lines.js : Leaving FixError.');
   }
