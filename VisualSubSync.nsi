@@ -14,6 +14,9 @@
 !define FILE_WEB1 "index.shtml"
 !define FILE_WEB2 "details.shtml"
 !define FILE_WEB3 "send_suggestion.shtml"
+!define FILE_WEB4 "style.css"
+!define FILE_WEB5 "details.css"
+!define FILE_WEB6 "script.js"
 
 !define DIR_HELP "help\"
 
@@ -78,6 +81,9 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB1}"
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB2}"
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB3}"
+  File "${INPUT_PATH}${DIR_WEB}${FILE_WEB4}"
+  File "${INPUT_PATH}${DIR_WEB}${FILE_WEB5}"
+  File "${INPUT_PATH}${DIR_WEB}${FILE_WEB6}"
 
 	; Help files (whole help dir)
   SetOutPath "$INSTDIR\${DIR_HELP}"
@@ -127,7 +133,10 @@ Section "Uninstall"
   ; Delete web files and directory if empty
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB1}"
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB2}"
-  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB3}"  
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB3}"
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB4}"
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB5}"
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB6}"  
   RMDir "$INSTDIR\${DIR_WEB}"
   
 	; Delete whole help directory
