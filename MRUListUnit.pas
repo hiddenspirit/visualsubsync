@@ -36,6 +36,7 @@ type
     procedure FillMenuItem(MenuItem : TMenuItem);
   public
     constructor Create(RootMenuItem : TMenuItem);
+    destructor Destroy; override;
     procedure AddFile(Filename : string);
     procedure SaveIni(IniFile : TIniFile; SectionName : string);
     procedure LoadIni(IniFile : TIniFile; SectionName : string);
@@ -54,6 +55,14 @@ begin
   FFileList := TStringList.Create;
   FLimit := 8;
   FRootMenuItem := RootMenuItem;
+end;
+
+// -----------------------------------------------------------------------------
+
+destructor TMRUList.Destroy;
+begin
+  FFileList.Free;
+  inherited;
 end;
 
 // -----------------------------------------------------------------------------
