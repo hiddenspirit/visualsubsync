@@ -2051,7 +2051,7 @@ begin
     JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
     JSPEnum.OnJSPluginError := LogForm.LogMsg;
     JSPEnum.Reset;
-    while JSPEnum.GetNext(JPlugin) and (not pmiFixErrorEnabled) do
+    while (not pmiFixErrorEnabled) and JSPEnum.GetNext(JPlugin) do
     begin
       JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
       pmiFixErrorEnabled := pmiFixErrorEnabled or ((Assigned(JSPluginInfo) and
@@ -3279,13 +3279,15 @@ end;
 procedure TMainForm.MemoSubtitleTextMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var pt : TPoint;
-    CharIndex : Integer;
+    CharIndex, LineIndex : Integer;
 begin
   if FormHasBeenActivated then
   begin
     Pt := Point(X, Y);
     CharIndex := MemoSubtitleText.Perform(Messages.EM_CHARFROMPOS, 0, Integer(@Pt));
-    MemoSubtitleText.SelStart := CharIndex;
+    LineIndex := MemoSubtitleText.Perform(EM_LINEFROMCHAR, CharIndex, 0);
+    MemoSubtitleText.SelStart := CharIndex + LineIndex;
+    FormHasBeenActivated := False;
   end;
   inherited;
 end;
