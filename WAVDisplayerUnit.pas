@@ -778,11 +778,10 @@ begin
     FOldPageSizeMs := FPageSizeMs;
   end;
 
-  FOffscreenWAV.Canvas.Unlock;
-
   // Copy Wav
   FOffscreen.Canvas.Lock;
   FOffscreen.Canvas.Draw(0,0,FOffscreenWAV);
+  FOffscreenWAV.Canvas.Unlock;
   // Add selection, range, cursor
   PaintOnCanvas(FOffscreen.Canvas);
   FOffscreen.Canvas.Unlock;
