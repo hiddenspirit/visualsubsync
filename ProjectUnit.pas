@@ -208,7 +208,7 @@ procedure TProjectForm.bttBrowseVideoFileClick(Sender: TObject);
 begin
   TntOpenDialog1.FileName := EditVideoFilename.Text;
   TntOpenDialog1.Filter :=
-    'Video files|*.AVI;*.OGM;*.MKV;*.MP4;*.DIVX;*.RM;*.RMVB' + '|' +
+    'Video files|*.AVI;*.OGM;*.MKV;*.MP4;*.DIVX;*.RM;*.RMVB;*.MPEG;*.MPG' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
