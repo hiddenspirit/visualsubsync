@@ -58,6 +58,7 @@ type
     function GetRangeIdxAt(PosMs : Integer) : Integer;
     procedure Delete(Index : Integer);
     function IndexOf(Range : TRange) : Integer;
+    procedure Move(CurIndex, NewIndex: Integer);
     procedure Clear;
     property Count : Integer read GetCount;  
     property Ranges[const Index: Integer]: TRange read GetItem; default;
@@ -390,6 +391,13 @@ end;
 function TRangeList.IndexOf(Range : TRange) : Integer;
 begin
   Result := FList.IndexOf(Range);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TRangeList.Move(CurIndex, NewIndex: Integer);
+begin
+  FList.Move(CurIndex,NewIndex);
 end;
 
 //------------------------------------------------------------------------------
@@ -907,6 +915,8 @@ var Buffer8 : array of Shortint;
     Buffer16 : array of SmallInt;
     i,j : Integer;
     PeakMax, PeakMin : SmallInt;
+    PeakMaxMax, PeakMinMin : SmallInt;
+    NormFactor : Single;
 begin
   if Assigned(FOnPeakFileCreation) then
     FOnPeakFileCreation(Self,pfcevtStart,0);
@@ -922,6 +932,8 @@ begin
   begin
     // Allocate the small buffer
     SetLength(Buffer8, FSamplesPerPeak * WAVFile.Channels);
+    PeakMaxMax := -128;
+    PeakMinMin := 127;
     for i:=0 to FPeakTabSize-1 do
     begin
       ZeroMemory(Buffer8, FSamplesPerPeak * SizeOf(Shortint) * WAVFile.Channels);
@@ -938,14 +950,24 @@ begin
       FPeakTab[i].Max := PeakMax shl 16;
       FPeakTab[i].Min := PeakMin shl 16;
 
+      if PeakMax > PeakMaxMax then
+        PeakMaxMax := PeakMax;
+      if PeakMin < PeakMinMin then
+        PeakMinMin := PeakMin;      
+
       if Assigned(FOnPeakFileCreation) then
         FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
-    end
+    end;
+    // Calc. normalize factor
+    PeakMaxMax := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
+    NormFactor := 127 / PeakMaxMax;
   end
   else if (WAVFile.BitsPerSample = 16) then
   begin
     // Allocate the small buffer
     SetLength(Buffer16, FSamplesPerPeak * WAVFile.Channels);
+    PeakMaxMax := -32768;
+    PeakMinMin := 32767;
     for i:=0 to FPeakTabSize-1 do
     begin
       ZeroMemory(Buffer16, FSamplesPerPeak * SizeOf(SmallInt) * WAVFile.Channels);
@@ -962,9 +984,23 @@ begin
       FPeakTab[i].Max := PeakMax;
       FPeakTab[i].Min := PeakMin;
 
+      if PeakMax > PeakMaxMax then
+        PeakMaxMax := PeakMax;
+      if PeakMin < PeakMinMin then
+        PeakMinMin := PeakMin;
+
       if Assigned(FOnPeakFileCreation) then
         FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
     end;
+    // Calc. normalize factor
+    PeakMaxMax := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
+    NormFactor := 32767 / PeakMaxMax;
+  end;
+  // Normalize peak tab
+  for i:=0 to FPeakTabSize-1 do
+  begin
+    FPeakTab[i].Max := Round(FPeakTab[i].Max * NormFactor);
+    FPeakTab[i].Min := Round(FPeakTab[i].Min * NormFactor);
   end;
   Buffer8 := nil;
   Buffer16 := nil;
