@@ -1,0 +1,8 @@
+*.ncb
+*.opt
+*.plg
+archive
+Debug
+Release
+Debug_Unicode
+Release_Unicode
