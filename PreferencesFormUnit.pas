@@ -310,17 +310,18 @@ begin
   IniFile.WriteInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
 
   // Hotkeys
+  IniFile.WriteBool('Hotkeys', 'UseIntegerShortcut', True);
   for i:=0 to ListHotkeys.Count-1 do
   begin
     HLID := ListHotkeys[i];
-    IniFile.WriteString(
+    IniFile.WriteInteger(
       'Hotkeys',
       HLID.Action.Name + '[Normal]',
-      ShortCutToText(HLID.NormalShortCut));
-    IniFile.WriteString(
+      HLID.NormalShortCut);
+    IniFile.WriteInteger(
       'Hotkeys',
       HLID.Action.Name + '[Timing]',
-      ShortCutToText(HLID.TimingShortCut));
+      HLID.TimingShortCut);
   end;
 end;
 
@@ -350,17 +351,33 @@ begin
   ErrorTooLongLineValue := IniFile.ReadInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
 
   // Hotkeys
-  for i:=0 to ListHotkeys.Count-1 do
+  if IniFile.ReadBool('Hotkeys', 'UseIntegerShortcut', False) = True then
   begin
-    HLID := ListHotkeys[i];
-    HLID.NormalShortCut := TextToShortCut(
-      IniFile.ReadString('Hotkeys',
-        HLID.Action.Name + '[Normal]',
-        ShortCutToText(HLID.NormalShortCut)));
-    HLID.TimingShortCut := TextToShortCut(
-      IniFile.ReadString('Hotkeys',
-        HLID.Action.Name + '[Timing]',
-        ShortCutToText(HLID.TimingShortCut)));
+    for i:=0 to ListHotkeys.Count-1 do
+    begin
+      HLID := ListHotkeys[i];
+      HLID.NormalShortCut := IniFile.ReadInteger('Hotkeys',
+          HLID.Action.Name + '[Normal]',
+          HLID.NormalShortCut);
+      HLID.TimingShortCut := IniFile.ReadInteger('Hotkeys',
+          HLID.Action.Name + '[Timing]',
+          HLID.TimingShortCut);
+    end;
+  end
+  else
+  begin
+    for i:=0 to ListHotkeys.Count-1 do
+    begin
+      HLID := ListHotkeys[i];
+      HLID.NormalShortCut := TextToShortCut(
+        IniFile.ReadString('Hotkeys',
+          HLID.Action.Name + '[Normal]',
+          ShortCutToText(HLID.NormalShortCut)));
+      HLID.TimingShortCut := TextToShortCut(
+        IniFile.ReadString('Hotkeys',
+          HLID.Action.Name + '[Timing]',
+          ShortCutToText(HLID.TimingShortCut)));
+    end;
   end;
 end;
 

@@ -244,6 +244,7 @@ object PreferencesForm: TPreferencesForm
         Width = 185
         Height = 19
         HotKey = 0
+        InvalidKeys = [hcNone]
         Modifiers = []
         TabOrder = 1
       end
