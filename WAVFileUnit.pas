@@ -101,7 +101,14 @@ begin
   if FIsOpen then
     Close;
 
-  FFS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  if not FileExists(FileName) then
+    Exit;
+
+  try
+    FFS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  except
+    Exit;
+  end;
 
   // === RIFF Header ===
   if not (FFS.Read(Buff, 4) = 4) or not (StrLComp(Buff,'RIFF',4) = 0) then
