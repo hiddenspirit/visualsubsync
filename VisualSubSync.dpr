@@ -24,7 +24,8 @@ uses
   SuggestionFormUnit in 'SuggestionFormUnit.pas' {SuggestionForm},
   GotoFormUnit in 'GotoFormUnit.pas' {GotoForm},
   PreferencesFormUnit in 'PreferencesFormUnit.pas' {PreferencesForm},
-  MRUListUnit in 'MRUListUnit.pas';
+  MRUListUnit in 'MRUListUnit.pas',
+  VerticalScalingFormUnit in 'VerticalScalingFormUnit.pas' {VerticalScalingForm};
 
 {$R *.res}
 
