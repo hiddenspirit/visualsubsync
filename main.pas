@@ -336,7 +336,6 @@ type
   private
     { Private declarations }
     WAVDisplayer : TWAVDisplayer;
-    MiniSB : TMiniScrollBar;
     SubRangeFactory : TSubtitleRangeFactory;
     CurrentProject : TVSSProject;
     PeakCreationProgressForm : TPeakCreationProgressForm;
@@ -470,16 +469,6 @@ begin
   WAVDisplayer.OnSelectedRangeChange := WAVDisplayer1SelectedRangeChange;
   WAVDisplayer.OnAutoScrollChange := WAVDisplayer1AutoScrollChange;
   WAVDisplayer.Enabled := False;
-
-  MiniSB := TMiniScrollBar.Create(nil);
-  MiniSB.Top := WAVDisplayer.Top + WAVDisplayer.Height;
-  MiniSB.Left := 0;
-  MiniSB.Width := PanelWAVDisplay.Width;
-  MiniSB.Height := 12;
-  MiniSB.Align := alBottom;
-  MiniSB.Parent := PanelWAVDisplay;
-  WAVDisplayer.ScrollBar := MiniSB;
-
   WAVDisplayer.PopupMenu := WAVDisplayPopupMenu;
 
   InitVTV;
@@ -509,7 +498,6 @@ begin
   StartStopServer(True);
   AudioOnlyRenderer.Free;
   VideoRenderer.Free;
-  MiniSB.Free;
   WAVDisplayer.Free;
   SubRangeFactory.Free;
   MRUList.Free;

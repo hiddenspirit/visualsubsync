@@ -97,7 +97,7 @@ type
   TPeakFileCreationEvent = procedure (Sender: TObject;
     EventType : TPeakFileCreationEventType; Param : Integer) of object;
 
-  TWAVDisplayer = class(TCustomControl)
+  TWAVDisplayer = class(TCustomPanel)
   private
     { Private declarations }
     FPeakTab : array of TPeak;
@@ -144,6 +144,7 @@ type
     FWavFormat : TWaveFormatEx;
 
     FWheelTimeScroll, FWheelVZoom, FWheelHZoom : TMouseWheelModifier;
+    FMouseIsDown : Boolean; // [FIX] WAVDisplay refresh bug when double clicking title bar
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -172,7 +173,7 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure WM_EraseBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure Paint; override;
-
+    
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -223,7 +224,6 @@ type
     property PopupMenu;
     property Position : Integer read FPositionMs;
     property RangeList : TRangeList read FRangeList;
-    property ScrollBar : TMiniScrollBar read FScrollBar write SetScrollBar;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
     property SelMode : TSelectionMode read FSelMode write FSelMode default smCoolEdit;
@@ -452,8 +452,11 @@ end;
 // =============================================================================
 
 constructor TWAVDisplayer.Create(AOwner: TComponent);
+var MiniSB : TMiniScrollBar;
 begin
   inherited Create(AOwner);
+  BevelInner := bvNone;
+  BevelOuter := bvNone;
 
   TabStop := True;
   FSelectionOrigin := -1;
@@ -476,6 +479,12 @@ begin
   FWheelTimeScroll := mwmNone;
   FWheelVZoom := mwmShift;
   FWheelHZoom := mwmCtrl;
+
+  MiniSB := TMiniScrollBar.Create(Self);
+  MiniSB.Parent := Self;
+  MiniSB.Height := 12;
+  MiniSB.Align := alBottom;
+  SetScrollBar(MiniSB);
 end;
 
 //------------------------------------------------------------------------------
@@ -512,9 +521,8 @@ var x, y1, y2 : Integer;
     i : Integer;
     PeakMax, PeakMin : Smallint;
     Rect : TRect;
+    RectHeight : Integer;
 begin
-  Middle := Height div 2;
-
   PeaksPerPixelScaled := (((FPageSizeMs / 1000.0) * FWavFormat.nSamplesPerSec) / FSamplesPerPeak) / Width;
   StartPositionInPeaks := ((FPositionMs / 1000.0) * FWavFormat.nSamplesPerSec) / FSamplesPerPeak;
 
@@ -548,7 +556,11 @@ begin
 
   Rect := ClientRect;
   Rect.Left := x1_update;
-  Rect.Right := x2_update;  
+  Rect.Right := x2_update;
+  Rect.Bottom := Rect.Bottom - FScrollBar.Height;
+
+  RectHeight := Rect.Bottom - Rect.Top;
+  Middle := Rect.Top + (RectHeight div 2);
 
   // Back
   ACanvas.Brush.Color := clBlack;
@@ -579,17 +591,17 @@ begin
         PeakMin := FPeakTab[i].Min;
     end;
 
-    y1 := Round((((PeakMax * FVerticalScaling) / 100) * Height) / 65536);
-    y2 := Round((((PeakMin * FVerticalScaling) / 100) * Height) / 65536);
+    y1 := Round((((PeakMax * FVerticalScaling) / 100) * RectHeight) / 65536);
+    y2 := Round((((PeakMin * FVerticalScaling) / 100) * RectHeight) / 65536);
 
-    ACanvas.MoveTo(x,Middle-y1);
-    ACanvas.LineTo(x,Middle-y2);
+    ACanvas.MoveTo(x, Middle-y1);
+    ACanvas.LineTo(x, Middle-y2);
   end;
 
   // 0 line
   ACanvas.Pen.Color := $00518B0A;
-  ACanvas.MoveTo(0,Middle);
-  ACanvas.LineTo(Width,Middle);
+  ACanvas.MoveTo(0, Middle);
+  ACanvas.LineTo(Width, Middle);
 end;
 
 //------------------------------------------------------------------------------
@@ -600,9 +612,12 @@ var x : Integer;
     i : Integer;
     r : TRange;
     SelRect : TRect;
+    CanvasHeight : Integer;
 begin
-  y1 := Height div 10;
-  y2 := (Height * 9) div 10;
+  CanvasHeight := Height - FScrollBar.Height;
+
+  y1 := CanvasHeight div 10;
+  y2 := (CanvasHeight * 9) div 10;
 
   ACanvas.Brush.Color := clBlack;
 
@@ -635,14 +650,14 @@ begin
 
     if (x1 <> -1) then
     begin
-      ACanvas.MoveTo(x1,0);
-      ACanvas.LineTo(x1,Height);
+      ACanvas.MoveTo(x1, 0);
+      ACanvas.LineTo(x1, CanvasHeight);
     end;
 
     if (x2 <> -1) and (x2 <> x1) then
     begin
-      ACanvas.MoveTo(x2,0);
-      ACanvas.LineTo(x2,Height);
+      ACanvas.MoveTo(x2, 0);
+      ACanvas.LineTo(x2, CanvasHeight);
     end;
 
     if (r.StartTime < FPositionMs) and (r.StopTime > FPositionMs + FPageSizeMs) then
@@ -658,10 +673,10 @@ begin
         x2 := Width-1;
       ACanvas.Pen.Style := psSolid;
       ACanvas.Pen.Width := 2;
-      ACanvas.MoveTo(x1,y1);
-      ACanvas.LineTo(x2,y1);
-      ACanvas.MoveTo(x1,y2);
-      ACanvas.LineTo(x2,y2);
+      ACanvas.MoveTo(x1, y1);
+      ACanvas.LineTo(x2, y1);
+      ACanvas.MoveTo(x1, y2);
+      ACanvas.LineTo(x2, y2);
       ACanvas.Pen.Width := 1;
       ACanvas.Pen.Style := psDot;
     end;
@@ -682,21 +697,22 @@ begin
        (FSelection.StartTime <= FPositionMs + FPageSizeMs) then
       begin
         // points are on each other and in the display range
-        ACanvas.MoveTo(x1,0);
-        ACanvas.LineTo(x1,Height);
+        ACanvas.MoveTo(x1, 0);
+        ACanvas.LineTo(x1, CanvasHeight);
       end;
     end
     else
     begin
-      Constrain(x1,0,Width);
-      Constrain(x2,0,Width);
+      Constrain(x1, 0, Width);
+      Constrain(x2, 0, Width);
       if x1 <> x2 then
       begin
         SelRect := ClientRect;
         SelRect.Left := x1;
         SelRect.Right := x2+1;
+        SelRect.Bottom := SelRect.Bottom - FScrollBar.Height;
         ACanvas.CopyMode := cmDstInvert;
-        ACanvas.CopyRect(SelRect,ACanvas,SelRect);
+        ACanvas.CopyRect(SelRect, ACanvas, SelRect);
         ACanvas.CopyMode := cmSrcCopy;
       end;
     end;
@@ -708,8 +724,8 @@ begin
     ACanvas.Pen.Color := clYellow;
     ACanvas.Pen.Style := psDot;
     x := TimeToPixel(FCursorMs - FPositionMs);
-    ACanvas.MoveTo(x,0);
-    ACanvas.LineTo(x,Height);
+    ACanvas.MoveTo(x, 0);
+    ACanvas.LineTo(x, CanvasHeight);
   end;
 
   // Play Cursor
@@ -720,8 +736,8 @@ begin
       ACanvas.Pen.Color := clWhite;
       ACanvas.Pen.Style := psSolid;
       x := TimeToPixel(FPlayCursorMs - FPositionMs);
-      ACanvas.MoveTo(x,0);
-      ACanvas.LineTo(x,Height);
+      ACanvas.MoveTo(x, 0);
+      ACanvas.LineTo(x, CanvasHeight);
     end;
   end;
 end;
@@ -734,9 +750,9 @@ begin
     Exit;
 
   FOffscreenWAV.Width := Width;
-  FOffscreenWAV.Height := Height;
-  FOffscreen.Width := Width;
-  FOffscreen.Height := Height;
+  FOffscreenWAV.Height := Height - FScrollBar.Height;
+  FOffscreen.Width := FOffscreenWAV.Width;
+  FOffscreen.Height := FOffscreenWAV.Height;
 
   if (not FPeakDataLoaded) then
   begin
@@ -762,28 +778,32 @@ begin
     FOldPageSizeMs := FPageSizeMs;
   end;
 
+  FOffscreenWAV.Canvas.Unlock;
+
   // Copy Wav
   FOffscreen.Canvas.Lock;
   FOffscreen.Canvas.Draw(0,0,FOffscreenWAV);
-  FOffscreenWAV.Canvas.Unlock;
   // Add selection, range, cursor
   PaintOnCanvas(FOffscreen.Canvas);
   FOffscreen.Canvas.Unlock;
-  // TODO : separate cursors painting, and use xor tricks to paint cursors 
-  
+  // TODO : separate cursors painting, and use xor tricks to paint cursors
+
   Repaint;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.Paint;
+var NewWidth, NewHeight : Integer;
 begin
-  if (FOffscreen.Width <> Width) or (FOffscreen.Height <> Height) then
+  NewWidth := Width;
+  NewHeight := Height - FScrollBar.Height;
+  if (FOffscreen.Width <> NewWidth) or (FOffscreen.Height <> NewHeight) then
   begin
     UpdateView([uvfPageSize]);
   end;
   Canvas.Lock;
-  Canvas.Draw(0,0,FOffscreen);
+  Canvas.Draw(0, 0, FOffscreen);
   Canvas.Unlock;
 end;
 
@@ -798,6 +818,8 @@ begin
 
   if (ssDouble in Shift) or (not FPeakDataLoaded) then
     Exit;
+
+  FMouseIsDown := True;    
 
   Case FSelMode of
   smCoolEdit :
@@ -865,53 +887,53 @@ begin
     end;
   smSSA :
     begin
-        if not Inrange(X, 0, Width) then Exit;
-        NewCursorPos := PixelToTime(X) + FPositionMs;
+      if not Inrange(X, 0, Width) then Exit;
+      NewCursorPos := PixelToTime(X) + FPositionMs;
 
-        if ssLeft in Shift then
+      if ssLeft in Shift then
+      begin
+        with FSelection do
         begin
-          with FSelection do
-          begin
-            StartTime := NewCursorPos;
-            if StartTime > StopTime then
-              StopTime := StartTime;
-            FSelectionOrigin := StopTime;
-          end;
+          StartTime := NewCursorPos;
+          if StartTime > StopTime then
+            StopTime := StartTime;
+          FSelectionOrigin := StopTime;
         end;
+      end;
 
-        if (ssRight in Shift) and not(ssShift in Shift) then
+      if (ssRight in Shift) and not(ssShift in Shift) then
+      begin
+        with FSelection do
         begin
-          with FSelection do
-          begin
-            if NewCursorPos > StartTime then
-              StopTime := NewCursorPos;
-            FSelectionOrigin := StartTime;
-          end;
+          if NewCursorPos > StartTime then
+            StopTime := NewCursorPos;
+          FSelectionOrigin := StartTime;
         end;
+      end;
 
-        if (ssRight in Shift) or (ssLeft in Shift) then
+      if (ssRight in Shift) or (ssLeft in Shift) then
+      begin
+        if Assigned(FSelectedRange) then
         begin
-          if Assigned(FSelectedRange) then
-          begin
-            // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
-            FSelectedRange.StartTime := FSelection.StartTime;
-            FSelectedRange.StopTime := FSelection.StopTime;
-            Include(UpdateFlags, uvfRange);
-            if Assigned(FOnSelectedRangeChange) then
-              FOnSelectedRangeChange(Self);
-          end;
-          if Assigned(FOnSelectionChange) then
-            FOnSelectionChange(Self);
-          Include(UpdateFlags, uvfSelection);
+          // TODO : we need to keep range list sorted (or maybe we do it when we unselect)
+          FSelectedRange.StartTime := FSelection.StartTime;
+          FSelectedRange.StopTime := FSelection.StopTime;
+          Include(UpdateFlags, uvfRange);
+          if Assigned(FOnSelectedRangeChange) then
+            FOnSelectedRangeChange(Self);
         end;
+        if Assigned(FOnSelectionChange) then
+          FOnSelectionChange(Self);
+        Include(UpdateFlags, uvfSelection);
+      end;
 
-        if (FCursorMs <> NewCursorPos) then
-        begin
-          FCursorMs := NewCursorPos;
-          if Assigned(FOnCursorChange) then
-            FOnCursorChange(Self);
-          Include(UpdateFlags, uvfCursor);
-        end;
+      if (FCursorMs <> NewCursorPos) then
+      begin
+        FCursorMs := NewCursorPos;
+        if Assigned(FOnCursorChange) then
+          FOnCursorChange(Self);
+        Include(UpdateFlags, uvfCursor);
+      end;
     end;
   end; // case
 
@@ -935,7 +957,7 @@ var NewCursorPos : Integer;
 begin
   inherited;
 
-  if (ssDouble in Shift) or (not FPeakDataLoaded) then Exit;
+  if (ssDouble in Shift) or (not FPeakDataLoaded) or (not FMouseIsDown) then Exit;
 
   UpdateFlags := [];
 
@@ -1042,13 +1064,12 @@ end;
 procedure TWAVDisplayer.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
-  
-  if (not FPeakDataLoaded) then
-    Exit;
+
   FSelectionOrigin := -1;
-  FScrollOrigin := -1;  
+  FScrollOrigin := -1;
   Cursor := crIBeam;
   MouseCapture := False;
+  FMouseIsDown := False;
 end;
 
 //------------------------------------------------------------------------------
@@ -1226,13 +1247,10 @@ begin
   FSelection.StartTime := 0;
   FSelection.StopTime := 0;
 
-  if Assigned(FScrollBar) then
-  begin
-    FScrollBar.Min := 0;
-    FScrollBar.Max := FLengthMs;
-    FScrollBar.Position := 0;
-    FScrollBar.PageSize := FLengthMs;
-  end;
+  FScrollBar.Min := 0;
+  FScrollBar.Max := FLengthMs;
+  FScrollBar.Position := 0;
+  FScrollBar.PageSize := FLengthMs;
 
   FPeakDataLoaded := True;
 
@@ -1348,8 +1366,7 @@ begin
   if NewPosition <> FPositionMs then
   begin
     FPositionMs := NewPosition;
-    if Assigned(FScrollBar) then
-      FScrollBar.Position := FPositionMs;
+    FScrollBar.Position := FPositionMs;
     UpdateView([uvfPosition]);
     if Assigned(FOnViewChange) then
       FOnViewChange(Self);
@@ -1365,8 +1382,7 @@ begin
   begin
     FPageSizeMs := NewPageSize;
     FPositionMs := GetPositionMs;
-    if Assigned(FScrollBar) then
-      FScrollBar.PageSize := FPageSizeMs;
+    FScrollBar.PageSize := FPageSizeMs;
     UpdateView([uvfPageSize]);
     if Assigned(FOnViewChange) then
       FOnViewChange(Self);
@@ -1386,8 +1402,7 @@ begin
   Constrain(NewPageSize,0,FLengthMs);
   NewPosition := Range.StartTime;
   Constrain(NewPosition, 0, FLengthMs - NewPageSize);
-  if Assigned(FScrollBar) then
-    FScrollBar.SetPositionAndPageSize(NewPosition,NewPageSize);
+  FScrollBar.SetPositionAndPageSize(NewPosition,NewPageSize);
 
   UpdateFlags := [];
   if (NewPosition <> FPositionMs) or (NewPageSize <> FPageSizeMs) then
@@ -1742,7 +1757,7 @@ var TmpRange : TRange;
     DisplayLen : Integer;
     OldPos, OldPageSize : Integer;
 const
-    MinDisplayLen : Integer = 10000; // display minimum 15 seconds
+    MinDisplayLen : Integer = 10000; // display minimum 10 seconds
 begin
   TmpRange := TRange.Create;
   RangeLen := Range.StopTime - Range.StartTime;
@@ -1821,13 +1836,10 @@ begin
 
   ZeroMemory(@FWavFormat,SizeOf(FWavFormat));
 
-  if Assigned(FScrollBar) then
-  begin
-    FScrollBar.Min := 0;
-    FScrollBar.Max := 0;
-    FScrollBar.Position := 0;
-    FScrollBar.PageSize := 0;
-  end;
+  FScrollBar.Min := 0;
+  FScrollBar.Max := 0;
+  FScrollBar.Position := 0;
+  FScrollBar.PageSize := 0;
 
   UpdateView([uvfPageSize]);
   if Assigned(FOnSelectionChange) then
