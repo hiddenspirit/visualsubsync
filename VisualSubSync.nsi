@@ -3,7 +3,7 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.2"
+!define VERSION "0.3"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
@@ -19,6 +19,10 @@
 !define FILE_WEB6 "script.js"
 
 !define DIR_HELP "help\"
+!define FILES_HELP1 "*.html"
+!define FILES_HELP2 "*.css"
+!define DIR_HELP_IMAGES "help\images\"
+!define FILES_HELP_IMAGE1 "*.png"
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -85,9 +89,12 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB5}"
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB6}"
 
-	; Help files (whole help dir)
+	; Help files
   SetOutPath "$INSTDIR\${DIR_HELP}"
-  File /r "${INPUT_PATH}${DIR_HELP}*.*"
+  File "${INPUT_PATH}${DIR_HELP}${FILES_HELP1}"
+  File "${INPUT_PATH}${DIR_HELP}${FILES_HELP2}"
+  SetOutPath "$INSTDIR\${DIR_HELP_IMAGES}"
+  File "${INPUT_PATH}${DIR_HELP_IMAGES}${FILES_HELP_IMAGE1}"
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
