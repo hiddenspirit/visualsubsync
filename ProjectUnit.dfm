@@ -1,6 +1,6 @@
 object ProjectForm: TProjectForm
-  Left = 285
-  Top = 213
+  Left = 226
+  Top = 175
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'New Project'
@@ -189,8 +189,16 @@ object ProjectForm: TProjectForm
     Visible = False
     OnClick = bttOkClick
   end
+  object chkSaveAsUTF8: TTntCheckBox
+    Left = 112
+    Top = 183
+    Width = 92
+    Height = 17
+    Caption = 'Save as UTF8'
+    TabOrder = 7
+  end
   object TntOpenDialog1: TTntOpenDialog
-    Left = 8
-    Top = 296
+    Left = 288
+    Top = 304
   end
 end

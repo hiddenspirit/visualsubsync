@@ -71,6 +71,7 @@ type
     rbPeakOnly: TRadioButton;
     bttBrowsePeakFile: TSpeedButton;
     EditPeakFilename: TTntEdit;
+    chkSaveAsUTF8: TTntCheckBox;
     procedure bttCreateNewProjectClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure bttBrowseVideoFileClick(Sender: TObject);
@@ -305,6 +306,8 @@ begin
   EditWAVFilename.Text := '';
   EditSubtitleFilename.Text := '';
   EditProjectFilename.Text := '';
+  EditPeakFilename.Text := '';
+  chkSaveAsUTF8.Checked := False;
 end;
 
 //------------------------------------------------------------------------------
@@ -331,6 +334,7 @@ begin
   EditProjectFilename.Text := Project.Filename;
   EditPeakFilename.Text := Project.PeakFile;
   WAVSelectMode(Project.WAVMode);
+  chkSaveAsUTF8.Checked := Project.IsUTF8;
 end;
 
 //------------------------------------------------------------------------------
