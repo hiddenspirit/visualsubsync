@@ -1,0 +1,29 @@
+.MainColumn {
+	width: 90%;
+	margin: auto;
+}
+.Title {
+	font-size: 180%;
+	margin-bottom: 1em;
+}
+.Project {
+	text-align: left;
+	font-size: 120%;
+	margin-bottom: 1em;
+}		
+.SubTable {
+	width: 100%;
+}
+
+.HeaderIndex { background-color: #BBDDFF; }
+.HeaderFromTo { background-color: #BBDDFF; }
+.HeaderText { background-color: #DDEEFF; }
+.HeaderCommands { background-color: #BBDDFF; }
+
+.CellIndex { background-color: #DDDDDD; text-align: center; }
+.CellFromTo { background-color: #DDDDDD; text-align: center; white-space:nowrap; }
+.CellText { background-color: #EEEEEE; }
+.CellTextH { background-color: #FFFF00; }
+.CellCommands { background-color: #DDDDDD; text-align: center; }
+
+.Footer { text-align: center; font-size: 60%; margin-top: 1em; }

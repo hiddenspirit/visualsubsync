@@ -5,44 +5,11 @@
 		<title>VisualSubSync $|version|$</title>
 		<style type="text/css">
 		body {
-			text-align:center;
-		}
-		.MainColumn {
-			width: 90%;
-			margin: auto;
-		}
-		.Title {
-			font-size: 180%;
-			margin-bottom: 1em;
-		}
-		.Project {
-			text-align: left;
-			font-size: 120%;
-			margin-bottom: 1em;
+			text-align: center;
 		}		
-		.SubTable {
-			width: 100%;
-		}
-		
-		.HeaderIndex { background-color: #BBDDFF; }
-		.HeaderFromTo { background-color: #BBDDFF; }
-		.HeaderText { background-color: #DDEEFF; }
-		.HeaderCommands { background-color: #BBDDFF; }
-
-		.CellIndex { background-color: #DDDDDD; text-align: center; }
-		.CellFromTo { background-color: #DDDDDD; text-align: center; }
-		.CellText { background-color: #EEEEEE; }
-		.CellCommands { background-color: #DDDDDD; text-align: center; }
-		
-		.Footer { text-align: center; font-size: 60%; margin-top: 1em; }
 		</style>
-		<script Language="JavaScript">
-			function OpenDetailsWindow(index)
-			{
-				newwin = window.open("details.shtml?idx="+index,"SubtitleDetails","width=630,height=340,resizable");
-				newwin.focus();
-			}
-		</Script>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<script type="text/javascript" src="script.js"></script>
 </head>
 <body>
 
@@ -51,6 +18,13 @@
 <div class="Title">VisualSubSync Network Mode</div>
 
 <div class="Project">Project : $|project-filename|$</div>
+
+<form name="hwordform" style="text-align: left;">
+	<input type="text" name="hword" size="25">
+	<input type="button" value="highlight" onClick="document.hwordform.hwordcount.value=Highlighter(document.hwordform.hword.value)">	
+	<input type="button" value="clear" onClick="HighlighterClear(); document.hwordform.hwordcount.value=''">
+	<input type="text" name="hwordcount" size="20" style="border: solid 0px black;" readonly="true">
+</form>
 
 <table cellpadding="5" class="SubTable">
 	<tr>
