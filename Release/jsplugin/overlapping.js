@@ -1,3 +1,6 @@
+// Overlapping
+// (christophe.paris <at> free.fr)
+
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Overlapping',

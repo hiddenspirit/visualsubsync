@@ -3,12 +3,13 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.5"
+!define VERSION "0.6"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
 !define FILE1 "VisualSubSync.exe"
 !define FILE2 "WavWriter.dll"
+!define FILE3 "js3215R.dll"
 
 !define DIR_WEB "web\"
 !define FILE_WEB1 "index.shtml"
@@ -23,6 +24,13 @@
 !define FILES_HELP2 "*.css"
 !define DIR_HELP_IMAGES "help\images\"
 !define FILES_HELP_IMAGE1 "*.png"
+
+!define DIR_JSPLUGIN "jsplugin\"
+!define FILES_JSPLUGIN1 "french_typo.js"
+!define FILES_JSPLUGIN2 "overlapping.js"
+!define FILES_JSPLUGIN3 "too_long_display_time.js"
+!define FILES_JSPLUGIN4 "too_long_line.js"
+!define FILES_JSPLUGIN5 "too_short_display_time.js"
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -79,6 +87,7 @@ Section "Main (required)" SecMain
   ; Main files
   File "${INPUT_PATH}${FILE1}"
   File "${INPUT_PATH}${FILE2}"
+  File "${INPUT_PATH}${FILE3}"
 
 	; Web files
   SetOutPath "$INSTDIR\${DIR_WEB}"
@@ -95,6 +104,14 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_HELP}${FILES_HELP2}"
   SetOutPath "$INSTDIR\${DIR_HELP_IMAGES}"
   File "${INPUT_PATH}${DIR_HELP_IMAGES}${FILES_HELP_IMAGE1}"
+  
+  ; Javascript plugins
+  SetOutPath "$INSTDIR\${DIR_JSPLUGIN}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN1}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN2}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN3}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN4}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN5}"
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
@@ -148,6 +165,14 @@ Section "Uninstall"
   
 	; Delete whole help directory
   RMDir /r "$INSTDIR\${DIR_HELP}"
+  
+  ; Javascript plugins  
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN1}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN2}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN3}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN4}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN5}"  
+  RMDir "$INSTDIR\${DIR_JSPLUGIN}"
   
   ; Delete install directory if empty
   RMDir "$INSTDIR"

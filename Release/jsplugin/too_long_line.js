@@ -1,3 +1,6 @@
+// Too long line
+// (christophe.paris <at> free.fr)
+
 var DebugMode = true;
 
 VSSPlugin = {

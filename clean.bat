@@ -1,1 +1,2 @@
-del *.dcu *.~* *.ddp *.obj
+del *.dcu *.~* *.ddp *.obj *.dsm
+del .\dcu\*.dcu

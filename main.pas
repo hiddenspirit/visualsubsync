@@ -447,8 +447,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
 // TODO : Ignore tags in stats
 
-// TODO : previous/next error
-
 //==============================================================================
 
 procedure TMainForm.FormCreate(Sender: TObject);

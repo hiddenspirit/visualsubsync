@@ -1,3 +1,6 @@
+// Too short display time
+// (christophe.paris <at> free.fr)
+
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too short display time',

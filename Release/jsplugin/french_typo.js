@@ -1,3 +1,6 @@
+// French typography
+// (christophe.paris <at> free.fr)
+
 var DebugMode = true;
 
 VSSPlugin = {
