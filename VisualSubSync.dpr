@@ -26,7 +26,10 @@ uses
   PreferencesFormUnit in 'PreferencesFormUnit.pas' {PreferencesForm},
   MRUListUnit in 'MRUListUnit.pas',
   VerticalScalingFormUnit in 'VerticalScalingFormUnit.pas' {VerticalScalingForm},
-  DetachedVideoFormUnit in 'DetachedVideoFormUnit.pas' {DetachedVideoForm};
+  DetachedVideoFormUnit in 'DetachedVideoFormUnit.pas' {DetachedVideoForm},
+  JavaScriptPluginUnit in 'JavaScriptPluginUnit.pas',
+  LogWindowFormUnit in 'LogWindowFormUnit.pas' {LogForm},
+  CursorManager in 'CursorManager.pas';
 
 {$R *.res}
 
