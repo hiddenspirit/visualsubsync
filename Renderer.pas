@@ -761,6 +761,8 @@ begin
   FLastResult := S_OK;
   FAudioStreamCount := 0;
   FHWavWriterInst := CoLoadLibrary('WavWriter.dll',True);
+  if (FHWavWriterInst = 0) then
+    MessageBox(0, 'Error while loading WavWriter.dll', 'Error', MB_OK);
 end;
 
 //------------------------------------------------------------------------------
@@ -806,9 +808,13 @@ var
   EnumPins : IEnumPins;
   ul: ULONG;
 begin
+  Result := False;
+  if (FHWavWriterInst = 0) then
+    Exit;
+
   if Assigned(FGraphBuilder) then
     Close;
-  Result := False;
+
   FLastResult := CoCreateInstance(TGUID(CLSID_FilterGraph), nil, CLSCTX_INPROC,
     TGUID(IID_IGraphBuilder), FGraphBuilder);
   GetLastErrorString;
