@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<title>VisualSubSync tutorial : Making a transcript of your favourite TV series</title>
+	<meta name="author" content="Christophe Paris">
+	<meta name="description" content="A tutorial showing how to make a transcript of your favourite TV series with VisualSubSync">
+	<meta name="keywords" content="VisualSubSync, tutorial, subtitles, subtitle, video, divx, sous-titres, CoreCodec, WAV, transcript">
+	<meta http-equiv="content-type" content="text/xml; charset=iso-8859-1">
+	<link rel="icon" href="images/ico16.png" type="image/png">
+	<link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+
+<div class="MainColumn">
+
+<div class="MainTitle">Making a transcript of your favourite TV series with VisualSubSync</div>
+
+<p>
+Requirement :<br>
+- VisualSubSync installed.<br>
+- The video of your series, I use an episode of "24" here.<br>
+</p>
+
+<div class="Title">1) Creating the project</div>
+<p>
+Here we go, let's start VisualSubSync and choose in the menu
+<i>File&gt;New Project...</i><br>
+I use the little browse button (1) to select my video. Once it's done I
+get this screen :<br>
+<br>
+<img alt="New project dialog" src="images/SSNewProject.png"><br>
+<br>
+For the WAV file I keep <i>Internal</i> checked so the WAV will be extracted
+at the next step.<br>
+The 2 last fields (<i>Subtitle file</i> and <i>project file</i>) are automatically
+pre-filled, I keep them like that.<br>
+Now I click the <i>Create new project</i> button (2), and I get to the
+<i>Extract WAV</i> dialog below :<br>
+<br>
+<img alt="Extract WAV dialog" src="images/SSExtractWAV.png"><br>
+<br>
+If our video file as several audio stream we can select one in the
+<i>Stream to extract</i> combo box (1).<br>
+<br>
+For the WAV extraction we have 3 different choices (2).<br>
+In the 3 cases a peak file will be created. A peak file contain a
+highly reduced resolution version of the WAV file, which is used
+to display the audio form. Using the WAV file directly will be too slow, it will
+require to process a too large amount of data.<br>
+If you choose <i>Only create peak file</i> the video file will be used for
+audio preview so no more space will be required on your HD,
+but it's less efficient for audio preview, you will have a little start delay for example.<br>
+The <i>Simple extraction</i> option will just decompress the audio stream
+without any modification, so it can create quite big files.<br>
+I advise to use the last option <i>Convert to reduce file size</i>, it will
+create a WAV in a little reduced resolution but keeping enough quality
+to have a still comfortable listening.<br>
+<br>
+Ok, now we are set, I now click the <i>Extract</i> button (3) and we just
+have to wait now, extraction will take 2-3 minutes.
+</p>
+
+<div class="Title">2) The main window</div>
+
+<p>
+Finally we are ready to start the real work, this is the main window :<br>
+<br>
+<img alt="Main dialog" src="images/SSMainDialog.png"><br>
+<br>
+The interface can be divided in 4 different parts :<br>
+(1) the WAV display<br>
+(2) controls for listening, and informations about WAV display<br>
+(3) the subtitle list<br>
+(4) the subtitle edition, with the number of characters by line in the
+left part and the subtitle text in the right part<br>
+<br>
+An important thing to remember is the shortcut used to control the WAV
+display part :<br>
+<ul>
+<li>Zoom-in/out centered on mouse cursor position : mouse wheel up/down.</li>
+<li>Left/right panning : middle button mouse press + mouse left/right.</li>
+<li>Faster left/right panning : shift key + middle button mouse press + mouse left/right.</li>
+<li>Selection : mouse left click.</li>
+<li>Expanding selection : shift key + mouse left click.</li>
+</ul>
+</p>
+
+<div class="Title">3) Adding subtitles</div>
+
+<p>
+Ok, let's add a subtitle now.<br>
+First, I zoom a bit using mouse wheel up and go to start of the audio stream using the
+ little grey scrollbar, then I start playing using the play button
+or F1. I select a part of the WAV display using mouse left click and to check
+that I have the right part I press F1 again to listen to the audio. I
+readjust the selection keeping the shift key pressed and left clicking
+in the WAV display part. Once I'm satisfied I right click in the WAV
+display part and select <i>Add subtitles</i> (1).<br>
+<br>
+<img alt="Main dialog with the first subtitle" src="images/SSMainDialog2.png"><br>
+<br>
+The focus is now set in the subtitle edition part, so I enter the text
+for this subtitle (2).<br>
+You can notice some little statistics in the status bar, like the
+position of the cursor, the total number of characters and the number
+of characters by seconds which is usefull to check if your subtitle
+has a long enough display time (between 15-20 Char/s seems good).<br>
+<br>
+If I don't understand some words I just put some ??? you will see later why.
+</p>
+
+<div class="Title">4) Error checking</div>
+
+<p>
+Some time later.... Ouff I've finished typing all the text.<br>
+Lets's use the error checking function now, it's available from the
+menu <i>Edit&gt;Error checking&gt;Check errors</i>.<br>
+<br>
+<img alt="Error report" src="images/SSErrorReport.png"><br>
+<br>
+Different types of error are reported, 4 at the moment :<br>
+<ul>
+<li>Overlapping : An error is detected when the subtitle overlap on next
+subtitle.</li>
+<li>Too short display time : An error is detected when the number of
+Char/s is strictly superior to a specified value.</li>
+<li>Too long display time : An error is detected when the number of
+Char/s is strictly inferior to a specified value.</li>
+<li>Too long line : An error is detected when the line length in a
+subtitle is strictly superior to a specified value.</li>
+</ul>
+You can configure this in the preferences. <i>Edit&gt;Preferences...</i><br>
+Double clicking on a line will place you on the subtitle with the error.<br>
+<br>
+When most of the error are corrected we should have pretty good
+subtitles.<br>
+</p>
+
+<div class="Title">5) Network mode</div>
+
+<p>
+Now a special feature for people who's native language is different
+from the original video. (like me :-D)<br>
+VisualSubSync include a little network mode. To enable it select the
+menu <i>Edit&gt;Webserver&gt;Start</i>.<br>
+Give your ip address to your friend, or your domain name if you have one,
+and they will be able to help you by using any web browser.
+They just have to enter http://your-ip-address or http://your-domain-name in their browser.<br>
+You can of course configure the port used in case you already have a web server by going in
+<i>Edit&gt;Preferences...</i><br>
+Then to check if it works or see how it looks you
+can use locally <a href="http://127.0.0.1">http://127.0.0.1</a><br>
+<br>
+<img alt="Network mode home page" border="1" src="images/SSHomePage.png"><br>
+<br>
+Clicking on <i>[details]</i> open the following page :<br>
+<br>
+<img alt="Details page" src="images/SSDetailsPage.png"><br>
+<br>
+Here you can listen to the subtitle audio (1), complete the words missing
+(2), and finally submit your suggestion (3).<br>
+In return you get the suggestion in VisualSubSync by using <i>Edit&gt;Web
+server&gt;Show suggestions</i> :<br>
+<br>
+<img alt="Suggestions dialog" src="images/SSSuggestionDialog.png"><br>
+<br>
+You can correct the text of your subtitle, and your friend will see the text
+ modification instantly by refreshing his browser.
+</p>
+
+<a href="index.html">Back</a>
+
+</div> <!-- MainColumn -->
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" >
+		<title>Subtitle details</title>
+		<style type="text/css">
+		body {
+			text-align:center;
+		}		
+		.DetailsTable {
+			width: 100%;
+		}				
+		.HeaderIndex { background-color: #BBDDFF; }
+		.HeaderFrom { background-color: #DDEEFF; }
+		.HeaderTo { background-color: #DDEEFF; }
+		.HeaderText { background-color: #DDEEFF; vertical-align: top; }
+		.HeaderListen { background-color: #BBDDFF; }
+		.HeaderSuggestion { background-color: #DDEEFF; vertical-align: top; }
+
+		.CellIndex { background-color: #DDDDDD; }
+		.CellFrom { background-color: #EEEEEE; }
+		.CellTo { background-color: #EEEEEE; }
+		.CellText { background-color: #EEEEEE; }
+		.CellListen { background-color: #DDDDDD; }
+		.CellSuggestion { background-color: #EEEEEE; }		
+		</style>
+</head>
+<body onload="window.focus()">
+
+<!--$TMPL_SELECTED_SUB$-->
+<table cellpadding="5" class="DetailsTable">
+	<tr>
+		<td class="HeaderIndex">Index</td>
+		<td class="CellIndex"><a href="details.shtml?idx=$|index|$">$|index|$</a></td>
+	</tr>
+	<tr>
+		<td class="HeaderFrom">From</td>
+		<td class="CellFrom">$|start|$</td>
+	</tr>
+	<tr>
+		<td class="HeaderTo">To</td>
+		<td class="CellTo">$|stop|$</td>
+	</tr>
+	<tr>
+		<td class="HeaderText">Text</td>
+		<td class="CellText">$|html-text8|$</td>
+	</tr>
+	<tr>
+		<td class="HeaderListen">Listen</td>
+		<td class="CellListen"><a href="wav/$|time-index|$.wav">WAV format</a> ($|wav-size|$)</td>
+	</tr>
+	<tr>
+		<td class="HeaderSuggestion">Suggestion</td>
+		<td class="CellSuggestion">
+			<form method="post" action="send_suggestion.shtml">
+				<input type="hidden" name="vss-command" value="SUGGESTION">
+				<input type="hidden" name="time-index" value="$|time-index|$">
+				<input type="hidden" name="index" value="$|index|$">
+				<textarea name="text" cols="60" rows="5" wrap="physical">$|raw-text8|$</textarea><br>
+				<input type="submit" value="Submit" name="submit">
+			</form>
+		</td>
+	</tr>	
+</table>
+<!--$TMPL_SELECTED_SUB_END$-->
+
+</body>
+</html>

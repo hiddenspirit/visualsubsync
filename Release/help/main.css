@@ -1,0 +1,33 @@
+.MainColumn {
+	width: 90%;
+	margin-top: 2em;
+	margin-bottom: 2em;			
+	margin-right: auto;
+	margin-left: auto;
+	background: #eee;
+	padding: 1em;
+	border: 1px solid #aaa;
+}
+.MainTitle {
+	font-size: 180%;
+	margin-bottom: 1em;
+	text-align: center;
+}		
+.Title {
+	font-size: 120%;
+	margin-top: 0.5em;
+	margin-bottom: 0.25em;
+}
+a:link {
+	font-weight: bold;
+	color: #004488;	
+}	
+a:visited {
+	font-weight: bold;
+	color: #004488;
+}
+a:hover {
+	color: #2288CC;
+	background: #EEE;
+}
+img a:hover {  }
