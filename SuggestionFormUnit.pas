@@ -222,7 +222,10 @@ begin
   pSuggestion.Text := Text;
   pSuggestion.AddTime := GetTickCount;
   LeaveCriticalSection(FCriticalSection);
-  vtvSuggestionsLst.Repaint;  
+  vtvSuggestionsLst.Repaint;
+  MainForm.ShowStatusBarMessage(
+    Format('We just received a new suggestion from the network. (Total : %d)',
+    [vtvSuggestionsLst.ChildCount[nil]]) );
 end;
 
 // -----------------------------------------------------------------------------
