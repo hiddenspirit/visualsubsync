@@ -787,6 +787,7 @@ end;
 
 procedure TPreferencesForm.bttOkClick(Sender: TObject);
 begin
+  ListPluginParam.EndEditNode;
   ModalResult := mrOk;
 end;
 

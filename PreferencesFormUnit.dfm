@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsFonts
+    ActivePage = tsErrorChecking
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
