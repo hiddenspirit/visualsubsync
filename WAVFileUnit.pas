@@ -79,6 +79,9 @@ type
 
 implementation
 
+uses
+  Dialogs;
+
 // -----------------------------------------------------------------------------
 
 destructor TWAVFile.Destroy;
@@ -119,7 +122,9 @@ begin
     Exit;
 
   if (Size+8) <> FFS.Size then
-    Exit;
+  begin
+    MessageDlg('Warning, ' + FileName + ' is damaged, loading may not work correctly.', mtWarning, [mbOK], 0);
+  end;
 
   if not (FFS.Read(Buff, 4) = 4) or not (StrLComp(Buff,'WAVE',4) = 0) then
     Exit;
