@@ -15,7 +15,7 @@ VSSPlugin = {
   Message : 'Subtitle has a too long line :',
 
   // ----- Plugin parameters available from VSS GUI (name must start with "Param") -----
-  ParamMaxPerLine : { Value : 60, Unit : 'Characters' },
+  ParamMaxPerLine : { Value : 50, Unit : 'Characters' },
 
   // ----- HasError method called for each subtitle during the error checking -----
   // If there is an error on CurrentSub return a string containing the error description.
