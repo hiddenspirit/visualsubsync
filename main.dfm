@@ -755,6 +755,7 @@ object MainForm: TMainForm
       Top = 32
       Width = 150
       Height = 33
+      Hint = 'Cursor position'
       BevelOuter = bvLowered
       Caption = '00:00:00.000'
       Font.Charset = DEFAULT_CHARSET
@@ -763,6 +764,8 @@ object MainForm: TMainForm
       Font.Name = 'Arial'
       Font.Style = [fsBold]
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 0
     end
     object PanelTimeSelView: TPanel
@@ -816,8 +819,11 @@ object MainForm: TMainForm
         Top = 18
         Width = 73
         Height = 21
+        Hint = 'Selection length'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 0
       end
       object edSelEnd: TEdit
@@ -825,8 +831,11 @@ object MainForm: TMainForm
         Top = 18
         Width = 73
         Height = 21
+        Hint = 'Selection end position'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 1
       end
       object edSelBegin: TEdit
@@ -834,8 +843,11 @@ object MainForm: TMainForm
         Top = 18
         Width = 73
         Height = 21
+        Hint = 'Selection start position'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 2
       end
       object edViewBegin: TEdit
@@ -843,8 +855,11 @@ object MainForm: TMainForm
         Top = 41
         Width = 73
         Height = 21
+        Hint = 'View start position'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 3
       end
       object edViewEnd: TEdit
@@ -852,8 +867,11 @@ object MainForm: TMainForm
         Top = 41
         Width = 73
         Height = 21
+        Hint = 'View end position'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 4
       end
       object edViewLength: TEdit
@@ -861,8 +879,11 @@ object MainForm: TMainForm
         Top = 41
         Width = 73
         Height = 21
+        Hint = 'View length'
         TabStop = False
+        ParentShowHint = False
         ReadOnly = True
+        ShowHint = True
         TabOrder = 5
       end
     end
@@ -1329,7 +1350,7 @@ object MainForm: TMainForm
     Left = 72
     Top = 8
     Bitmap = {
-      494C010122002700040010001000FF00FF00FF00FFFFFFFFFFFFFFFF424D3600
+      494C010122002700040010001000FF00FF00FF10FFFFFFFFFFFFFFFF424D3600
       000000000000360000002800000040000000A0000000010020000000000000A0
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -2653,7 +2674,8 @@ object MainForm: TMainForm
       FFF1FFF10001F001FFE3FFE30001F001F8C7F8C70001F001E00FE00F0001C001
       C01FC01F00018001C01FC01F00010001800F800F00010001800F800F00010001
       800F800F00010001C01FC01F00010001C01FC01F00018003E03FE03F0001C007
-      F8FFF8FF0001F00FFFFFFFFF0003F01F}
+      F8FFF8FF0001F00FFFFFFFFF0003F01F00000000000000000000000000000000
+      000000000000}
   end
   object TntOpenDialog1: TTntOpenDialog
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]

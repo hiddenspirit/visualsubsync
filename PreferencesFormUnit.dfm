@@ -47,6 +47,9 @@ object PreferencesForm: TPreferencesForm
           Top = 20
           Width = 89
           Height = 21
+          Hint = 'Port to which the webserver listen for connections'
+          ParentShowHint = False
+          ShowHint = True
           TabOrder = 0
           Text = '1'
           OnKeyPress = EditDigitOnlyKeyPress
@@ -68,7 +71,10 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 121
           Height = 17
+          Hint = 'Compress dynamic webpages for faster transmission'
           Caption = 'Enable compression'
+          ParentShowHint = False
+          ShowHint = True
           TabOrder = 2
         end
       end
@@ -84,7 +90,12 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 305
           Height = 17
+          Hint = 
+            'Double click on a .vssprj file will automatically open the proje' +
+            'ct in VisualSubSync'
           Caption = 'Associate project file (*.vssprj) with VisualSubSync'
+          ParentShowHint = False
+          ShowHint = True
           TabOrder = 0
           OnClick = chkAssociateExtClick
         end
