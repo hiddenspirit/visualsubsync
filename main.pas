@@ -1023,7 +1023,7 @@ begin
 
   g_WebRWSynchro.BeginWrite;
   WAVDisplayer.RangeList.Clear;
-  FS := TFileStream.Create(Filename,fmOpenRead);
+  FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
   ZeroMemory(@BOM[0],Length(BOM));
   FS.Read(BOM,4);
   if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
@@ -1055,16 +1055,16 @@ begin
       S := Trim(S);        
       Text := Text + S + #13#10;
     end;
-    Text := Trim(Text);
+    Text := TrimRight(Text);
     if (Start <> -1) and (Stop <> -1) then
     begin
       // Remove the index line if any
-      i := RPos(#13#10,Text);
+      i := RPos(#13#10, Text);
       if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (not EndOfFile)) then
       begin
-        Delete(Text,i,MaxInt);
-        Text := Trim(Text);
+        Delete(Text, i, MaxInt);
       end;
+      Text := Trim(Text);      
       if (not EndOfFile) and (Stop = NextStart) then
       begin
         AutoCorrectedFile := True;
