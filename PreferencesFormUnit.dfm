@@ -110,22 +110,23 @@ object PreferencesForm: TPreferencesForm
       end
     end
     object tsErrorChecking: TTntTabSheet
+      BorderWidth = 4
       Caption = 'Error checking'
       object TntBevel1: TTntBevel
-        Left = 8
-        Top = 176
-        Width = 329
+        Left = 0
+        Top = 177
+        Width = 337
         Height = 60
       end
       object TntLabel2: TTntLabel
-        Left = 8
+        Left = 0
         Top = 148
         Width = 33
         Height = 13
         Caption = 'Value :'
       end
       object lbErrorUnit: TTntLabel
-        Left = 184
+        Left = 176
         Top = 148
         Width = 89
         Height = 13
@@ -133,16 +134,16 @@ object PreferencesForm: TPreferencesForm
         Caption = '-'
       end
       object lbErrorDescription: TTntLabel
-        Left = 16
+        Left = 8
         Top = 200
-        Width = 313
+        Width = 321
         Height = 31
         AutoSize = False
         Caption = '-'
         WordWrap = True
       end
       object TntLabel3: TTntLabel
-        Left = 16
+        Left = 8
         Top = 184
         Width = 73
         Height = 13
@@ -175,16 +176,16 @@ object PreferencesForm: TPreferencesForm
         ParentFont = False
       end
       object ListErrorChecking: TTntCheckListBox
-        Left = 8
-        Top = 8
-        Width = 329
-        Height = 129
+        Left = 0
+        Top = 0
+        Width = 337
+        Height = 137
         ItemHeight = 13
         TabOrder = 0
         OnClick = ListErrorCheckingClick
       end
       object EditErrorValue: TTntEdit
-        Left = 48
+        Left = 40
         Top = 144
         Width = 129
         Height = 21
@@ -194,7 +195,100 @@ object PreferencesForm: TPreferencesForm
       end
     end
     object tsHotKeys: TTntTabSheet
+      BorderWidth = 4
       Caption = 'HotKeys'
+      object TntLabel5: TTntLabel
+        Left = 0
+        Top = 200
+        Width = 33
+        Height = 13
+        Caption = 'Mode :'
+      end
+      object TntLabel6: TTntLabel
+        Left = 80
+        Top = 200
+        Width = 40
+        Height = 13
+        Caption = 'Hotkey :'
+      end
+      object ListHotkeys: TTntListView
+        Left = 0
+        Top = 0
+        Width = 337
+        Height = 193
+        Columns = <
+          item
+            Caption = 'Name'
+            Width = 150
+          end
+          item
+            Caption = 'Normal'
+            Width = 80
+          end
+          item
+            Caption = 'Timing'
+            Width = 80
+          end>
+        HideSelection = False
+        ReadOnly = True
+        RowSelect = True
+        SortType = stText
+        TabOrder = 0
+        ViewStyle = vsReport
+        OnDeletion = ListHotkeysDeletion
+        OnSelectItem = ListHotkeysSelectItem
+      end
+      object HotKey1: THotKey
+        Left = 80
+        Top = 217
+        Width = 185
+        Height = 19
+        HotKey = 0
+        Modifiers = []
+        TabOrder = 1
+      end
+      object ComboHotkeyMode: TTntComboBox
+        Left = 0
+        Top = 216
+        Width = 73
+        Height = 21
+        Style = csDropDownList
+        ItemHeight = 13
+        ItemIndex = 0
+        TabOrder = 4
+        Text = 'Normal'
+        OnSelect = ComboHotkeyModeSelect
+        Items.WideStrings = (
+          'Normal'
+          'Timing')
+      end
+      object bttResetAllHotkeys: TTntButton
+        Left = 272
+        Top = 199
+        Width = 65
+        Height = 19
+        Caption = 'Reset all'
+        TabOrder = 5
+        OnClick = bttResetAllHotkeysClick
+      end
+      object bttSetHotkey: TTntButton
+        Left = 272
+        Top = 217
+        Width = 33
+        Height = 19
+        Caption = 'Set'
+        TabOrder = 2
+        OnClick = bttSetHotkeyClick
+      end
+      object bttClearHotkey: TTntButton
+        Left = 304
+        Top = 217
+        Width = 33
+        Height = 19
+        Caption = 'Clear'
+        TabOrder = 3
+        OnClick = bttClearHotkeyClick
+      end
     end
   end
   object bttOk: TTntButton

@@ -26,7 +26,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, TntStdCtrls, ComCtrls, TntComCtrls, CheckLst,
-  TntCheckLst, IniFiles, ExtCtrls, TntExtCtrls;
+  TntCheckLst, IniFiles, ExtCtrls, TntExtCtrls, TntActnList, Menus;
 
 type
   TErrorListElemType = (eletNoParam, eletIntParam);
@@ -69,6 +69,18 @@ const
   );
 
 type
+  TDefaultActionShortcut = record
+    ActionName : string;
+    ShortCut : string;
+  end;
+
+const
+  DefaultTimingShortcuts : array[0..1] of TDefaultActionShortcut = (
+    (ActionName: 'ActionStop'; ShortCut: 'Esc'),
+    (ActionName: 'ActionPlay'; ShortCut: 'F1')    
+  );
+
+type
   TConfigObject = class
     // Web server
     ServerPort : Integer;
@@ -83,11 +95,23 @@ type
     ErrorTooLongLineValue : Integer;
     // Misc
     SwapSubtitlesList : Boolean;
+    // Hotkeys
+    ListHotkeys : TList;
+    ListDefaultHotkeys : TList;
 
     constructor Create;
+    destructor Destroy; override;
     procedure SetDefault;
     procedure SaveIni(IniFile : TIniFile);
     procedure LoadIni(IniFile : TIniFile);
+    procedure SetDefaultHotKeys(ActionList : TTntActionList);
+  end;
+
+  THotkeyListItemData = class
+    Action : TTntAction;
+    NormalShortCut : TShortCut;
+    TimingShortCut : TShortCut;
+    procedure Assign(Source : THotkeyListItemData);
   end;
 
   TPreferencesForm = class(TForm)
@@ -114,6 +138,14 @@ type
     chkEnableCompression: TCheckBox;
     chkSwapSubList: TCheckBox;
     tsHotKeys: TTntTabSheet;
+    ListHotkeys: TTntListView;
+    HotKey1: THotKey;
+    bttSetHotkey: TTntButton;
+    bttClearHotkey: TTntButton;
+    ComboHotkeyMode: TTntComboBox;
+    TntLabel5: TTntLabel;
+    bttResetAllHotkeys: TTntButton;
+    TntLabel6: TTntLabel;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -122,13 +154,29 @@ type
     procedure EditDigitOnlyKeyPress(Sender: TObject; var Key: Char);
     procedure chkAssociateExtClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure ListHotkeysSelectItem(Sender: TObject; Item: TListItem;
+      Selected: Boolean);
+    procedure ComboHotkeyModeSelect(Sender: TObject);
+    procedure bttSetHotkeyClick(Sender: TObject);
+    procedure bttClearHotkeyClick(Sender: TObject);
+    procedure ListHotkeysDeletion(Sender: TObject; Item: TListItem);
+    procedure bttResetAllHotkeysClick(Sender: TObject);
   private
     { Private declarations }
+    TimingMode : Boolean;
+    ListDefaultHotkeys : TList;
+        
+    function GetCurrentModeShortCut(HLID : THotkeyListItemData) : TShortCut;
+    function GetCurrentModeShortCutFromList : TShortCut;
+    procedure SetCurrentModeShortCut(HLID : THotkeyListItemData; ShortCut : TShortCut);
+    procedure SetCurrentModeShortCutFromList(ShortCut : TShortCut);
   public
     { Public declarations }
     procedure LoadConfig(Config : TConfigObject);
     procedure SaveConfig(Config : TConfigObject);
     function GetErrorListElem(Idx : Integer) : PErrorListElem;
+    function GetMode : Boolean;    
+    procedure SetMode(Timing : Boolean);
   end;
 
 var
@@ -136,15 +184,40 @@ var
 
 implementation
 
-uses MiscToolsUnit, GlobalUnit;
+uses MiscToolsUnit, GlobalUnit, ActnList;
 
 {$R *.dfm}
 
 // =============================================================================
 
+procedure THotkeyListItemData.Assign(Source : THotkeyListItemData);
+begin
+  Action := Source.Action;
+  NormalShortCut := Source.NormalShortCut;
+  TimingShortCut := Source.TimingShortCut;
+end;
+
+// =============================================================================
+
 constructor TConfigObject.Create;
 begin
+  ListHotkeys := TList.Create;
+  ListDefaultHotkeys := TList.Create;
   SetDefault;
+end;
+
+//------------------------------------------------------------------------------
+
+destructor TConfigObject.Destroy;
+var i : integer;
+begin
+  for i:= 0 to ListHotkeys.Count-1 do
+    THotkeyListItemData(ListHotkeys[i]).Free;
+  ListHotkeys.Free;
+  for i:= 0 to ListDefaultHotkeys.Count-1 do
+    THotkeyListItemData(ListDefaultHotkeys[i]).Free;
+  ListDefaultHotkeys.Free;
+  inherited;
 end;
 
 //------------------------------------------------------------------------------
@@ -155,7 +228,7 @@ begin
   SwapSubtitlesList := False;
   // Web server
   ServerPort := 80;
-  EnableCompression := True;
+  EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
   // Error
   ErrorOverlappingEnabled := True;
   ErrorTooShortDisplayTimeEnabled := True;
@@ -168,7 +241,55 @@ end;
 
 //------------------------------------------------------------------------------
 
+function GetDefaultShortcut(ActionName : string; ArraySC : array of TDefaultActionShortcut) : TShortCut;
+var i : integer;
+begin
+  Result := 0;
+  for i:=0 to Length(ArraySC)-1 do
+  begin
+    if (ActionName = ArraySC[i].ActionName) then
+    begin
+      Result := TextToShortCut(ArraySC[i].ShortCut);
+      Break;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TConfigObject.SetDefaultHotKeys(ActionList : TTntActionList);
+var i : integer;
+    Action : TTntAction;
+    HLID : THotkeyListItemData;
+    SC : TShortCut;
+begin
+  for i:=0 to ActionList.ActionCount-1 do
+  begin
+    Action := TTntAction(ActionList.Actions[i]);
+    if (Action.Tag = 1) then
+    begin
+      SC := GetDefaultShortcut(Action.Name, DefaultTimingShortcuts);
+
+      HLID := THotkeyListItemData.Create;
+      HLID.Action := Action;
+      HLID.NormalShortCut := Action.ShortCut;
+      HLID.TimingShortCut := SC;
+      ListHotkeys.Add(HLID);
+
+      HLID := THotkeyListItemData.Create;
+      HLID.Action := Action;
+      HLID.NormalShortCut := Action.ShortCut;
+      HLID.TimingShortCut := SC;
+      ListDefaultHotkeys.Add(HLID);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TConfigObject.SaveIni(IniFile : TIniFile);
+var i : integer;
+    HLID : THotkeyListItemData;
 begin
   // Misc
   IniFile.WriteBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
@@ -187,11 +308,27 @@ begin
 
   IniFile.WriteBool('ErrorChecking','TooLongLineEnabled',ErrorTooLongLineEnabled);
   IniFile.WriteInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
+
+  // Hotkeys
+  for i:=0 to ListHotkeys.Count-1 do
+  begin
+    HLID := ListHotkeys[i];
+    IniFile.WriteString(
+      'Hotkeys',
+      HLID.Action.Name + '[Normal]',
+      ShortCutToText(HLID.NormalShortCut));
+    IniFile.WriteString(
+      'Hotkeys',
+      HLID.Action.Name + '[Timing]',
+      ShortCutToText(HLID.TimingShortCut));
+  end;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TConfigObject.LoadIni(IniFile : TIniFile);
+var i : integer;
+    HLID : THotkeyListItemData;
 begin
   // Misc
   SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
@@ -211,6 +348,20 @@ begin
 
   ErrorTooLongLineEnabled := IniFile.ReadBool('ErrorChecking','TooLongLineEnabled',ErrorTooLongLineEnabled);
   ErrorTooLongLineValue := IniFile.ReadInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
+
+  // Hotkeys
+  for i:=0 to ListHotkeys.Count-1 do
+  begin
+    HLID := ListHotkeys[i];
+    HLID.NormalShortCut := TextToShortCut(
+      IniFile.ReadString('Hotkeys',
+        HLID.Action.Name + '[Normal]',
+        ShortCutToText(HLID.NormalShortCut)));
+    HLID.TimingShortCut := TextToShortCut(
+      IniFile.ReadString('Hotkeys',
+        HLID.Action.Name + '[Timing]',
+        ShortCutToText(HLID.TimingShortCut)));
+  end;
 end;
 
 // =============================================================================
@@ -218,12 +369,15 @@ end;
 procedure TPreferencesForm.FormCreate(Sender: TObject);
 var i : integer;
 begin
+  TimingMode := False;
+
   for i:=0 to Length(ErrorListElemTab)-1 do
   begin
     ListErrorChecking.AddItem(ErrorListElemTab[i].Name,@ErrorListElemTab[i]);
   end;
   ListErrorChecking.ItemIndex := 0;
   ListErrorCheckingClick(Self);
+
   TntPageControl1.ActivePage := tsGeneral;
 end;
 
@@ -237,6 +391,9 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TPreferencesForm.LoadConfig(Config : TConfigObject);
+var i : integer;
+    HLID : THotkeyListItemData;
+    ListItem : TTntListItem;
 begin
   // Misc
   chkSwapSubList.Checked := Config.SwapSubtitlesList;
@@ -256,11 +413,30 @@ begin
 
   ListErrorChecking.Checked[3] := Config.ErrorTooLongLineEnabled;
   PErrorListElem(ListErrorChecking.Items.Objects[3]).Value := Config.ErrorTooLongLineValue;
+
+  // Hotkeys
+  ListHotkeys.Clear;
+  for i:=0 to Config.ListHotkeys.Count-1 do
+  begin
+    HLID := THotkeyListItemData.Create;
+    HLID.Assign(Config.ListHotkeys[i]);
+    ListItem := ListHotkeys.Items.Add;
+    ListItem.Data := HLID;
+    ListItem.Caption := HLID.Action.Caption;
+    ListItem.SubItems.Add(ShortCutToText(HLID.NormalShortCut));
+    ListItem.SubItems.Add(ShortCutToText(HLID.TimingShortCut));
+  end;
+
+  // Default hotkeys never change once loaded
+  // we just keep a pointer
+  ListDefaultHotkeys := Config.ListDefaultHotkeys;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TPreferencesForm.SaveConfig(Config : TConfigObject);
+var i : integer;
+    HLID : THotkeyListItemData;
 begin
   // Misc
   Config.SwapSubtitlesList := chkSwapSubList.Checked;
@@ -280,6 +456,13 @@ begin
 
   Config.ErrorTooLongLineEnabled := ListErrorChecking.Checked[3];
   Config.ErrorTooLongLineValue := PErrorListElem(ListErrorChecking.Items.Objects[3]).Value;
+
+  // Hotkeys
+  for i:=0 to ListHotkeys.Items.Count-1 do
+  begin
+    HLID := ListHotkeys.Items.Item[i].Data;
+    THotkeyListItemData(Config.ListHotkeys[i]).Assign(HLID);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -364,6 +547,158 @@ begin
   if (Idx >= 0) and (Idx < ListErrorChecking.Count) then
   begin
     Result := PErrorListElem(ListErrorChecking.Items.Objects[Idx]);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPreferencesForm.GetCurrentModeShortCut(HLID : THotkeyListItemData) : TShortCut;
+begin
+  Result := 0;
+  if Assigned(HLID) then
+  begin
+    if (ComboHotkeyMode.ItemIndex = 0) then
+      Result := HLID.NormalShortCut
+    else if (ComboHotkeyMode.ItemIndex = 1) then
+      Result := HLID.TimingShortCut;
+  end;
+
+end;
+
+//------------------------------------------------------------------------------
+
+function TPreferencesForm.GetCurrentModeShortCutFromList : TShortCut;
+var
+  HLID : THotkeyListItemData;
+begin
+  if Assigned(ListHotkeys.ItemFocused) then
+  begin
+    HLID := ListHotkeys.ItemFocused.Data;
+    Result := GetCurrentModeShortCut(HLID);
+  end
+  else
+    Result := 0;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.SetCurrentModeShortCut(HLID : THotkeyListItemData; ShortCut : TShortCut);
+begin
+  if Assigned(HLID) then
+  begin
+    if (ComboHotkeyMode.ItemIndex = 0) then
+      HLID.NormalShortCut := ShortCut
+    else if (ComboHotkeyMode.ItemIndex = 1) then
+      HLID.TimingShortCut := ShortCut;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.SetCurrentModeShortCutFromList(ShortCut : TShortCut);
+var
+  HLID : THotkeyListItemData;
+begin
+  if Assigned(ListHotkeys.ItemFocused) then
+  begin
+    HLID := ListHotkeys.ItemFocused.Data;
+    SetCurrentModeShortCut(HLID, ShortCut);
+    ListHotkeys.ItemFocused.SubItems.Strings[ComboHotkeyMode.ItemIndex] := ShortCutToText(ShortCut);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListHotkeysSelectItem(Sender: TObject;
+  Item: TListItem; Selected: Boolean);
+begin
+  HotKey1.HotKey := GetCurrentModeShortCutFromList;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ComboHotkeyModeSelect(Sender: TObject);
+begin
+  HotKey1.HotKey := GetCurrentModeShortCutFromList;
+end;
+
+//------------------------------------------------------------------------------
+procedure TPreferencesForm.bttSetHotkeyClick(Sender: TObject);
+var i : integer;
+    HLID : THotkeyListItemData;
+    Shortcut : TShortCut;
+begin
+  // First check if the hotkey is not already used
+  for i:=0 to ListHotkeys.Items.Count-1 do
+  begin
+    HLID := ListHotkeys.Items.Item[i].Data;
+    Shortcut := GetCurrentModeShortCut(HLID);
+    if (Shortcut <> 0) and (Shortcut = HotKey1.HotKey) then
+    begin
+      // Clear the hotkey
+      SetCurrentModeShortCut(HLID, 0);
+      ListHotkeys.Items.Item[i].SubItems.Strings[ComboHotkeyMode.ItemIndex] := ShortCutToText(0);
+      Break;
+    end;
+  end;
+
+  // Set the hotkey
+  SetCurrentModeShortCutFromList(HotKey1.HotKey);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttClearHotkeyClick(Sender: TObject);
+begin
+  SetCurrentModeShortCutFromList(0);
+end;
+
+//------------------------------------------------------------------------------
+
+function TPreferencesForm.GetMode : Boolean;
+begin
+  Result := TimingMode;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.SetMode(Timing : Boolean);
+begin
+  TimingMode := Timing;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListHotkeysDeletion(Sender: TObject;
+  Item: TListItem);
+begin
+  THotkeyListItemData(Item.Data).Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttResetAllHotkeysClick(Sender: TObject);
+var i,j : integer;
+    HLID, HLID2 : THotkeyListItemData;
+begin
+  if not Assigned(ListDefaultHotkeys) then
+    Exit;
+  for i:=0 to ListHotkeys.Items.Count-1 do
+  begin
+    HLID := ListHotkeys.Items.Item[i].Data;
+    // Search based on action, cause List is alpha. sorted
+    for j:=0 to ListDefaultHotkeys.Count-1 do
+    begin
+      HLID2 := ListDefaultHotkeys[j];
+      if (HLID.Action = HLID2.Action) then
+      begin
+        HLID.NormalShortCut := HLID2.NormalShortCut;
+        ListHotkeys.Items.Item[i].SubItems[0] := ShortCutToText(HLID2.NormalShortCut);
+        HLID.TimingShortCut := HLID2.TimingShortCut;
+        ListHotkeys.Items.Item[i].SubItems[1] := ShortCutToText(HLID2.TimingShortCut);
+        Break;
+      end;
+    end;
   end;
 end;
 
