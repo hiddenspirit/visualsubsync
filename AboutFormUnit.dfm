@@ -44,9 +44,9 @@ object AboutForm: TAboutForm
   object TntLabel2: TTntLabel
     Left = 8
     Top = 72
-    Width = 81
+    Width = 109
     Height = 14
-    Caption = 'Copyright 2003'
+    Caption = 'Copyright 2003-2004'
   end
   object TntLabel3: TTntLabel
     Left = 8
