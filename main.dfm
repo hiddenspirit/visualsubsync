@@ -3051,7 +3051,7 @@ object MainForm: TMainForm
   end
   object MemoTextPipePopupMenu: TTntPopupMenu
     OnPopup = MemoTextPipePopupMenuPopup
-    Left = 208
+    Left = 8
     Top = 184
     object pmiAddAsSubtitle: TTntMenuItem
       Action = ActionAddSubFromPipe

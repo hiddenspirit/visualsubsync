@@ -45,9 +45,11 @@ type
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
   function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string = '.') : string;
   function TimeStringToMs(Time : string) : Integer;
+  function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;  
   function StringConvertPipeToCRLF(s : WideString) : WideString;
   function StringConvertPipeToBR(s : WideString) : WideString;
   function StringConvertCRLFToPipe(s : WideString) : WideString;
+  function StringConvertCRLFToBR(s : WideString) : WideString;  
   function GetFileVersionString(filename : string) : string;
 
   function PosStream(SubString : string; Stream : TStream; StartPos : Integer = -1) : Integer;
@@ -60,10 +62,11 @@ type
   procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
 
   function ReadLineStream(Stream : TStream; var s : string) : Boolean;
-    
+  function RPos(Substr: string; S: string): Integer;
+  
 implementation
 
-uses SysUtils, Windows, Registry, ShlObj;
+uses SysUtils, Windows, Registry, ShlObj, StrUtils;
 
 // -----------------------------------------------------------------------------
 
@@ -119,6 +122,24 @@ end;
 
 //------------------------------------------------------------------------------
 
+function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;
+var i : integer;
+    SS : string;
+begin
+  Result := False;
+  i := Pos('-->',Line);
+  if i > 0 then
+  begin
+    SS := Trim(Copy(Line,1,i-1));
+    Start := TimeStringToMs(SS);
+    SS := Trim(Copy(Line,i+3,Length(Line)));
+    Stop := TimeStringToMs(SS);
+    Result := (Start <> -1) and (Stop <> -1);
+  end
+end;
+
+//------------------------------------------------------------------------------
+
 function StringConvertPipeToCRLF(s : WideString) : WideString;
 var i : integer;
 begin
@@ -164,6 +185,26 @@ begin
       Result := Result + '<br>'
     else
       Result := Result + s[i]
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function StringConvertCRLFToBR(s : WideString) : WideString;
+var i : integer;
+begin
+  Result := '';
+  i := 1;
+  while (i <= Length(s)) do
+  begin
+    if (s[i] = #13) then
+    begin
+      Result := Result + '<br>';
+      Inc(i);
+    end
+    else
+      Result := Result + s[i];
+    Inc(i);
   end;
 end;
 
@@ -466,6 +507,31 @@ begin
     s := s + c;
   end;
   Result := (Stream.Position = Stream.Size) and (s = '');
+end;
+
+// -----------------------------------------------------------------------------
+
+function RPos(Substr: string; S: string): Integer;
+var i,j : integer;
+begin
+  i := Length(S);
+  j := Length(Substr);
+  while (i > 0) do
+  begin
+    if S[i] = Substr[j] then
+    begin
+      Dec(j);
+      if j = 0 then
+      begin
+        Result := i;
+        Exit;
+      end;
+    end
+    else
+      j := Length(Substr);
+    Dec(i);
+  end;
+  Result := 0;
 end;
 
 // -----------------------------------------------------------------------------

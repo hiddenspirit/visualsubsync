@@ -935,6 +935,7 @@ var
   BOM : array[0..3] of BYTE;
   i : integer;
   Start, Stop : Integer;
+  NextStart, NextStop : Integer;  
   Text : string;
   NewRange : TRange;
   Node: PVirtualNode;
@@ -971,44 +972,42 @@ begin
   end;
 
   EndOfFile := False;
+
+  // Skip lines until a timestamps line
+  repeat
+    EndOfFile := ReadLineStream(FS, S);
+  until IsTimeStampsLine(S, Start, Stop) or EndOfFile;
   while not EndOfFile do
   begin
-    // Skip blank lines
-    repeat
-      EndOfFile := ReadLineStream(FS,S);
-      S := Trim(S);
-    until (S <> '') or EndOfFile;
-    if (EndOfFile) then
-      Break;
-    // we need 1 number on 1 line
-    if StrToIntDef(S,-1) = -1 then
-      Break;
-    // we need the timestamps line
-    EndOfFile := ReadLineStream(FS,S);
-    if (EndOfFile) then
-      Break;
-    i := Pos('-->',S);
-    if i = 0 then
-      Break;
-    SS := Trim(Copy(S,1,i-1));
-    Start := TimeStringToMs(SS);
-    SS := Trim(Copy(S,i+3,Length(S)));
-    Stop := TimeStringToMs(SS);
-    // Copy text until a blank line
+    // Copy text until a timestamps line
     Text := '';
-    repeat
-      EndOfFile := ReadLineStream(FS,S);
-      S := Trim(S);
-      Text := Text + S + '|';
-    until (S = '') or EndOfFile;
-    Delete(Text,Length(Text)-1,2); // remove '|' excess
+    while True do
+    begin
+      EndOfFile := ReadLineStream(FS, S);
+      if EndOfFile or IsTimeStampsLine(S, NextStart, NextStop) then
+        Break;
+      S := Trim(S);        
+      Text := Text + S + #13#10;
+    end;
     Text := Trim(Text);
-    NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-    if IsUTF8 then
-      TSubtitleRange(NewRange).Text := UTF8Decode(Text)
-    else
-      TSubtitleRange(NewRange).Text := Text;
-    WAVDisplayer.RangeList.AddAtEnd(NewRange);
+    if (Start <> -1) and (Stop <> -1) then
+    begin
+      // Remove the index line if any
+      i := RPos(#13#10,Text);
+      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (not EndOfFile)) then
+      begin
+        Delete(Text,i,MaxInt);
+        Text := Trim(Text);
+      end;
+      NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
+      if IsUTF8 then
+        TSubtitleRange(NewRange).Text := UTF8Decode(Text)
+      else
+        TSubtitleRange(NewRange).Text := Text;
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
+    end;
+    Start := NextStart;
+    Stop := NextStop;
   end;
   FS.Free;
   WAVDisplayer.RangeList.FullSort;
@@ -1043,7 +1042,7 @@ begin
     0: CellText := IntToStr(Node.Index+1);
     1: CellText := TimeMsToString(NodeData.Range.StartTime);
     2: CellText := TimeMsToString(NodeData.Range.StopTime);
-    3: CellText := NodeData.Range.Text;
+    3: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
   end;
 end;
 
@@ -1069,7 +1068,7 @@ begin
   if (Node <> nil) then
   begin
     NodeData := Sender.GetNodeData(Node);
-    MemoSubtitleText.Text := StringConvertPipeToCRLF(NodeData.Range.Text);
+    MemoSubtitleText.Text := NodeData.Range.Text;
     MemoSubtitleText.Tag := 1;
   end
   else
@@ -1088,7 +1087,7 @@ begin
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
     g_WebRWSynchro.BeginWrite;
-    NodeData.Range.Text := StringConvertCRLFToPipe(MemoSubtitleText.Text);
+    NodeData.Range.Text := MemoSubtitleText.Text;
     vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
     CurrentProject.IsDirty := True;
     g_WebRWSynchro.EndWrite;    
@@ -1182,9 +1181,9 @@ begin
     WriteStringLnStream(TimeMsToString(SubRange.StartTime,',') + ' --> ' +
       TimeMsToString(SubRange.StopTime,','), FS);
     if InUTF8 then
-      WriteStringLnStream(UTF8Encode(StringConvertPipeToCRLF(Subrange.Text)), FS)
+      WriteStringLnStream(UTF8Encode(Subrange.Text), FS)
     else
-      WriteStringLnStream(StringConvertPipeToCRLF(Subrange.Text), FS);
+      WriteStringLnStream(Subrange.Text, FS);
     WriteStringLnStream('',FS);
   end;
   FS.Free;
@@ -1931,7 +1930,7 @@ begin
   // - set new settings to first node
   Node := vtvSubsList.GetFirstSelected;
   NodeData := vtvSubsList.GetNodeData(Node);
-  NodeData.Range.Text := StringConvertCRLFToPipe(Trim(AccuText));;
+  NodeData.Range.Text := Trim(AccuText);
   NodeData.Range.StopTime := LastStopTime;
 
   // Finally delete nodes

@@ -66,13 +66,13 @@ begin
   else if (Name = 'stop') then
     Result := TimeMsToString(SubRange.StopTime)
   else if (Name = 'html-text') then
-    Result := StringConvertPipeToBR(SubRange.Text)
+    Result := StringConvertCRLFToBR(SubRange.Text)
   else if (Name = 'raw-text') then
-    Result := StringConvertPipeToCRLF(SubRange.Text)
+    Result := SubRange.Text
   else if (Name = 'html-text8') then
-    Result := UTF8Encode(StringConvertPipeToBR(SubRange.Text))
+    Result := UTF8Encode(StringConvertCRLFToBR(SubRange.Text))
   else if (Name = 'raw-text8') then
-    Result := UTF8Encode(StringConvertPipeToCRLF(SubRange.Text))
+    Result := UTF8Encode(SubRange.Text)
   else if (Name = 'wav-size') then
   begin
     i := Round(((SubRange.StopTime - SubRange.StartTime) / 1000) * g_GlobalContext.WavAverageBytePerSecond);
