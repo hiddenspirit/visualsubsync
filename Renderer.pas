@@ -33,9 +33,11 @@ type
     FOnStopPlaying : TNotifyEvent;
   public
     function PlayRange(Start, Stop : Cardinal; Loop : Boolean = False) : Boolean; virtual; abstract;
+    procedure UpdatePlayRange(Start, Stop : Cardinal); virtual;
     function GetPosition : Cardinal; virtual; abstract;
     procedure Stop; virtual; abstract;
     function IsOpen : Boolean; virtual; abstract;
+    procedure SetRate(Rate : Integer); virtual;
   published
     property OnStopPlaying : TNotifyEvent read FOnStopPlaying write FOnStopPlaying;
   end;
@@ -53,7 +55,11 @@ type
     FStart, FStop : Int64;
     FVideoWidth, FVideoHeight : Integer;
     FDisplayWindow : THandle;
-    FIsOpen : Boolean;    
+    FIsOpen : Boolean;
+    FStartStopAccessCS : TRtlCriticalSection;
+
+    function FGetStart : Int64;
+    function FGetStop : Int64;
 
   public
     constructor Create;
@@ -61,6 +67,7 @@ type
     function GetLastErrorString : string;
     function Open(filename : string) : Boolean;
     function PlayRange(Start, Stop : Cardinal; Loop : Boolean = False) : Boolean; override;
+    procedure UpdatePlayRange(Start, Stop : Cardinal); override;
     function GetPosition : Cardinal; override;
     procedure Stop; override;
     function IsPlaying : Boolean;
@@ -69,11 +76,14 @@ type
     procedure UpdateDisplayWindow;
     procedure KillVideo;    
     procedure Close;
-    function IsOpen : Boolean; override;    
+    function IsOpen : Boolean; override;
+    procedure SetRate(Rate : Integer); override;        
   published
     property OnStopPlaying;
     property VideoWidth : Integer read FVideoWidth;
     property VideoHeight : Integer read FVideoHeight;
+    property StartTime : Int64 read FGetStart;
+    property StopTime : Int64 read FGetStop;
   end;
 
   TWaitCompletionThread = class(TThread)
@@ -100,7 +110,7 @@ type
     FDuration : Int64;
     FSourceFilename : WideString;
     FDestinationFilename : WideString;
-    FhWavDestInst : THandle;
+    FHWavWriterInst : THandle;
     FWAVExtractionType : TWAVExtractionType;
 
     function GetOutputAudioPinCount(Filter : IBaseFilter) : Integer;
@@ -265,6 +275,18 @@ end;
 
 //==============================================================================
 
+procedure TRenderer.UpdatePlayRange(Start, Stop : Cardinal);
+begin
+  // do nothing
+end;
+
+procedure TRenderer.SetRate(Rate : Integer);
+begin
+  // do nothing
+end;
+
+//==============================================================================
+
 constructor TDShowRenderer.Create;
 begin
   FGraphBuilder := nil;
@@ -277,6 +299,7 @@ begin
   FLoop := False;
   FLastResult := S_OK;
   FIsOpen := False;
+  InitializeCriticalSection(FStartStopAccessCS);
 end;
 
 //------------------------------------------------------------------------------
@@ -291,6 +314,7 @@ begin
     FWaitThread := nil;
   end;
   Close;
+  DeleteCriticalSection(FStartStopAccessCS);
   inherited;
 end;
 
@@ -331,6 +355,8 @@ begin
   BasicVideoI.get_VideoWidth(FVideoWidth);
   BasicVideoI.get_VideoHeight(FVideoHeight);
   BasicVideoI := nil;
+
+  SetRate(100);
 end;
 
 //------------------------------------------------------------------------------
@@ -354,8 +380,8 @@ begin
   FStop := Int64(Stop) * 10000;
   StopDummy := 0;
 
-  // TODO : maybe we can use the stop when there is no video,
-  // at least it cause problems with AVI (stop before the stop point :p),
+  // We can't use the stop position
+  // it cause problems with AVI (stop before the stop point :p),
   // and matroska splitter doesn't support stop
 
   //FLastResult := FMediaSeeking.SetPositions(FStart,
@@ -374,6 +400,34 @@ begin
   FWaitThread := TWaitCompletionThread.Create(Self);
   FLastResult := FMediaControl.Run;
   Result := (FLastResult = S_OK);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.UpdatePlayRange(Start, Stop : Cardinal);
+begin
+  EnterCriticalSection(FStartStopAccessCS);
+  FStart := Int64(Start) * 10000;
+  FStop := Int64(Stop) * 10000;
+  LeaveCriticalSection(FStartStopAccessCS);  
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.FGetStart : Int64;
+begin
+  EnterCriticalSection(FStartStopAccessCS);
+  Result := FStart;
+  LeaveCriticalSection(FStartStopAccessCS);
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.FGetStop : Int64;
+begin
+  EnterCriticalSection(FStartStopAccessCS);
+  Result := FStop;
+  LeaveCriticalSection(FStartStopAccessCS);
 end;
 
 //------------------------------------------------------------------------------
@@ -531,6 +585,14 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TDShowRenderer.SetRate(Rate : Integer);
+begin
+  if Assigned(FMediaSeeking) then
+    FMediaSeeking.SetRate(Rate / 100);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TDShowRenderer.Close;
 begin
   FIsOpen := False;
@@ -542,7 +604,7 @@ begin
     FVideoWindow := nil;
   end;
   if Assigned(FMediaControl) then FMediaControl := nil;
-  if Assigned(FMediaEventEx) then FMediaEventEx := nil;  
+  if Assigned(FMediaEventEx) then FMediaEventEx := nil;
   if Assigned(FMediaSeeking) then FMediaSeeking := nil;
   if Assigned(FGraphBuilder) then FGraphBuilder := nil;
 end;
@@ -581,7 +643,7 @@ var
   bDone : Boolean;
   EventsArray : array[0..1] of THandle;
   WaitResult : Cardinal;
-  CurrentPos : Int64;
+  CurrentPos, StartPos : Int64;
   StopDummy : Int64;
 label TWaitCompletionThread_Restart;
 begin
@@ -597,22 +659,21 @@ TWaitCompletionThread_Restart:
   bDone := False;
   while (not bDone) and (not Self.Terminated) do
   begin
-    WaitResult := WaitForMultipleObjects(2,@EventsArray,False,40);
+    WaitResult := WaitForMultipleObjects(2, @EventsArray, False, 40);
     if (WaitResult = WAIT_OBJECT_0+1) then
     begin
-      while (FRenderer.FMediaEventEx.GetEvent(evCode,param1,param2,0) = S_OK) do
+      while (FRenderer.FMediaEventEx.GetEvent(evCode, param1, param2, 0) = S_OK) do
       begin
         FRenderer.FMediaEventEx.FreeEventParams(evCode, param1, param2);
         bDone := (evCode = EC_COMPLETE);
       end;
     end;
-    // if(WaitResult = WAIT_TIMEOUT) then
-    begin
-      // Check position in case the splitter doesn't support the "stop"
-      FRenderer.FMediaSeeking.GetCurrentPosition(CurrentPos);
-      if ((CurrentPos >= FRenderer.FStop) or ((Abs(CurrentPos - FRenderer.FStop)) <= 40)) then
-        bDone := True;
-    end;
+    // Check position
+    FRenderer.FMediaSeeking.GetCurrentPosition(CurrentPos);
+    if ((CurrentPos >= FRenderer.StopTime) or
+       ((Abs(CurrentPos - FRenderer.StopTime)) <= 40)) or
+       (CurrentPos < FRenderer.StartTime) then
+      bDone := True;
   end;
 
   if bDone then
@@ -621,7 +682,8 @@ TWaitCompletionThread_Restart:
     begin
       //FRenderer.FMediaSeeking.SetPositions(FRenderer.FStart,
       //  AM_SEEKING_AbsolutePositioning, FRenderer.FStop, AM_SEEKING_AbsolutePositioning);
-      FRenderer.FMediaSeeking.SetPositions(FRenderer.FStart,
+      StartPos := FRenderer.StartTime;
+      FRenderer.FMediaSeeking.SetPositions(StartPos,
         AM_SEEKING_AbsolutePositioning, StopDummy, AM_SEEKING_NoPositioning);
       goto TWaitCompletionThread_Restart;
     end
@@ -641,8 +703,7 @@ constructor TDSWavExtractor.Create;
 begin
   FLastResult := S_OK;
   FAudioStreamCount := 0;
-  //FhWavDestInst := CoLoadLibrary('WavDestEx.dll',True);
-  FhWavDestInst := CoLoadLibrary('WavWriter.dll',True);
+  FHWavWriterInst := CoLoadLibrary('WavWriter.dll',True);
 end;
 
 //------------------------------------------------------------------------------
@@ -650,10 +711,10 @@ end;
 destructor TDSWavExtractor.Destroy;
 begin
   Close;
-  if (FhWavDestInst <> 0) then
+  if (FHWavWriterInst <> 0) then
   begin
-    //CoFreeLibrary(FhWavDestInst); // TODO : why it b0rks ?
-    //FhWavDestInst := 0;
+    //CoFreeLibrary(FHWavWriterInst); // TODO : why it b0rks ?
+    //FHWavWriterInst := 0;
   end;
   inherited;
 end;
@@ -869,7 +930,7 @@ begin
   NukeDownstream(FGraphBuilder,PCMPin);
 
   // We are ready to connect, the WAV writer filter and the File Writer
-  FLastResult := CreateFilterFromFile(FhWavDestInst,CLSID_WavWriter, WavWriterFilter);
+  FLastResult := CreateFilterFromFile(FHWavWriterInst,CLSID_WavWriter, WavWriterFilter);
   FLastResult := WavWriterFilter.QueryInterface(IID_IFileSinkFilter, FileSinkFilter);
   FLastResult := FileSinkFilter.SetFileName(@DestinationFilename[1],nil);
   FileSinkFilter := nil;
