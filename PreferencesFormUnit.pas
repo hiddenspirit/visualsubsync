@@ -491,7 +491,7 @@ begin
   ComboWheelTimeScrollModifier.ItemIndex := Ord(Config.MouseWheelTimeScrollModifier);
   ComboWheelVZoomModifier.ItemIndex := Ord(Config.MouseWheelVZoomModifier);
   ComboWheelHZoomModifier.ItemIndex := Ord(Config.MouseWheelHZoomModifier);
-  chkEnableSSATimingMode.Enabled := Config.MouseEnableSSATimingMode;
+  chkEnableSSATimingMode.Checked := Config.MouseEnableSSATimingMode;
 end;
 
 //------------------------------------------------------------------------------
@@ -530,7 +530,7 @@ begin
   Config.MouseWheelTimeScrollModifier := TMouseWheelModifier(ComboWheelTimeScrollModifier.ItemIndex);
   Config.MouseWheelVZoomModifier := TMouseWheelModifier(ComboWheelVZoomModifier.ItemIndex);
   Config.MouseWheelHZoomModifier := TMouseWheelModifier(ComboWheelHZoomModifier.ItemIndex);
-  Config.MouseEnableSSATimingMode := chkEnableSSATimingMode.Enabled;
+  Config.MouseEnableSSATimingMode := chkEnableSSATimingMode.Checked;
 end;
 
 //------------------------------------------------------------------------------
