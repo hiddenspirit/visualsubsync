@@ -144,10 +144,15 @@ type
     FWavFormat : TWaveFormatEx;
 
     FWheelTimeScroll, FWheelVZoom, FWheelHZoom : TMouseWheelModifier;
-    FMouseIsDown : Boolean; // [FIX] WAVDisplay refresh bug when double clicking title bar
+    FMouseIsDown : Boolean; // this fix WAVDisplay refresh bug when double clicking title bar
+
+    FDisplayRuler : Boolean;
+    FDisplayRulerHeight : Integer;
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
+    procedure PaintRulerOnCanvas(ACanvas : TCanvas);
+
     procedure CreatePeakTab(WAVFile : TWAVFile);
     function PixelToTime(Pixel : Integer) : Integer;
     function TimeToPixel(Time : Integer) : Integer;
@@ -206,7 +211,11 @@ type
     procedure SetRenderer(Renderer : TRenderer);
     procedure ClearSelection;
     function GetWAVAverageBytePerSecond : Integer;
-    
+
+    property RangeList : TRangeList read FRangeList;
+    property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
+    property Selection : TRange read FSelection;
+
   published
     { Published declarations }
     property OnCursorChange : TNotifyEvent read FOnCursorChange write FOnCursorChange;
@@ -217,17 +226,19 @@ type
     property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;    
     property OnPeakFileCreation : TPeakFileCreationEvent read FOnPeakFileCreation write FOnPeakFileCreation;
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
+
+    property Align;
+    property Anchors;
     property AutoScrolling : Boolean read FAutoScrolling write SetAutoScroll;
     property IsPlaying : Boolean read FIsPlaying;
+    property Enabled;
     property Length : Integer read FLengthMs;
     property PageSize : Integer read FPageSizeMs;
     property PopupMenu;
     property Position : Integer read FPositionMs;
-    property RangeList : TRangeList read FRangeList;
-    property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
-    property Selection : TRange read FSelection;
     property SelMode : TSelectionMode read FSelMode write FSelMode default smCoolEdit;
     property VerticalScaling : Integer read FVerticalScaling write SetVerticalScaling;
+    property Visible;
     property WheelTimeScroll : TMouseWheelModifier read FWheelTimeScroll write FWheelTimeScroll default mwmNone;
     property WheelVZoom : TMouseWheelModifier read FWheelVZoom write FWheelVZoom default mwmShift;
     property WheelHZoom : TMouseWheelModifier read FWheelHZoom write FWheelHZoom default mwmCtrl;
@@ -475,6 +486,8 @@ begin
   FIsPlaying := False;
   FPeakDataLoaded := False;
   FVerticalScaling := 100;
+  FDisplayRuler := True;
+  FDisplayRulerHeight := 20;
 
   FWheelTimeScroll := mwmNone;
   FWheelVZoom := mwmShift;
@@ -558,6 +571,8 @@ begin
   Rect.Left := x1_update;
   Rect.Right := x2_update;
   Rect.Bottom := Rect.Bottom - FScrollBar.Height;
+  if FDisplayRuler then
+    Rect.Bottom := Rect.Bottom - FDisplayRulerHeight;
 
   RectHeight := Rect.Bottom - Rect.Top;
   Middle := Rect.Top + (RectHeight div 2);
@@ -606,6 +621,25 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TimeMsToShortString(TimeMS: Cardinal; Precision : Cardinal) : string;
+var
+  min, sec, ms: Cardinal;
+begin
+  ms := TimeMs div 1000;
+  min := ms div 60;
+  sec := ms mod 60;
+  ms := (TimeMs - (min * 60 * 1000) - (sec * 1000)) div Precision;
+  if (min > 0) then
+  begin
+    if (ms > 0) then
+      Result := Format('%d:%.2d.%d', [min, sec, ms])
+    else
+      Result := Format('%d:%.2d', [min, sec]);
+  end
+  else
+    Result := Format('%d.%d', [sec, ms])
+end;
+
 procedure TWAVDisplayer.PaintOnCanvas(ACanvas : TCanvas);
 var x : Integer;
     x1, x2, y1, y2 : Integer;
@@ -615,6 +649,8 @@ var x : Integer;
     CanvasHeight : Integer;
 begin
   CanvasHeight := Height - FScrollBar.Height;
+  if FDisplayRuler then
+    CanvasHeight := CanvasHeight - FDisplayRulerHeight;
 
   y1 := CanvasHeight div 10;
   y2 := (CanvasHeight * 9) div 10;
@@ -711,6 +747,8 @@ begin
         SelRect.Left := x1;
         SelRect.Right := x2+1;
         SelRect.Bottom := SelRect.Bottom - FScrollBar.Height;
+        if FDisplayRuler then
+          SelRect.Bottom := SelRect.Bottom - FDisplayRulerHeight;
         ACanvas.CopyMode := cmDstInvert;
         ACanvas.CopyRect(SelRect, ACanvas, SelRect);
         ACanvas.CopyMode := cmSrcCopy;
@@ -744,6 +782,64 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TWAVDisplayer.PaintRulerOnCanvas(ACanvas : TCanvas);
+var PosRect : TRect;
+    PosString : string;
+    p, x, MaxPosStep, StepMs, StepLog : Integer;
+begin
+  if FDisplayRuler then
+  begin
+    PosRect := ClientRect;
+    PosRect.Bottom := PosRect.Bottom - FScrollBar.Height;
+    PosRect.Top := PosRect.Bottom - FDisplayRulerHeight;
+
+    ACanvas.Brush.Style := bsSolid;
+    ACanvas.Brush.Color := $514741;
+    ACanvas.FillRect(PosRect);
+
+    ACanvas.Pen.Mode := pmCopy;  
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Pen.Color := $BEB5AE;
+    ACanvas.MoveTo(0, PosRect.Top);
+    ACanvas.LineTo(Width, PosRect.Top);
+    ACanvas.MoveTo(0, PosRect.Bottom-1);
+    ACanvas.LineTo(Width, PosRect.Bottom-1);
+
+    ACanvas.Pen.Color := $E0E0E0; 
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Font.Name := 'Time New Roman';
+    ACanvas.Font.Color := $E0E0E0;
+    ACanvas.Font.Size := 8;
+    ACanvas.Brush.Style := bsClear;
+
+    MaxPosStep := Round(Width / (ACanvas.TextWidth('000:00.0') * 2));
+    StepMs := Round(FPageSizeMs / MaxPosStep);
+    if StepMs = 0 then
+      StepMs := 1;
+    StepLog := Trunc(Power(10, Trunc(Log10(StepMs))));
+    StepMs := StepMs div StepLog * StepLog;
+
+    p := (FPositionMs div StepMs * StepMs);
+    while (p < FPositionMs + FPageSizeMs) do
+    begin
+      x := TimeToPixel(p - FPositionMs);
+      ACanvas.MoveTo(x, PosRect.Top + 1);
+      ACanvas.LineTo(x, PosRect.Top + 5);
+      PosString := TimeMsToShortString(p, StepLog);
+      x := x - (ACanvas.TextWidth(PosString) div 2);
+      // Shadow
+      ACanvas.Font.Color := clBlack;
+      ACanvas.TextOut(x+2, PosRect.Top + 4 + 2, PosString);
+      // Text
+      ACanvas.Font.Color := $E0E0E0;
+      ACanvas.TextOut(x, PosRect.Top + 4, PosString);
+      p := p + StepMs;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TWAVDisplayer.UpdateView(UpdateViewFlags : TUpdateViewFlags);
 begin
   if (UpdateViewFlags = []) then
@@ -758,6 +854,7 @@ begin
   begin
     FOffscreen.Canvas.Brush.Color := clGray;
     FOffscreen.Canvas.FillRect(FOffscreen.Canvas.ClipRect);
+    Invalidate;
     Exit;
   end;
 
@@ -768,7 +865,8 @@ begin
     // We need to recalculate all
     PaintWavOnCanvas(FOffscreenWAV.Canvas, False);
     FOldPositionMs := FPositionMs;
-    FOldPageSizeMs := FPageSizeMs;    
+    FOldPageSizeMs := FPageSizeMs;
+    PaintRulerOnCanvas(FOffscreenWAV.Canvas);
   end
   else if (uvfPosition in UpdateViewFlags) then
   begin
@@ -776,11 +874,12 @@ begin
     PaintWavOnCanvas(FOffscreenWAV.Canvas, True);
     FOldPositionMs := FPositionMs;
     FOldPageSizeMs := FPageSizeMs;
+    PaintRulerOnCanvas(FOffscreenWAV.Canvas);
   end;
 
   // Copy Wav
   FOffscreen.Canvas.Lock;
-  FOffscreen.Canvas.Draw(0,0,FOffscreenWAV);
+  FOffscreen.Canvas.Draw(0, 0, FOffscreenWAV);
   FOffscreenWAV.Canvas.Unlock;
   // Add selection, range, cursor
   PaintOnCanvas(FOffscreen.Canvas);
@@ -801,9 +900,9 @@ begin
   begin
     UpdateView([uvfPageSize]);
   end;
-  Canvas.Lock;
+  //Canvas.Lock;
   Canvas.Draw(0, 0, FOffscreen);
-  Canvas.Unlock;
+  //Canvas.Unlock;
 end;
 
 //------------------------------------------------------------------------------
@@ -999,7 +1098,8 @@ var NewCursorPos : Integer;
 begin
   inherited;
 
-  if (ssDouble in Shift) or (not FPeakDataLoaded) or (not FMouseIsDown) then Exit;
+  if (ssDouble in Shift) or (not FPeakDataLoaded) or (not FMouseIsDown) then
+    Exit;
 
   UpdateFlags := [];
 
@@ -1166,7 +1266,7 @@ begin
         PeakMinMin := PeakMin;      
 
       if Assigned(FOnPeakFileCreation) then
-        FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
+        FOnPeakFileCreation(Self, pfcevtProgress, (i*100) div Integer(FPeakTabSize));
     end;
     // Calc. normalize factor
     MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
@@ -1200,7 +1300,7 @@ begin
         PeakMinMin := PeakMin;
 
       if Assigned(FOnPeakFileCreation) then
-        FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div FPeakTabSize);
+        FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div Integer(FPeakTabSize));
     end;
     // Calc. normalize factor
     MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
@@ -1525,6 +1625,11 @@ end;
 
 //------------------------------------------------------------------------------
 
+function NoKeyModifierIn(Shift: TShiftState) : Boolean;
+begin
+  Result := not ((ssShift in Shift) or (ssAlt in Shift) or (ssCtrl in Shift));
+end;
+
 function TWAVDisplayer.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
 type
   ByteSet = Set of 0..7;
@@ -1534,7 +1639,7 @@ var
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
   bShift: ByteSet absolute shift;  
 begin
-  Result := inherited DoMouseWheelUp(Shift, MousePos);
+  Result := True;
   RelativePos := ScreenToClient(MousePos);
   if not InRange(RelativePos.X, 0, Width) then Exit;
 
@@ -1542,7 +1647,7 @@ begin
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
-  if ((FWheelHZoom = mwmNone) and (Shift = [])) or (Ord(FWheelHZoom) in bShift) then
+  if ((FWheelHZoom = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelHZoom) in bShift) then
   begin
     NewPageSize := Round(FPageSizeMs * 80 / 100);
 
@@ -1556,18 +1661,17 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if ((FWheelVZoom = mwmNone) and (Shift = [])) or (Ord(FWheelVZoom) in bShift) then
+  else if ((FWheelVZoom = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelVZoom) in bShift) then
   begin
-    if Inrange(FVerticalScaling, 0, 395) then
+    if InRange(FVerticalScaling, 0, 395) then
       Inc(FVerticalScaling, 5);
   end
-  else if ((FWheelTimeScroll = mwmNone) and (Shift = [])) or (Ord(FWheelTimeScroll) in bShift) then
+  else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
     SetPositionMs(FPositionMs - (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
     Exit;
 
   UpdateView([uvfPageSize]);
-  Result := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -1581,7 +1685,7 @@ var
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
   bShift: ByteSet absolute shift;
 begin
-  Result := inherited DoMouseWheelDown(Shift, MousePos);
+  Result := True;
   RelativePos := ScreenToClient(MousePos);
   if not InRange(RelativePos.X, 0, Width) then Exit;
 
@@ -1590,7 +1694,7 @@ begin
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
 
-  if ((FWheelHZoom = mwmNone) and (Shift = [])) or (Ord(FWheelHZoom) in bShift) then
+  if ((FWheelHZoom = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelHZoom) in bShift) then
   begin
     NewPageSize := Round(FPageSizeMs * 125 / 100);
 
@@ -1604,18 +1708,17 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if ((FWheelVZoom = mwmNone) and (Shift = [])) or (Ord(FWheelVZoom) in bShift) then
+  else if ((FWheelVZoom = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelVZoom) in bShift) then
   begin
-    if Inrange(FVerticalScaling, 5, 400) then
+    if InRange(FVerticalScaling, 5, 400) then
       Dec(FVerticalScaling, 5);
   end
-  else if ((FWheelTimeScroll = mwmNone) and (Shift = [])) or (Ord(FWheelTimeScroll) in bShift) then
+  else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
     SetPositionMs(FPositionMs + (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
     Exit;
     
   UpdateView([uvfPageSize]); // Refresh waveform
-  Result := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -1926,3 +2029,4 @@ end;
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
+

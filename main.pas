@@ -1066,12 +1066,23 @@ end;
 
 procedure TMainForm.FormMouseWheel(Sender: TObject; Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  Msg : TCMMouseWheel;
+  TargetControl : HWND;
 begin
-  // Fix weird Windows mouse wheel handling behaviour :p
-  if WAVDisplayer.RedirectedMousewheel(Sender,Shift,WheelDelta,MousePos) then
+  // Recreate original CM_MOUSEWHEEL Message
+  Msg.ShiftState := Shift;
+  Msg.WheelDelta := WheelDelta;
+  Msg.XPos := MousePos.X;
+  Msg.YPos := MousePos.Y;
+
+  // Find the control under the mouse pointer
+  TargetControl := WindowFromPoint(MousePos);
+
+  if (TargetControl = WAVDisplayer.Handle) then
   begin
-    Handled := True;
-    Exit;
+    Handled := WavDisplayer.Perform(CM_MOUSEWHEEL, TMessage(Msg).WParam,
+      TMessage(Msg).LParam) <> 0;
   end;
 end;
 
