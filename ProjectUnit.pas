@@ -43,6 +43,8 @@ type
     SubtitlesFile : WideString;
     WAVMode : TProjectWAVMode;
     IsUTF8 : Boolean;
+    TextPipeSource : WideString;
+    TextPipePosition : Integer;
   published
     property IsDirty : Boolean read FIsDirty write SetIsDirty;
     property OnDirtyChange : TNotifyEvent read FOnDirtyChange write FOnDirtyChange;
