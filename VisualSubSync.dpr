@@ -38,8 +38,8 @@ begin
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TPreferencesForm, PreferencesForm);
   MainForm.LoadSettings;
-  MainForm.Show;
-  Application.ProcessMessages;
+  Application.ProcessMessages;  
+  MainForm.FinishLoadSettings;
   if (ParamCount = 1) then
   begin
     MainForm.LoadProject(ParamStr(1));
