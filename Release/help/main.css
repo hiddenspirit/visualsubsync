@@ -18,6 +18,17 @@
 	margin-top: 0.5em;
 	margin-bottom: 0.25em;
 }
+.TitleFR {
+	font-size: 140%;
+	font-weight: bold;
+	margin-top: 1em;
+	margin-bottom: 0.4em;
+}
+.TitleFR1 {
+	font-size: 120%;
+	margin-top: 0.5em;
+	margin-bottom: 0.25em;
+}
 a:link {
 	font-weight: bold;
 	color: #004488;	
@@ -30,4 +41,3 @@ a:hover {
 	color: #2288CC;
 	background: #EEE;
 }
-img a:hover {  }
