@@ -23,7 +23,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 353
     Height = 273
-    ActivePage = tsMouse
+    ActivePage = tsGeneral
     TabOrder = 0
     object tsGeneral: TTntTabSheet
       BorderWidth = 2
@@ -71,7 +71,9 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 121
           Height = 17
-          Hint = 'Compress dynamic webpages for faster transmission'
+          Hint = 
+            'Compress dynamic webpages for faster transmission (broken with I' +
+            'E)'
           Caption = 'Enable compression'
           ParentShowHint = False
           ShowHint = True
@@ -80,9 +82,9 @@ object PreferencesForm: TPreferencesForm
       end
       object GroupBox1: TGroupBox
         Left = 0
-        Top = 56
+        Top = 144
         Width = 341
-        Height = 185
+        Height = 97
         Caption = ' Misc : '
         TabOrder = 1
         object chkAssociateExt: TCheckBox
@@ -106,6 +108,57 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
+        end
+      end
+      object GroupBox4: TGroupBox
+        Left = 0
+        Top = 56
+        Width = 341
+        Height = 81
+        Caption = ' Backup : '
+        TabOrder = 2
+        object Label6: TLabel
+          Left = 16
+          Top = 52
+          Width = 153
+          Height = 13
+          Caption = 'Automatic save every (minutes) :'
+        end
+        object chkCreateBackup: TCheckBox
+          Left = 16
+          Top = 24
+          Width = 185
+          Height = 17
+          Caption = 'Create backup file (*.bak) on save'
+          TabOrder = 0
+        end
+        object bttOpenBackupDir: TButton
+          Left = 302
+          Top = 49
+          Width = 28
+          Height = 20
+          Hint = 'Open backup directory'
+          Caption = '...'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 1
+          OnClick = bttOpenBackupDirClick
+        end
+        object EditBackupTime: TEdit
+          Left = 176
+          Top = 48
+          Width = 57
+          Height = 21
+          TabOrder = 2
+          Text = '0'
+        end
+        object UpDownBackupTime: TUpDown
+          Left = 233
+          Top = 48
+          Width = 15
+          Height = 21
+          Associate = EditBackupTime
+          TabOrder = 3
         end
       end
     end
@@ -302,36 +355,36 @@ object PreferencesForm: TPreferencesForm
         Caption = ' Mouse wheel control : '
         TabOrder = 0
         object Label1: TLabel
-          Left = 12
+          Left = 24
           Top = 44
-          Width = 121
+          Width = 93
           Height = 13
           Alignment = taRightJustify
           AutoSize = False
           Caption = 'Time scrolling :'
         end
         object Label2: TLabel
-          Left = 12
+          Left = 24
           Top = 68
-          Width = 121
+          Width = 93
           Height = 13
           Alignment = taRightJustify
           AutoSize = False
           Caption = 'Vertical Zoom :'
         end
         object Label3: TLabel
-          Left = 12
+          Left = 24
           Top = 92
-          Width = 121
+          Width = 93
           Height = 13
           Alignment = taRightJustify
           AutoSize = False
           Caption = 'Horizontal Zoom :'
         end
         object Label4: TLabel
-          Left = 12
+          Left = 24
           Top = 22
-          Width = 121
+          Width = 93
           Height = 13
           Alignment = taCenter
           AutoSize = False
@@ -346,9 +399,9 @@ object PreferencesForm: TPreferencesForm
           ParentFont = False
         end
         object Label5: TLabel
-          Left = 140
+          Left = 124
           Top = 22
-          Width = 177
+          Width = 181
           Height = 13
           Alignment = taCenter
           AutoSize = False
@@ -363,9 +416,9 @@ object PreferencesForm: TPreferencesForm
           ParentFont = False
         end
         object ComboWheelTimeScrollModifier: TComboBox
-          Left = 140
+          Left = 124
           Top = 40
-          Width = 177
+          Width = 181
           Height = 21
           Style = csDropDownList
           Font.Charset = DEFAULT_CHARSET
@@ -383,9 +436,9 @@ object PreferencesForm: TPreferencesForm
             'None')
         end
         object ComboWheelVZoomModifier: TComboBox
-          Left = 140
+          Left = 124
           Top = 64
-          Width = 177
+          Width = 181
           Height = 21
           Style = csDropDownList
           ItemHeight = 13
@@ -397,9 +450,9 @@ object PreferencesForm: TPreferencesForm
             'None')
         end
         object ComboWheelHZoomModifier: TComboBox
-          Left = 140
+          Left = 124
           Top = 88
-          Width = 177
+          Width = 181
           Height = 21
           Style = csDropDownList
           ItemHeight = 13

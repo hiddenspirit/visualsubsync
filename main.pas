@@ -238,6 +238,7 @@ type
     pmiAutoDeleteAllTextBefore: TTntMenuItem;
     ActionReplaceFromPipe: TTntAction;
     pmiReplaceSubtitleFromPipe: TTntMenuItem;
+    TimerAutoBackup: TTimer;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -332,6 +333,7 @@ type
     procedure ActionAddSubFromPipeExecute(Sender: TObject);
     procedure MemoTextPipePopupMenuPopup(Sender: TObject);
     procedure ActionReplaceFromPipeExecute(Sender: TObject);
+    procedure TimerAutoBackupTimer(Sender: TObject);
 
   private
     { Private declarations }
@@ -357,7 +359,7 @@ type
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
     procedure LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
-    procedure SaveSubtitles(Filename: string; InUTF8 : Boolean);
+    procedure SaveSubtitles(Filename: WideString; InUTF8 : Boolean; BackupOnly : Boolean);
     procedure SaveProject(Project : TVSSProject);
     procedure UpdateLinesCounter;
     function CheckSubtitlesAreSaved : Boolean;
@@ -375,7 +377,8 @@ type
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
 
     procedure ColorizeOrDeleteTextPipe;
-    procedure ApplyMouseSettings;       
+    procedure ApplyMouseSettings;
+    procedure ApplyAutoBackupSettings;
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -619,6 +622,8 @@ procedure TMainForm.FinishLoadSettings;
 begin
   if(ConfigObject.SwapSubtitlesList) then
     Self.SwapSubList(False);
+
+  ApplyAutoBackupSettings;
 end;
 
 //------------------------------------------------------------------------------
@@ -666,7 +671,7 @@ end;
 procedure TMainForm.OnRecentMenuItemClick(Sender : TObject);
 var MenuItem : TMenuItem;
 begin
-  // FIXME : unicode
+  // FIXME : unicode filename
   MenuItem := Sender as TMenuItem;
   LoadProject(MenuItem.Caption);
 end;
@@ -1148,10 +1153,11 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitles(Filename: string; InUTF8 : Boolean);
+procedure TMainForm.SaveSubtitles(Filename: WideString; InUTF8 : Boolean;  BackupOnly : Boolean);
 var i : integer;
     SubRange : TSubtitleRange;
     FS : TFileStream;
+    BackupDstFilename : WideString;
 const
     UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
 
@@ -1161,7 +1167,15 @@ const
       Stream.Write(s[1],Length(s));
     end;
 begin
-  FS := TFileStream.Create(Filename,fmCreate);
+  if (not BackupOnly) and WideFileExists(Filename) and ConfigObject.EnableBackup then
+  begin
+    CheckBackupDirectory;
+    BackupDstFilename := g_BackupDirectory + WideChangeFileExt(WideExtractFileName(Filename), '.bak');
+    WideCopyFile(Filename, BackupDstFilename, False);
+  end;
+
+  // FIX unicode : Filename
+  FS := TFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
@@ -1177,10 +1191,15 @@ begin
       WriteStringLnStream(UTF8Encode(Subrange.Text), FS)
     else
       WriteStringLnStream(Subrange.Text, FS);
-    WriteStringLnStream('',FS);
+    WriteStringLnStream('', FS);
   end;
   FS.Free;
-  CurrentProject.IsDirty := False;
+  
+  if (not BackupOnly) then
+  begin
+    ApplyAutoBackupSettings; // Reset auto-backup timing
+    CurrentProject.IsDirty := False
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1526,7 +1545,7 @@ procedure TMainForm.ActionSaveExecute(Sender: TObject);
 begin
   // Save subtitles
   if Trim(CurrentProject.SubtitlesFile) <> '' then
-    SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+    SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
   SaveProject(CurrentProject);
 end;
 
@@ -1538,7 +1557,7 @@ begin
     'All files (*.*)|*.*';
   if TntSaveDialog1.Execute then
   begin
-    SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.IsUTF8);
+    SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.IsUTF8, False);
   end;
 end;
 
@@ -1972,7 +1991,7 @@ begin
       '" has changed, do you want to save it before closing ?')), PWideChar(WideString('Warning')), MB_YESNOCANCEL or MB_ICONWARNING);
     if (res = IDYES) then
     begin
-      SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+      SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
       SaveProject(CurrentProject);
     end
     else if(res = IDCANCEL) then
@@ -2259,7 +2278,17 @@ begin
       Self.SwapSubList;
     SetShortcut(PreferencesForm.GetMode);
     ApplyMouseSettings;
+    ApplyAutoBackupSettings;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ApplyAutoBackupSettings;
+begin
+  TimerAutoBackup.Enabled := False;
+  TimerAutoBackup.Interval := ConfigObject.AutoBackupEvery * 60 * 100;
+  TimerAutoBackup.Enabled := (ConfigObject.AutoBackupEvery > 0);  
 end;
 
 //------------------------------------------------------------------------------
@@ -2859,6 +2888,20 @@ begin
       WAVDisplayer.SelMode := smSSA
     else
       WAVDisplayer.SelMode := smCoolEdit;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TimerAutoBackupTimer(Sender: TObject);
+var BackupDstFilename : WideString;
+begin
+  if ActionSave.Enabled then
+  begin
+    CheckBackupDirectory;
+    BackupDstFilename := g_BackupDirectory +
+      WideChangeFileExt(WideExtractFileName(CurrentProject.SubtitlesFile), '.bak');
+    SaveSubtitles(BackupDstFilename, CurrentProject.IsUTF8, True);
   end;
 end;
 

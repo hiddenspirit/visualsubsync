@@ -3091,4 +3091,11 @@ object MainForm: TMainForm
       RadioItem = True
     end
   end
+  object TimerAutoBackup: TTimer
+    Enabled = False
+    Interval = 60000
+    OnTimer = TimerAutoBackupTimer
+    Left = 344
+    Top = 475
+  end
 end

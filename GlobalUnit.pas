@@ -38,6 +38,8 @@ type
     function GetFieldValue(Name : string) : string; override;
   end;
 
+  procedure CheckBackupDirectory;
+
 const
   ApplicationName : string = 'VisualSubSync';
 
@@ -46,8 +48,11 @@ var
   g_GlobalContext : TGlobalContext;
   // Synchronization object from application<->web server threads
   g_WebRWSynchro : TMultiReadExclusiveWriteSynchronizer;
+  g_BackupDirectory : WideString;
 
 implementation
+
+uses TntSysUtils;
 
 function TGlobalContext.GetFieldValue(Name : string) : string;
 begin
@@ -57,11 +62,20 @@ begin
     Result := ExtractFileName(CurrentProject.Filename)
 end;
 
+procedure CheckBackupDirectory;
+begin
+  if not WideDirectoryExists(g_BackupDirectory) then
+    WideForceDirectories(g_BackupDirectory);
+end;
+
 initialization
   g_ApplicationVersion := TFileVersion.Create(Application.ExeName);
   g_GlobalContext := TGlobalContext.Create;
   g_WebRWSynchro := TMultiReadExclusiveWriteSynchronizer.Create;
-
+  // FIX unicode : Application.ExeName
+  g_BackupDirectory := WideIncludeTrailingBackslash(WideExtractFilePath(Application.ExeName)) + 'Backup\';
+  CheckBackupDirectory;
+  
 finalization
   g_WebRWSynchro.Free;
   g_WebRWSynchro := nil;

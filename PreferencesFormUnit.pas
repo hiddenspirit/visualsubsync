@@ -104,6 +104,9 @@ type
     MouseWheelVZoomModifier : TMouseWheelModifier;
     MouseWheelHZoomModifier : TMouseWheelModifier;
     MouseEnableSSATimingMode : Boolean;
+    // Backup
+    EnableBackup : Boolean;
+    AutoBackupEvery : Integer;
 
     constructor Create;
     destructor Destroy; override;
@@ -164,6 +167,12 @@ type
     ComboWheelHZoomModifier: TComboBox;
     GroupBox3: TGroupBox;
     chkEnableSSATimingMode: TCheckBox;
+    GroupBox4: TGroupBox;
+    chkCreateBackup: TCheckBox;
+    bttOpenBackupDir: TButton;
+    EditBackupTime: TEdit;
+    Label6: TLabel;
+    UpDownBackupTime: TUpDown;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -179,6 +188,7 @@ type
     procedure bttClearHotkeyClick(Sender: TObject);
     procedure ListHotkeysDeletion(Sender: TObject; Item: TListItem);
     procedure bttResetAllHotkeysClick(Sender: TObject);
+    procedure bttOpenBackupDirClick(Sender: TObject);
   private
     { Private declarations }
     TimingMode : Boolean;
@@ -202,7 +212,7 @@ var
 
 implementation
 
-uses MiscToolsUnit, GlobalUnit, ActnList;
+uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows;
 
 {$R *.dfm}
 
@@ -260,6 +270,9 @@ begin
   MouseWheelVZoomModifier := mwmShift;
   MouseWheelHZoomModifier := mwmNone;
   MouseEnableSSATimingMode := True;
+  // Backup
+  EnableBackup := True;
+  AutoBackupEvery := 0;
 end;
 
 //------------------------------------------------------------------------------
@@ -352,6 +365,10 @@ begin
   IniFile.WriteInteger('Mouse','WheelVZoomModifier',Ord(MouseWheelVZoomModifier));
   IniFile.WriteInteger('Mouse','WheelHZoomModifier',Ord(MouseWheelHZoomModifier));
   IniFile.WriteBool('Mouse','EnableSSATimingMode',MouseEnableSSATimingMode);
+
+  // Backup
+  IniFile.WriteBool('Backup','EnableBackup',EnableBackup);
+  IniFile.WriteInteger('Backup','AutoBackupEvery',AutoBackupEvery);
 end;
 
 //------------------------------------------------------------------------------
@@ -418,6 +435,10 @@ begin
     'WheelHZoomModifier',Ord(MouseWheelHZoomModifier)));
   MouseEnableSSATimingMode := IniFile.ReadBool('Mouse',
     'EnableSSATimingMode',MouseEnableSSATimingMode);
+
+  // Backup
+  EnableBackup := IniFile.ReadBool('Backup','EnableBackup',EnableBackup);
+  AutoBackupEvery := IniFile.ReadInteger('Backup','AutoBackupEvery',AutoBackupEvery);
 end;
 
 // =============================================================================
@@ -492,6 +513,10 @@ begin
   ComboWheelVZoomModifier.ItemIndex := Ord(Config.MouseWheelVZoomModifier);
   ComboWheelHZoomModifier.ItemIndex := Ord(Config.MouseWheelHZoomModifier);
   chkEnableSSATimingMode.Checked := Config.MouseEnableSSATimingMode;
+
+  // Backup
+  chkCreateBackup.Checked := Config.EnableBackup;
+  UpDownBackupTime.Position := Config.AutoBackupEvery;
 end;
 
 //------------------------------------------------------------------------------
@@ -531,6 +556,10 @@ begin
   Config.MouseWheelVZoomModifier := TMouseWheelModifier(ComboWheelVZoomModifier.ItemIndex);
   Config.MouseWheelHZoomModifier := TMouseWheelModifier(ComboWheelHZoomModifier.ItemIndex);
   Config.MouseEnableSSATimingMode := chkEnableSSATimingMode.Checked;
+
+  // Backup
+  Config.EnableBackup := chkCreateBackup.Checked;
+  Config.AutoBackupEvery := UpDownBackupTime.Position;
 end;
 
 //------------------------------------------------------------------------------
@@ -768,6 +797,15 @@ begin
       end;
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttOpenBackupDirClick(Sender: TObject);
+begin
+  CheckBackupDirectory;
+  Tnt_ShellExecuteW(Handle, 'explore', PWideChar(g_BackupDirectory), nil,
+    nil, SW_SHOWNORMAL);
 end;
 
 //------------------------------------------------------------------------------
