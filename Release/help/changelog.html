@@ -13,13 +13,41 @@
 
 <div class="MainColumn">
 
+<a href="index.html"><img alt="back to index" class="TopLeftCorner" src="images/ico64.png" border="0"></a>
+
 <div class="MainTitle">Changelog</div>
+
+<br>
+
+<div class="Title">Version 0.4</div>
+In this version appear the new "Text pipe"© feature. It's used to synchronize
+subtitles from an already made transcript. You load your transcript in the text
+pipe, you select a sentence in the WAV display part, you select the matching 
+text in the text pipe and you choose "Add subtitle from pipe". You have the
+option to automatically delete the text you added from the pipe, it's why
+it's called a pipe, text his moving out as you add subtitles.
+<br>
+<br>
+Here is a more complete list of change :
+<ul>
+	<li>Added new keyboard shortcuts to shift start/stop time by 10/100 ms</li>
+	<li>Added vertical zoom option</li>
+	<li>Added "Text pipe"© with new <a href="tutorial2.html">tutorial</a></li>
+	<li>Changed the way shortcut are now written to config files</li>
+	<li>Changed the way subtitles from a text file are inserted, now time is incremented for each sub to avoid sorting problems</li>
+	<li>Fixed problem when subtitle start time = stop time (division by 0)</li>		
+	<li>Fixed problem when changing subtitle filename in project dialog to a new empty file, old subtitles were not cleared</li>
+	<li>Fixed problem when subtitle start time is > stop time, time are now swapped automatically</li>
+	<li>Fixed miscalculation in peak file normalization</li>
+</ul>
+
+<br>
 
 <div class="Title">Version 0.3</div>
 The main new feature is the configurable shortcuts with 2 modes available :
 Normal and Timing. You can change the mode quickly using the button in the
-main window.<br>
-Others important features are dynamic update of playing range, that can be quickly tested
+main window. More differences between 2 modes should be available later.<br>
+Others important features are dynamic update of playing range, that can be tested quickly
 by playing in loop mode and changing selection, and the "Save as UTF8" check box
 that allow subtitle creation in every language without charset headache ;-)<br>
 <br>
@@ -37,6 +65,8 @@ Here is a more complete list of change :
 	<li>Fixed webpage compression is now off by default, IE wrongly report that it support deflate</li>
 </ul>
 
+<br>
+
 <div class="Title">Version 0.2</div>
 <ul>
 	<li>Added new "Set subtitle time" menu item in WAV display popup menu</li>
@@ -52,6 +82,8 @@ Here is a more complete list of change :
 	<li>Fixed suggestions UTF8 decoding</li>
 	<li>Fixed IE issue when submiting suggestion.</li>
 </ul>
+
+<br>
 
 <div class="Title">Version 0.1</div>
 <ul>
