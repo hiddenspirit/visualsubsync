@@ -81,7 +81,8 @@ type
     procedure KillVideo;    
     procedure Close;
     function IsOpen : Boolean; override;
-    procedure SetRate(Rate : Integer); override;        
+    procedure SetRate(Rate : Integer); override;
+    procedure ShowImageAt(TimeMs : Cardinal);
   published
     property OnStopPlaying;
     property VideoWidth : Integer read FVideoWidth;
@@ -655,6 +656,30 @@ procedure TDShowRenderer.SetRate(Rate : Integer);
 begin
   if Assigned(FMediaSeeking) then
     FMediaSeeking.SetRate(Rate / 100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.ShowImageAt(TimeMs : Cardinal);
+var SeekToTime100NS, StopDummy : Int64;
+begin
+  if Assigned(FMediaSeeking) then
+  begin
+    FLastResult := FMediaControl.Stop;
+    if (FLastResult <> S_OK) then
+      Exit;
+    SeekToTime100NS := Int64(TimeMs) * 10000;
+    StopDummy := 0;
+
+    FLastResult := FMediaSeeking.SetPositions(SeekToTime100NS,
+      AM_SEEKING_AbsolutePositioning,
+      StopDummy,
+      AM_SEEKING_NoPositioning);
+    if (FLastResult <> S_OK) then
+      Exit;
+
+    FMediaControl.StopWhenReady;
+  end;
 end;
 
 //------------------------------------------------------------------------------
