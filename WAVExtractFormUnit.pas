@@ -64,6 +64,8 @@ implementation
 
 {$R *.dfm}
 
+uses CursorManager;
+
 // -----------------------------------------------------------------------------
 
 procedure TExtractWAVForm.bttExtractClick(Sender: TObject);
@@ -101,45 +103,40 @@ end;
 
 procedure TExtractWAVForm.FormActivate(Sender: TObject);
 var i : integer;
-  SaveCursor: TCursor;
+    CM : ICursorManager;
 begin
-  SaveCursor := Screen.Cursor;
-  try
-    Screen.Cursor := crHourGlass;
-    
-    bttExtract.Enabled := False;
-    bttStop.Enabled := False;
-    bttClose.Enabled := False;
-    gbSettings.Enabled := False;
-    AudioPinIsSelected := False;
+  CM := TCursorManager.Create(crHourGlass);
 
-    // Get video info
-    MemoVideoInfo.Clear;
-    DSWavExtractor := TDSWavExtractor.Create;
-    MemoVideoInfo.Lines.Add('Opening and analyzing file :');
-    MemoVideoInfo.Lines.Add(VideoFilename);
-    MemoVideoInfo.Lines.Add('Please wait...');
-    Application.ProcessMessages;
-    DSWavExtractor.Open(VideoFilename);
-    MemoVideoInfo.Lines.Add(IntToStr(DSWavExtractor.AudioStreamCount) +
-      ' audio stream found.');
-    cbStreamIndex.Clear;
-    for i := 1 to DSWavExtractor.AudioStreamCount do
-    begin
-      cbStreamIndex.AddItem(IntToStr(i),nil);
-    end;
-    if (DSWavExtractor.AudioStreamCount > 0) then
-      cbStreamIndex.ItemIndex := 0;
+  bttExtract.Enabled := False;
+  bttStop.Enabled := False;
+  bttClose.Enabled := False;
+  gbSettings.Enabled := False;
+  AudioPinIsSelected := False;
 
-    bttExtract.Enabled := (DSWavExtractor.AudioStreamCount > 0);
-    bttClose.Enabled := True;
-    gbSettings.Enabled := True;
-    CurrentExtractionType := 2;
-    rbFastConversion.Checked := True;
-    MemoVideoInfo.Lines.Add('Select a stream and press the ''Extract'' button.');
-  finally
-    Screen.Cursor := SaveCursor
+  // Get video info
+  MemoVideoInfo.Clear;
+  DSWavExtractor := TDSWavExtractor.Create;
+  MemoVideoInfo.Lines.Add('Opening and analyzing file :');
+  MemoVideoInfo.Lines.Add(VideoFilename);
+  MemoVideoInfo.Lines.Add('Please wait...');
+  Application.ProcessMessages;
+  DSWavExtractor.Open(VideoFilename);
+  MemoVideoInfo.Lines.Add(IntToStr(DSWavExtractor.AudioStreamCount) +
+    ' audio stream found.');
+  cbStreamIndex.Clear;
+  for i := 1 to DSWavExtractor.AudioStreamCount do
+  begin
+    cbStreamIndex.AddItem(IntToStr(i),nil);
   end;
+  if (DSWavExtractor.AudioStreamCount > 0) then
+    cbStreamIndex.ItemIndex := 0;
+
+  bttExtract.Enabled := (DSWavExtractor.AudioStreamCount > 0);
+  bttClose.Enabled := True;
+  gbSettings.Enabled := True;
+  CurrentExtractionType := 2;
+  rbFastConversion.Checked := True;
+  MemoVideoInfo.Lines.Add('Select a stream and press the ''Extract'' button.');
 end;
 
 // -----------------------------------------------------------------------------
