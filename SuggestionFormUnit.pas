@@ -170,7 +170,7 @@ begin
   x := NodeLeftMargin;
   y := NodeTopMargin;
 
-  if (PaintInfo.Node = vtvSuggestionsLst.FocusedNode) then
+  if (vtvSuggestionsLst.Selected[PaintInfo.Node]) then
     SetTextColor(DC, ColorToRGB(clHighlightText))
   else
     SetTextColor(DC, ColorToRGB(clWindowText));
@@ -195,6 +195,9 @@ begin
   SelectObject(DC, FNormalFont);
   Msg := StringConvertCRLFToPipe(pSuggestionData.Text);
   TextOutW(DC, x, y, PWideChar(Msg), Length(Msg));
+
+  if (vtvSuggestionsLst.FocusedNode = PaintInfo.Node) then
+    DrawFocusRect(DC, PaintInfo.CellRect);
 
   SelectObject(DC, OldFont);
   SetTextColor(DC, OldColor);
