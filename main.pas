@@ -206,6 +206,36 @@ type
     Setplaybackrateat801: TTntMenuItem;
     Loopselectionstart1: TTntMenuItem;
     Loopselectionend1: TTntMenuItem;
+    ActionShiftStartPlus100: TTntAction;
+    ActionShiftStartMinus100: TTntAction;
+    ActionShiftStopPlus100: TTntAction;
+    ActionShiftStopMinus100: TTntAction;
+    ActionShiftStartPlus10: TTntAction;
+    ActionShiftStartMinus10: TTntAction;
+    ActionShiftStopPlus10: TTntAction;
+    ActionShiftStopMinus10: TTntAction;
+    MenuItemVerticalScaling: TTntMenuItem;
+    ActionZoomVertical: TTntAction;
+    bttZoomVertical: TSpeedButton;
+    MemoTextPipe: TTntRichEdit;
+    SplitterMemoTextPipe: TSplitter;
+    ActionShowHideTextPipe: TTntAction;
+    MenuItemTextPipe: TTntMenuItem;
+    MenuItemLoadTextFileInPipe: TTntMenuItem;
+    MenuItemShowHideTextPipe: TTntMenuItem;
+    ActionLoadTextPipe: TTntAction;
+    MemoTextPipePopupMenu: TTntPopupMenu;
+    pmiLoadTextPipe: TTntMenuItem;
+    pmiAddAsSubtitle: TTntMenuItem;
+    ActionClearTextPipe: TTntAction;
+    MenuItemClearTextPipe: TTntMenuItem;
+    ActionSaveTextPipeAs: TTntAction;
+    MenuItemSaveTextPipe: TTntMenuItem;
+    ActionAddSubFromPipe: TTntAction;
+    N13: TTntMenuItem;
+    pmiAutoColorizeText: TTntMenuItem;
+    pmiAutoDeleteText: TTntMenuItem;
+    pmiAutoDeleteAllTextBefore: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -284,6 +314,21 @@ type
     procedure ActionSetPlaybackRate80Execute(Sender: TObject);
     procedure ActionSetPlaybackRate90Execute(Sender: TObject);
     procedure ActionSetPlaybackRate100Execute(Sender: TObject);
+    procedure ActionShiftStartPlus100Execute(Sender: TObject);
+    procedure ActionShiftStartMinus100Execute(Sender: TObject);
+    procedure ActionShiftStopPlus100Execute(Sender: TObject);
+    procedure ActionShiftStopMinus100Execute(Sender: TObject);
+    procedure ActionShiftStartPlus10Execute(Sender: TObject);
+    procedure ActionShiftStartMinus10Execute(Sender: TObject);
+    procedure ActionShiftStopPlus10Execute(Sender: TObject);
+    procedure ActionShiftStopMinus10Execute(Sender: TObject);
+    procedure ActionZoomVerticalExecute(Sender: TObject);
+    procedure ActionShowHideTextPipeExecute(Sender: TObject);
+    procedure ActionLoadTextPipeExecute(Sender: TObject);
+    procedure ActionClearTextPipeExecute(Sender: TObject);
+    procedure ActionSaveTextPipeAsExecute(Sender: TObject);
+    procedure ActionAddSubFromPipeExecute(Sender: TObject);
+    procedure MemoTextPipePopupMenuPopup(Sender: TObject);
 
   private
     { Private declarations }
@@ -322,7 +367,10 @@ type
     procedure FullSortTreeAndSubList;
 
     procedure OnRecentMenuItemClick(Sender : TObject);
-    procedure SetShortcut(TimingMode : Boolean);    
+    procedure SetShortcut(TimingMode : Boolean);
+
+    procedure OffsetCurrentSubtitleStartTime(Offset : Integer);
+    procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -332,7 +380,7 @@ type
     procedure SaveSettings;
     procedure LoadSettings;
     procedure ShowPreferences(TabSheet : TTntTabSheet);
-    procedure LoadProject(Filename : string);
+    procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
   end;
@@ -347,7 +395,7 @@ implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
-  Types, ShellApi;
+  Types, ShellApi, VerticalScalingFormUnit, TntSysUtils;
 
 {$R *.dfm}
 
@@ -435,6 +483,7 @@ begin
   MemoSubtitleText.Font.Style := MemoSubtitleText.Font.Style + [fsBold];
   MemoSubtitleText.Font.Size := 10;
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
+  MemoTextPipe.Font.Assign(MemoSubtitleText.Font);
 
   EnableControl(False);
 
@@ -622,6 +671,7 @@ end;
 procedure TMainForm.OnRecentMenuItemClick(Sender : TObject);
 var MenuItem : TMenuItem;
 begin
+  // FIXME : unicode
   MenuItem := Sender as TMenuItem;
   LoadProject(MenuItem.Caption);
 end;
@@ -658,6 +708,7 @@ begin
   ActionZoomOut.Enabled := Enable;
   ActionZoomSelection.Enabled := Enable;
   ActionZoomAll.Enabled := Enable;
+  ActionZoomVertical.Enabled := Enable;
 
   ActionFind.Enabled := Enable;
   ActionFindNext.Enabled := Enable;
@@ -683,7 +734,6 @@ begin
 
   chkAutoScrollWAVDisp.Enabled := Enable;
   chkAutoScrollSub.Enabled := Enable;
-
   lbAutoScroll.Enabled := Enable;
 
   ActionClose.Enabled := Enable;
@@ -694,7 +744,7 @@ begin
   ActionSetPlaybackRate100.Enabled := Enable;
 
   ActionLoopSelStart.Enabled := Enable;
-  ActionLoopSelEnd.Enabled := Enable;  
+  ActionLoopSelEnd.Enabled := Enable;
 end;
 
 //------------------------------------------------------------------------------
@@ -893,12 +943,18 @@ var
   EndOfFile : Boolean;
 begin
   if not FileExists(Filename) then
+  begin
+    g_WebRWSynchro.BeginWrite;
+    WAVDisplayer.RangeList.Clear;
+    vtvSubsList.Clear;
+    vtvSubsList.Repaint;
+    WAVDisplayer.UpdateView([uvfRange]);
+    g_WebRWSynchro.EndWrite;
     Exit;
+  end;
 
   g_WebRWSynchro.BeginWrite;
-
   WAVDisplayer.RangeList.Clear;
-
   FS := TFileStream.Create(Filename,fmOpenRead);
   ZeroMemory(@BOM[0],Length(BOM));
   FS.Read(BOM,4);
@@ -969,7 +1025,7 @@ begin
   end;
   vtvSubsList.EndUpdate;
   WAVDisplayer.UpdateView([uvfRange]);
-  g_WebRWSynchro.EndWrite;  
+  g_WebRWSynchro.EndWrite;
 end;
 
 //------------------------------------------------------------------------------
@@ -1151,12 +1207,12 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.LoadProject(Filename : string);
+procedure TMainForm.LoadProject(Filename : WideString);
 var
   ProjectFileIni : TIniFile;
   SaveCursor: TCursor;
 begin
-  if (not FileExists(Filename)) then
+  if (not WideFileExists(Filename)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The project file "' + Filename +
       '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -1177,16 +1233,18 @@ begin
     CurrentProject.PeakFile := ProjectFileIni.ReadString('VisualSubsync','PeakFile','');
     CurrentProject.WAVMode := TProjectWAVMode(ProjectFileIni.ReadInteger('VisualSubsync','WAVMode',1));
     CurrentProject.SubtitlesFile := ProjectFileIni.ReadString('VisualSubsync','SubtitlesFile','');
+    CurrentProject.TextPipeSource := ProjectFileIni.ReadString('VisualSubsync','TextPipeSource','');
+    CurrentProject.TextPipePosition := ProjectFileIni.ReadInteger('VisualSubsync','TextPipePosition',0);
     ProjectFileIni.Free;
 
     ShowStatusBarMessage('Loading WAV form...');
     if CurrentProject.WAVMode = pwmPeakOnly then
     begin
-      if FileExists(CurrentProject.PeakFile) then
+      if WideFileExists(CurrentProject.PeakFile) then
         WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile,'.wav'))
       else
       begin
-        if FileExists(CurrentProject.WAVFile) then
+        if WideFileExists(CurrentProject.WAVFile) then
         begin
           CurrentProject.WAVMode := pwmExternal;
           WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
@@ -1204,24 +1262,24 @@ begin
     end
     else
     begin
-      if FileExists(CurrentProject.WAVFile) then
+      if WideFileExists(CurrentProject.WAVFile) then
         WAVDisplayer.LoadWAV(CurrentProject.WAVFile)
       else
       begin
-        if FileExists(CurrentProject.PeakFile) then
+        if WideFileExists(CurrentProject.PeakFile) then
         begin
           CurrentProject.WAVMode := pwmPeakOnly;
-          WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile,'.wav'));
+          WAVDisplayer.LoadWAV(WideChangeFileExt(CurrentProject.PeakFile,'.wav'));
           CurrentProject.IsDirty := True;
           // Show warning
           MessageBoxW(Handle, PWideChar(WideString('WAV file ' + CurrentProject.WAVFile +
            ' hasn''t been found, project has been switched to "Peak file only" mode')),
             PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
         end
-        else if FileExists(ChangeFileExt(CurrentProject.WAVFile,'.peak')) then
+        else if WideFileExists(WideChangeFileExt(CurrentProject.WAVFile,'.peak')) then
         begin
           CurrentProject.WAVMode := pwmPeakOnly;
-          CurrentProject.PeakFile := ChangeFileExt(CurrentProject.WAVFile,'.peak');
+          CurrentProject.PeakFile := WideChangeFileExt(CurrentProject.WAVFile,'.peak');
           WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
           CurrentProject.IsDirty := True;
         end
@@ -1260,6 +1318,17 @@ begin
       VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
     end;
 
+    if WideFileExists(WideChangeFileExt(CurrentProject.Filename,'.vssscript')) then
+    begin
+      ShowStatusBarMessage('Loading script file...');
+      MemoTextPipe.Lines.LoadFromFile(WideChangeFileExt(CurrentProject.Filename,'.vssscript'));
+      // First go to bottom, so the line will go get at the top
+      MemoTextPipe.SelStart := Length(MemoTextPipe.Text);
+      Perform(EM_SCROLLCARET, 0, 0);
+      MemoTextPipe.SelStart := CurrentProject.TextPipePosition;
+      Perform(EM_SCROLLCARET, 0, 0);
+    end;
+
     EnableControl(True);
 
     CurrentProjectOnDirtyChange(nil);
@@ -1285,6 +1354,17 @@ begin
   ProjectFileIni.WriteString('VisualSubsync','PeakFile',Project.PeakFile);
   ProjectFileIni.WriteInteger('VisualSubsync','WAVMode',Ord(Project.WAVMode));
   ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',Project.SubtitlesFile);
+
+  if Length(Trim(MemoTextPipe.Text)) > 0 then
+  begin
+    MemoTextPipe.PlainText := False;
+    MemoTextPipe.Lines.SaveToFile(WideChangeFileExt(Project.Filename,'.vssscript'));
+    // Save cursor position
+    ProjectFileIni.WriteInteger('VisualSubsync', 'TextPipePosition',
+      MemoTextPipe.SelStart);
+    ProjectFileIni.WriteString('VisualSubsync', 'TextPipeSource', Project.TextPipeSource);
+  end;
+
   ProjectFileIni.Free;
 end;
 
@@ -1656,8 +1736,11 @@ begin
     end;
     if (LineLen > MaxLineLen) then
       MaxLineLen := LineLen;
-    
-    CPS := Round(TotalCharCount / ((SubRange.StopTime - SubRange.StartTime) / 1000));
+
+    if (SubRange.StopTime = SubRange.StartTime) then
+      CPS := 999
+    else
+      CPS := Round(TotalCharCount / ((SubRange.StopTime - SubRange.StartTime) / 1000));
 
     if ConfigObject.ErrorTooShortDisplayTimeEnabled and
        (CPS > ConfigObject.ErrorTooShortDisplayTimeValue) then
@@ -2217,6 +2300,7 @@ begin
     WAVDisplayer.Enabled := False;
     WAVDisplayer.Close;
     WAVDisplayer.Repaint;
+    WAVDisplayer.VerticalScaling := 100;
 
     CurrentProject.Filename := '';
     CurrentProject.VideoSource := '';
@@ -2271,7 +2355,8 @@ var
   FS : TFileStream;
   BOM : array[0..3] of BYTE;
   Line: string;
-  NewRange : TRange;
+  LastRange, NewRange : TRange;
+  StartTime : Integer;
   Node: PVirtualNode;
   NodeData: PTreeData;
   IsUTF8 : Boolean;
@@ -2296,11 +2381,21 @@ begin
       FS.Seek(0,soFromBeginning);
     end;
 
+    // Get start time
+    if (WAVDisplayer.RangeList.Count > 0) then
+    begin
+      LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
+      StartTime := LastRange.StopTime + 2000;
+    end
+    else
+      StartTime := 99 * 60 * 60 * 1000;
+
     while (not ReadLineStream(FS,Line)) do
     begin
       if IsUTF8 then
         Line := UTF8Decode(Text);
-      NewRange := SubRangeFactory.CreateRangeSS(359999999,359999999);
+      NewRange := SubRangeFactory.CreateRangeSS(StartTime,StartTime+1000);
+      Inc(StartTime,2000);
       TSubtitleRange(NewRange).Text := Line;
       WAVDisplayer.RangeList.AddAtEnd(NewRange);
 
@@ -2544,6 +2639,192 @@ procedure TMainForm.ActionSetPlaybackRate100Execute(Sender: TObject);
 begin
   VideoRenderer.SetRate(100);
   AudioOnlyRenderer.SetRate(100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OffsetCurrentSubtitleStartTime(Offset : Integer);
+var NodeData : PTreeData;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    NodeData.Range.StartTime := NodeData.Range.StartTime + Offset;
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OffsetCurrentSubtitleStopTime(Offset : Integer);
+var NodeData : PTreeData;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    NodeData.Range.StopTime := NodeData.Range.StopTime + Offset;
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStartPlus100Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStartTime(100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStartMinus100Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStartTime(-100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStopPlus100Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStopTime(100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStopMinus100Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStopTime(-100);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStartPlus10Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStartTime(10);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStartMinus10Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStartTime(-10);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStopPlus10Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStopTime(10);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShiftStopMinus10Execute(Sender: TObject);
+begin
+  OffsetCurrentSubtitleStopTime(-10);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionZoomVerticalExecute(Sender: TObject);
+begin
+  if (VerticalScalingForm = nil) then
+    VerticalScalingForm := TVerticalScalingForm.Create(Self,WAVDisplayer);
+  VerticalScalingForm.Visible := not VerticalScalingForm.Visible;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowHideTextPipeExecute(Sender: TObject);
+begin
+  SplitterMemoTextPipe.Visible := not SplitterMemoTextPipe.Visible;
+  MemoTextPipe.Visible := not MemoTextPipe.Visible;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLoadTextPipeExecute(Sender: TObject);
+begin
+  TntOpenDialog1.Filter :=
+    'Text files (*.txt)|*.TXT' + '|' +
+    'RTF files (*.rtf)|*.RTF' + '|' +
+    'All files (*.*)|*.*';
+  if TntOpenDialog1.Execute then
+  begin
+    MemoTextPipe.Lines.LoadFromFile(TntOpenDialog1.FileName);
+    CurrentProject.TextPipeSource := TntOpenDialog1.FileName;
+    if MemoTextPipe.Visible = False then
+      ActionShowHideTextPipe.Execute;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionClearTextPipeExecute(Sender: TObject);
+begin
+  MemoTextPipe.Clear;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSaveTextPipeAsExecute(Sender: TObject);
+begin
+  TntSaveDialog1.Filter := 'Text file (*.txt)|*.TXT|RTF file (*.rtf)|*.RTF';
+  TntSaveDialog1.FileName := CurrentProject.TextPipeSource;
+  if TntSaveDialog1.Execute then
+  begin
+    if TntSaveDialog1.FilterIndex = 1 then
+      MemoTextPipe.PlainText := True
+    else if TntSaveDialog1.FilterIndex = 2 then
+      MemoTextPipe.PlainText := False;
+    MemoTextPipe.Lines.SaveToFile(TntSaveDialog1.FileName);
+    MemoTextPipe.PlainText := False;
+    CurrentProject.TextPipeSource := TntSaveDialog1.FileName;    
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionAddSubFromPipeExecute(Sender: TObject);
+var NewSelLen : Integer;
+    NewColor : TColor;
+    NodeData : PTreeData;
+begin
+  if (MemoTextPipe.SelLength > 0) and (not WavDisplayer.SelectionIsEmpty) then
+  begin
+    ActionAddSubtitle.Execute;
+    MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
+    if pmiAutoColorizeText.Checked then
+    begin
+      NewColor := clRed;
+      if Assigned(vtvSubsList.FocusedNode) then
+      begin
+        if (vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) = 0 then
+          NewColor := $003333FF
+        else
+          NewColor := $00FF8000;
+      end;
+      MemoTextPipe.SelAttributes.Color := NewColor;
+    end
+    else if pmiAutoDeleteText.Checked then
+      MemoTextPipe.ClearSelection
+    else if pmiAutoDeleteAllTextBefore.Checked then
+    begin
+      NewSelLen := MemoTextPipe.SelLength + MemoTextPipe.SelStart;
+      MemoTextPipe.SelStart := 0;
+      MemoTextPipe.SelLength := NewSelLen;
+      MemoTextPipe.ClearSelection;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.MemoTextPipePopupMenuPopup(Sender: TObject);
+begin
+  pmiAddAsSubtitle.Enabled := (MemoTextPipe.SelLength > 0) and
+    (not WavDisplayer.SelectionIsEmpty);
 end;
 
 //------------------------------------------------------------------------------
