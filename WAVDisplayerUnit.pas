@@ -1331,6 +1331,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+// Called only internally when the scroll bar change
 function TWAVDisplayer.GetPositionMs : Cardinal;
 begin
   if (FScrollBar.Position + FPageSizeMs - 1) > FLengthMs then
@@ -1480,6 +1481,7 @@ begin
   RelativePos := ScreenToClient(MousePos);
   if not InRange(RelativePos.X, 0, Width) then Exit;
 
+  // default:  
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
@@ -1565,7 +1567,8 @@ procedure TWAVDisplayer.DblClick;
 var idx : Integer;
 begin
   inherited;
-  if (not FPeakDataLoaded) then
+  // Disable subtitle selection for SSA mode
+  if (not FPeakDataLoaded) or (SelMode = smSSA) then
     Exit;
   idx := FRangeList.GetRangeIdxAt(FCursorMs);
   if idx <> -1 then
