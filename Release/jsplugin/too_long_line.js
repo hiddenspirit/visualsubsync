@@ -1,3 +1,5 @@
+var DebugMode = true;
+
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too long line',
@@ -29,5 +31,150 @@ VSSPlugin = {
     } else {
     	return '';
     }
+  },
+    
+  FixError : function(CurrentSub, PreviousSub, NextSub) {  	
+    if(DebugMode)
+    	ScriptLog('=====> too_long_lines.js : Entering FixError...');      	
+  	
+    // Ignore dialogs
+    if(CurrentSub.Text.match(/^\s*-/mg)) {
+	    if(DebugMode)
+      	ScriptLog('Dialog detected, exiting.');
+    	return;    	
+    }
+  	
+    // Put all text on 1 line
+    var TextWOLF = CurrentSub.Text.replace(/\s*\r\n\s*/mg, ' ');
+    var TextWOLFLen = TextWOLF.length;
+    
+    if(DebugMode)
+      ScriptLog('TextWOLF = ' + TextWOLF);
+    
+    // Check if length is already ok
+    if(TextWOLFLen <= this.ParamMaxPerLine.Value) {
+	    if(DebugMode)
+      	ScriptLog('Length already ok, exiting.');    	
+      return;
+    }
+    
+    // We works only on 2 lines max
+    if(TextWOLFLen > this.ParamMaxPerLine.Value*2) {
+	    if(DebugMode)
+      	ScriptLog('Text exceed 2 line, exiting.');
+      return;
+    }
+        
+    // Split text at every space
+  	var WordArray = TextWOLF.split(' ');
+  	var WordArrayLen = WordArray.length;
+  	var SumFromStartArray = new Array(WordArrayLen);
+  	var SumFromEndArray = new Array(WordArrayLen);
+  	
+  	// Abc de, fghij klm.
+  	// 3   7   13    18   <- SumFromStartArray
+  	// 14  10  4     0    <- SumFromEndArray  	
+  	 	
+  	var SumFromStart = 0;
+  	for(i=0; i < WordArrayLen; i++)
+  	{
+			if (i == 0) {
+			  SumFromStart = WordArray[i].length;
+			} else {
+			  SumFromStart += (1 + WordArray[i].length);
+			}
+			SumFromStartArray[i] = SumFromStart;
+			// We will get -1 for last item, but that's not important
+			SumFromEndArray[i] = (TextWOLFLen - SumFromStart - 1);
+  	}
+  	
+  	var CutList = new Array();
+  	var j = 0;
+  	
+  	// 1st pass, try to break on ".", "?", or "!"  	
+  	var RegExpEndWithL1 = /[.|?|!]$/;
+  	for(i=0; i < WordArrayLen; i++)
+  	{
+  		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
+  			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
+  			 RegExpEndWithL1.test(WordArray[i]))
+  		{
+  			if(DebugMode)
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			CutList[j++] = {idx : i, lvl : 1};
+  		}
+  	}
+  	  	
+  	// 2nd pass, try to break on "..." or ";"  	
+  	var RegExpEndWithL2 = /[...|;]$/;
+  	for(i=0; i < WordArrayLen; i++)
+  	{
+  		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
+  			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
+  			 RegExpEndWithL2.test(WordArray[i]))
+  		{
+  			if(DebugMode)
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			CutList[j++] = {idx : i, lvl : 2};
+  		}
+  	}
+  	
+  	// 3rd pass, try to break on ","  	
+  	var RegExpEndWithL3 = /[,]$/;
+  	for(i=0; i < WordArrayLen; i++)
+  	{
+  		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
+  			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
+  			 RegExpEndWithL3.test(WordArray[i]))
+  		{
+  			if(DebugMode)
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			CutList[j++] = {idx : i, lvl : 3};
+  		}
+  	}
+  	  	
+  	// 4th pass, break on space
+  	for(i=0; i < WordArrayLen; i++)
+  	{
+  		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
+  			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value)
+  		{
+  			if(DebugMode)
+  				ScriptLog('cut at i = ' + i + ', ' + WordArray[i]);
+  			CutList[j++] = {idx : i, lvl : 4};
+  		}
+  	}
+  	
+  	var NewText = '';
+  	var LineDiff = 0;
+  	var DiffPercent = 0;
+  	
+  	// Find a "good" cut point
+  	for(i=0; i < j; i++)
+  	{
+  		LineDiff = Math.abs(SumFromStartArray[CutList[i].idx] - SumFromEndArray[CutList[i].idx]);
+      DiffPercent = CutList[i].lvl == 4 ? 0.2 : 0.6;
+  		if(LineDiff < (TextWOLFLen * DiffPercent))
+  		{
+  			// ok, build new text
+  			for(k=0; k < WordArrayLen; k++)
+  			{
+  				if(k == WordArrayLen-1)
+  				{
+  					NewText += WordArray[k];
+  				} else if(k == CutList[i].idx) {
+  					NewText += (WordArray[k] + '\r\n');
+  				} else {
+  					NewText += (WordArray[k] + ' ');
+  				}
+  			}
+  			if(DebugMode)
+  				ScriptLog('<'+NewText+'>');
+  			CurrentSub.Text = NewText;
+  			break;
+  		}
+  	}
+  	if(DebugMode)
+			ScriptLog('<===== too_long_lines.js : Leaving FixError.');
   }
 }
