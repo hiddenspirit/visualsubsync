@@ -1,7 +1,7 @@
 // French typography
 // (christophe.paris <at> free.fr)
 
-var DebugMode = true;
+var DebugMode = false;
 
 VSSPlugin = {
   // ----- Plugin constant -----
