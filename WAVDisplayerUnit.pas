@@ -88,6 +88,7 @@ type
   // ----------
 
   TSelectionMode = (smCoolEdit, smSSA);
+  TMouseWheelModifier = (mwmNone, mwmShift = Ord(ssShift), mwmAlt = Ord(ssAlt), mwmCtrl = Ord(ssCtrl));
 
   TUpdateViewFlag = (uvfCursor, uvfSelection, uvfRange, uvfPosition, uvfPageSize, uvfPlayCursor);
   TUpdateViewFlags = set of TUpdateViewFlag;
@@ -142,6 +143,8 @@ type
     FPeakDataLoaded : Boolean;
     FWavFormat : TWaveFormatEx;
 
+    FWheelTimeScroll, FWheelVZoom, FWheelHZoom : TMouseWheelModifier;
+
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
     procedure CreatePeakTab(WAVFile : TWAVFile);
@@ -193,7 +196,7 @@ type
 
     procedure PlayRange(Range : TRange; Loop : Boolean = False); overload;
     procedure PlayRange(Start, Stop : Integer; Loop : Boolean = False); overload;
-    procedure UpdatePlayRange(Start, Stop : Integer);    
+    procedure UpdatePlayRange(Start, Stop : Integer);
     procedure Stop;
     function SelectionIsEmpty : Boolean;
     procedure UpdateView(UpdateViewFlags : TUpdateViewFlags);
@@ -225,6 +228,9 @@ type
     property Selection : TRange read FSelection;
     property SelMode : TSelectionMode read FSelMode write FSelMode default smCoolEdit;
     property VerticalScaling : Integer read FVerticalScaling write SetVerticalScaling;
+    property WheelTimeScroll : TMouseWheelModifier read FWheelTimeScroll write FWheelTimeScroll default mwmNone;
+    property WheelVZoom : TMouseWheelModifier read FWheelVZoom write FWheelVZoom default mwmShift;
+    property WheelHZoom : TMouseWheelModifier read FWheelHZoom write FWheelHZoom default mwmCtrl;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -1458,10 +1464,13 @@ end;
 //------------------------------------------------------------------------------
 
 function TWAVDisplayer.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
+type
+  ByteSet = Set of 0..7;
 var
   RelativePos : TPoint;
     Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
+  bShift: ByteSet absolute shift;  
 begin
   Result := inherited DoMouseWheelUp(Shift, MousePos);
   RelativePos := ScreenToClient(MousePos);
@@ -1470,7 +1479,7 @@ begin
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
-  if ssCtrl in Shift then
+  if Ord(FWheelTimeScroll) in bShift then
   begin
     NewPageSize := Round(FPageSizeMs * 80 / 100);
 
@@ -1484,13 +1493,15 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if ssShift in Shift then
+  else if Ord(FWheelVZoom) in bShift then
   begin
     if Inrange(FVerticalScaling, 0, 395) then
       Inc(FVerticalScaling, 5);
   end
+  else if Ord(FWheelHZoom) in bShift then
+    SetPositionMs(FPositionMs - (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
-    SetPositionMs(FPositionMs - (FPageSizeMs div 4)); // scroll amount = 1/4 of visible interval
+    Exit;
 
   UpdateView([uvfPageSize]);
   Result := True;
@@ -1499,19 +1510,24 @@ end;
 //------------------------------------------------------------------------------
 
 function TWAVDisplayer.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean;
+type
+  ByteSet = Set of 0..7;
 var
   RelativePos : TPoint;
   Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
+  bShift: ByteSet absolute shift;
 begin
   Result := inherited DoMouseWheelDown(Shift, MousePos);
   RelativePos := ScreenToClient(MousePos);
   if not InRange(RelativePos.X, 0, Width) then Exit;
 
+  // default:
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
-  if ssCtrl in Shift then
+
+  if Ord(FWheelTimeScroll) in bShift then
   begin
     NewPageSize := Round(FPageSizeMs * 125 / 100);
 
@@ -1525,14 +1541,16 @@ begin
     ZoomRange(Range);
     FreeAndNil(Range);
   end
-  else if ssShift in Shift then
+  else if Ord(FWheelVZoom) in bShift then
   begin
     if Inrange(FVerticalScaling, 5, 400) then
       Dec(FVerticalScaling, 5);
   end
+  else if Ord(FWheelHZoom) in bShift then
+    SetPositionMs(FPositionMs + (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
   else
-    SetPositionMs(FPositionMs + (FPageSizeMs div 4)); // scroll amount = 1/4 of visible interval
-
+    Exit;
+    
   UpdateView([uvfPageSize]); // Refresh waveform
   Result := True;
 end;
