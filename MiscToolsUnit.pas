@@ -59,6 +59,8 @@ type
   function ShellIsExtensionRegistered(Extension, Name, Executable : string) : Boolean;
   procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
 
+  function ReadLineStream(Stream : TStream; var s : string) : Boolean;
+    
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj;
@@ -447,6 +449,23 @@ begin
   finally
     Reg.Free;
   end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function ReadLineStream(Stream : TStream; var s : string) : Boolean;
+var c : Char;
+begin
+  s := '';
+  while Stream.Read(c,1) = 1 do
+  begin
+    if (c = #10) then
+      Break
+    else if (c = #13) then
+      Continue;
+    s := s + c;
+  end;
+  Result := (Stream.Position = Stream.Size) and (s = '');
 end;
 
 // -----------------------------------------------------------------------------

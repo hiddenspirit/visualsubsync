@@ -29,7 +29,7 @@ uses
   MiniScrollBarUnit, VirtualTrees, MiscToolsUnit, TntStdCtrls, TntMenus,
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
-  PreferencesFormUnit, MRUListUnit;
+  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns;
 
 type
   TTreeData = record
@@ -163,9 +163,30 @@ type
     ActionShowSuggestions: TTntAction;
     MenuItemHelp: TTntMenuItem;
     N8: TTntMenuItem;
-    SpeedButton1: TSpeedButton;
-    SpeedButton2: TSpeedButton;
-    SpeedButton3: TSpeedButton;
+    bttCheckErrors: TSpeedButton;
+    bttShowSuggestions: TSpeedButton;
+    bttShowHideVideo: TSpeedButton;
+    MemoSubPopupMenu: TPopupMenu;
+    pmiMemoSubCopy: TMenuItem;
+    pmiMemoSubCut: TMenuItem;
+    pmiMemoSubPaste: TMenuItem;
+    EditCut1: TTntEditCut;
+    EditCopy1: TTntEditCopy;
+    EditPaste1: TTntEditPaste;
+    EditSelectAll1: TTntEditSelectAll;
+    EditUndo1: TTntEditUndo;
+    EditDelete1: TTntEditDelete;
+    Undo1: TMenuItem;
+    N9: TMenuItem;
+    Delete1: TMenuItem;
+    N10: TMenuItem;
+    SelectAll1: TMenuItem;
+    MenuItemHelpIndex: TTntMenuItem;
+    MenuItemHelpIndexWAVDisplayControl: TTntMenuItem;
+    pmiWAVDispSetSubtitleTime: TTntMenuItem;
+    N11: TTntMenuItem;
+    ActionInsertTextFile: TTntAction;
+    Inserttextfile1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -230,7 +251,10 @@ type
     procedure ActionCloseExecute(Sender: TObject);
     procedure ActionErrorPreferencesExecute(Sender: TObject);
     procedure ActionShowSuggestionsExecute(Sender: TObject);
-    procedure MenuItemHelpClick(Sender: TObject);
+    procedure MenuItemHelpIndexClick(Sender: TObject);
+    procedure MenuItemHelpIndexWAVDisplayControlClick(Sender: TObject);
+    procedure pmiWAVDispSetSubtitleTimeClick(Sender: TObject);
+    procedure ActionInsertTextFileExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -581,6 +605,7 @@ begin
   ActionGoto.Enabled := Enable;
   ActionCheckErrors.Enabled := Enable;
   ActionDelay.Enabled := Enable;
+  ActionInsertTextFile.Enabled := Enable;
 
   ActionShowHideVideo.Enabled := Enable;
   ActionProjectProperties.Enabled := Enable;
@@ -823,21 +848,6 @@ var
   NodeData: PTreeData;
   FS : TFileStream;
   EndOfFile : Boolean;
-  
-  function ReadLineStream(Stream : TStream; var s : string) : Boolean;
-  var c : Char;
-  begin
-    s := '';
-    while Stream.Read(c,1) = 1 do
-    begin
-      if (c = #10) then
-        Break
-      else if (c = #13) then
-        Continue;
-      s := s + c;
-    end;
-    Result := (Stream.Position = Stream.Size) and (s = '');
-  end;
 begin
   if not FileExists(Filename) then
     Exit;
@@ -999,6 +1009,7 @@ var s : string;
     i, CharCount, TotalCharCount, TotalCharCountWithCRLF, CPS : Integer;
     LineNo, LineStart, ColNo : Integer;
     NodeData: PTreeData;
+    SubDuration : Integer;
 begin
   s := '';
   TotalCharCount := 0;
@@ -1024,14 +1035,18 @@ begin
 
   LineNo := MemoSubtitleText.Perform(EM_LINEFROMCHAR, -1, 0);
   LineStart := MemoSubtitleText.Perform(EM_LINEINDEX, LineNo, 0);
-  ColNo := MemoSubtitleText.SelStart + MemoSubtitleText.SelLength - LineStart + 1;
+  ColNo := MemoSubtitleText.SelStart + MemoSubtitleText.SelLength - LineStart - LineNo + 1;
 
   s := 'Line: ' + IntToStr(LineNo+1) + ', Column: ' + IntToStr(ColNo);
   s := s + ' | Total: ' + IntToStr(TotalCharCount);
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    CPS := Round(TotalCharCountWithCRLF / ((NodeData.Range.StopTime - NodeData.Range.StartTime) / 1000));
+    SubDuration := NodeData.Range.StopTime - NodeData.Range.StartTime;
+    if (SubDuration > 0) then
+      CPS := Round(TotalCharCountWithCRLF / (SubDuration / 1000))
+    else
+      CPS := -1;
     s := s + ', Char/s: ' + IntToStr(CPS);
   end;
 
@@ -1856,6 +1871,8 @@ end;
 procedure TMainForm.WAVDisplayPopupMenuPopup(Sender: TObject);
 begin
   pmiWAVDispAddSubtitle.Enabled := not WAVDisplayer.SelectionIsEmpty;
+  pmiWAVDispSetSubtitleTime.Enabled := (not WAVDisplayer.SelectionIsEmpty) and
+    Assigned(vtvSubsList.FocusedNode);
 end;
 
 //------------------------------------------------------------------------------
@@ -2157,18 +2174,108 @@ end;
 
 procedure TMainForm.ActionShowSuggestionsExecute(Sender: TObject);
 begin
-  SuggestionForm.Show;
+  SuggestionForm.Visible := not SuggestionForm.Visible;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.MenuItemHelpClick(Sender: TObject);
+procedure TMainForm.MenuItemHelpIndexClick(Sender: TObject);
 var HelpFilename : string;
 begin
   HelpFilename := ExtractFilePath(Application.ExeName);
   HelpFilename := IncludeTrailingPathDelimiter(HelpFilename);
-  HelpFilename := HelpFilename + 'help\index.html';  
+  HelpFilename := HelpFilename + 'help\index.html';
   ShellExecute(0, 'open', PAnsiChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.MenuItemHelpIndexWAVDisplayControlClick(
+  Sender: TObject);
+var HelpFilename : string;
+begin
+  HelpFilename := ExtractFilePath(Application.ExeName);
+  HelpFilename := IncludeTrailingPathDelimiter(HelpFilename);
+  HelpFilename := HelpFilename + 'help\wavdisplaycontrol.html';
+  ShellExecute(0, 'open', PAnsiChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.pmiWAVDispSetSubtitleTimeClick(Sender: TObject);
+var NodeData : PTreeData;
+    NextNodeToFocus : PVirtualNode;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
+    g_WebRWSynchro.BeginWrite;
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+
+    NodeData.Range.StartTime := WAVDisplayer.Selection.StartTime;
+    NodeData.Range.StopTime := WAVDisplayer.Selection.StopTime;
+
+    FullSortTreeAndSubList; // lazy me :) but well it's fast enough
+    CurrentProject.IsDirty := True;
+    g_WebRWSynchro.EndWrite;
+
+    if Assigned(NextNodeToFocus) then
+    begin
+      vtvSubsList.FocusedNode := NextNodeToFocus;
+      vtvSubsList.ClearSelection;
+      vtvSubsList.Selected[NextNodeToFocus] := True;
+    end;
+
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionInsertTextFileExecute(Sender: TObject);
+var
+  FS : TFileStream;
+  BOM : array[0..3] of BYTE;
+  Line: string;
+  NewRange : TRange;
+  Node: PVirtualNode;
+  NodeData: PTreeData;
+  IsUTF8 : Boolean;
+begin
+  TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
+  if TntOpenDialog1.Execute then
+  begin
+    FS := TFileStream.Create(TntOpenDialog1.FileName,fmOpenRead);
+    ZeroMemory(@BOM[0],Length(BOM));
+    FS.Read(BOM,4);
+    if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
+    begin
+      // UTF8
+      IsUTF8 := True;
+      FS.Seek(3,soFromBeginning);
+    end
+    else
+    begin
+      IsUTF8 := False;
+      FS.Seek(0,soFromBeginning);
+    end;
+
+    while (not ReadLineStream(FS,Line)) do
+    begin
+      if IsUTF8 then
+        Line := UTF8Decode(Text);
+      NewRange := SubRangeFactory.CreateRangeSS(359999999,359999999);
+      TSubtitleRange(NewRange).Text := Line;
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
+
+      Node := vtvSubsList.AddChild(nil);
+      NodeData := vtvSubsList.GetNodeData(Node);
+      NodeData.Range := TSubtitleRange(NewRange);
+      TSubtitleRange(NewRange).Node := Node;
+    end;
+    FS.Free;
+  end;
 end;
 
 //------------------------------------------------------------------------------
