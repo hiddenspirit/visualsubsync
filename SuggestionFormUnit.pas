@@ -41,15 +41,17 @@ type
     vtvSuggestionsLst: TVirtualDrawTree;
     MemoSuggPreview: TTntMemo;
     TntPopupMenu1: TTntPopupMenu;
-    pmiClear: TTntMenuItem;
+    pmiClearAll: TTntMenuItem;
+    pmiClearSelected: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure vtvSuggestionsLstDrawNode(Sender: TBaseVirtualTree;
       const PaintInfo: TVTPaintInfo);
-    procedure vtvSuggestionsLstChange(Sender: TBaseVirtualTree;
-      Node: PVirtualNode);
-    procedure pmiClearClick(Sender: TObject);
+    procedure pmiClearAllClick(Sender: TObject);
     procedure vtvSuggestionsLstDblClick(Sender: TObject);
+    procedure pmiClearSelectedClick(Sender: TObject);
+    procedure vtvSuggestionsLstFocusChanged(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex);
   private
     { Private declarations }
     FCriticalSection : TRtlCriticalSection;
@@ -204,21 +206,6 @@ begin
   vtvSuggestionsLst.Canvas.Unlock;
 end;
 
-// -----------------------------------------------------------------------------
-
-procedure TSuggestionForm.vtvSuggestionsLstChange(Sender: TBaseVirtualTree;
-  Node: PVirtualNode);
-var Data : PSuggestionTreeData;
-begin
-  if Assigned(Node) then
-  begin
-    Data := vtvSuggestionsLst.GetNodeData(Node);
-    MemoSuggPreview.Text := Data.Text;
-  end
-  else
-    MemoSuggPreview.Text := '';
-end;
-
 //------------------------------------------------------------------------------
 
 procedure TSuggestionForm.AddSuggestion(Range : TSubtitleRange;
@@ -240,7 +227,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TSuggestionForm.pmiClearClick(Sender: TObject);
+procedure TSuggestionForm.pmiClearAllClick(Sender: TObject);
 var Node : PVirtualNode;
     pSuggestion : PSuggestionTreeData;
     DeleteLst : TList;
@@ -264,7 +251,7 @@ begin
   vtvSuggestionsLst.FocusedNode := nil;
   vtvSuggestionsLst.Repaint;
   MemoSuggPreview.Text := '';
-  DeleteLst.Free;    
+  DeleteLst.Free;
 end;
 
 // -----------------------------------------------------------------------------
@@ -286,6 +273,83 @@ begin
   EnterCriticalSection(FCriticalSection);
   vtvSuggestionsLst.Clear;
   LeaveCriticalSection(FCriticalSection);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TSuggestionForm.pmiClearSelectedClick(Sender: TObject);
+var Node, NextNodeToSelect : PVirtualNode;
+    pSuggestion : PSuggestionTreeData;
+    DeleteLst : TList;
+    i : integer;
+    CurrentTime : Cardinal;
+begin
+  CurrentTime := GetTickCount;
+  DeleteLst := TList.Create;
+  NextNodeToSelect := nil;
+  
+  EnterCriticalSection(FCriticalSection);
+
+  // Find next unselected node or a new node that we aren't going to delete 
+  Node := vtvSuggestionsLst.GetFirstSelected;
+  while Assigned(Node) do
+  begin
+    pSuggestion := vtvSuggestionsLst.GetNodeData(Node);
+    if (not vtvSuggestionsLst.Selected[Node]) or
+      ((CurrentTime - pSuggestion.AddTime) <= 2000) then
+    begin
+      NextNodeToSelect := Node;
+      Break;
+    end;
+    Node := vtvSuggestionsLst.GetNext(Node);
+  end;
+
+  // If not find, then try previous node
+  Node := vtvSuggestionsLst.GetFirstSelected;
+  if (Assigned(Node) = True) and
+     (Assigned(NextNodeToSelect) = False) then
+  begin
+    NextNodeToSelect := vtvSuggestionsLst.GetPrevious(Node);
+  end;
+
+  // Build a list of node to delete (older than 2s)
+  while Assigned(Node) do
+  begin
+    pSuggestion := vtvSuggestionsLst.GetNodeData(Node);
+    if ((CurrentTime - pSuggestion.AddTime) > 2000) then
+      DeleteLst.Add(Node);
+    Node := vtvSuggestionsLst.GetNextSelected(Node);
+  end;
+
+  // Delete nodes
+  for i:=DeleteLst.Count-1 downto 0 do
+  begin
+    vtvSuggestionsLst.DeleteNode(DeleteLst[i]);
+  end;
+  
+  LeaveCriticalSection(FCriticalSection);
+
+  // Try to select a new node
+  vtvSuggestionsLst.FocusedNode := NextNodeToSelect;
+  if Assigned(vtvSuggestionsLst.FocusedNode) then
+    vtvSuggestionsLst.Selected[vtvSuggestionsLst.FocusedNode] := True;
+  vtvSuggestionsLst.Repaint;
+  DeleteLst.Free;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TSuggestionForm.vtvSuggestionsLstFocusChanged(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var Data : PSuggestionTreeData;
+begin
+  if Assigned(Node) then
+  begin
+    Data := vtvSuggestionsLst.GetNodeData(Node);
+    MemoSuggPreview.Text := Data.Text;
+  end
+  else
+    MemoSuggPreview.Text := '';
 end;
 
 // -----------------------------------------------------------------------------

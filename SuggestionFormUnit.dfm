@@ -38,12 +38,12 @@ object SuggestionForm: TSuggestionForm
     Header.Font.Style = []
     Header.MainColumn = -1
     Header.Options = [hoColumnResize, hoDrag]
-    ParentBackground = False
     PopupMenu = TntPopupMenu1
     TabOrder = 0
-    OnChange = vtvSuggestionsLstChange
+    TreeOptions.SelectionOptions = [toMultiSelect]
     OnDblClick = vtvSuggestionsLstDblClick
     OnDrawNode = vtvSuggestionsLstDrawNode
+    OnFocusChanged = vtvSuggestionsLstFocusChanged
     Columns = <>
   end
   object MemoSuggPreview: TTntMemo
@@ -64,9 +64,13 @@ object SuggestionForm: TSuggestionForm
   object TntPopupMenu1: TTntPopupMenu
     Left = 8
     Top = 8
-    object pmiClear: TTntMenuItem
-      Caption = 'Clear'
-      OnClick = pmiClearClick
+    object pmiClearSelected: TTntMenuItem
+      Caption = 'Clear selected'
+      OnClick = pmiClearSelectedClick
+    end
+    object pmiClearAll: TTntMenuItem
+      Caption = 'Clear all'
+      OnClick = pmiClearAllClick
     end
   end
 end
