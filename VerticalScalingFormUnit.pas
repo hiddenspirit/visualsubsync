@@ -24,7 +24,7 @@ type
     FWAVDisplayer : TWAVDisplayer;
   public
     { Public declarations }
-    constructor Create(AOwner: TComponent; WAVDisplayer : TWAVDisplayer);
+    constructor Create(AOwner: TComponent; WAVDisplayer : TWAVDisplayer); reintroduce;
   end;
 
 var
