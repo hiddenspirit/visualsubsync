@@ -29,7 +29,8 @@ uses
   MiniScrollBarUnit, VirtualTrees, MiscToolsUnit, TntStdCtrls, TntMenus,
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
-  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms;
+  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
+  DetachedVideoFormUnit;
 
 type
   TTreeData = record
@@ -72,7 +73,7 @@ type
     ActionNewProject: TTntAction;
     ActionShowHideVideo: TTntAction;
     N3: TTntMenuItem;
-    ShowHidevideo1: TTntMenuItem;
+    MenuItemShowHideVideo: TTntMenuItem;
     TntOpenDialog1: TTntOpenDialog;
     ActionOpenProject: TTntAction;
     N4: TTntMenuItem;
@@ -239,6 +240,8 @@ type
     ActionReplaceFromPipe: TTntAction;
     pmiReplaceSubtitleFromPipe: TTntMenuItem;
     TimerAutoBackup: TTimer;
+    ActionDetachVideo: TTntAction;
+    MenuItemDetachVideoWindow: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -274,7 +277,6 @@ type
     procedure MemoSubtitleTextSelectionChange(Sender: TObject);
     procedure ActionSaveExecute(Sender: TObject);
     procedure ActionSaveAsExecute(Sender: TObject);
-    procedure PanelVideoResize(Sender: TObject);
     procedure ActionProjectPropertiesExecute(Sender: TObject);
     procedure pmiSubListDeleteClick(Sender: TObject);
     procedure SubListPopupMenuPopup(Sender: TObject);
@@ -334,6 +336,7 @@ type
     procedure MemoTextPipePopupMenuPopup(Sender: TObject);
     procedure ActionReplaceFromPipeExecute(Sender: TObject);
     procedure TimerAutoBackupTimer(Sender: TObject);
+    procedure ActionDetachVideoExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -355,6 +358,7 @@ type
 
     Swapped : Boolean;
     PlayingMode : TPlayingModeType;
+    ShowingVideo : Boolean;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -379,6 +383,7 @@ type
     procedure ColorizeOrDeleteTextPipe;
     procedure ApplyMouseSettings;
     procedure ApplyAutoBackupSettings;
+    procedure UpdateVideoRendererWindow;
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -487,6 +492,7 @@ begin
   CurrentProject.OnDirtyChange := CurrentProjectOnDirtyChange;
   AudioOnlyRenderer := TDShowRenderer.Create;
   VideoRenderer := TDShowRenderer.Create;
+  ShowingVideo := False;
 
   g_GlobalContext.SubList := WAVDisplayer.RangeList;
   g_GlobalContext.CurrentProject := CurrentProject;
@@ -667,10 +673,10 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnRecentMenuItemClick(Sender : TObject);
-var MenuItem : TTntMenuItem;
+var MenuItem : TMenuItem;
 begin
   // TODO : Fix MRU for unicode
-  MenuItem := Sender as TTntMenuItem;
+  MenuItem := Sender as TMenuItem;
   LoadProject(MenuItem.Caption);
 end;
 
@@ -716,6 +722,7 @@ begin
   ActionInsertTextFile.Enabled := Enable;
 
   ActionShowHideVideo.Enabled := Enable;
+  ActionDetachVideo.Enabled := Enable;
   ActionProjectProperties.Enabled := Enable;
   ActionSaveAs.Enabled := Enable;
 
@@ -1218,6 +1225,19 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.UpdateVideoRendererWindow;
+begin
+  if not MenuItemDetachVideoWindow.Checked then
+  begin
+    PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
+    VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
+  end
+  else
+    VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.LoadProject(Filename : WideString);
 var
   ProjectFileIni : TIniFile;
@@ -1316,7 +1336,7 @@ begin
       if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
         AudioOnlyRenderer.KillVideo;
     end;
-    if PanelVideo.Visible then
+    if ShowingVideo then
       WAVDisplayer.SetRenderer(VideoRenderer)
     else
       WAVDisplayer.SetRenderer(AudioOnlyRenderer);
@@ -1324,9 +1344,7 @@ begin
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
-      PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div
-        VideoRenderer.VideoHeight;
-      VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
+      UpdateVideoRendererWindow;
     end;
 
     if WideFileExists(WideChangeFileExt(CurrentProject.Filename,'.vssscript')) then
@@ -1345,7 +1363,8 @@ begin
     CurrentProjectOnDirtyChange(nil);
   finally
     Screen.Cursor := SaveCursor;
-    if (not VideoRenderer.IsOpen) and PanelVideo.Visible then
+    // Hide the video
+    if (not VideoRenderer.IsOpen) and ShowingVideo then
         ActionShowHideVideo.Execute;
     g_GlobalContext.WavAverageBytePerSecond := WAVDisplayer.GetWAVAverageBytePerSecond;
     g_WebRWSynchro.EndWrite;    
@@ -1490,19 +1509,30 @@ procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
 var IsPlaying : Boolean;
     PlayingPos : Integer;
 begin
-  if (not VideoRenderer.IsOpen) and (not PanelVideo.Visible) then
+  if (not VideoRenderer.IsOpen) then
   begin
     ShowStatusBarMessage('Video file is not open...');
     Exit;
   end;
 
+  ShowingVideo := not ShowingVideo;
+
   PlayingPos := 0;
   IsPlaying := WAVDisplayer.IsPlaying;
   if IsPlaying then
     PlayingPos := WAVDisplayer.GetPlayCursorPos;
-  PanelVideo.Visible := not PanelVideo.Visible;
-  SplitterWAVDisplay_Video.Visible := not SplitterWAVDisplay_Video.Visible;
-  if PanelVideo.Visible then
+
+  if MenuItemDetachVideoWindow.Checked then
+  begin
+    DetachedVideoForm.Visible := ShowingVideo;
+  end
+  else
+  begin
+    PanelVideo.Visible := ShowingVideo;
+    SplitterWAVDisplay_Video.Visible := ShowingVideo;
+  end;
+
+  if ShowingVideo then
     WAVDisplayer.SetRenderer(VideoRenderer)
   else
     WAVDisplayer.SetRenderer(AudioOnlyRenderer);
@@ -1588,8 +1618,7 @@ begin
     begin
       CurrentProject.VideoSource := ProjectForm.EditVideoFilename.Text;
       VideoRenderer.Open(CurrentProject.VideoSource);
-      PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
-      VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
+      UpdateVideoRendererWindow;
       ProjectHasChanged := True;
     end;
 
@@ -1643,7 +1672,8 @@ begin
       SaveProject(CurrentProject);
     end;
 
-    if (not VideoRenderer.IsOpen) and PanelVideo.Visible then
+    // Hide the video
+    if (not VideoRenderer.IsOpen) and ShowingVideo then
         ActionShowHideVideo.Execute;
     g_GlobalContext.WavAverageBytePerSecond := WAVDisplayer.GetWAVAverageBytePerSecond;
 
@@ -1793,7 +1823,7 @@ var DelayInMs : Integer;
 begin
   DelayForm := TDelayForm.Create(nil);
   
-  // Prefill he dialog
+  // Prefill the dialog
   if (vtvSubsList.SelectedCount > 1) then
   begin
     DelayForm.rgApplyTo.ItemIndex := 1;
@@ -1854,13 +1884,6 @@ begin
   end;
   DelayForm.Free;
   DelayForm := nil;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.PanelVideoResize(Sender: TObject);
-begin
-  VideoRenderer.UpdateDisplayWindow;
 end;
 
 //------------------------------------------------------------------------------
@@ -2807,7 +2830,7 @@ begin
       MemoTextPipe.PlainText := False;
     MemoTextPipe.Lines.SaveToFile(TntSaveDialog1.FileName);
     MemoTextPipe.PlainText := False;
-    CurrentProject.TextPipeSource := TntSaveDialog1.FileName;    
+    CurrentProject.TextPipeSource := TntSaveDialog1.FileName;
   end;
 end;
 
@@ -2903,6 +2926,29 @@ begin
       WideChangeFileExt(WideExtractFileName(CurrentProject.SubtitlesFile), '.bak');
     SaveSubtitles(BackupDstFilename, CurrentProject.IsUTF8, True);
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionDetachVideoExecute(Sender: TObject);
+begin
+  if MenuItemDetachVideoWindow.Checked then
+  begin
+    DetachedVideoForm.Visible := False;
+    if VideoRenderer.IsOpen then
+      VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
+    PanelVideo.Visible := ShowingVideo;
+    SplitterWAVDisplay_Video.Visible := ShowingVideo;
+  end
+  else
+  begin
+    PanelVideo.Visible := False;
+    SplitterWAVDisplay_Video.Visible := False;
+    if VideoRenderer.IsOpen then
+      VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle);
+    DetachedVideoForm.Visible := ShowingVideo;
+  end;
+  MenuItemDetachVideoWindow.Checked := not MenuItemDetachVideoWindow.Checked;
 end;
 
 //------------------------------------------------------------------------------

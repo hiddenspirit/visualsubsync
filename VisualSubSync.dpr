@@ -25,7 +25,8 @@ uses
   GotoFormUnit in 'GotoFormUnit.pas' {GotoForm},
   PreferencesFormUnit in 'PreferencesFormUnit.pas' {PreferencesForm},
   MRUListUnit in 'MRUListUnit.pas',
-  VerticalScalingFormUnit in 'VerticalScalingFormUnit.pas' {VerticalScalingForm};
+  VerticalScalingFormUnit in 'VerticalScalingFormUnit.pas' {VerticalScalingForm},
+  DetachedVideoFormUnit in 'DetachedVideoFormUnit.pas' {DetachedVideoForm};
 
 {$R *.res}
 
@@ -38,6 +39,7 @@ begin
   Application.CreateForm(TErrorReportForm, ErrorReportForm);
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TPreferencesForm, PreferencesForm);
+  Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
   MainForm.LoadSettings;
   Application.ProcessMessages;  
   MainForm.FinishLoadSettings;

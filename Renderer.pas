@@ -23,7 +23,7 @@ unit Renderer;
 
 interface
 
-uses Classes, Windows, DirectShow9;
+uses Classes, Windows, DirectShow9, Messages;
 
 type
   TWaitCompletionThread = class;
@@ -49,6 +49,7 @@ type
     FMediaSeeking : IMediaSeeking;
     FMediaEventEx : IMediaEventEx;
     FVideoWindow : IVideoWindow;
+    FDisplayWindowProc, FDisplayWindowOldProc : TFarProc;
     FLastResult : HRESULT;
     FWaitThread : TWaitCompletionThread;
     FLoop : Boolean;
@@ -60,6 +61,9 @@ type
 
     function FGetStart : Int64;
     function FGetStop : Int64;
+
+  protected
+    procedure DisplayWindowProc(var Mesg : TMessage);
 
   public
     constructor Create;
@@ -299,6 +303,9 @@ begin
   FLoop := False;
   FLastResult := S_OK;
   FIsOpen := False;
+  FDisplayWindow := 0;
+  FDisplayWindowProc := nil;
+  FDisplayWindowOldProc := nil;
   InitializeCriticalSection(FStartStopAccessCS);
 end;
 
@@ -313,6 +320,8 @@ begin
     FWaitThread.Free;
     FWaitThread := nil;
   end;
+  if (FDisplayWindow <> 0) then
+    SetDisplayWindow(0);
   Close;
   DeleteCriticalSection(FStartStopAccessCS);
   inherited;
@@ -459,7 +468,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TDShowRenderer.IsPlaying : Boolean;
-var State : _FilterState;
+var State : TFilterState;
 begin
   Result := False;
   if Assigned(FMediaControl) then
@@ -478,23 +487,67 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TDShowRenderer.SetDisplayWindow(WinHwnd : THandle);
+procedure TDShowRenderer.DisplayWindowProc(var Mesg : TMessage);
 begin
-  FDisplayWindow := WinHwnd;
+  with Mesg do
+  begin
+    if Msg = WM_SIZE then
+      UpdateDisplayWindow;
+    Result := CallWindowProc(FDisplayWindowOldProc, FDisplayWindow, Msg,
+      WParam, LParam);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.SetDisplayWindow(WinHwnd : THandle);
+var State : TFilterState;
+begin
+  if (FDisplayWindow = WinHwnd) then
+    Exit;
+
+  FMediaControl.GetState(0, State);
+  if (State = State_Running) or (State = State_Paused) then
+    FMediaControl.Stop;
 
   if Assigned(FVideoWindow) then
   begin
     FVideoWindow.put_Visible(False);
     FVideoWindow.put_Owner(0);
     FVideoWindow := nil;
-  end;  
+  end;
 
-  FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
-  FVideoWindow.put_Owner(FDisplayWindow);
-  FVideoWindow.put_MessageDrain(FDisplayWindow);
-  FVideoWindow.put_WindowStyle(WS_CHILD + WS_CLIPSIBLINGS + WS_CLIPCHILDREN);
+  // Unsubclass old window
+  if (FDisplayWindowOldProc <> nil) then
+  begin
+    SetWindowLong(FDisplayWindow, GWL_WNDPROC, LongInt(FDisplayWindowOldProc));
+    FreeObjectInstance(FDisplayWindowProc);
+    FDisplayWindowProc := nil;
+    FDisplayWindowOldProc := nil;
+  end;
 
-  UpdateDisplayWindow;
+  if (WinHwnd <> 0) then
+  begin
+    // Subclass new window to handle resize
+    FDisplayWindowProc := MakeObjectInstance(DisplayWindowProc);
+    FDisplayWindowOldProc := Pointer(GetWindowLong(WinHwnd, GWL_WNDPROC));
+    SetWindowLong(WinHwnd, GWL_WNDPROC, LongInt(FDisplayWindowProc));
+
+    FDisplayWindow := WinHwnd;
+    FGraphBuilder.QueryInterface(IID_IVideoWindow, FVideoWindow);
+    FVideoWindow.put_Owner(FDisplayWindow);
+    //FVideoWindow.put_AutoShow(False);
+    FVideoWindow.put_MessageDrain(FDisplayWindow);
+    FVideoWindow.put_WindowStyle(WS_CHILD + WS_CLIPSIBLINGS + WS_CLIPCHILDREN);
+    //FVideoWindow.put_Visible(True);
+
+    UpdateDisplayWindow;
+
+    if (State = State_Running) then
+      FMediaControl.Run
+    else if(State = State_Paused) then
+      FMediaControl.Pause;
+  end;      
 end;
 
 //------------------------------------------------------------------------------

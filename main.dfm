@@ -82,7 +82,6 @@ object MainForm: TMainForm
       FullRepaint = False
       TabOrder = 0
       Visible = False
-      OnResize = PanelVideoResize
     end
     object PanelWAVDisplay: TPanel
       Left = 256
@@ -1199,8 +1198,11 @@ object MainForm: TMainForm
       object N3: TTntMenuItem
         Caption = '-'
       end
-      object ShowHidevideo1: TTntMenuItem
+      object MenuItemShowHideVideo: TTntMenuItem
         Action = ActionShowHideVideo
+      end
+      object MenuItemDetachVideoWindow: TTntMenuItem
+        Action = ActionDetachVideo
       end
     end
     object MenuItemPlayback: TTntMenuItem
@@ -1632,6 +1634,10 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Replace subtitle from pipe'
       OnExecute = ActionReplaceFromPipeExecute
+    end
+    object ActionDetachVideo: TTntAction
+      Caption = 'Detach video window'
+      OnExecute = ActionDetachVideoExecute
     end
   end
   object ImageList1: TImageList
