@@ -19,7 +19,17 @@
 	font-size: 180%;
 	margin-bottom: 1em;
 	text-align: center;
-}		
+}
+
+.MainTitleMainPage {
+	font-size: 180%;
+	text-align: center;
+}
+.SubTitleMainPage {
+	font-size: 80%;
+	text-align: center;
+}	
+
 .Title {
 	font-size: 120%;
 	margin-top: 0.5em;
