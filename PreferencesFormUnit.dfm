@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsErrorChecking
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -93,7 +93,7 @@ object PreferencesForm: TPreferencesForm
         object chkAssociateExt: TCheckBox
           Left = 16
           Top = 24
-          Width = 305
+          Width = 385
           Height = 17
           Hint = 
             'Double click on a .vssprj file will automatically open the proje' +
@@ -107,10 +107,26 @@ object PreferencesForm: TPreferencesForm
         object chkSwapSubList: TCheckBox
           Left = 16
           Top = 40
-          Width = 113
+          Width = 385
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
+        end
+        object chkDisableSubEditionInTimingMode: TCheckBox
+          Left = 16
+          Top = 56
+          Width = 385
+          Height = 17
+          Caption = 'Disable subtitle edition in timing mode'
+          TabOrder = 2
+        end
+        object chkEnableSubCreationWithSpaceKey: TCheckBox
+          Left = 16
+          Top = 72
+          Width = 385
+          Height = 17
+          Caption = 'Enable subtitle creation with space key (toggle) in timing mode'
+          TabOrder = 3
         end
       end
       object GroupBox4: TGroupBox
@@ -162,6 +178,14 @@ object PreferencesForm: TPreferencesForm
           Height = 21
           Associate = EditBackupTime
           TabOrder = 3
+        end
+        object chkAutoSaveWhenPlaying: TCheckBox
+          Left = 232
+          Top = 24
+          Width = 169
+          Height = 17
+          Caption = 'Auto save when playing start'
+          TabOrder = 4
         end
       end
     end
@@ -256,7 +280,6 @@ object PreferencesForm: TPreferencesForm
         Header.MainColumn = 1
         Header.Options = [hoAutoResize, hoColumnResize, hoVisible, hoAutoSpring]
         Header.Style = hsPlates
-        ParentBackground = False
         TabOrder = 2
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowTreeLines, toThemeAware, toUseBlendedImages]
@@ -517,9 +540,11 @@ object PreferencesForm: TPreferencesForm
         object chkEnableSSATimingMode: TCheckBox
           Left = 16
           Top = 24
-          Width = 305
+          Width = 385
           Height = 17
-          Caption = 'Left/right mouse button set start/stop time in Timing Mode'
+          Caption = 
+            'Left/right mouse button set start/stop time in Timing Mode (SSA ' +
+            'mouse mode)'
           TabOrder = 0
         end
       end

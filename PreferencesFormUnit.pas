@@ -77,6 +77,8 @@ type
     EnableCompression : Boolean;
     // Misc
     SwapSubtitlesList : Boolean;
+    DisableSubtitleEdition : Boolean;
+    EnableToggleCreation : Boolean; 
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -88,6 +90,7 @@ type
     // Backup
     EnableBackup : Boolean;
     AutoBackupEvery : Integer;
+    AutoSaveWhenPlaying : Boolean;
     // Plugins
     ListJSPlugin : TList;
     // Fonts
@@ -170,6 +173,9 @@ type
     TntGroupBox3: TTntGroupBox;
     EditSubTextFont: TTntEdit;
     bttSubTextFont: TTntButton;
+    chkDisableSubEditionInTimingMode: TCheckBox;
+    chkEnableSubCreationWithSpaceKey: TCheckBox;
+    chkAutoSaveWhenPlaying: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -386,6 +392,8 @@ procedure TConfigObject.SetDefault;
 begin
   // Misc
   SwapSubtitlesList := False;
+  DisableSubtitleEdition := True;
+  EnableToggleCreation := True;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -399,6 +407,7 @@ begin
   // Backup
   EnableBackup := True;
   AutoBackupEvery := 0;
+  AutoSaveWhenPlaying := False;
   // Fonts
   SubListFont := 'Arial,8,0,0,clWindowText';
   SubTextFont := 'Arial,10,1,0,clWindowText';
@@ -495,7 +504,9 @@ var i, j : integer;
 begin
   // Misc
   IniFile.WriteBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
-  
+  IniFile.WriteBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
+  IniFile.WriteBool('Misc','EnableToggleCreation',EnableToggleCreation);
+
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
   IniFile.WriteBool('WebServer','EnableCompression',EnableCompression);
@@ -541,6 +552,7 @@ begin
   // Backup
   IniFile.WriteBool('Backup','EnableBackup',EnableBackup);
   IniFile.WriteInteger('Backup','AutoBackupEvery',AutoBackupEvery);
+  IniFile.WriteBool('Backup','AutoSaveWhenPlaying',AutoSaveWhenPlaying);
 
   // Fonts
   IniFile.WriteString('Fonts', 'SubList', SubListFont);
@@ -557,6 +569,8 @@ var i, j : integer;
 begin
   // Misc
   SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
+  DisableSubtitleEdition := IniFile.ReadBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
+  EnableToggleCreation := IniFile.ReadBool('Misc','EnableToggleCreation',EnableToggleCreation);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -622,6 +636,7 @@ begin
   // Backup
   EnableBackup := IniFile.ReadBool('Backup','EnableBackup',EnableBackup);
   AutoBackupEvery := IniFile.ReadInteger('Backup','AutoBackupEvery',AutoBackupEvery);
+  AutoSaveWhenPlaying := IniFile.ReadBool('Backup','AutoSaveWhenPlaying',AutoSaveWhenPlaying);
 
   // Fonts
   SubListFont := IniFile.ReadString('Fonts', 'SubList', SubListFont);
@@ -674,6 +689,8 @@ var i : integer;
 begin
   // Misc
   chkSwapSubList.Checked := Config.SwapSubtitlesList;
+  chkDisableSubEditionInTimingMode.Checked := Config.DisableSubtitleEdition;
+  chkEnableSubCreationWithSpaceKey.Checked := Config.EnableToggleCreation;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -731,6 +748,7 @@ begin
   // Backup
   chkCreateBackup.Checked := Config.EnableBackup;
   UpDownBackupTime.Position := Config.AutoBackupEvery;
+  chkAutoSaveWhenPlaying.Checked := Config.AutoSaveWhenPlaying;
 
   // Fonts
   EditSubListFont.Text := Config.SubListFont;
@@ -748,7 +766,9 @@ var i : integer;
 begin
   // Misc
   Config.SwapSubtitlesList := chkSwapSubList.Checked;
-  
+  Config.DisableSubtitleEdition := chkDisableSubEditionInTimingMode.Checked;
+  Config.EnableToggleCreation := chkEnableSubCreationWithSpaceKey.Checked;
+
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;
@@ -777,6 +797,7 @@ begin
   // Backup
   Config.EnableBackup := chkCreateBackup.Checked;
   Config.AutoBackupEvery := UpDownBackupTime.Position;
+  Config.AutoSaveWhenPlaying := chkAutoSaveWhenPlaying.Checked;
 
   // Fonts
   Config.SubListFont := EditSubListFont.Text;
