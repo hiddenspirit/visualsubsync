@@ -41,8 +41,8 @@ object ErrorReportForm: TErrorReportForm
     PopupMenu = ErrorListPopupMenu
     TabOrder = 0
     TreeOptions.SelectionOptions = [toMultiSelect]
-    OnDblClick = vtvErrorListDblClick
     OnDrawNode = vtvErrorListDrawNode
+    OnFocusChanged = vtvErrorListFocusChanged
     Columns = <>
   end
   object TntStatusBar1: TTntStatusBar

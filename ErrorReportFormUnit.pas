@@ -70,6 +70,8 @@ type
     procedure ErrorListPopupMenuPopup(Sender: TObject);
     procedure pmiFixAllXXXClick(Sender: TObject);
     procedure pmiFixAllYYYClick(Sender: TObject);
+    procedure vtvErrorListFocusChanged(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex);
   private
     { Private declarations }
     BoldFont : HFONT;
@@ -414,6 +416,19 @@ begin
     ErrorLst.Free;
     vtvErrorList.Repaint;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.vtvErrorListFocusChanged(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var pError : PErrorTreeData;
+begin
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    pError := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    MainForm.SelectNode(pError.Range.Node);
+  end
 end;
 
 //------------------------------------------------------------------------------
