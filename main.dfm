@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 245
   Top = 120
-  Width = 700
+  Width = 720
   Height = 589
   Caption = 'VisualSubSync'
   Color = clBtnFace
@@ -22,7 +22,7 @@ object MainForm: TMainForm
   object Splitter1: TSplitter
     Left = 0
     Top = 454
-    Width = 692
+    Width = 712
     Height = 5
     Cursor = crVSplit
     Align = alBottom
@@ -33,7 +33,7 @@ object MainForm: TMainForm
   object Splitter2: TSplitter
     Left = 0
     Top = 225
-    Width = 692
+    Width = 712
     Height = 5
     Cursor = crVSplit
     Align = alTop
@@ -43,14 +43,15 @@ object MainForm: TMainForm
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 692
+    Width = 712
     Height = 225
     Align = alTop
     BevelOuter = bvLowered
     Caption = 'PanelWAV_Video'
+    FullRepaint = False
     TabOrder = 0
     object SplitterWAVDisplay_Video: TSplitter
-      Left = 485
+      Left = 505
       Top = 1
       Width = 5
       Height = 223
@@ -61,7 +62,7 @@ object MainForm: TMainForm
       Visible = False
     end
     object PanelVideo: TPanel
-      Left = 490
+      Left = 510
       Top = 1
       Width = 201
       Height = 223
@@ -69,6 +70,7 @@ object MainForm: TMainForm
       BevelOuter = bvNone
       Caption = 'PanelVideo'
       Color = clBlack
+      FullRepaint = False
       TabOrder = 0
       Visible = False
       OnResize = PanelVideoResize
@@ -76,7 +78,7 @@ object MainForm: TMainForm
     object PanelWAVDisplay: TPanel
       Left = 1
       Top = 1
-      Width = 484
+      Width = 504
       Height = 223
       Align = alClient
       BevelOuter = bvNone
@@ -87,7 +89,7 @@ object MainForm: TMainForm
   object TntStatusBar1: TTntStatusBar
     Left = 0
     Top = 524
-    Width = 692
+    Width = 712
     Height = 19
     Panels = <
       item
@@ -100,7 +102,7 @@ object MainForm: TMainForm
   object PanelBottom: TPanel
     Left = 0
     Top = 459
-    Width = 692
+    Width = 712
     Height = 65
     Align = alBottom
     BevelOuter = bvNone
@@ -120,7 +122,7 @@ object MainForm: TMainForm
     object MemoSubtitleText: TTntRichEdit
       Left = 35
       Top = 0
-      Width = 657
+      Width = 677
       Height = 65
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -139,7 +141,7 @@ object MainForm: TMainForm
   object PanelMiddle: TPanel
     Left = 0
     Top = 230
-    Width = 692
+    Width = 712
     Height = 224
     Align = alClient
     BevelOuter = bvNone
@@ -148,7 +150,7 @@ object MainForm: TMainForm
     object vtvSubsList: TVirtualStringTree
       Left = 0
       Top = 70
-      Width = 692
+      Width = 712
       Height = 154
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -175,7 +177,7 @@ object MainForm: TMainForm
     object PanelPlaybackControl: TPanel
       Left = 0
       Top = 0
-      Width = 692
+      Width = 712
       Height = 70
       Align = alTop
       BevelOuter = bvNone
@@ -217,7 +219,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttZoomIn: TSpeedButton
-        Left = 219
+        Left = 210
         Top = 0
         Width = 25
         Height = 25
@@ -287,7 +289,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttZoomOut: TSpeedButton
-        Left = 243
+        Left = 234
         Top = 0
         Width = 25
         Height = 25
@@ -357,7 +359,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttShowHideVideo: TSpeedButton
-        Left = 344
+        Left = 335
         Top = 0
         Width = 25
         Height = 25
@@ -401,7 +403,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttCheckErrors: TSpeedButton
-        Left = 656
+        Left = 632
         Top = 0
         Width = 25
         Height = 25
@@ -603,7 +605,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttZoomSel: TSpeedButton
-        Left = 267
+        Left = 258
         Top = 0
         Width = 25
         Height = 25
@@ -673,7 +675,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttZoomAll: TSpeedButton
-        Left = 291
+        Left = 282
         Top = 0
         Width = 25
         Height = 25
@@ -744,7 +746,7 @@ object MainForm: TMainForm
       end
       object bttShowSuggestions: TSpeedButton
         Left = 656
-        Top = 24
+        Top = 0
         Width = 25
         Height = 25
         Action = ActionShowSuggestions
@@ -786,8 +788,18 @@ object MainForm: TMainForm
         ParentShowHint = False
         ShowHint = True
       end
+      object bttWorkingMode: TTntSpeedButton
+        Left = 632
+        Top = 32
+        Width = 73
+        Height = 25
+        AllowAllUp = True
+        GroupIndex = 1
+        Caption = 'Normal mode'
+        OnClick = bttWorkingModeClick
+      end
       object Panel1: TPanel
-        Left = 112
+        Left = 107
         Top = 0
         Width = 97
         Height = 65
@@ -823,7 +835,7 @@ object MainForm: TMainForm
         end
       end
       object plCursorPos: TPanel
-        Left = 219
+        Left = 210
         Top = 32
         Width = 150
         Height = 33
@@ -841,7 +853,7 @@ object MainForm: TMainForm
         TabOrder = 1
       end
       object PanelTimeSelView: TPanel
-        Left = 381
+        Left = 366
         Top = 0
         Width = 260
         Height = 65
@@ -1110,9 +1122,32 @@ object MainForm: TMainForm
       end
       object NextSub1: TTntMenuItem
         Action = ActionNextSub
+        Caption = 'Next subtitle'
       end
       object PreviousSub1: TTntMenuItem
         Action = ActionPreviousSub
+        Caption = 'Previous subtitle'
+      end
+      object Loopselectionstart1: TTntMenuItem
+        Action = ActionLoopSelStart
+      end
+      object Loopselectionend1: TTntMenuItem
+        Action = ActionLoopSelEnd
+      end
+      object N12: TTntMenuItem
+        Caption = '-'
+      end
+      object Rate1: TTntMenuItem
+        Caption = 'Playback Rate'
+        object Setplaybackrateat1001: TTntMenuItem
+          Action = ActionSetPlaybackRate100
+        end
+        object Setplaybackrateat901: TTntMenuItem
+          Action = ActionSetPlaybackRate90
+        end
+        object Setplaybackrateat801: TTntMenuItem
+          Action = ActionSetPlaybackRate80
+        end
       end
     end
     object MenuItemHelpRoot: TTntMenuItem
@@ -1144,6 +1179,7 @@ object MainForm: TMainForm
     Left = 40
     Top = 8
     object ActionZoomIn: TTntAction
+      Tag = 1
       Category = 'Zoom'
       Caption = 'Zoom In'
       Hint = 'Zoom In'
@@ -1151,6 +1187,7 @@ object MainForm: TMainForm
       OnExecute = ActionZoomInExecute
     end
     object ActionZoomOut: TTntAction
+      Tag = 1
       Category = 'Zoom'
       Caption = 'Zoom Out'
       Hint = 'Zoom Out'
@@ -1158,6 +1195,7 @@ object MainForm: TMainForm
       OnExecute = ActionZoomOutExecute
     end
     object ActionZoomSelection: TTntAction
+      Tag = 1
       Category = 'Zoom'
       Caption = 'Zoom Selection'
       Hint = 'Zoom Selection'
@@ -1165,6 +1203,7 @@ object MainForm: TMainForm
       OnExecute = ActionZoomSelectionExecute
     end
     object ActionZoomAll: TTntAction
+      Tag = 1
       Category = 'Zoom'
       Caption = 'Zoom All'
       Hint = 'Zoom All'
@@ -1172,6 +1211,7 @@ object MainForm: TMainForm
       OnExecute = ActionZoomAllExecute
     end
     object ActionPlay: TTntAction
+      Tag = 1
       Category = 'Playback'
       Caption = 'Play'
       Hint = 'Play'
@@ -1180,6 +1220,7 @@ object MainForm: TMainForm
       OnExecute = ActionPlayExecute
     end
     object ActionStop: TTntAction
+      Tag = 1
       Category = 'Playback'
       Caption = 'Stop'
       Hint = 'Stop'
@@ -1188,6 +1229,7 @@ object MainForm: TMainForm
       OnExecute = ActionStopExecute
     end
     object ActionLoop: TTntAction
+      Tag = 1
       Category = 'Playback'
       Caption = 'Loop'
       Hint = 'Loop'
@@ -1207,6 +1249,7 @@ object MainForm: TMainForm
       OnExecute = ActionNewProjectExecute
     end
     object ActionShowHideVideo: TTntAction
+      Tag = 1
       Caption = 'Show/Hide Video'
       Hint = 'Show/Hide Video'
       ImageIndex = 21
@@ -1248,23 +1291,27 @@ object MainForm: TMainForm
       OnExecute = ActionFindNextExecute
     end
     object ActionCheckErrors: TTntAction
+      Tag = 1
       Caption = 'Check errors'
       Hint = 'Check errors'
       ImageIndex = 19
       OnExecute = ActionCheckErrorsExecute
     end
     object ActionDelay: TTntAction
+      Tag = 1
       Caption = 'Delay'
       ImageIndex = 20
       ShortCut = 16452
       OnExecute = ActionDelayExecute
     end
     object ActionShowErrorReport: TTntAction
+      Tag = 1
       Caption = 'Show error report'
       ImageIndex = 24
       OnExecute = ActionShowErrorReportExecute
     end
     object ActionNextSub: TTntAction
+      Tag = 1
       Category = 'Playback'
       Caption = 'Next Sub'
       Hint = 'Next subtitle'
@@ -1273,6 +1320,7 @@ object MainForm: TMainForm
       OnExecute = ActionNextSubExecute
     end
     object ActionPreviousSub: TTntAction
+      Tag = 1
       Category = 'Playback'
       Caption = 'Previous Sub'
       Hint = 'Previous subtitle'
@@ -1281,12 +1329,14 @@ object MainForm: TMainForm
       OnExecute = ActionPreviousSubExecute
     end
     object ActionGoto: TTntAction
+      Tag = 1
       Caption = 'Goto'
       ImageIndex = 9
       ShortCut = 16455
       OnExecute = ActionGotoExecute
     end
     object ActionPreferences: TTntAction
+      Tag = 1
       Caption = 'Preferences'
       ImageIndex = 22
       OnExecute = ActionPreferencesExecute
@@ -1302,6 +1352,7 @@ object MainForm: TMainForm
       OnExecute = ActionErrorPreferencesExecute
     end
     object ActionShowSuggestions: TTntAction
+      Tag = 1
       Caption = 'Show suggestions'
       Hint = 'Show suggestions'
       ImageIndex = 24
@@ -1353,10 +1404,52 @@ object MainForm: TMainForm
       ImageIndex = 33
       OnExecute = ActionInsertTextFileExecute
     end
-    object ActionUnselectSubtitle: TTntAction
-      Caption = 'ActionUnselectSubtitle'
+    object ActionClearSelection: TTntAction
+      Tag = 1
+      Caption = 'Clear selection'
       ShortCut = 118
-      OnExecute = ActionUnselectSubtitleExecute
+      OnExecute = ActionClearSelectionExecute
+    end
+    object ActionLoopSelStart: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Loop selection start'
+      OnExecute = ActionLoopSelStartExecute
+    end
+    object ActionLoopSelEnd: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Loop selection end'
+      OnExecute = ActionLoopSelEndExecute
+    end
+    object ActionAddSubtitle: TTntAction
+      Tag = 1
+      Caption = 'Add subtitle'
+      OnExecute = ActionAddSubtitleExecute
+    end
+    object ActionSetSubtitleTime: TTntAction
+      Tag = 1
+      Caption = 'Set subtitle time'
+      ShortCut = 16468
+      OnExecute = ActionSetSubtitleTimeExecute
+    end
+    object ActionSetPlaybackRate80: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Set playback rate at 80%'
+      OnExecute = ActionSetPlaybackRate80Execute
+    end
+    object ActionSetPlaybackRate90: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Set playback rate at 90%'
+      OnExecute = ActionSetPlaybackRate90Execute
+    end
+    object ActionSetPlaybackRate100: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Set playback rate at 100%'
+      OnExecute = ActionSetPlaybackRate100Execute
     end
   end
   object ImageList1: TImageList
@@ -2707,8 +2800,7 @@ object MainForm: TMainForm
     Left = 8
     Top = 176
     object pmiWAVDispAddSubtitle: TTntMenuItem
-      Caption = 'Add subtitle'
-      OnClick = WAVDisplayPopup_AddRange
+      Action = ActionAddSubtitle
     end
     object pmiWAVDispDeleteRange: TTntMenuItem
       Caption = 'Delete subtitle'
@@ -2719,14 +2811,13 @@ object MainForm: TMainForm
       OnClick = WAVDisplayPopup_SplitAtCursor
     end
     object pmiWAVDispSetSubtitleTime: TTntMenuItem
-      Caption = 'Set subtitle time'
-      OnClick = pmiWAVDispSetSubtitleTimeClick
+      Action = ActionSetSubtitleTime
     end
   end
   object SubListPopupMenu: TTntPopupMenu
     OnPopup = SubListPopupMenuPopup
     Left = 8
-    Top = 328
+    Top = 312
     object pmiSubListDelete: TTntMenuItem
       Caption = 'Delete'
       ShortCut = 46
@@ -2755,7 +2846,7 @@ object MainForm: TMainForm
     Top = 480
   end
   object MemoSubPopupMenu: TTntPopupMenu
-    Left = 80
+    Left = 48
     Top = 467
     object Undo1: TTntMenuItem
       Action = EditUndo1

@@ -29,13 +29,15 @@ uses
   MiniScrollBarUnit, VirtualTrees, MiscToolsUnit, TntStdCtrls, TntMenus,
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
-  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns;
+  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons;
 
 type
   TTreeData = record
     Range: TSubtitleRange;
   end;
   PTreeData = ^TTreeData;
+
+  TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
 
   TMainForm = class(TForm)
     TntMainMenu1: TTntMainMenu;
@@ -187,8 +189,23 @@ type
     N11: TTntMenuItem;
     ActionInsertTextFile: TTntAction;
     Inserttextfile1: TTntMenuItem;
-    ActionUnselectSubtitle: TTntAction;
+    ActionClearSelection: TTntAction;
     PanelPlaybackControl: TPanel;
+    bttWorkingMode: TTntSpeedButton;
+    ActionLoopSelStart: TTntAction;
+    ActionLoopSelEnd: TTntAction;
+    ActionAddSubtitle: TTntAction;
+    ActionSetSubtitleTime: TTntAction;
+    ActionSetPlaybackRate80: TTntAction;
+    ActionSetPlaybackRate90: TTntAction;
+    ActionSetPlaybackRate100: TTntAction;
+    N12: TTntMenuItem;
+    Rate1: TTntMenuItem;
+    Setplaybackrateat1001: TTntMenuItem;
+    Setplaybackrateat901: TTntMenuItem;
+    Setplaybackrateat801: TTntMenuItem;
+    Loopselectionstart1: TTntMenuItem;
+    Loopselectionend1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -198,7 +215,6 @@ type
     procedure WAVDisplayer1SelectedRange(Sender: TObject);
     procedure WAVDisplayer1SelectedRangeChange(Sender: TObject);
     procedure WAVDisplayer1AutoScrollChange(Sender: TObject);
-    procedure WAVDisplayPopup_AddRange(Sender: TObject);
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
     procedure vtvSubsListGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
@@ -255,12 +271,19 @@ type
     procedure ActionShowSuggestionsExecute(Sender: TObject);
     procedure MenuItemHelpIndexClick(Sender: TObject);
     procedure MenuItemHelpIndexWAVDisplayControlClick(Sender: TObject);
-    procedure pmiWAVDispSetSubtitleTimeClick(Sender: TObject);
     procedure ActionInsertTextFileExecute(Sender: TObject);
-    procedure ActionUnselectSubtitleExecute(Sender: TObject);
+    procedure ActionClearSelectionExecute(Sender: TObject);
     procedure Splitter1CanResize(Sender: TObject; var NewSize: Integer;
       var Accept: Boolean);
     procedure FormResize(Sender: TObject);
+    procedure bttWorkingModeClick(Sender: TObject);
+    procedure ActionLoopSelStartExecute(Sender: TObject);
+    procedure ActionLoopSelEndExecute(Sender: TObject);
+    procedure ActionAddSubtitleExecute(Sender: TObject);
+    procedure ActionSetSubtitleTimeExecute(Sender: TObject);
+    procedure ActionSetPlaybackRate80Execute(Sender: TObject);
+    procedure ActionSetPlaybackRate90Execute(Sender: TObject);
+    procedure ActionSetPlaybackRate100Execute(Sender: TObject);
 
   private
     { Private declarations }
@@ -282,6 +305,7 @@ type
     ConfigObject : TConfigObject;
 
     Swapped : Boolean;
+    PlayingMode : TPlayingModeType;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -298,6 +322,7 @@ type
     procedure FullSortTreeAndSubList;
 
     procedure OnRecentMenuItemClick(Sender : TObject);
+    procedure SetShortcut(TimingMode : Boolean);    
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -311,6 +336,9 @@ type
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
   end;
+
+const
+  StartEndPlayingDuration: Integer = 500;
 
 var
   MainForm: TMainForm;
@@ -331,7 +359,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 
 // TODO : Better vobsub support (auto select file, force loading, make a customized version maybe)
 // TODO : Web: number of suggestion for current sub
-// TODO : IE error when submitting ???
+// TODO : We need real gzip compression, deflate support is b0rked in IE
 // TODO : Split at cursor for submemo
 // TODO : When in ErroForm and click in MemoSubtitleText it go to 1,1
 // TODO : Replace dialog
@@ -353,6 +381,7 @@ begin
   MRUList := TMRUList.Create(MenuItemOpenRecentRoot);
   MRUList.OnRecentMenuItemClick := OnRecentMenuItemClick;
   ConfigObject := TConfigObject.Create;
+  ConfigObject.SetDefaultHotKeys(TntActionList1);
 
   ServerRootDir := ExtractFilePath(Application.ExeName);
   ServerRootDir := IncludeTrailingPathDelimiter(ServerRootDir) + 'web\';
@@ -366,6 +395,8 @@ begin
   for i := 0 to Pred(PanelPlaybackControl.ControlCount) do
       if PanelPlaybackControl.Controls[i] is TSpeedButton then
         TSpeedButton(PanelPlaybackControl.Controls[i]).Caption := '';
+
+  bttWorkingMode.Caption := 'Normal mode';
 
   SubRangeFactory := TSubtitleRangeFactory.Create;
 
@@ -521,16 +552,18 @@ begin
   IniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini'));
   MRUList.LoadIni(IniFile, 'MRUList');
   ConfigObject.LoadIni(IniFile);
+  SetShortcut(False);
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
+
+  Show;
 
   PanelTop.Height := IniFile.ReadInteger('Windows', 'MainForm_PanelTop_Height',
     PanelTop.Height);
   PanelBottom.Height := IniFile.ReadInteger('Windows', 'MainForm_PanelBottom_Height',
     PanelBottom.Height);
-  TntStatusBar1.Top := MainForm.Height;
-
+  TntStatusBar1.Top := Maxint;
   IniFile.Free;
 end;
 
@@ -597,7 +630,7 @@ procedure TMainForm.ShowStatusBarMessage(Text : WideString);
 begin
   TntStatusBar1.Panels[1].Text := Text;
   TntStatusBar1.Repaint;
-  TimerStatusBarMsg.Interval := 2000;
+  TimerStatusBarMsg.Interval := 2500;
   TimerStatusBarMsg.Enabled := True;
 end;
 
@@ -652,7 +685,14 @@ begin
   lbAutoScroll.Enabled := Enable;
 
   ActionClose.Enabled := Enable;
-  ActionSave.Enabled := False;  
+  ActionSave.Enabled := False;
+
+  ActionSetPlaybackRate80.Enabled := Enable;
+  ActionSetPlaybackRate90.Enabled := Enable;
+  ActionSetPlaybackRate100.Enabled := Enable;
+
+  ActionLoopSelStart.Enabled := Enable;
+  ActionLoopSelEnd.Enabled := Enable;  
 end;
 
 //------------------------------------------------------------------------------
@@ -678,6 +718,23 @@ begin
   edSelEnd.Text := TimeMsToString(WAVDisplayer.Selection.StopTime);
   edSelLength.Text := TimeMsToString(WAVDisplayer.Selection.StopTime -
     WAVDisplayer.Selection.StartTime);
+  if (not WAVDisplayer.SelectionIsEmpty) then
+  begin
+    case PlayingMode of
+      pmtAll: ; // do nothing
+      pmtSelection:
+        WAVDisplayer.UpdatePlayRange(WAVDisplayer.Selection.StartTime,
+          WAVDisplayer.Selection.StopTime);
+      pmtSelectionStart:
+        WAVDisplayer.UpdatePlayRange(
+          WAVDisplayer.Selection.StartTime,
+          Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration,WAVDisplayer.Selection.StopTime));
+      pmtSelectionEnd:
+        WAVDisplayer.UpdatePlayRange(
+          Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
+          WAVDisplayer.Selection.StopTime);
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -769,46 +826,6 @@ begin
   Self.Caption := ApplicationName + ' - ' +
     ExtractFileName(CurrentProject.Filename) + s;
   ActionSave.Enabled := CurrentProject.IsDirty;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.WAVDisplayPopup_AddRange(Sender: TObject);
-var NewRange, SiblingRange : TRange;
-    NewNode, SiblingNode: PVirtualNode;
-    NodeData: PTreeData;
-    InsertPos : Integer;
-begin
-  g_WebRWSynchro.BeginWrite;
-  
-  NewRange := SubRangeFactory.CreateRangeSS(WAVDisplayer.Selection.StartTime,
-    WAVDisplayer.Selection.StopTime);
-  InsertPos := WAVDisplayer.RangeList.FindInsertPos(NewRange);
-  if (InsertPos >= WAVDisplayer.RangeList.Count) then
-    NewNode := vtvSubsList.AddChild(nil)
-  else
-  begin
-    SiblingRange := WAVDisplayer.RangeList[InsertPos];
-    SiblingNode := TSubtitleRange(SiblingRange).Node;
-    NewNode := vtvSubsList.InsertNode(SiblingNode,amInsertBefore);
-  end;
-  NodeData := vtvSubsList.GetNodeData(NewNode);
-  NodeData.Range := TSubtitleRange(NewRange);
-  TSubtitleRange(NewRange).Node := NewNode;
-  WAVDisplayer.AddRange(NewRange);
-
-  vtvSubsList.ScrollIntoView(NewNode,True);
-  vtvSubsList.FocusedNode := NewNode;
-  vtvSubsList.ClearSelection;
-  vtvSubsList.Selected[NewNode] := True;
-  vtvSubsList.Repaint;
-
-  WAVDisplayer.SelectedRange := NewRange;
-
-  MemoSubtitleText.SetFocus;
-  CurrentProject.IsDirty := True;
-
-  g_WebRWSynchro.EndWrite;
 end;
 
 //------------------------------------------------------------------------------
@@ -1137,12 +1154,6 @@ var
   ProjectFileIni : TIniFile;
   SaveCursor: TCursor;
 begin
-  {
-  g_WebRWSynchro.BeginWrite;
-  CurrentProject.Filename := '';
-  g_WebRWSynchro.EndWrite;
-  }
-
   if (not FileExists(Filename)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The project file "' + Filename +
@@ -1306,19 +1317,18 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionPlayExecute(Sender: TObject);
-var Range : TRange;
 begin
   WAVDisplayer.AutoScrolling := True;
   if WAVDisplayer.SelectionIsEmpty then
   begin
-    Range := TRange.Create;
-    Range.StartTime := WAVDisplayer.GetCursorPos;
-    Range.StopTime := WAVDisplayer.Length;
-    WAVDisplayer.PlayRange(Range);
-    Range.Free;
+    PlayingMode := pmtAll;
+    WAVDisplayer.PlayRange2(WAVDisplayer.GetCursorPos,WAVDisplayer.Length)
   end
   else
+  begin
+    PlayingMode := pmtSelection;
     WAVDisplayer.PlayRange(WAVDisplayer.Selection);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1331,19 +1341,18 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionLoopExecute(Sender: TObject);
-var Range : TRange;
 begin
   WAVDisplayer.AutoScrolling := True;
   if WAVDisplayer.SelectionIsEmpty then
   begin
-    Range := TRange.Create;
-    Range.StartTime := WAVDisplayer.GetCursorPos;
-    Range.StopTime := WAVDisplayer.Length;
-    WAVDisplayer.PlayRange(Range,True);
-    Range.Free;
+    PlayingMode := pmtAll;  
+    WAVDisplayer.PlayRange2(WAVDisplayer.GetCursorPos,WAVDisplayer.Length,True)
   end
   else
+  begin
+    PlayingMode := pmtSelection;
     WAVDisplayer.PlayRange(WAVDisplayer.Selection,True);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1377,6 +1386,8 @@ begin
 
     // Load the project
     LoadProject(ProjectForm.EditProjectFilename.Text);
+    CurrentProject.IsUTF8 := ProjectForm.chkSaveAsUTF8.Checked;
+    // TODO : Maybe create an empty file to keep UTF8 info if we quit
   end;
 end;
 
@@ -1526,6 +1537,12 @@ begin
     if (CurrentProject.Filename <> ProjectForm.EditProjectFilename.Text) then
     begin
       CurrentProject.Filename := ProjectForm.EditProjectFilename.Text;
+    end;
+
+    if (CurrentProject.IsUTF8 <> ProjectForm.chkSaveAsUTF8.Checked) then
+    begin
+      CurrentProject.IsUTF8 := ProjectForm.chkSaveAsUTF8.Checked;
+      CurrentProject.IsDirty := True;
     end;
 
     if (ProjectHasChanged) then
@@ -1679,6 +1696,8 @@ var DelayInMs : Integer;
     NodeData : PTreeData;
 begin
   DelayForm := TDelayForm.Create(nil);
+  
+  // Prefill he dialog
   if (vtvSubsList.SelectedCount > 1) then
   begin
     DelayForm.rgApplyTo.ItemIndex := 1;
@@ -1688,6 +1707,7 @@ begin
     DelayForm.meDelay.Text := TimeMsToString(WAVDisplayer.Selection.StopTime -
       WAVDisplayer.Selection.StartTime)
   end;
+
   if DelayForm.ShowModal = mrOk then
   begin
     g_WebRWSynchro.BeginWrite;
@@ -2043,28 +2063,36 @@ begin
     SubRange := nil;
     if GotoForm.rbGotoLine.Checked then
     begin
-      Idx := StrToIntDef(GotoForm.EditLine.Text,0) - 1;
+      Idx := StrToIntDef(GotoForm.EditLine.Text, 0) - 1;
       Constrain(Idx, 0, WAVDisplayer.RangeList.Count-1);
       SubRange := TSubtitleRange(WAVDisplayer.RangeList[Idx]);
     end
     else if GotoForm.rbGotoTime.Checked then
     begin
       GotoPositionMs := TimeStringToMs(GotoForm.MaskEditTime.EditText);
-      for i:=0 to WAVDisplayer.RangeList.Count-1 do
+      if (WAVDisplayer.RangeList.Count > 0) then
       begin
-        if ( ((WAVDisplayer.RangeList[i].StartTime <= GotoPositionMs) and
-          (WAVDisplayer.RangeList[i].StopTime >= GotoPositionMs)) or
-          (WAVDisplayer.RangeList[i].StartTime >= GotoPositionMs)) then
+        for i:=0 to WAVDisplayer.RangeList.Count-1 do
         begin
-          SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-          Break;
+          if ( ((WAVDisplayer.RangeList[i].StartTime <= GotoPositionMs) and
+            (WAVDisplayer.RangeList[i].StopTime >= GotoPositionMs)) or
+            (WAVDisplayer.RangeList[i].StartTime >= GotoPositionMs)) then
+          begin
+            SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+            Break;
+          end;
         end;
-      end;
-      if not Assigned(SubRange) then
+        if not Assigned(SubRange) then
+        begin
+          SubRange := TSubtitleRange(WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1]);
+        end;
+      end
+      else
       begin
-        SubRange := TSubtitleRange(WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1]);
+        // Display 20s centered on cursor
+        WAVDisplayer.ZoomCenteredOn(GotoPositionMs,20000);
       end;
-      WAVDisplayer.SetCursorPos(GotoPositionMs);      
+      WAVDisplayer.SetCursorPos(GotoPositionMs);
     end;
     if Assigned(SubRange) then
     begin
@@ -2152,6 +2180,7 @@ begin
       Server.EnableCompression := ConfigObject.EnableCompression;
     if(ConfigObject.SwapSubtitlesList <> OldSwapState) then
       Self.SwapSubList;
+    SetShortcut(PreferencesForm.GetMode);
   end;
 end;
 
@@ -2235,37 +2264,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.pmiWAVDispSetSubtitleTimeClick(Sender: TObject);
-var NodeData : PTreeData;
-    NextNodeToFocus : PVirtualNode;
-begin
-  if Assigned(vtvSubsList.FocusedNode) then
-  begin
-    NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
-    g_WebRWSynchro.BeginWrite;
-    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-
-    NodeData.Range.StartTime := WAVDisplayer.Selection.StartTime;
-    NodeData.Range.StopTime := WAVDisplayer.Selection.StopTime;
-
-    FullSortTreeAndSubList; // lazy me :) but well it's fast enough
-    CurrentProject.IsDirty := True;
-    g_WebRWSynchro.EndWrite;
-
-    if Assigned(NextNodeToFocus) then
-    begin
-      vtvSubsList.FocusedNode := NextNodeToFocus;
-      vtvSubsList.ClearSelection;
-      vtvSubsList.Selected[NextNodeToFocus] := True;
-    end;
-
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.Repaint;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.ActionInsertTextFileExecute(Sender: TObject);
 var
   FS : TFileStream;
@@ -2275,7 +2273,9 @@ var
   Node: PVirtualNode;
   NodeData: PTreeData;
   IsUTF8 : Boolean;
+  HaveNewSub : Boolean;
 begin
+  HaveNewSub := False;
   TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
@@ -2306,9 +2306,12 @@ begin
       NodeData := vtvSubsList.GetNodeData(Node);
       NodeData.Range := TSubtitleRange(NewRange);
       TSubtitleRange(NewRange).Node := Node;
+      HaveNewSub := True;
     end;
     FS.Free;
   end;
+  if HaveNewSub then
+    CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -2347,14 +2350,14 @@ begin
 
     if(SwapSizeAlso) then
       PanelMiddle.Height := PanelMiddle.Height - SavHeight + SavHeight2;
-    TntStatusBar1.Top := MaxInt; // make sure status bar stay at bottom      
+    Splitter1.Top := MaxInt;
   end;
   Swapped := not Swapped;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionUnselectSubtitleExecute(Sender: TObject);
+procedure TMainForm.ActionClearSelectionExecute(Sender: TObject);
 begin
   WAVDisplayer.ClearSelection;
 end;
@@ -2381,6 +2384,164 @@ end;
 procedure TMainForm.FormResize(Sender: TObject);
 begin
   // TODO : add some autoresizing maybe
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.bttWorkingModeClick(Sender: TObject);
+begin
+  if (bttWorkingMode.Tag = 0) then
+  begin
+    bttWorkingMode.Caption := 'Timing mode';
+    bttWorkingMode.Font.Color := clRed;
+    bttWorkingMode.Tag := 1;
+  end
+  else
+  begin
+    bttWorkingMode.Caption := 'Normal mode';
+    bttWorkingMode.Tag := 0;
+    bttWorkingMode.Font.Color := clWindowText;   
+  end;
+  PreferencesForm.SetMode(bttWorkingMode.Tag = 1);
+  SetShortcut(PreferencesForm.GetMode);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SetShortcut(TimingMode : Boolean);
+var i : integer;
+    HLID : THotkeyListItemData;
+begin
+  for i:=0 to ConfigObject.ListHotkeys.Count-1 do
+  begin
+    HLID := ConfigObject.ListHotkeys[i];
+    if TimingMode then
+      HLID.Action.ShortCut := HLID.TimingShortCut
+    else
+      HLID.Action.ShortCut := HLID.NormalShortCut
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLoopSelStartExecute(Sender: TObject);
+begin
+  if not WAVDisplayer.SelectionIsEmpty then
+  begin
+    PlayingMode := pmtSelectionStart;
+    WAVDisplayer.PlayRange2(WAVDisplayer.Selection.StartTime,
+      Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration, WAVDisplayer.Selection.StopTime),
+      True);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLoopSelEndExecute(Sender: TObject);
+begin
+  if not WAVDisplayer.SelectionIsEmpty then
+  begin
+    PlayingMode := pmtSelectionEnd;
+    WAVDisplayer.PlayRange2(
+      Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
+      WAVDisplayer.Selection.StopTime,
+      True);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionAddSubtitleExecute(Sender: TObject);
+var NewRange, SiblingRange : TRange;
+    NewNode, SiblingNode: PVirtualNode;
+    NodeData: PTreeData;
+    InsertPos : Integer;
+begin
+  g_WebRWSynchro.BeginWrite;
+
+  NewRange := SubRangeFactory.CreateRangeSS(WAVDisplayer.Selection.StartTime,
+    WAVDisplayer.Selection.StopTime);
+  InsertPos := WAVDisplayer.RangeList.FindInsertPos(NewRange);
+  if (InsertPos >= WAVDisplayer.RangeList.Count) then
+    NewNode := vtvSubsList.AddChild(nil)
+  else
+  begin
+    SiblingRange := WAVDisplayer.RangeList[InsertPos];
+    SiblingNode := TSubtitleRange(SiblingRange).Node;
+    NewNode := vtvSubsList.InsertNode(SiblingNode,amInsertBefore);
+  end;
+  NodeData := vtvSubsList.GetNodeData(NewNode);
+  NodeData.Range := TSubtitleRange(NewRange);
+  TSubtitleRange(NewRange).Node := NewNode;
+  WAVDisplayer.AddRange(NewRange);
+
+  vtvSubsList.ScrollIntoView(NewNode,True);
+  vtvSubsList.FocusedNode := NewNode;
+  vtvSubsList.ClearSelection;
+  vtvSubsList.Selected[NewNode] := True;
+  vtvSubsList.Repaint;
+
+  WAVDisplayer.SelectedRange := NewRange;
+
+  MemoSubtitleText.SetFocus;
+  CurrentProject.IsDirty := True;
+
+  g_WebRWSynchro.EndWrite;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetSubtitleTimeExecute(Sender: TObject);
+var NodeData : PTreeData;
+    NextNodeToFocus : PVirtualNode;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
+    g_WebRWSynchro.BeginWrite;
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+
+    NodeData.Range.StartTime := WAVDisplayer.Selection.StartTime;
+    NodeData.Range.StopTime := WAVDisplayer.Selection.StopTime;
+
+    FullSortTreeAndSubList; // lazy me :) but well it's fast enough
+    CurrentProject.IsDirty := True;
+    g_WebRWSynchro.EndWrite;
+
+    if Assigned(NextNodeToFocus) then
+    begin
+      vtvSubsList.FocusedNode := NextNodeToFocus;
+      vtvSubsList.ClearSelection;
+      vtvSubsList.Selected[NextNodeToFocus] := True;
+    end;
+
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetPlaybackRate80Execute(Sender: TObject);
+begin
+  VideoRenderer.SetRate(80);
+  AudioOnlyRenderer.SetRate(80);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetPlaybackRate90Execute(Sender: TObject);
+begin
+  VideoRenderer.SetRate(90);
+  AudioOnlyRenderer.SetRate(90);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetPlaybackRate100Execute(Sender: TObject);
+begin
+  VideoRenderer.SetRate(100);
+  AudioOnlyRenderer.SetRate(100);
 end;
 
 //------------------------------------------------------------------------------
