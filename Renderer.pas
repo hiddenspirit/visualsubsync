@@ -843,7 +843,7 @@ begin
     Pin1 := nil;
   end;
   EnumPins := nil;
-  if (FLastResult <> S_OK) then Exit;
+  if Failed(FLastResult) then Exit;
 
   // Get the duration
   FLastResult := FMediaSeeking.GetDuration(FDuration);
