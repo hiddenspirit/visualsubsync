@@ -3,9 +3,10 @@ object DelayForm: TDelayForm
   Top = 223
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
+  BorderWidth = 6
   Caption = 'Delay'
-  ClientHeight = 221
-  ClientWidth = 225
+  ClientHeight = 289
+  ClientWidth = 193
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -17,8 +18,8 @@ object DelayForm: TDelayForm
   PixelsPerInch = 96
   TextHeight = 13
   object meDelay: TMaskEdit
-    Left = 16
-    Top = 60
+    Left = 0
+    Top = 52
     Width = 193
     Height = 21
     EditMask = '!99:99:99.999;1;0'
@@ -27,8 +28,8 @@ object DelayForm: TDelayForm
     Text = '  :  :  .   '
   end
   object rgApplyTo: TTntRadioGroup
-    Left = 16
-    Top = 88
+    Left = 0
+    Top = 80
     Width = 193
     Height = 81
     Caption = ' Apply to '
@@ -40,8 +41,8 @@ object DelayForm: TDelayForm
     TabOrder = 1
   end
   object rgType: TTntRadioGroup
-    Left = 16
-    Top = 8
+    Left = 0
+    Top = 0
     Width = 193
     Height = 41
     Caption = ' Type : '
@@ -53,8 +54,8 @@ object DelayForm: TDelayForm
     TabOrder = 2
   end
   object bttApply: TTntButton
-    Left = 24
-    Top = 184
+    Left = 8
+    Top = 264
     Width = 81
     Height = 25
     Caption = 'Apply'
@@ -62,12 +63,25 @@ object DelayForm: TDelayForm
     OnClick = bttApplyClick
   end
   object bttCancel: TTntButton
-    Left = 120
-    Top = 184
+    Left = 104
+    Top = 264
     Width = 83
     Height = 25
     Caption = 'Cancel'
     TabOrder = 4
     OnClick = bttCancelClick
+  end
+  object rgShift: TTntRadioGroup
+    Left = 0
+    Top = 168
+    Width = 193
+    Height = 81
+    Caption = ' Shift '
+    ItemIndex = 0
+    Items.WideStrings = (
+      'Start and end time'
+      'Start time only'
+      'End time only')
+    TabOrder = 5
   end
 end

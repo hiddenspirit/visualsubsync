@@ -34,6 +34,7 @@ type
     rgType: TTntRadioGroup;
     bttApply: TTntButton;
     bttCancel: TTntButton;
+    rgShift: TTntRadioGroup;
     procedure bttApplyClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
   private
