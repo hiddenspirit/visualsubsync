@@ -242,6 +242,11 @@ type
     TimerAutoBackup: TTimer;
     ActionDetachVideo: TTntAction;
     MenuItemDetachVideoWindow: TTntMenuItem;
+    N14: TTntMenuItem;
+    ShowHidelogs1: TTntMenuItem;
+    ActionShowHideLogs: TTntAction;
+    pmiFixError: TTntMenuItem;
+    ActionFixErrorMain: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -258,8 +263,6 @@ type
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure FormDestroy(Sender: TObject);
-    procedure vtvSubsListChange(Sender: TBaseVirtualTree;
-      Node: PVirtualNode);
     procedure MemoSubtitleTextChange(Sender: TObject);
     procedure vtvSubsListDblClick(Sender: TObject);
     procedure ActionZoomInExecute(Sender: TObject);
@@ -337,6 +340,13 @@ type
     procedure ActionReplaceFromPipeExecute(Sender: TObject);
     procedure TimerAutoBackupTimer(Sender: TObject);
     procedure ActionDetachVideoExecute(Sender: TObject);
+    procedure ActionShowHideLogsExecute(Sender: TObject);
+    procedure vtvSubsListFocusChanged(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex);
+    procedure ActionFixErrorMainExecute(Sender: TObject);
+    procedure TntFormActivate(Sender: TObject);
+    procedure MemoSubtitleTextMouseDown(Sender: TObject;
+      Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
   private
     { Private declarations }
@@ -359,6 +369,7 @@ type
     Swapped : Boolean;
     PlayingMode : TPlayingModeType;
     ShowingVideo : Boolean;
+    FormHasBeenActivated : Boolean;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -384,6 +395,9 @@ type
     procedure ApplyMouseSettings;
     procedure ApplyAutoBackupSettings;
     procedure UpdateVideoRendererWindow;
+    procedure ApplyFontSettings;
+    procedure OnSubtitleRangeJSWrapperChange;
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -396,6 +410,8 @@ type
     procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
+    function CanFixError(PluginFilename : WideString) : Boolean;
+    procedure FixErrorInList(ErrorList : TList);    
   end;
 
 const
@@ -408,7 +424,8 @@ implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
-  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows;
+  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows, JavaScriptPluginUnit,
+  LogWindowFormUnit, CursorManager;
 
 {$R *.dfm}
 
@@ -430,12 +447,15 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
 // TODO : Ignore tags in stats
 
+// TODO : previous/next error
+
 //==============================================================================
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
 begin
   plCursorPos.DoubleBuffered := True;
+  LogForm := TLogForm.Create(nil);
 
   MRUList := TMRUList.Create(MenuItemOpenRecentRoot);
   MRUList.OnRecentMenuItemClick := OnRecentMenuItemClick;
@@ -511,6 +531,8 @@ begin
   MRUList.Free;
   ConfigObject.Free;
   CurrentProject.Free;
+  if Assigned(LogForm) then
+    LogForm.Free;
 end;
 
 //------------------------------------------------------------------------------
@@ -590,6 +612,7 @@ begin
   SaveFormPosition(IniFile,ErrorReportForm);
   SaveFormPosition(IniFile,SuggestionForm);
   SaveFormPosition(IniFile,DetachedVideoForm);
+  SaveFormPosition(IniFile,LogForm);
 
   IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
   IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
@@ -607,10 +630,12 @@ begin
   ConfigObject.LoadIni(IniFile);
   SetShortcut(False);
   ApplyMouseSettings;
+  ApplyFontSettings;
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
   LoadFormPosition(IniFile,DetachedVideoForm);
+  LoadFormPosition(IniFile,LogForm);
 
   Show;
 
@@ -652,23 +677,26 @@ begin
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
+    Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 80;
+    Column.MinWidth := 80;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 80;
+    Column.MinWidth := 80;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column := Header.Columns.Add;
     Column.Text := 'Text';
     Column.Options := Column.Options - [coAllowClick,coDraggable];
     Column.Width := 500;
+    Column.MinWidth := 100;
     //FocusedColumn := 2;
 
     OnGetText := vtvSubsListGetText;
-    OnChange := vtvSubsListChange;
   end;
 end;
 
@@ -1028,7 +1056,7 @@ begin
 
   vtvSubsList.Clear;
   vtvSubsList.Repaint;
-  vtvSubsList.BeginUpdate;  
+  vtvSubsList.BeginUpdate;
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     Node := vtvSubsList.AddChild(nil);
@@ -1040,6 +1068,8 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   if AutoCorrectedFile then
     CurrentProject.IsDirty := True;
+  vtvSubsList.Header.AutoFitColumns(False);
+  vtvSubsList.Repaint;
   g_WebRWSynchro.EndWrite;
 end;
 
@@ -1083,25 +1113,6 @@ begin
   begin
     Handled := WavDisplayer.Perform(CM_MOUSEWHEEL, TMessage(Msg).WParam,
       TMessage(Msg).LParam) <> 0;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.vtvSubsListChange(Sender: TBaseVirtualTree;
-  Node: PVirtualNode);
-var NodeData: PTreeData;
-begin
-  if (Node <> nil) then
-  begin
-    NodeData := Sender.GetNodeData(Node);
-    MemoSubtitleText.Text := NodeData.Range.Text;
-    MemoSubtitleText.Tag := 1;
-  end
-  else
-  begin
-    MemoSubtitleText.Tag := 0;  
-    MemoSubtitleText.Text := '';
   end;
 end;
 
@@ -1263,7 +1274,8 @@ end;
 procedure TMainForm.LoadProject(Filename : WideString);
 var
   ProjectFileIni : TIniFile;
-  SaveCursor: TCursor;
+  CM : ICursorManager;
+  LoadWAVOK : Boolean;
 begin
   if (not WideFileExists(Filename)) then
   begin
@@ -1275,10 +1287,8 @@ begin
   ActionClose.Execute;
 
   g_WebRWSynchro.BeginWrite;
-  SaveCursor := Screen.Cursor;
+  CM := TCursorManager.Create(crHourGlass);
   try
-    Screen.Cursor := crHourGlass;
-      
     ProjectFileIni := TIniFile.Create(Filename);
     CurrentProject.Filename := Filename;
     CurrentProject.VideoSource := ProjectFileIni.ReadString('VisualSubsync','VideoSource','');
@@ -1291,16 +1301,17 @@ begin
     ProjectFileIni.Free;
 
     ShowStatusBarMessage('Loading WAV form...');
+    LoadWAVOK := False;
     if CurrentProject.WAVMode = pwmPeakOnly then
     begin
       if WideFileExists(CurrentProject.PeakFile) then
-        WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile,'.wav'))
+        LoadWAVOK := WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile,'.wav'))
       else
       begin
         if WideFileExists(CurrentProject.WAVFile) then
         begin
           CurrentProject.WAVMode := pwmExternal;
-          WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
+          LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
           CurrentProject.IsDirty := True;
         end
         else
@@ -1316,13 +1327,13 @@ begin
     else
     begin
       if WideFileExists(CurrentProject.WAVFile) then
-        WAVDisplayer.LoadWAV(CurrentProject.WAVFile)
+        LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile)
       else
       begin
         if WideFileExists(CurrentProject.PeakFile) then
         begin
           CurrentProject.WAVMode := pwmPeakOnly;
-          WAVDisplayer.LoadWAV(WideChangeFileExt(CurrentProject.PeakFile,'.wav'));
+          LoadWAVOK := WAVDisplayer.LoadWAV(WideChangeFileExt(CurrentProject.PeakFile,'.wav'));
           CurrentProject.IsDirty := True;
           // Show warning
           MessageBoxW(Handle, PWideChar(WideString('WAV file ' + CurrentProject.WAVFile +
@@ -1333,7 +1344,7 @@ begin
         begin
           CurrentProject.WAVMode := pwmPeakOnly;
           CurrentProject.PeakFile := WideChangeFileExt(CurrentProject.WAVFile,'.peak');
-          WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
+          LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
           CurrentProject.IsDirty := True;
         end
         else
@@ -1346,11 +1357,11 @@ begin
         end;
       end;
     end;
-    WAVDisplayer.Enabled := True;    
+    // TODO : report invalid wav file error
+    WAVDisplayer.Enabled := LoadWAVOK;    
 
     ShowStatusBarMessage('Loading subtitles...');
     LoadSubtitles(CurrentProject.SubtitlesFile,CurrentProject.IsUTF8);
-    vtvSubsList.Repaint;
 
     ShowStatusBarMessage('Loading audio file...');
     if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
@@ -1385,14 +1396,13 @@ begin
 
     CurrentProjectOnDirtyChange(nil);
   finally
-    Screen.Cursor := SaveCursor;
     // Hide the video
     if (not VideoRenderer.IsOpen) and ShowingVideo then
         ActionShowHideVideo.Execute;
     g_GlobalContext.WavAverageBytePerSecond := WAVDisplayer.GetWAVAverageBytePerSecond;
     g_WebRWSynchro.EndWrite;    
   end;
-  MRUList.AddFile(CurrentProject.Filename);  
+  MRUList.AddFile(CurrentProject.Filename);
 end;
 
 //------------------------------------------------------------------------------
@@ -1758,16 +1768,21 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-
+{
+// Old version
 procedure TMainForm.ActionCheckErrorsExecute(Sender: TObject);
 var i, j, CPS, LineLen, MaxLineLen, TotalCharCount : Integer;
     SubRange : TSubtitleRange;
     Msg : WideString;
+    Start, Stop : Cardinal;
+    k :integer;
 begin
   // TODO : ignore tags in stats
-  
+
   ErrorReportForm.Clear;
   ErrorReportForm.vtvErrorList.BeginUpdate;
+  Start := GetTickCount;
+  //for k:=1 to 100 do
   for i := 0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
@@ -1818,6 +1833,10 @@ begin
       (MaxLineLen > ConfigObject.ErrorTooLongLineValue) then
       ErrorReportForm.AddError(etLineTooLong, SubRange, IntToStr(MaxLineLen)+' Char.');
   end;
+  Stop := GetTickCount - Start;
+  if (stop > 1000) then
+    OutputDebugString('blah');
+
   ErrorReportForm.vtvErrorList.EndUpdate;
   if (ErrorReportForm.vtvErrorList.TotalCount > 0) then
   begin
@@ -1829,7 +1848,7 @@ begin
   ShowStatusBarMessage(Msg);
   ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
 end;
-
+}
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowErrorReportExecute(Sender: TObject);
@@ -1926,7 +1945,6 @@ begin
     ErrorReportForm.DeleteError(NodeData.Range);
     Idx := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
     WAVDisplayer.DeleteRangeAtIdx(Idx,False);
-    NodeData.Range.Free;
     Node := vtvSubsList.GetNextSelected(Node);
   end;
   vtvSubsList.DeleteSelectedNodes;
@@ -1990,6 +2008,7 @@ begin
   NodeData := vtvSubsList.GetNodeData(Node);
   NodeData.Range.Text := Trim(AccuText);
   NodeData.Range.StopTime := LastStopTime;
+  vtvSubsList.FocusedNode := nil;
 
   // Finally delete nodes
   for i := 0 to DeleteList.Count-1 do
@@ -1999,18 +2018,17 @@ begin
     ErrorReportForm.DeleteError(NodeData.Range);
     Idx := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
     WAVDisplayer.DeleteRangeAtIdx(Idx,False);
-    NodeData.Range.Free;
     vtvSubsList.DeleteNode(Node);
   end;
 
+  // Make sure to update display
   CurrentProject.IsDirty := True;
   Node := vtvSubsList.GetFirstSelected;
+  vtvSubsList.FocusedNode := Node;
   if Assigned(WAVDisplayer.SelectedRange) then
     WAVDisplayer.SelectedRange := nil;
   WAVDisplayer.ClearSelection;
   WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
-  vtvSubsList.FocusedNode := Node;
-  vtvSubsListChange(vtvSubsList, Node);
   vtvSubsList.Repaint;
 
   g_WebRWSynchro.EndWrite;
@@ -2019,9 +2037,30 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.SubListPopupMenuPopup(Sender: TObject);
+var JSPEnum : TJavaScriptPluginEnumerator;
+    JPlugin : TJavaScriptPlugin;
+    JSPluginInfo : TJSPluginInfo;
+    pmiFixErrorEnabled : Boolean;
 begin
-  pmiSubListDelete.Enabled := vtvSubsList.SelectedCount > 0;
-  pmiSubListMerge.Enabled := vtvSubsList.SelectedCount > 1;
+  pmiSubListDelete.Enabled := (vtvSubsList.SelectedCount > 0);
+  pmiSubListMerge.Enabled := (vtvSubsList.SelectedCount > 1);
+
+  pmiFixErrorEnabled := False;
+  if (vtvSubsList.SelectedCount > 0) then
+  begin
+    JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+    JSPEnum.OnJSPluginError := LogForm.LogMsg;
+    JSPEnum.Reset;
+    while JSPEnum.GetNext(JPlugin) and (not pmiFixErrorEnabled) do
+    begin
+      JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+      pmiFixErrorEnabled := pmiFixErrorEnabled or ((Assigned(JSPluginInfo) and
+        (JSPluginInfo.Enabled = True)) and JPlugin.CanFixError);
+      FreeAndNil(JPlugin);
+    end;
+    JSPEnum.Free;
+  end;
+  pmiFixError.Enabled := pmiFixErrorEnabled;
 end;
 
 //------------------------------------------------------------------------------
@@ -2081,7 +2120,6 @@ begin
   vtvSubsList.FocusedNode := Node;
   vtvSubsList.ClearSelection;
   vtvSubsList.Selected[Node] := True;
-  vtvSubsListChange(vtvSubsList, Node);
   vtvSubsList.ScrollIntoView(Node,True);
   vtvSubsListDblClick(Self);
   vtvSubsList.Repaint;
@@ -2325,7 +2363,18 @@ begin
     SetShortcut(PreferencesForm.GetMode);
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
+    ApplyFontSettings;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ApplyFontSettings;
+begin
+  String2Font(ConfigObject.SubListFont, vtvSubsList.Font);
+  vtvSubsList.Header.AutoFitColumns(False);
+  String2Font(ConfigObject.SubTextFont, MemoSubtitleText.Font);
+  MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
 end;
 
 //------------------------------------------------------------------------------
@@ -2334,7 +2383,7 @@ procedure TMainForm.ApplyAutoBackupSettings;
 begin
   TimerAutoBackup.Enabled := False;
   TimerAutoBackup.Interval := ConfigObject.AutoBackupEvery * 60 * 1000;
-  TimerAutoBackup.Enabled := (ConfigObject.AutoBackupEvery > 0);  
+  TimerAutoBackup.Enabled := (ConfigObject.AutoBackupEvery > 0);
 end;
 
 //------------------------------------------------------------------------------
@@ -2375,9 +2424,11 @@ begin
     CurrentProject.WAVFile := '';
     CurrentProject.PeakFile := '';
     CurrentProject.SubtitlesFile := '';
+    CurrentProject.IsDirty := False;
     Self.Caption := ApplicationName;
     MemoLinesCounter.Text := '';
     TntStatusBar1.Panels[0].Text := '';
+    MemoSubtitleText.Text := '';
 
     EnableControl(False);
 
@@ -2920,7 +2971,6 @@ begin
   end;
 end;
 
-
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ApplyMouseSettings;
@@ -2975,6 +3025,269 @@ begin
     DetachedVideoForm.Visible := ShowingVideo;
   end;
   MenuItemDetachVideoWindow.Checked := not MenuItemDetachVideoWindow.Checked;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionCheckErrorsExecute(Sender: TObject);
+var JSPEnum : TJavaScriptPluginEnumerator;
+    JPlugin : TJavaScriptPlugin;
+    SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
+    i : Integer;
+    Start, ExecTime : Cardinal;
+    ResultMsg, Msg : WideString;
+    JSPluginInfo : TJSPluginInfo;
+    CM : ICursorManager;
+begin
+  CM := TCursorManager.Create(crHourGlass);
+
+  LogForm.Clear;
+  LogForm.SilentLogMsg('');
+  LogForm.SilentLogMsg('Starting error checking :');
+
+  ErrorReportForm.Clear;
+  Start := GetTickCount;  
+  ErrorReportForm.vtvErrorList.BeginUpdate;
+
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+  while JSPEnum.GetNext(JPlugin) do
+  begin
+    JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+    if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = False) then
+    begin
+      FreeAndNil(JPlugin);
+      Continue;
+    end;
+
+    ConfigObject.ApplyParam(JPlugin);
+
+    for i := 0 to WAVDisplayer.RangeList.Count-1 do
+    begin
+      SubRangeCurrent := TSubtitleRange(WAVDisplayer.RangeList[i]);
+
+      if (i > 0) then
+        SubRangePrevious := TSubtitleRange(WAVDisplayer.RangeList[i-1])
+      else
+        SubRangePrevious := nil;
+
+      if (i < WAVDisplayer.RangeList.Count-1) then
+        SubRangeNext := TSubtitleRange(WAVDisplayer.RangeList[i+1])
+      else
+        SubRangeNext := nil;
+
+      ResultMsg := JPlugin.HasError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+      if (ResultMsg <> '') then
+      begin
+        ErrorReportForm.AddError(SubRangeCurrent, JSColorToTColor(JPlugin.Color),
+          JPlugin.Msg, ResultMsg, JPlugin.Filename, JPlugin.Name);
+      end;
+      if JPlugin.FatalError then
+        Break;
+    end;
+    FreeAndNil(JPlugin);
+  end;
+  JSPEnum.Free;
+
+  ExecTime := GetTickCount - Start;
+
+  ErrorReportForm.vtvErrorList.EndUpdate;
+  if (ErrorReportForm.vtvErrorList.TotalCount > 0) then
+  begin
+    ErrorReportForm.Visible := True;
+    Msg := Format('%d  error(s) found.', [ErrorReportForm.vtvErrorList.TotalCount]);
+  end
+  else
+    Msg := 'No error found.';
+  Msg := Msg + Format(' (in %d ms)',[ExecTime]);
+  ShowStatusBarMessage(Msg);
+  ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
+  LogForm.SilentLogMsg(Msg);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowHideLogsExecute(Sender: TObject);
+begin
+  LogForm.Visible := not LogForm.Visible; 
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionFixErrorMainExecute(Sender: TObject);
+var JSPEnum : TJavaScriptPluginEnumerator;
+    JPlugin : TJavaScriptPlugin;
+    JSPluginInfo : TJSPluginInfo;
+    i : integer;
+    SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
+    NodeData : PTreeData;
+    Node : PVirtualNode;
+begin
+  if not Assigned(vtvSubsList.FocusedNode) then
+    Exit;
+
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+  while JSPEnum.GetNext(JPlugin) do
+  begin
+    JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+    if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = False) then
+    begin
+      FreeAndNil(JPlugin);
+      Continue;
+    end;
+
+    ConfigObject.ApplyParam(JPlugin);
+    JPlugin.OnSubtitleChange := OnSubtitleRangeJSWrapperChange;
+
+    Node := vtvSubsList.GetFirstSelected;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      SubRangeCurrent := NodeData.Range;
+      i := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
+
+      if (i > 0) then
+        SubRangePrevious := TSubtitleRange(WAVDisplayer.RangeList[i-1])
+      else
+        SubRangePrevious := nil;
+
+      if (i < WAVDisplayer.RangeList.Count-1) then
+        SubRangeNext := TSubtitleRange(WAVDisplayer.RangeList[i+1])
+      else
+        SubRangeNext := nil;
+
+      JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+      Node := vtvSubsList.GetNextSelected(Node);
+    end;
+
+    FreeAndNil(JPlugin);
+  end;
+  JSPEnum.Free;
+  vtvSubsList.Repaint;
+  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.CanFixError(PluginFilename : WideString) : Boolean;
+var JSPEnum : TJavaScriptPluginEnumerator;
+    JPlugin : TJavaScriptPlugin;
+    JSPluginInfo : TJSPluginInfo;
+begin
+  Result := False;
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+  JPlugin := JSPEnum.GetPluginByFilename(PluginFilename);
+  if Assigned(JPlugin) then
+  begin
+    JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+    Result := Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) and
+      JPlugin.CanFixError;
+    FreeAndNil(JPlugin);
+  end;
+  JSPEnum.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.vtvSubsListFocusChanged(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex);
+var NodeData: PTreeData;
+begin
+  if (Node <> nil) then
+  begin
+    NodeData := Sender.GetNodeData(Node);
+    MemoSubtitleText.Tag := 0;
+    MemoSubtitleText.Text := NodeData.Range.Text;
+    MemoSubtitleText.Tag := 1;
+  end
+  else
+  begin
+    MemoSubtitleText.Tag := 0;
+    MemoSubtitleText.Text := '';
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSubtitleRangeJSWrapperChange;
+begin
+  CurrentProject.IsDirty := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.FixErrorInList(ErrorList : TList);
+var Node : PVirtualNode;
+    NodeData : PErrorTreeData;
+    JSPEnum : TJavaScriptPluginEnumerator;
+    JPlugin : TJavaScriptPlugin;
+    JSPluginInfo : TJSPluginInfo;
+    SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
+    i,j : integer;
+begin
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+
+  for j:=0 to ErrorList.Count-1 do
+  begin
+    NodeData := ErrorList[j];
+    JPlugin := JSPEnum.GetPluginByFilename(NodeData.Filename);
+    if Assigned(JPlugin) then
+    begin
+      JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+      if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) then
+      begin
+        ConfigObject.ApplyParam(JPlugin);
+        JPlugin.OnSubtitleChange := OnSubtitleRangeJSWrapperChange;
+        SubRangeCurrent := NodeData.Range;
+        i := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
+
+        if (i > 0) then
+          SubRangePrevious := TSubtitleRange(WAVDisplayer.RangeList[i-1])
+        else
+          SubRangePrevious := nil;
+
+        if (i < WAVDisplayer.RangeList.Count-1) then
+          SubRangeNext := TSubtitleRange(WAVDisplayer.RangeList[i+1])
+        else
+          SubRangeNext := nil;
+
+        JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+      end;
+      FreeAndNil(JPlugin);
+    end;
+  end;
+  JSPEnum.Free;
+  vtvSubsList.Repaint;
+  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TntFormActivate(Sender: TObject);
+begin
+  FormHasBeenActivated := True;
+end;
+
+//------------------------------------------------------------------------------
+procedure TMainForm.MemoSubtitleTextMouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var pt : TPoint;
+    CharIndex : Integer;
+begin
+  if FormHasBeenActivated then
+  begin
+    Pt := Point(X, Y);
+    CharIndex := MemoSubtitleText.Perform(Messages.EM_CHARFROMPOS, 0, Integer(@Pt));
+    MemoSubtitleText.SelStart := CharIndex;
+  end;
+  inherited;
 end;
 
 //------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 217
-  Top = 108
+  Left = 281
+  Top = 115
   Width = 720
   Height = 589
   Caption = 'VisualSubSync'
@@ -12,6 +12,7 @@ object MainForm: TMainForm
   Font.Style = []
   Menu = TntMainMenu1
   OldCreateOrder = False
+  OnActivate = TntFormActivate
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -155,6 +156,7 @@ object MainForm: TMainForm
       ScrollBars = ssVertical
       TabOrder = 1
       OnChange = MemoSubtitleTextChange
+      OnMouseDown = MemoSubtitleTextMouseDown
       OnSelectionChange = MemoSubtitleTextSelectionChange
     end
   end
@@ -192,6 +194,7 @@ object MainForm: TMainForm
       TabOrder = 0
       OnCompareNodes = vtvSubsListCompareNodes
       OnDblClick = vtvSubsListDblClick
+      OnFocusChanged = vtvSubsListFocusChanged
       Columns = <>
     end
     object PanelPlaybackControl: TPanel
@@ -1204,6 +1207,12 @@ object MainForm: TMainForm
       object MenuItemDetachVideoWindow: TTntMenuItem
         Action = ActionDetachVideo
       end
+      object N14: TTntMenuItem
+        Caption = '-'
+      end
+      object ShowHidelogs1: TTntMenuItem
+        Action = ActionShowHideLogs
+      end
     end
     object MenuItemPlayback: TTntMenuItem
       Caption = 'Playback'
@@ -1638,6 +1647,15 @@ object MainForm: TMainForm
     object ActionDetachVideo: TTntAction
       Caption = 'Detach video window'
       OnExecute = ActionDetachVideoExecute
+    end
+    object ActionShowHideLogs: TTntAction
+      Caption = 'Show/Hide Logs'
+      OnExecute = ActionShowHideLogsExecute
+    end
+    object ActionFixErrorMain: TTntAction
+      Tag = 1
+      Caption = 'Fix error'
+      OnExecute = ActionFixErrorMainExecute
     end
   end
   object ImageList1: TImageList
@@ -3017,6 +3035,9 @@ object MainForm: TMainForm
     end
     object pmiSubListDelay: TTntMenuItem
       Action = ActionDelay
+    end
+    object pmiFixError: TTntMenuItem
+      Action = ActionFixErrorMain
     end
   end
   object TimerStatusBarMsg: TTimer

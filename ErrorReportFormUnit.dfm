@@ -40,6 +40,7 @@ object ErrorReportForm: TErrorReportForm
     ParentBackground = False
     PopupMenu = ErrorListPopupMenu
     TabOrder = 0
+    TreeOptions.SelectionOptions = [toMultiSelect]
     OnDblClick = vtvErrorListDblClick
     OnDrawNode = vtvErrorListDrawNode
     Columns = <>
@@ -55,11 +56,24 @@ object ErrorReportForm: TErrorReportForm
       end>
   end
   object ErrorListPopupMenu: TTntPopupMenu
+    OnPopup = ErrorListPopupMenuPopup
     Left = 16
     Top = 48
     object pmiClear: TTntMenuItem
       Caption = 'Clear'
       OnClick = pmiClearClick
+    end
+    object pmiFixError: TTntMenuItem
+      Caption = 'Fix error'
+      OnClick = pmiFixErrorClick
+    end
+    object pmiFixAllXXX: TTntMenuItem
+      Caption = 'Fix all errors of same type (color)'
+      OnClick = pmiFixAllXXXClick
+    end
+    object pmiFixAllYYY: TTntMenuItem
+      Caption = 'Fix all errors with same error msg'
+      OnClick = pmiFixAllYYYClick
     end
   end
   object TntMainMenu1: TTntMainMenu

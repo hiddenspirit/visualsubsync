@@ -27,47 +27,33 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, TntStdCtrls, ComCtrls, TntComCtrls, CheckLst,
   TntCheckLst, IniFiles, ExtCtrls, TntExtCtrls, TntActnList, Menus,
-  WAVDisplayerUnit;
-
-type
-  TErrorListElemType = (eletNoParam, eletIntParam);
-  TErrorListElem = record
-    Name : string;
-    ElemType : TErrorListElemType;
-    Value : Integer;
-    UnitName : string;
-    Description : string;
-    Msg: string;
-    Color : TColor;
-  end;
-  PErrorListElem = ^TErrorListElem;
+  WAVDisplayerUnit, VirtualTrees, JavaScriptPluginUnit;
 
 const
-  ErrorListElemTab : array[0..3] of TErrorListElem = (
-    (Name: 'Overlapping';
-     ElemType: eletNoParam;
-     Description: 'An error is detected when the subtitle overlap on next subtitle.';
-     Msg: 'Subtitle overlap on next subtitle :';
-     Color: $003737FF),
-    (Name: 'Too short display time';
-     ElemType: eletIntParam;
-     UnitName: 'Char/s';
-     Description: 'An error is detected when the number of Char/s is strictly superior to the specified value.';
-     Msg: 'Subtitle display time is too short :';
-     Color: $0037C4FF),
-    (Name: 'Too long display time';
-     ElemType: eletIntParam;
-     UnitName: 'Char/s';
-     Description: 'An error is detected when the number of Char/s is strictly inferior to the specified value.';
-     Msg: 'Subtitle display time is too long :';
-     Color: $00FF8737),
-    (Name: 'Too long line';
-     ElemType: eletIntParam;
-     UnitName: 'Characters';
-     Description: 'An error is detected when the line length in a subtitle is strictly superior to the specified value.';
-     Msg: 'Subtitle has a too long line :';
-     Color: $0037FFFF)
-  );
+  WM_ENDEDITING = WM_USER + 736;
+
+type
+  PParamData = ^TParamData;
+  TParamData = record
+    Param : PJSPluginParam;
+    ValueAsString : WideString;
+    Changed: Boolean;
+  end;
+
+  TJSPluginInfo = class
+    Enabled : Boolean;
+    Name : WideString;
+    Description : WideString;
+    Msg: WideString;
+    Color : TColor;
+    ParamList : TList;
+
+    constructor Create;
+    destructor Destroy; override;
+    procedure Assign(Value : TJSPluginInfo);
+    procedure ClearParam;
+    function GetParamByName(Name : WideString) : PParamData;
+  end;
 
 type
   TDefaultActionShortcut = record
@@ -83,17 +69,12 @@ const
 
 type
   TConfigObject = class
+  private
+    procedure ClearJSPluginInfoList;
+  public
     // Web server
     ServerPort : Integer;
     EnableCompression : Boolean;
-    // Error
-    ErrorOverlappingEnabled : Boolean;
-    ErrorTooShortDisplayTimeEnabled : Boolean;
-    ErrorTooShortDisplayTimeValue : Integer;
-    ErrorTooLongDisplayTimeEnabled : Boolean;
-    ErrorTooLongDisplayTimeValue : Integer;
-    ErrorTooLongLineEnabled : Boolean;
-    ErrorTooLongLineValue : Integer;
     // Misc
     SwapSubtitlesList : Boolean;
     // Hotkeys
@@ -107,6 +88,11 @@ type
     // Backup
     EnableBackup : Boolean;
     AutoBackupEvery : Integer;
+    // Plugins
+    ListJSPlugin : TList;
+    // Fonts
+    SubListFont : string;
+    SubTextFont : string;
 
     constructor Create;
     destructor Destroy; override;
@@ -114,6 +100,9 @@ type
     procedure SaveIni(IniFile : TIniFile);
     procedure LoadIni(IniFile : TIniFile);
     procedure SetDefaultHotKeys(ActionList : TTntActionList);
+    procedure UpdatePluginList;
+    function GetJSPluginInfoByName(Name : WideString) : TJSPluginInfo;
+    procedure ApplyParam(JSPlugin : TJavaScriptPlugin);
   end;
 
   THotkeyListItemData = class
@@ -126,24 +115,14 @@ type
   TPreferencesForm = class(TForm)
     TntPageControl1: TTntPageControl;
     tsGeneral: TTntTabSheet;
-    bttOk: TTntButton;
-    bttCancel: TTntButton;
     tsErrorChecking: TTntTabSheet;
     TntGroupBox1: TTntGroupBox;
     EditServerPort: TTntEdit;
     TntLabel1: TTntLabel;
     ListErrorChecking: TTntCheckListBox;
-    EditErrorValue: TTntEdit;
-    TntLabel2: TTntLabel;
     UpDownServerPort: TTntUpDown;
-    lbErrorUnit: TTntLabel;
-    lbErrorDescription: TTntLabel;
-    TntLabel3: TTntLabel;
-    TntBevel1: TTntBevel;
     GroupBox1: TGroupBox;
     chkAssociateExt: TCheckBox;
-    ShapeErrorColor: TShape;
-    TntLabel4: TTntLabel;
     chkEnableCompression: TCheckBox;
     chkSwapSubList: TCheckBox;
     tsHotKeys: TTntTabSheet;
@@ -173,12 +152,28 @@ type
     EditBackupTime: TEdit;
     Label6: TLabel;
     UpDownBackupTime: TUpDown;
+    Panel1: TPanel;
+    bttOk: TTntButton;
+    bttCancel: TTntButton;
+    Panel2: TPanel;
+    TntLabel3: TTntLabel;
+    lbErrorDescription: TTntLabel;
+    TntLabel4: TTntLabel;
+    ShapeErrorColor: TShape;
+    Bevel1: TBevel;
+    ListPluginParam: TVirtualStringTree;
+    tsFonts: TTntTabSheet;
+    FontDialog1: TFontDialog;
+    TntGroupBox2: TTntGroupBox;
+    EditSubListFont: TTntEdit;
+    bttSubListFont: TTntButton;
+    TntGroupBox3: TTntGroupBox;
+    EditSubTextFont: TTntEdit;
+    bttSubTextFont: TTntButton;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure ListErrorCheckingClick(Sender: TObject);
-    procedure EditErrorValueChange(Sender: TObject);
-    procedure EditDigitOnlyKeyPress(Sender: TObject; var Key: Char);
     procedure chkAssociateExtClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure ListHotkeysSelectItem(Sender: TObject; Item: TListItem;
@@ -189,30 +184,66 @@ type
     procedure ListHotkeysDeletion(Sender: TObject; Item: TListItem);
     procedure bttResetAllHotkeysClick(Sender: TObject);
     procedure bttOpenBackupDirClick(Sender: TObject);
+    procedure ListPluginParamGetText(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+      var CellText: WideString);
+    procedure ListPluginParamEditing(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex; var Allowed: Boolean);
+    procedure ListPluginParamCreateEditor(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex; out EditLink: IVTEditLink);
+    procedure FormDestroy(Sender: TObject);
+    procedure ListErrorCheckingClickCheck(Sender: TObject);
+    procedure bttSubListFontClick(Sender: TObject);
+    procedure bttSubTextFontClick(Sender: TObject);
+      
   private
     { Private declarations }
     TimingMode : Boolean;
     ListDefaultHotkeys : TList;
-        
+
     function GetCurrentModeShortCut(HLID : THotkeyListItemData) : TShortCut;
     function GetCurrentModeShortCutFromList : TShortCut;
     procedure SetCurrentModeShortCut(HLID : THotkeyListItemData; ShortCut : TShortCut);
     procedure SetCurrentModeShortCutFromList(ShortCut : TShortCut);
+    procedure WMEndEditing(var Message: TMessage); message WM_ENDEDITING;
+    procedure ClearErrorList;
   public
     { Public declarations }
     procedure LoadConfig(Config : TConfigObject);
     procedure SaveConfig(Config : TConfigObject);
-    function GetErrorListElem(Idx : Integer) : PErrorListElem;
     function GetMode : Boolean;    
     procedure SetMode(Timing : Boolean);
   end;
+
+  TPropertyEditLink = class(TInterfacedObject, IVTEditLink)
+  private
+    FEditControl: TWinControl; // One of the property editor classes.
+    FTree: TVirtualStringTree; // A back reference to the tree calling.
+    FNode: PVirtualNode;       // The node being edited.
+    FColumn: Integer;          // The column of the node being edited.
+  protected
+    procedure EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure EditIntegerKeyPress(Sender: TObject; var Key: Char);
+    procedure EditFloatKeyPress(Sender: TObject; var Key: Char);
+  public
+    destructor Destroy; override;
+
+    function BeginEdit: Boolean; stdcall;
+    function CancelEdit: Boolean; stdcall;
+    function EndEdit: Boolean; stdcall;
+    function GetBounds: TRect; stdcall;
+    function PrepareEdit(Tree: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex): Boolean; stdcall;
+    procedure ProcessMessage(var Message: TMessage); stdcall;
+    procedure SetBounds(R: TRect); stdcall;
+  end;  
 
 var
   PreferencesForm: TPreferencesForm;
 
 implementation
 
-uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows;
+uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows, TntSysUtils,
+  TntForms, Mask, TntClasses, LogWindowFormUnit;
 
 {$R *.dfm}
 
@@ -227,10 +258,73 @@ end;
 
 // =============================================================================
 
+constructor TJSPluginInfo.Create;
+begin
+  ParamList := TList.Create;
+end;
+
+//------------------------------------------------------------------------------
+
+destructor TJSPluginInfo.Destroy;
+begin
+  ClearParam;
+  ParamList.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TJSPluginInfo.ClearParam;
+var i : Integer;
+begin
+  for i:=0 to ParamList.Count-1 do
+    Dispose(PJSPluginParam(ParamList[i]));
+  ParamList.Clear;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TJSPluginInfo.Assign(Value : TJSPluginInfo);
+var i : Integer;
+    pParamSrc, pParamDst : PJSPluginParam;
+begin
+  Self.Enabled := Value.Enabled;
+  Self.Name := Value.Name;
+  Self.Description := Value.Description;
+  Self.Msg := Value.Msg;
+  Self.Color := Value.Color;
+  ClearParam;
+  for i:=0 to Value.ParamList.Count-1 do
+  begin
+    pParamSrc := Value.ParamList[i];
+    pParamDst := New(PJSPluginParam);
+    pParamDst^ := pParamSrc^;
+    Self.ParamList.Add(pParamDst);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TJSPluginInfo.GetParamByName(Name : WideString) : PParamData;
+var i : Integer;
+begin
+  Result := nil;
+  for i:=0 to ParamList.Count-1 do
+  begin
+    if PJSPluginParam(ParamList[i]).Name = Name then
+    begin
+      Result := ParamList[i];
+      Exit;
+    end;
+  end;
+end;
+
+// =============================================================================
+
 constructor TConfigObject.Create;
 begin
   ListHotkeys := TList.Create;
   ListDefaultHotkeys := TList.Create;
+  ListJSPlugin := TList.Create;
   SetDefault;
 end;
 
@@ -242,10 +336,48 @@ begin
   for i:= 0 to ListHotkeys.Count-1 do
     THotkeyListItemData(ListHotkeys[i]).Free;
   ListHotkeys.Free;
+
   for i:= 0 to ListDefaultHotkeys.Count-1 do
     THotkeyListItemData(ListDefaultHotkeys[i]).Free;
   ListDefaultHotkeys.Free;
+
+  ClearJSPluginInfoList;
+  ListJSPlugin.Free;
   inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+function TConfigObject.GetJSPluginInfoByName(Name : WideString) : TJSPluginInfo;
+var i : Integer;
+begin
+  Result := nil;
+  for i:=0 to ListJSPlugin.Count-1 do
+  begin
+    if TJSPluginInfo(ListJSPlugin[i]).Name = Name then
+    begin
+      Result := ListJSPlugin[i];
+      Break;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TConfigObject.ApplyParam(JSPlugin : TJavaScriptPlugin);
+var JSPluginInfo : TJSPluginInfo;
+    pParam : PJSPluginParam;
+    i : Integer;
+begin
+  JSPluginInfo := GetJSPluginInfoByName(JSPlugin.Name);
+  if Assigned(JSPluginInfo) then
+  begin
+    for i:=0 to JSPluginInfo.ParamList.Count-1 do
+    begin
+      pParam := JSPluginInfo.ParamList[i];
+      JSPlugin.SetParamValue(pParam.Name, GetParamValueAsWideString(pParam));
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -258,13 +390,7 @@ begin
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
   // Error
-  ErrorOverlappingEnabled := True;
-  ErrorTooShortDisplayTimeEnabled := True;
-  ErrorTooShortDisplayTimeValue := 25;
-  ErrorTooLongDisplayTimeEnabled := True;
-  ErrorTooLongDisplayTimeValue := 5;
-  ErrorTooLongLineEnabled := True;
-  ErrorTooLongLineValue := 60;
+  UpdatePluginList;
   // Mouse
   MouseWheelTimeScrollModifier := mwmCtrl;
   MouseWheelVZoomModifier := mwmShift;
@@ -273,6 +399,44 @@ begin
   // Backup
   EnableBackup := True;
   AutoBackupEvery := 0;
+  // Fonts
+  SubListFont := 'Arial, 8, 0, 0, clWindowText';
+  SubTextFont := 'Arial, 10, 1, 0, clWindowText';
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TConfigObject.UpdatePluginList;
+var JSPEnum : TJavaScriptPluginEnumerator;
+    JSPlugin : TJavaScriptPlugin;
+    JSPluginInfo : TJSPluginInfo;
+begin
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+  while JSPEnum.GetNext(JSPlugin) do
+  begin
+    JSPluginInfo := TJSPluginInfo.Create;
+    JSPluginInfo.Enabled := True;
+    JSPluginInfo.Name := JSPlugin.Name;
+    JSPluginInfo.Description := JSPlugin.Description;
+    JSPluginInfo.Color := JSColorToTColor(JSPlugin.Color);
+    JSPluginInfo.Msg := JSPlugin.Msg;
+    JSPlugin.FillParamList(JSPluginInfo.ParamList);
+    ListJSPlugin.Add(JSPluginInfo);
+    FreeAndNil(JSPlugin);
+  end;
+  JSPEnum.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TConfigObject.ClearJSPluginInfoList;
+var i : Integer;
+begin
+  for i:=0 to ListJSPlugin.Count-1 do
+    TJSPluginInfo(ListJSPlugin[i]).Free;
+  ListJSPlugin.Clear;
 end;
 
 //------------------------------------------------------------------------------
@@ -324,26 +488,34 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TConfigObject.SaveIni(IniFile : TIniFile);
-var i : integer;
+var i, j : integer;
     HLID : THotkeyListItemData;
+    JSPluginInfo : TJSPluginInfo;
+    pPluginParam : PJSPluginParam;
 begin
   // Misc
   IniFile.WriteBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
+  
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
   IniFile.WriteBool('WebServer','EnableCompression',EnableCompression);
 
-  // Error
-  IniFile.WriteBool('ErrorChecking','OverlappingEnabled',ErrorOverlappingEnabled);
-
-  IniFile.WriteBool('ErrorChecking','TooShortDisplayTimeEnabled',ErrorTooShortDisplayTimeEnabled);
-  IniFile.WriteInteger('ErrorChecking','TooShortDisplayTimeValue',ErrorTooShortDisplayTimeValue);
-
-  IniFile.WriteBool('ErrorChecking','TooLongDisplayTimeEnabled',ErrorTooLongDisplayTimeEnabled);
-  IniFile.WriteInteger('ErrorChecking','TooLongDisplayTimeValue',ErrorTooLongDisplayTimeValue);
-
-  IniFile.WriteBool('ErrorChecking','TooLongLineEnabled',ErrorTooLongLineEnabled);
-  IniFile.WriteInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
+  // Error plugin
+  for i:=0 to ListJSPlugin.Count-1 do
+  begin
+    JSPluginInfo := ListJSPlugin[i];
+    IniFile.WriteBool(JSPluginInfo.Name, 'Enabled', JSPluginInfo.Enabled);
+    for j:=0 to JSPluginInfo.ParamList.Count-1 do
+    begin
+      pPluginParam := JSPluginInfo.ParamList[j];
+      case pPluginParam.ParamType of
+        jsptBoolean: IniFile.WriteBool(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.BooleanValue);
+        jsptInteger: IniFile.WriteInteger(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.IntegerValue);
+        jsptDouble: IniFile.WriteFloat(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.DoubleValue);
+        jsptWideString: IniFile.WriteString(JSPluginInfo.Name, pPluginParam.Name, UTF8Encode(pPluginParam.WideStringValue));
+      end;
+    end;
+  end;
 
   // Hotkeys
   IniFile.WriteBool('Hotkeys', 'UseIntegerShortcut', True);
@@ -369,13 +541,19 @@ begin
   // Backup
   IniFile.WriteBool('Backup','EnableBackup',EnableBackup);
   IniFile.WriteInteger('Backup','AutoBackupEvery',AutoBackupEvery);
+
+  // Fonts
+  IniFile.WriteString('Fonts', 'SubList', SubListFont);
+  IniFile.WriteString('Fonts', 'SubText', SubTextFont);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TConfigObject.LoadIni(IniFile : TIniFile);
-var i : integer;
+var i, j : integer;
     HLID : THotkeyListItemData;
+    JSPluginInfo : TJSPluginInfo;
+    pPluginParam : PJSPluginParam;
 begin
   // Misc
   SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
@@ -384,17 +562,22 @@ begin
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
   EnableCompression := IniFile.ReadBool('WebServer','EnableCompression',EnableCompression);
 
-  // Error
-  ErrorOverlappingEnabled := IniFile.ReadBool('ErrorChecking','OverlappingEnabled',ErrorOverlappingEnabled);
-
-  ErrorTooShortDisplayTimeEnabled := IniFile.ReadBool('ErrorChecking','TooShortDisplayTimeEnabled',ErrorTooShortDisplayTimeEnabled);
-  ErrorTooShortDisplayTimeValue := IniFile.ReadInteger('ErrorChecking','TooShortDisplayTimeValue',ErrorTooShortDisplayTimeValue);
-
-  ErrorTooLongDisplayTimeEnabled := IniFile.ReadBool('ErrorChecking','TooLongDisplayTimeEnabled',ErrorTooLongDisplayTimeEnabled);
-  ErrorTooLongDisplayTimeValue := IniFile.ReadInteger('ErrorChecking','TooLongDisplayTimeValue',ErrorTooLongDisplayTimeValue);
-
-  ErrorTooLongLineEnabled := IniFile.ReadBool('ErrorChecking','TooLongLineEnabled',ErrorTooLongLineEnabled);
-  ErrorTooLongLineValue := IniFile.ReadInteger('ErrorChecking','TooLongLineValue',ErrorTooLongLineValue);
+  // Error plugin
+  for i:=0 to ListJSPlugin.Count-1 do
+  begin
+    JSPluginInfo := ListJSPlugin[i];
+    JSPluginInfo.Enabled := IniFile.ReadBool(JSPluginInfo.Name, 'Enabled', JSPluginInfo.Enabled);
+    for j:=0 to JSPluginInfo.ParamList.Count-1 do
+    begin
+      pPluginParam := JSPluginInfo.ParamList[j];
+      case pPluginParam.ParamType of
+        jsptBoolean: pPluginParam.BooleanValue := IniFile.ReadBool(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.BooleanValue);
+        jsptInteger: pPluginParam.IntegerValue := IniFile.ReadInteger(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.IntegerValue);
+        jsptDouble: pPluginParam.DoubleValue := IniFile.ReadFloat(JSPluginInfo.Name, pPluginParam.Name, pPluginParam.DoubleValue);
+        jsptWideString: pPluginParam.WideStringValue := UTF8Decode(IniFile.ReadString(JSPluginInfo.Name, pPluginParam.Name, UTF8Encode(pPluginParam.WideStringValue)));
+      end;
+    end;
+  end;
 
   // Hotkeys
   if IniFile.ReadBool('Hotkeys', 'UseIntegerShortcut', False) = True then
@@ -439,30 +622,46 @@ begin
   // Backup
   EnableBackup := IniFile.ReadBool('Backup','EnableBackup',EnableBackup);
   AutoBackupEvery := IniFile.ReadInteger('Backup','AutoBackupEvery',AutoBackupEvery);
+
+  // Fonts
+  SubListFont := IniFile.ReadString('Fonts', 'SubList', SubListFont);
+  SubTextFont := IniFile.ReadString('Fonts', 'SubText', SubTextFont);
 end;
 
 // =============================================================================
 
 procedure TPreferencesForm.FormCreate(Sender: TObject);
-var i : integer;
 begin
   TimingMode := False;
-
-  for i:=0 to Length(ErrorListElemTab)-1 do
-  begin
-    ListErrorChecking.AddItem(ErrorListElemTab[i].Name,@ErrorListElemTab[i]);
-  end;
-  ListErrorChecking.ItemIndex := 0;
-  ListErrorCheckingClick(Self);
-
   TntPageControl1.ActivePage := tsGeneral;
+  ListPluginParam.NodeDataSize := SizeOf(TParamData);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.FormDestroy(Sender: TObject);
+begin
+  ClearErrorList
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TPreferencesForm.FormActivate(Sender: TObject);
+var IsExtReged : Boolean;
 begin
-  chkAssociateExt.Checked := ShellIsExtensionRegistered('vssprj',ApplicationName,Application.ExeName);
+  IsExtReged := ShellIsExtensionRegistered('vssprj',ApplicationName,Application.ExeName);
+  chkAssociateExt.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ClearErrorList;
+var i : integer;
+begin
+  ListPluginParam.Clear;
+  for i:=0 to ListErrorChecking.Items.Count-1 do
+    TJSPluginInfo(ListErrorChecking.Items.Objects[i]).Free;
+  ListErrorChecking.Clear;
 end;
 
 //------------------------------------------------------------------------------
@@ -471,6 +670,7 @@ procedure TPreferencesForm.LoadConfig(Config : TConfigObject);
 var i : integer;
     HLID : THotkeyListItemData;
     ListItem : TTntListItem;
+    JSPluginInfoSrc, JSPluginInfoDst  : TJSPluginInfo;
 begin
   // Misc
   chkSwapSubList.Checked := Config.SwapSubtitlesList;
@@ -479,17 +679,31 @@ begin
   UpDownServerPort.Position := Config.ServerPort;
   chkEnableCompression.Checked := Config.EnableCompression;
 
-  // Error
-  ListErrorChecking.Checked[0] := Config.ErrorOverlappingEnabled;
-
-  ListErrorChecking.Checked[1] := Config.ErrorTooShortDisplayTimeEnabled;
-  PErrorListElem(ListErrorChecking.Items.Objects[1]).Value := Config.ErrorTooShortDisplayTimeValue;
-
-  ListErrorChecking.Checked[2] := Config.ErrorTooLongDisplayTimeEnabled;
-  PErrorListElem(ListErrorChecking.Items.Objects[2]).Value := Config.ErrorTooLongDisplayTimeValue;
-
-  ListErrorChecking.Checked[3] := Config.ErrorTooLongLineEnabled;
-  PErrorListElem(ListErrorChecking.Items.Objects[3]).Value := Config.ErrorTooLongLineValue;
+  // Error plugin
+  ClearErrorList;
+  ListErrorChecking.Sorted := True;
+  for i:=0 to Config.ListJSPlugin.Count-1 do
+  begin
+    // We do a local copy
+    JSPluginInfoSrc := Config.ListJSPlugin[i];
+    JSPluginInfoDst := TJSPluginInfo.Create;
+    JSPluginInfoDst.Assign(JSPluginInfoSrc);
+    ListErrorChecking.AddItem(JSPluginInfoDst.Name, JSPluginInfoDst);
+  end;
+  ListErrorChecking.Sorted := False;
+  // Do the checking now cause sorting would have messed up the order 
+  for i:=0 to ListErrorChecking.Items.Count-1 do
+  begin
+    JSPluginInfoSrc := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
+    ListErrorChecking.Checked[i] := JSPluginInfoSrc.Enabled;
+  end;
+  // Select the first item
+  // TODO : we could try to restore the selected item
+  if (ListErrorChecking.Items.Count > 0) then
+  begin
+    ListErrorChecking.ItemIndex := 0;
+    ListErrorCheckingClick(nil);
+  end;
 
   // Hotkeys
   ListHotkeys.Clear;
@@ -517,6 +731,12 @@ begin
   // Backup
   chkCreateBackup.Checked := Config.EnableBackup;
   UpDownBackupTime.Position := Config.AutoBackupEvery;
+
+  // Fonts
+  EditSubListFont.Text := Config.SubListFont;
+  String2Font(EditSubListFont.Text, EditSubListFont.Font);
+  EditSubTextFont.Text := Config.SubTextFont;
+  String2Font(EditSubTextFont.Text, EditSubTextFont.Font);
 end;
 
 //------------------------------------------------------------------------------
@@ -524,6 +744,7 @@ end;
 procedure TPreferencesForm.SaveConfig(Config : TConfigObject);
 var i : integer;
     HLID : THotkeyListItemData;
+    JSPluginInfoSrc, JSPluginInfoDst : TJSPluginInfo;
 begin
   // Misc
   Config.SwapSubtitlesList := chkSwapSubList.Checked;
@@ -532,17 +753,13 @@ begin
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;
 
-  // Error
-  Config.ErrorOverlappingEnabled := ListErrorChecking.Checked[0];
-
-  Config.ErrorTooShortDisplayTimeEnabled := ListErrorChecking.Checked[1];
-  Config.ErrorTooShortDisplayTimeValue := PErrorListElem(ListErrorChecking.Items.Objects[1]).Value;
-
-  Config.ErrorTooLongDisplayTimeEnabled := ListErrorChecking.Checked[2];
-  Config.ErrorTooLongDisplayTimeValue := PErrorListElem(ListErrorChecking.Items.Objects[2]).Value;
-
-  Config.ErrorTooLongLineEnabled := ListErrorChecking.Checked[3];
-  Config.ErrorTooLongLineValue := PErrorListElem(ListErrorChecking.Items.Objects[3]).Value;
+  // Error plugin
+  for i:=0 to ListErrorChecking.Items.Count-1 do
+  begin
+    JSPluginInfoSrc := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
+    JSPluginInfoDst := Config.ListJSPlugin[i];
+    JSPluginInfoDst.Assign(JSPluginInfoSrc);
+  end;
 
   // Hotkeys
   for i:=0 to ListHotkeys.Items.Count-1 do
@@ -560,6 +777,10 @@ begin
   // Backup
   Config.EnableBackup := chkCreateBackup.Checked;
   Config.AutoBackupEvery := UpDownBackupTime.Position;
+
+  // Fonts
+  Config.SubListFont := EditSubListFont.Text;
+  Config.SubTextFont := EditSubTextFont.Text;
 end;
 
 //------------------------------------------------------------------------------
@@ -579,47 +800,37 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TPreferencesForm.ListErrorCheckingClick(Sender: TObject);
-var ErrorListElem : PErrorListElem;
+var i : Integer;
+    JSPluginInfo : TJSPluginInfo;
+    paramData : PParamData;
+    pNode : PVirtualNode;
 begin
   if ListErrorChecking.ItemIndex <> -1 then
   begin
-    ErrorListElem := PErrorListElem(ListErrorChecking.Items.Objects[ListErrorChecking.ItemIndex]);
-    EditErrorValue.Enabled := (ErrorListElem.ElemType <> eletNoParam);
-    if (EditErrorValue.Enabled) then
+    JSPluginInfo := TJSPluginInfo(ListErrorChecking.Items.Objects[ListErrorChecking.ItemIndex]);
+    ShapeErrorColor.Brush.Color := JSPluginInfo.Color;
+    lbErrorDescription.Caption := JSPluginInfo.Description;
+    ListPluginParam.Clear;
+    for i:=0 to JSPluginInfo.ParamList.Count-1 do
     begin
-      EditErrorValue.Text := IntToStr(ErrorListElem.Value);
-      EditErrorValue.Color := clWindow;
-      lbErrorUnit.Caption := ErrorListElem.UnitName;
-    end
-    else
-    begin
-      EditErrorValue.Text := '';
-      EditErrorValue.Color := cl3DLight;
-      lbErrorUnit.Caption := '';
+      pNode := ListPluginParam.AddChild(nil);
+      paramData := ListPluginParam.GetNodeData(pNode);
+      paramData.Param := JSPluginInfo.ParamList[i];
+      paramData.ValueAsString := GetParamValueAsWideString(paramData.Param);
     end;
-    ShapeErrorColor.Brush.Color := ErrorListElem.Color;    
-    lbErrorDescription.Caption := ErrorListElem.Description;
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TPreferencesForm.EditErrorValueChange(Sender: TObject);
-var ErrorListElem : PErrorListElem;
+procedure TPreferencesForm.ListErrorCheckingClickCheck(Sender: TObject);
+var JSPluginInfo : TJSPluginInfo;
 begin
   if ListErrorChecking.ItemIndex <> -1 then
   begin
-    ErrorListElem := PErrorListElem(ListErrorChecking.Items.Objects[ListErrorChecking.ItemIndex]);
-    ErrorListElem.Value := StrToIntDef(EditErrorValue.Text,ErrorListElem.Value);
-  end;  
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TPreferencesForm.EditDigitOnlyKeyPress(Sender: TObject; var Key: Char);
-begin
-  if not (Key in [#8, '0'..'9']) then // #8 is Backspace
-    Key := #0; // Discard the key
+    JSPluginInfo := TJSPluginInfo(ListErrorChecking.Items.Objects[ListErrorChecking.ItemIndex]);
+    JSPluginInfo.Enabled := ListErrorChecking.Checked[ListErrorChecking.ItemIndex];
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -638,17 +849,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TPreferencesForm.GetErrorListElem(Idx : Integer) : PErrorListElem;
-begin
-  Result := nil;
-  if (Idx >= 0) and (Idx < ListErrorChecking.Count) then
-  begin
-    Result := PErrorListElem(ListErrorChecking.Items.Objects[Idx]);
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 function TPreferencesForm.GetCurrentModeShortCut(HLID : THotkeyListItemData) : TShortCut;
 begin
   Result := 0;
@@ -659,7 +859,6 @@ begin
     else if (ComboHotkeyMode.ItemIndex = 1) then
       Result := HLID.TimingShortCut;
   end;
-
 end;
 
 //------------------------------------------------------------------------------
@@ -806,6 +1005,271 @@ begin
   CheckBackupDirectory;
   Tnt_ShellExecuteW(Handle, 'explore', PWideChar(g_BackupDirectory), nil,
     nil, SW_SHOWNORMAL);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListPluginParamGetText(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: WideString);
+var
+  ParamData: PParamData;
+begin
+  if (TextType = ttNormal) then
+  begin
+    ParamData := Sender.GetNodeData(Node);
+    case Column of
+      0: CellText := ParamData.Param.Name;
+      1: CellText := ParamData.ValueAsString;
+      2: CellText := ParamData.Param.UnitStr;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListPluginParamEditing(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; var Allowed: Boolean);
+var
+  ParamData: PParamData;
+begin
+  with Sender do
+  begin
+    ParamData := GetNodeData(Node);
+    Allowed := (Column = 1) and (ParamData.Param.ParamType <> jsptUnknown);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListPluginParamCreateEditor(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
+  out EditLink: IVTEditLink);
+begin
+  EditLink := TPropertyEditLink.Create;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.WMEndEditing(var Message: TMessage);
+begin
+  ListPluginParam.EndEditNode;
+end;
+
+// =============================================================================
+// Adapted from the VTV Advanced demo
+
+destructor TPropertyEditLink.Destroy;
+begin
+  FEditControl.Free;
+  inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPropertyEditLink.EditIntegerKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not (Key in [#8, '0'..'9']) then // #8 is Backspace
+    Key := #0; // Discard the key
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPropertyEditLink.EditFloatKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not (Key in [#8, '0'..'9', '.']) then // #8 is Backspace
+    Key := #0; // Discard the key
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPropertyEditLink.EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  CanAdvance: Boolean;
+  RootControl : TWinControl;
+begin
+  case Key of
+    VK_RETURN:
+      begin
+        RootControl := FTree;
+        while (RootControl.Parent <> nil) do
+          RootControl := RootControl.Parent;
+        PostMessage(RootControl.Handle, WM_ENDEDITING, 0, 0);
+      end;
+    VK_ESCAPE,
+    VK_UP,
+    VK_DOWN:
+      begin
+        // Consider special cases before finishing edit mode.
+        CanAdvance := Shift = [];
+        if FEditControl is TComboBox then
+          CanAdvance := CanAdvance and not TComboBox(FEditControl).DroppedDown;
+
+        if CanAdvance then
+        begin
+          // Forward the keypress to the tree. It will asynchronously change the focused node.
+          PostMessage(FTree.Handle, WM_KEYDOWN, Key, 0);
+          Key := 0;
+        end;
+      end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPropertyEditLink.BeginEdit: Boolean;
+begin
+  Result := True;
+  FEditControl.Show;
+  FEditControl.SetFocus;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPropertyEditLink.CancelEdit: Boolean;
+begin
+  Result := True;
+  FEditControl.Hide;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPropertyEditLink.EndEdit: Boolean;
+var
+  ParamData: PParamData;
+  Buffer: array[0..1024] of Char;
+  S: WideString;
+begin
+  Result := True;
+
+  ParamData := FTree.GetNodeData(FNode);
+  if FEditControl is TComboBox then
+    S := TComboBox(FEditControl).Text
+  else
+  begin
+    GetWindowText(FEditControl.Handle, Buffer, 1024);
+    S := Buffer;
+  end;
+
+  if S <> ParamData.ValueAsString then
+  begin
+    SetParamValueAsWideString(ParamData.Param, S);
+    ParamData.ValueAsString := S;
+    ParamData.Changed := True;
+    FTree.InvalidateNode(FNode);
+  end;
+  FEditControl.Hide;
+  FTree.SetFocus;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPropertyEditLink.GetBounds: TRect;
+begin
+  Result := FEditControl.BoundsRect;
+end;
+
+//------------------------------------------------------------------------------
+
+function TPropertyEditLink.PrepareEdit(Tree: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex): Boolean;
+var
+  ParamData: PParamData;
+begin
+  Result := True;
+  FTree := Tree as TVirtualStringTree;
+  FNode := Node;
+  FColumn := Column;
+
+  // determine what edit type actually is needed
+  FEditControl.Free;
+  FEditControl := nil;
+  ParamData := FTree.GetNodeData(Node);
+  case ParamData.Param.ParamType of
+    jsptWideString:
+      begin
+        FEditControl := TTntEdit.Create(nil);
+        with FEditControl as TTntEdit do
+        begin
+          Visible := False;
+          Parent := Tree;
+          Text := ParamData.ValueAsString;
+          OnKeyDown := EditKeyDown;
+        end;
+      end;
+    jsptBoolean:
+      begin
+        FEditControl := TComboBox.Create(nil);
+        with FEditControl as TComboBox do
+        begin
+          Visible := False;
+          Parent := Tree;
+          Text := ParamData.ValueAsString;
+          Items.Add(BoolToStr(True));
+          Items.Add(BoolToStr(False));
+          OnKeyDown := EditKeyDown;
+        end;
+      end;
+    jsptInteger, jsptDouble:
+      begin
+        FEditControl := TEdit.Create(nil);
+        with FEditControl as TEdit do
+        begin
+          Visible := False;
+          Parent := Tree;
+          Text := ParamData.ValueAsString;
+          OnKeyDown := EditKeyDown;
+          if ParamData.Param.ParamType = jsptInteger then
+            OnKeyPress := EditIntegerKeyPress;
+          if ParamData.Param.ParamType = jsptDouble then
+            OnKeyPress := EditFloatKeyPress;
+        end;
+      end;
+  else
+    Result := False;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPropertyEditLink.ProcessMessage(var Message: TMessage);
+begin
+  FEditControl.WindowProc(Message);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPropertyEditLink.SetBounds(R: TRect);
+var
+  Dummy: Integer;
+begin
+  // Since we don't want to activate grid extensions in the tree (this would influence how the selection is drawn)
+  // we have to set the edit's width explicitly to the width of the column.
+  FTree.Header.Columns.GetColumnBounds(FColumn, Dummy, R.Right);
+  FEditControl.BoundsRect := R;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttSubListFontClick(Sender: TObject);
+begin
+  FontDialog1.Font.Assign(EditSubListFont.Font);
+  if FontDialog1.Execute then
+  begin
+    EditSubListFont.Font.Assign(FontDialog1.Font);
+    EditSubListFont.Text := Font2String(EditSubListFont.Font);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttSubTextFontClick(Sender: TObject);
+begin
+  FontDialog1.Font.Assign(EditSubTextFont.Font);
+  if FontDialog1.Execute then
+  begin
+    EditSubTextFont.Font.Assign(FontDialog1.Font);
+    EditSubTextFont.Text := Font2String(EditSubTextFont.Font);
+  end;
 end;
 
 //------------------------------------------------------------------------------

@@ -4,8 +4,8 @@ object PreferencesForm: TPreferencesForm
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Preferences'
-  ClientHeight = 305
-  ClientWidth = 355
+  ClientHeight = 365
+  ClientWidth = 434
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,23 +16,26 @@ object PreferencesForm: TPreferencesForm
   Position = poOwnerFormCenter
   OnActivate = FormActivate
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object TntPageControl1: TTntPageControl
     Left = 0
     Top = 0
-    Width = 353
-    Height = 273
-    ActivePage = tsGeneral
+    Width = 434
+    Height = 324
+    ActivePage = tsFonts
+    Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
-      BorderWidth = 2
+      BorderWidth = 4
       Caption = 'General'
       object TntGroupBox1: TTntGroupBox
         Left = 0
         Top = 0
-        Width = 341
+        Width = 418
         Height = 49
+        Align = alTop
         Caption = ' Web server : '
         TabOrder = 0
         object TntLabel1: TTntLabel
@@ -52,7 +55,6 @@ object PreferencesForm: TPreferencesForm
           ShowHint = True
           TabOrder = 0
           Text = '1'
-          OnKeyPress = EditDigitOnlyKeyPress
         end
         object UpDownServerPort: TTntUpDown
           Left = 137
@@ -67,7 +69,7 @@ object PreferencesForm: TPreferencesForm
           Thousands = False
         end
         object chkEnableCompression: TCheckBox
-          Left = 208
+          Left = 280
           Top = 24
           Width = 121
           Height = 17
@@ -82,9 +84,10 @@ object PreferencesForm: TPreferencesForm
       end
       object GroupBox1: TGroupBox
         Left = 0
-        Top = 144
-        Width = 341
-        Height = 97
+        Top = 156
+        Width = 418
+        Height = 132
+        Align = alBottom
         Caption = ' Misc : '
         TabOrder = 1
         object chkAssociateExt: TCheckBox
@@ -112,8 +115,8 @@ object PreferencesForm: TPreferencesForm
       end
       object GroupBox4: TGroupBox
         Left = 0
-        Top = 56
-        Width = 341
+        Top = 64
+        Width = 419
         Height = 81
         Caption = ' Backup : '
         TabOrder = 2
@@ -133,7 +136,7 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 0
         end
         object bttOpenBackupDir: TButton
-          Left = 302
+          Left = 374
           Top = 49
           Width = 28
           Height = 20
@@ -165,86 +168,122 @@ object PreferencesForm: TPreferencesForm
     object tsErrorChecking: TTntTabSheet
       BorderWidth = 4
       Caption = 'Error checking'
-      object TntBevel1: TTntBevel
-        Left = 0
-        Top = 177
-        Width = 337
-        Height = 60
-      end
-      object TntLabel2: TTntLabel
-        Left = 0
-        Top = 148
-        Width = 33
-        Height = 13
-        Caption = 'Value :'
-      end
-      object lbErrorUnit: TTntLabel
-        Left = 176
-        Top = 148
-        Width = 89
-        Height = 13
-        AutoSize = False
-        Caption = '-'
-      end
-      object lbErrorDescription: TTntLabel
-        Left = 8
-        Top = 200
-        Width = 321
-        Height = 31
-        AutoSize = False
-        Caption = '-'
-        WordWrap = True
-      end
-      object TntLabel3: TTntLabel
-        Left = 8
-        Top = 184
-        Width = 73
-        Height = 13
-        Caption = 'Description :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = [fsBold]
-        ParentFont = False
-      end
-      object ShapeErrorColor: TShape
-        Left = 314
-        Top = 147
-        Width = 15
-        Height = 15
-        Shape = stCircle
-      end
-      object TntLabel4: TTntLabel
-        Left = 280
-        Top = 148
-        Width = 30
-        Height = 13
-        Caption = 'Color :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
-      end
       object ListErrorChecking: TTntCheckListBox
         Left = 0
         Top = 0
-        Width = 337
-        Height = 137
+        Width = 418
+        Height = 105
+        OnClickCheck = ListErrorCheckingClickCheck
+        Align = alTop
         ItemHeight = 13
+        Sorted = True
         TabOrder = 0
         OnClick = ListErrorCheckingClick
       end
-      object EditErrorValue: TTntEdit
-        Left = 40
-        Top = 144
-        Width = 129
-        Height = 21
+      object Panel2: TPanel
+        Left = 0
+        Top = 112
+        Width = 417
+        Height = 65
+        BevelOuter = bvLowered
         TabOrder = 1
-        OnChange = EditErrorValueChange
-        OnKeyPress = EditDigitOnlyKeyPress
+        object TntLabel3: TTntLabel
+          Left = 8
+          Top = 7
+          Width = 73
+          Height = 13
+          Caption = 'Description :'
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'MS Sans Serif'
+          Font.Style = [fsBold]
+          ParentFont = False
+        end
+        object lbErrorDescription: TTntLabel
+          Left = 8
+          Top = 21
+          Width = 345
+          Height = 31
+          AutoSize = False
+          Caption = '-'
+          WordWrap = True
+        end
+        object TntLabel4: TTntLabel
+          Left = 360
+          Top = 4
+          Width = 57
+          Height = 13
+          Alignment = taCenter
+          AutoSize = False
+          Caption = 'Color :'
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'MS Sans Serif'
+          Font.Style = []
+          ParentFont = False
+          Transparent = True
+        end
+        object ShapeErrorColor: TShape
+          Left = 376
+          Top = 24
+          Width = 25
+          Height = 25
+          Shape = stCircle
+        end
+        object Bevel1: TBevel
+          Left = 352
+          Top = 8
+          Width = 9
+          Height = 49
+          Shape = bsRightLine
+        end
+      end
+      object ListPluginParam: TVirtualStringTree
+        Left = 0
+        Top = 183
+        Width = 418
+        Height = 105
+        Align = alBottom
+        EditDelay = 40
+        Header.AutoSizeIndex = 1
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'MS Sans Serif'
+        Header.Font.Style = []
+        Header.MainColumn = 1
+        Header.Options = [hoAutoResize, hoColumnResize, hoVisible, hoAutoSpring]
+        Header.Style = hsPlates
+        ParentBackground = False
+        TabOrder = 2
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowTreeLines, toThemeAware, toUseBlendedImages]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toCenterScrollIntoView]
+        TreeOptions.StringOptions = [toAutoAcceptEditChange]
+        OnCreateEditor = ListPluginParamCreateEditor
+        OnEditing = ListPluginParamEditing
+        OnGetText = ListPluginParamGetText
+        Columns = <
+          item
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
+            Position = 0
+            Width = 164
+            WideText = 'Parameter'
+          end
+          item
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
+            Position = 1
+            Width = 150
+            WideText = 'Value'
+          end
+          item
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
+            Position = 2
+            Width = 100
+            WideText = 'Unit'
+          end>
       end
     end
     object tsHotKeys: TTntTabSheet
@@ -252,14 +291,14 @@ object PreferencesForm: TPreferencesForm
       Caption = 'HotKeys'
       object TntLabel5: TTntLabel
         Left = 0
-        Top = 200
+        Top = 248
         Width = 33
         Height = 13
         Caption = 'Mode :'
       end
       object TntLabel6: TTntLabel
-        Left = 80
-        Top = 200
+        Left = 128
+        Top = 248
         Width = 40
         Height = 13
         Caption = 'Hotkey :'
@@ -267,21 +306,23 @@ object PreferencesForm: TPreferencesForm
       object ListHotkeys: TTntListView
         Left = 0
         Top = 0
-        Width = 337
-        Height = 193
+        Width = 418
+        Height = 241
+        Align = alTop
         Columns = <
           item
             Caption = 'Name'
-            Width = 150
+            Width = 180
           end
           item
             Caption = 'Normal'
-            Width = 80
+            Width = 100
           end
           item
             Caption = 'Timing'
-            Width = 80
+            Width = 100
           end>
+        ColumnClick = False
         HideSelection = False
         ReadOnly = True
         RowSelect = True
@@ -292,9 +333,9 @@ object PreferencesForm: TPreferencesForm
         OnSelectItem = ListHotkeysSelectItem
       end
       object HotKey1: THotKey
-        Left = 80
-        Top = 217
-        Width = 185
+        Left = 128
+        Top = 265
+        Width = 209
         Height = 19
         HotKey = 0
         InvalidKeys = [hcNone]
@@ -303,8 +344,8 @@ object PreferencesForm: TPreferencesForm
       end
       object ComboHotkeyMode: TTntComboBox
         Left = 0
-        Top = 216
-        Width = 73
+        Top = 264
+        Width = 113
         Height = 21
         Style = csDropDownList
         ItemHeight = 13
@@ -317,8 +358,8 @@ object PreferencesForm: TPreferencesForm
           'Timing')
       end
       object bttResetAllHotkeys: TTntButton
-        Left = 272
-        Top = 199
+        Left = 352
+        Top = 247
         Width = 65
         Height = 19
         Caption = 'Reset all'
@@ -326,8 +367,8 @@ object PreferencesForm: TPreferencesForm
         OnClick = bttResetAllHotkeysClick
       end
       object bttSetHotkey: TTntButton
-        Left = 272
-        Top = 217
+        Left = 352
+        Top = 265
         Width = 33
         Height = 19
         Caption = 'Set'
@@ -335,8 +376,8 @@ object PreferencesForm: TPreferencesForm
         OnClick = bttSetHotkeyClick
       end
       object bttClearHotkey: TTntButton
-        Left = 304
-        Top = 217
+        Left = 384
+        Top = 265
         Width = 33
         Height = 19
         Caption = 'Clear'
@@ -350,8 +391,9 @@ object PreferencesForm: TPreferencesForm
       object GroupBox2: TGroupBox
         Left = 0
         Top = 0
-        Width = 337
+        Width = 418
         Height = 121
+        Align = alTop
         Caption = ' Mouse wheel control : '
         TabOrder = 0
         object Label1: TLabel
@@ -401,7 +443,7 @@ object PreferencesForm: TPreferencesForm
         object Label5: TLabel
           Left = 124
           Top = 22
-          Width = 181
+          Width = 261
           Height = 13
           Alignment = taCenter
           AutoSize = False
@@ -418,7 +460,7 @@ object PreferencesForm: TPreferencesForm
         object ComboWheelTimeScrollModifier: TComboBox
           Left = 124
           Top = 40
-          Width = 181
+          Width = 261
           Height = 21
           Style = csDropDownList
           Font.Charset = DEFAULT_CHARSET
@@ -438,7 +480,7 @@ object PreferencesForm: TPreferencesForm
         object ComboWheelVZoomModifier: TComboBox
           Left = 124
           Top = 64
-          Width = 181
+          Width = 261
           Height = 21
           Style = csDropDownList
           ItemHeight = 13
@@ -452,7 +494,7 @@ object PreferencesForm: TPreferencesForm
         object ComboWheelHZoomModifier: TComboBox
           Left = 124
           Top = 88
-          Width = 181
+          Width = 261
           Height = 21
           Style = csDropDownList
           ItemHeight = 13
@@ -466,9 +508,10 @@ object PreferencesForm: TPreferencesForm
       end
       object GroupBox3: TGroupBox
         Left = 0
-        Top = 132
-        Width = 337
-        Height = 105
+        Top = 136
+        Width = 418
+        Height = 152
+        Align = alBottom
         Caption = ' Misc : '
         TabOrder = 1
         object chkEnableSSATimingMode: TCheckBox
@@ -481,23 +524,100 @@ object PreferencesForm: TPreferencesForm
         end
       end
     end
+    object tsFonts: TTntTabSheet
+      BorderWidth = 4
+      Caption = 'Fonts'
+      object TntGroupBox2: TTntGroupBox
+        Left = 0
+        Top = 0
+        Width = 418
+        Height = 81
+        Align = alTop
+        Caption = ' Subtitles list : '
+        TabOrder = 0
+        object EditSubListFont: TTntEdit
+          Left = 16
+          Top = 24
+          Width = 345
+          Height = 41
+          AutoSize = False
+          ReadOnly = True
+          TabOrder = 0
+          Text = 'ABCabc 123'
+        end
+        object bttSubListFont: TTntButton
+          Left = 368
+          Top = 24
+          Width = 33
+          Height = 25
+          Caption = '...'
+          TabOrder = 1
+          OnClick = bttSubListFontClick
+        end
+      end
+      object TntGroupBox3: TTntGroupBox
+        Left = 0
+        Top = 89
+        Width = 418
+        Height = 80
+        Caption = ' Subtitles text : '
+        TabOrder = 1
+        object EditSubTextFont: TTntEdit
+          Left = 16
+          Top = 24
+          Width = 345
+          Height = 41
+          AutoSize = False
+          ReadOnly = True
+          TabOrder = 0
+          Text = 'ABCabc 123'
+        end
+        object bttSubTextFont: TTntButton
+          Left = 368
+          Top = 24
+          Width = 33
+          Height = 25
+          Caption = '...'
+          TabOrder = 1
+          OnClick = bttSubTextFontClick
+        end
+      end
+    end
   end
-  object bttOk: TTntButton
-    Left = 200
-    Top = 280
-    Width = 75
-    Height = 25
-    Caption = 'Ok'
+  object Panel1: TPanel
+    Left = 0
+    Top = 324
+    Width = 434
+    Height = 41
+    Align = alBottom
+    BevelOuter = bvNone
     TabOrder = 1
-    OnClick = bttOkClick
+    object bttOk: TTntButton
+      Left = 278
+      Top = 16
+      Width = 75
+      Height = 25
+      Caption = 'Ok'
+      TabOrder = 0
+      OnClick = bttOkClick
+    end
+    object bttCancel: TTntButton
+      Left = 358
+      Top = 16
+      Width = 75
+      Height = 25
+      Caption = 'Cancel'
+      TabOrder = 1
+      OnClick = bttCancelClick
+    end
   end
-  object bttCancel: TTntButton
-    Left = 280
-    Top = 280
-    Width = 75
-    Height = 25
-    Caption = 'Cancel'
-    TabOrder = 2
-    OnClick = bttCancelClick
+  object FontDialog1: TFontDialog
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = []
+    Left = 4
+    Top = 336
   end
 end

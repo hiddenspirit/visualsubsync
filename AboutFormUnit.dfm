@@ -6,7 +6,7 @@ object AboutForm: TAboutForm
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'About...'
-  ClientHeight = 209
+  ClientHeight = 225
   ClientWidth = 345
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -78,7 +78,7 @@ object AboutForm: TAboutForm
   end
   object Bevel2: TBevel
     Left = 0
-    Top = 168
+    Top = 184
     Width = 345
     Height = 9
     Shape = bsBottomLine
@@ -125,9 +125,23 @@ object AboutForm: TAboutForm
     Font.Style = []
     ParentFont = False
   end
+  object TntLabel7: TTntLabel
+    Left = 8
+    Top = 168
+    Width = 273
+    Height = 14
+    AutoSize = False
+    Caption = '- JavaScript Bridge / SpiderMonkey JavaScript Engine'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
   object bttOk: TTntButton
     Left = 8
-    Top = 184
+    Top = 200
     Width = 329
     Height = 25
     Caption = 'Ok'

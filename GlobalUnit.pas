@@ -49,6 +49,7 @@ var
   // Synchronization object from application<->web server threads
   g_WebRWSynchro : TMultiReadExclusiveWriteSynchronizer;
   g_BackupDirectory : WideString;
+  g_PluginPath : WideString;
 
 implementation
 
@@ -75,6 +76,8 @@ initialization
   g_BackupDirectory := WideExtractFilePath(TntApplication.ExeName);
   g_BackupDirectory := WideIncludeTrailingBackslash(g_BackupDirectory) + 'Backup\';
   CheckBackupDirectory;
+  g_PluginPath := WideExtractFilePath(TntApplication.ExeName);
+  g_PluginPath := WideIncludeTrailingBackslash(g_PluginPath) + 'jsplugin\';
   
 finalization
   g_WebRWSynchro.Free;

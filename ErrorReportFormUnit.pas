@@ -33,9 +33,12 @@ type
 
 type
   TErrorTreeData = record
-    ErrorType : TErrorType;
     Range : TSubtitleRange;
-    Msg : string; // a context dependant msg (like the number of Char/s reached ...)
+    Color : TColor;
+    GlobalMsg : WideString;
+    ContextMsg : WideString; // a context dependant msg (like the number of Char/s reached ...)
+    Filename : WideString; // plugin filename
+    PluginName : WideString;
   end;
   PErrorTreeData = ^TErrorTreeData;
 
@@ -52,6 +55,9 @@ type
     miPreferences: TTntMenuItem;
     Clear1: TTntMenuItem;
     N2: TTntMenuItem;
+    pmiFixError: TTntMenuItem;
+    pmiFixAllXXX: TTntMenuItem;
+    pmiFixAllYYY: TTntMenuItem;
     procedure pmiClearClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure vtvErrorListDrawNode(Sender: TBaseVirtualTree;
@@ -60,6 +66,10 @@ type
     procedure vtvErrorListDblClick(Sender: TObject);
     procedure miCloseClick(Sender: TObject);
     procedure Clear1Click(Sender: TObject);
+    procedure pmiFixErrorClick(Sender: TObject);
+    procedure ErrorListPopupMenuPopup(Sender: TObject);
+    procedure pmiFixAllXXXClick(Sender: TObject);
+    procedure pmiFixAllYYYClick(Sender: TObject);
   private
     { Private declarations }
     BoldFont : HFONT;
@@ -69,7 +79,8 @@ type
     function CalculateNodeHeight : Integer;
   public
     { Public declarations }
-    procedure AddError(ErrorType : TErrorType; Range : TSubtitleRange; Msg : string);
+    procedure AddError(Range : TSubtitleRange; Color : TColor;
+      GlobalMsg, ContextMsg, Filename, PluginName : WideString);
     procedure Clear;
     procedure DeleteError(Range : TSubtitleRange);
   end;
@@ -84,7 +95,7 @@ const
 
 implementation
 
-uses Types, MiscToolsUnit, Main, PreferencesFormUnit;
+uses Types, MiscToolsUnit, Main, PreferencesFormUnit, CursorManager;
 
 {$R *.dfm}
 
@@ -175,11 +186,9 @@ var x, y : Integer;
     pErrorData : PErrorTreeData;
     OldBrush, CurrentBrush : HBRUSH;
     OldPen, CurrentPen : HPEN;
-    ErrorListElem : PErrorListElem;
 begin
   pErrorData := vtvErrorList.GetNodeData(PaintInfo.Node);
-  ErrorListElem := PreferencesForm.GetErrorListElem(Ord(pErrorData.ErrorType));  
-
+  
   vtvErrorList.Canvas.Lock;
   DC := PaintInfo.Canvas.Handle;
   OldColor := GetTextColor(DC);
@@ -187,7 +196,7 @@ begin
   x := NodeLeftMargin;
   y := NodeTopMargin;
 
-  if (PaintInfo.Node = vtvErrorList.FocusedNode) then
+  if (vtvErrorList.Selected[PaintInfo.Node]) then
     SetTextColor(DC, ColorToRGB(clHighlightText))
   else
     SetTextColor(DC, ColorToRGB(clWindowText));
@@ -195,20 +204,21 @@ begin
 
   OldFont := SelectObject(DC, BoldFont);
 
-  Msg := ErrorListElem.Msg;
-  if pErrorData.Msg <> '' then
-    Msg := Msg + ' (' + pErrorData.Msg +')';
+  Msg := pErrorData.GlobalMsg;
+  if pErrorData.ContextMsg <> '' then
+    Msg := Msg + ' (' + pErrorData.ContextMsg +')';
   GetTextExtentPoint32W(DC, PWideChar(Msg), Length(Msg), xysize);
   TextOutW(DC, x + xysize.cy + 2, y, PWideChar(Msg), Length(Msg));
 
   CurrentPen := CreatePen(PS_SOLID,1,0);
-  OldPen := SelectObject(DC,CurrentPen);
-  CurrentBrush := CreateSolidBrush(ColorToRGB(ErrorListElem.Color));
-  OldBrush := SelectObject(DC,CurrentBrush);
+  OldPen := SelectObject(DC, CurrentPen);
+
+  CurrentBrush := CreateSolidBrush(pErrorData.Color);
+  OldBrush := SelectObject(DC, CurrentBrush);
   Ellipse(DC, x, y+2, x+xysize.cy-4, y+xysize.cy-2);
-  SelectObject(DC,OldBrush);
+  SelectObject(DC, OldBrush);
   DeleteObject(CurrentBrush);
-  SelectObject(DC,OldPen);
+  SelectObject(DC, OldPen);
   DeleteObject(CurrentPen);
   y := Round(y + (xysize.cy * NodeInterline));
 
@@ -218,8 +228,11 @@ begin
   GetTextExtentPoint32W(DC, PWideChar(Msg), Length(Msg), xysize);
   y := Round(y + (xysize.cy * NodeInterline));
 
-  Msg := pErrorData.Range.Text;
+  Msg := StringConvertCRLFToPipe(pErrorData.Range.Text);
   TextOutW(DC, x, y, PWideChar(Msg), Length(Msg));
+
+  if (vtvErrorList.FocusedNode = PaintInfo.Node) then
+    DrawFocusRect(DC, PaintInfo.CellRect);
 
   SelectObject(DC, OldFont);
   SetTextColor(DC, OldColor);
@@ -238,15 +251,19 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TErrorReportForm.AddError(ErrorType : TErrorType; Range : TSubtitleRange; Msg : string);
+procedure TErrorReportForm.AddError(Range : TSubtitleRange; Color : TColor;
+  GlobalMsg, ContextMsg, Filename, PluginName : WideString);
 var Node : PVirtualNode;
     pError : PErrorTreeData;
 begin
   Node := vtvErrorList.AddChild(nil);
   pError := vtvErrorList.GetNodeData(Node);
-  pError.ErrorType := ErrorType;
+  pError.Color := Color;
   pError.Range := Range;
-  pError.Msg := Msg;
+  pError.GlobalMsg := GlobalMsg;
+  pError.ContextMsg := ContextMsg;
+  pError.Filename := Filename;
+  pError.PluginName := PluginName;
 end;
 
 //------------------------------------------------------------------------------
@@ -295,6 +312,108 @@ end;
 procedure TErrorReportForm.Clear1Click(Sender: TObject);
 begin
   Clear;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiFixErrorClick(Sender: TObject);
+var ErrorLst : TList;
+    Node : PVirtualNode;
+begin
+  ErrorLst := TList.Create;
+  Node := vtvErrorList.GetFirstSelected;
+  while Assigned(Node) do
+  begin
+    ErrorLst.Add(vtvErrorList.GetNodeData(Node));
+    Node := vtvErrorList.GetNextSelected(Node);
+  end;
+  MainForm.FixErrorInList(ErrorLst);
+  ErrorLst.Free;
+  vtvErrorList.Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.ErrorListPopupMenuPopup(Sender: TObject);
+var Node : PVirtualNode;
+    NodeData : PErrorTreeData;
+    pmiFixErrorEnabled : Boolean;
+begin
+  pmiFixErrorEnabled := False;
+  Node := vtvErrorList.GetFirstSelected;
+  while Assigned(Node) and (not pmiFixErrorEnabled) do
+  begin
+    NodeData := vtvErrorList.GetNodeData(Node);
+    pmiFixErrorEnabled := pmiFixErrorEnabled or MainForm.CanFixError(NodeData.Filename);
+    Node := vtvErrorList.GetNextSelected(Node);
+  end;
+  pmiFixError.Enabled := pmiFixErrorEnabled;
+
+  pmiFixAllXXX.Enabled := False;
+  pmiFixAllYYY.Enabled := False;
+  if pmiFixErrorEnabled and (vtvErrorList.SelectedCount = 1) then
+  begin
+    pmiFixAllXXX.Enabled := True;
+    NodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    pmiFixAllYYY.Enabled := (NodeData.ContextMsg <> '');
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiFixAllXXXClick(Sender: TObject);
+var ErrorLst : TList;
+    Node : PVirtualNode;
+    FocusedNodeData, NodeData : PErrorTreeData;
+    CM : ICursorManager;
+begin
+  CM := TCursorManager.Create(crHourGlass);
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    FocusedNodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    ErrorLst := TList.Create;
+    Node := vtvErrorList.GetFirst;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvErrorList.GetNodeData(Node);
+      if (NodeData.PluginName = FocusedNodeData.PluginName) then
+        ErrorLst.Add(NodeData);
+      Node := vtvErrorList.GetNext(Node);
+    end;
+    MainForm.FixErrorInList(ErrorLst);
+    ErrorLst.Free;
+    vtvErrorList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiFixAllYYYClick(Sender: TObject);
+var ErrorLst : TList;
+    Node : PVirtualNode;
+    FocusedNodeData, NodeData : PErrorTreeData;
+    CM : ICursorManager;
+begin
+  CM := TCursorManager.Create(crHourGlass);
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    FocusedNodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    ErrorLst := TList.Create;
+    Node := vtvErrorList.GetFirst;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvErrorList.GetNodeData(Node);
+      if (NodeData.PluginName = FocusedNodeData.PluginName) and
+         (NodeData.ContextMsg = FocusedNodeData.ContextMsg) then
+      begin
+        ErrorLst.Add(NodeData);
+      end;
+      Node := vtvErrorList.GetNext(Node);
+    end;
+    MainForm.FixErrorInList(ErrorLst);
+    ErrorLst.Free;
+    vtvErrorList.Repaint;
+  end;
 end;
 
 //------------------------------------------------------------------------------
