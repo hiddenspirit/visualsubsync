@@ -52,7 +52,7 @@ var
 
 implementation
 
-uses TntSysUtils;
+uses TntSysUtils, TntForms;
 
 function TGlobalContext.GetFieldValue(Name : string) : string;
 begin
@@ -72,8 +72,8 @@ initialization
   g_ApplicationVersion := TFileVersion.Create(Application.ExeName);
   g_GlobalContext := TGlobalContext.Create;
   g_WebRWSynchro := TMultiReadExclusiveWriteSynchronizer.Create;
-  // FIX unicode : Application.ExeName
-  g_BackupDirectory := WideIncludeTrailingBackslash(WideExtractFilePath(Application.ExeName)) + 'Backup\';
+  g_BackupDirectory := WideExtractFilePath(TntApplication.ExeName);
+  g_BackupDirectory := WideIncludeTrailingBackslash(g_BackupDirectory) + 'Backup\';
   CheckBackupDirectory;
   
 finalization

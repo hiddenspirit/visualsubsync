@@ -29,7 +29,7 @@ uses
   MiniScrollBarUnit, VirtualTrees, MiscToolsUnit, TntStdCtrls, TntMenus,
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
-  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons;
+  PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms;
 
 type
   TTreeData = record
@@ -39,7 +39,7 @@ type
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
 
-  TMainForm = class(TForm)
+  TMainForm = class(TTntForm)
     TntMainMenu1: TTntMainMenu;
     MenuItemFile: TTntMenuItem;
     MenuItemNewProject: TTntMenuItem;
@@ -403,7 +403,7 @@ implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
-  Types, ShellApi, VerticalScalingFormUnit, TntSysUtils;
+  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows;
 
 {$R *.dfm}
 
@@ -420,8 +420,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : When in ErroForm and click in MemoSubtitleText it go to 1,1
 // TODO : Replace dialog
 // TODO : Check HD space before extraction
-
-// TODO : When saving add an option to create .bak file
 
 // TODO : Rework project handling which is a bit messy ATM
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
@@ -669,10 +667,10 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnRecentMenuItemClick(Sender : TObject);
-var MenuItem : TMenuItem;
+var MenuItem : TTntMenuItem;
 begin
-  // FIXME : unicode filename
-  MenuItem := Sender as TMenuItem;
+  // TODO : Fix MRU for unicode
+  MenuItem := Sender as TTntMenuItem;
   LoadProject(MenuItem.Caption);
 end;
 
@@ -872,11 +870,11 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.CurrentProjectOnDirtyChange(Sender : TObject);
-var s : string;
+var s : WideString;
 begin
   if CurrentProject.IsDirty then s := '*' else s := '';
   Self.Caption := ApplicationName + ' - ' +
-    ExtractFileName(CurrentProject.Filename) + s;
+    WideExtractFileName(CurrentProject.Filename) + s;
   ActionSave.Enabled := CurrentProject.IsDirty;
 end;
 
@@ -928,6 +926,8 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+// TODO : unicode filename
 
 procedure TMainForm.LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
 var
@@ -1174,7 +1174,7 @@ begin
     WideCopyFile(Filename, BackupDstFilename, False);
   end;
 
-  // FIX unicode : Filename
+  // TODO : FIX unicode Filename
   FS := TFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
@@ -2287,7 +2287,7 @@ end;
 procedure TMainForm.ApplyAutoBackupSettings;
 begin
   TimerAutoBackup.Enabled := False;
-  TimerAutoBackup.Interval := ConfigObject.AutoBackupEvery * 60 * 100;
+  TimerAutoBackup.Interval := ConfigObject.AutoBackupEvery * 60 * 1000;
   TimerAutoBackup.Enabled := (ConfigObject.AutoBackupEvery > 0);  
 end;
 
@@ -2350,24 +2350,24 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.MenuItemHelpIndexClick(Sender: TObject);
-var HelpFilename : string;
+var HelpFilename : WideString;
 begin
-  HelpFilename := ExtractFilePath(Application.ExeName);
-  HelpFilename := IncludeTrailingPathDelimiter(HelpFilename);
+  HelpFilename := WideExtractFilePath(TntApplication.ExeName);
+  HelpFilename := WideIncludeTrailingBackslash(HelpFilename);
   HelpFilename := HelpFilename + 'help\index.html';
-  ShellExecute(0, 'open', PAnsiChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
+  Tnt_ShellExecuteW(0, 'open', PWideChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.MenuItemHelpIndexWAVDisplayControlClick(
   Sender: TObject);
-var HelpFilename : string;
+var HelpFilename : WideString;
 begin
-  HelpFilename := ExtractFilePath(Application.ExeName);
-  HelpFilename := IncludeTrailingPathDelimiter(HelpFilename);
+  HelpFilename := WideExtractFilePath(TntApplication.ExeName);
+  HelpFilename := WideIncludeTrailingBackslash(HelpFilename);
   HelpFilename := HelpFilename + 'help\wavdisplaycontrol.html';
-  ShellExecute(0, 'open', PAnsiChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
+  Tnt_ShellExecuteW(0, 'open', PWideChar(HelpFilename), nil, nil, SW_SHOWNORMAL);
 end;
 
 //------------------------------------------------------------------------------

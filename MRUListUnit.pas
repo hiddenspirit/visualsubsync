@@ -19,6 +19,8 @@
 //  http://www.gnu.org/copyleft/gpl.html
 // -----------------------------------------------------------------------------
 
+// TODO : unicode friendly
+
 unit MRUListUnit;
 
 interface
