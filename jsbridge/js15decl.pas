@@ -925,11 +925,14 @@ function JSReportIsStrict(Report: PJSErrorReport): Boolean;
 
 implementation
 
-{$IFDEF LINUX}uses Math, SysUtils;{$ENDIF}
+uses {$IFDEF LINUX}Math, SysUtils,{$ENDIF} Classes;
 
 const
   JSCLASS_RESERVED_SLOTS_SHIFT  : Cardinal = 8;
   JSCLASS_RESERVED_SLOTS_MASK   : Cardinal = 255;
+
+var
+  PtrList: TList;
 
 function JSStringToString(str: PJSString): TBridgeString;
 begin
@@ -1059,32 +1062,29 @@ begin
 end;
 
 {$IFDEF D6OR7}
-function CreateAnsiString(const Text: String): PChar; overload;
-var
-  Size: Integer;
-begin
-  Size := Length(Text)+1;
-  Result := StrMove(StrAlloc(Size), PChar(Text), Size);
-  //AddPtr(@Result);
-end;
+  function CreateAnsiString(const Text: String): PChar; overload;
+  var
+    Size: Integer;
+  begin
+    Size := Length(Text)+1;
+    Result := StrMove(StrAlloc(Size), PChar(Text), Size);
+    PtrList.Add(Result);
+  end;
 
-function CreateAnsiString(const Text: WideString): PChar; overload;
-begin
-  Result := PChar(WideCharToString(PWideChar(Text)));
-  //AddPtr(@Result);
-end;
+  function CreateAnsiString(const Text: WideString): PChar; overload;
+  begin
+    Result := PChar(WideCharToString(PWideChar(Text)));
+  end;
 
-function CreateWideString(const Text: String): PWideChar; overload;
-begin
-  Result := StringToOleStr(Text);
-  //AddPtr(@Result);
-end;
+  function CreateWideString(const Text: String): PWideChar; overload;
+  begin
+    Result := StringToOleStr(Text);
+  end;
 
-function CreateWideString(const Text: WideString): PWideChar; overload;
-begin
-  Result := PWideChar(Copy(Text, 1, Length(Text)));
-  //AddPtr(@Result);
-end;
+  function CreateWideString(const Text: WideString): PWideChar; overload;
+  begin
+    Result := PWideChar(Copy(Text, 1, Length(Text)));
+  end;
 {$ELSE}
   {$IFNDEF JSUnicode}
     function CreateAnsiString(const Text: String): PChar; overload;
@@ -1093,25 +1093,22 @@ end;
     begin
       Size := Length(Text)+1;
       Result := StrMove(StrAlloc(Size), PChar(Text), Size);
-      //AddPtr(@Result);
+      PtrList.Add(Result);
     end;
 
     function CreateWideString(const Text: String): PWideChar; overload;
     begin
       Result := StringToOleStr(Text);
-      //AddPtr(@Result);
     end;
   {$ELSE}
     function CreateAnsiString(const Text: WideString): PChar; overload;
     begin
       Result := PChar(WideCharToString(PWideChar(Text)));
-      //AddPtr(@Result);
     end;
 
     function CreateWideString(const Text: WideString): PWideChar; overload;
     begin
       Result := PWideChar(Copy(Text, 1, Length(Text)));
-      //AddPtr(@Result);
     end;
   {$ENDIF}
 {$ENDIF}
@@ -1139,14 +1136,19 @@ end;
 {$IFDEF LINUX}
 initialization
   SetExceptionMask(GetExceptionMask+[exInvalidOp]);
-  //InitPtrList;
+  PtrList := TList.Create;
 {$ELSE}
-//initialization
-//  InitPtrList;
+initialization
+  PtrList := TList.Create;
 {$ENDIF}
 
-//finalization
-//  DeletePtrs;
+finalization
+  while (PtrList.Count > 0) do
+  begin
+    StrDispose(PtrList[0]);
+    PtrList.Delete(0);
+  end;
+  PtrList.Free;
 
 end.
 

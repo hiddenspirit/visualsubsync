@@ -416,7 +416,7 @@ begin
       end
       else
         Dispose(pPluginParam);
-      FreeAndNil(ParamObject); // subject to change
+      //FreeAndNil(ParamObject);
     end;
   end;
   SetLength(ListEnum, 0);
@@ -452,9 +452,7 @@ begin
         ParamObject.SetProperty('Value', val);
       end;
     end;
-    // XXX : if we free this, the 'Value' property doesn't exist anymore
-    // on the javascript object
-    // FreeAndNil(ParamObject);
+    //FreeAndNil(ParamObject);
   end;
 end;
 

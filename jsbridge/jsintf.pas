@@ -193,6 +193,7 @@ type
     procedure DeleteClasses;
     procedure DeletePtrs;
     procedure DeleteVarList;
+    function HasVar(Obj: TJSBase): Boolean;
     function InternalExecute(Script: PJSScript): Boolean; overload;
     function InternalExecute(Script: PJSScript; Scope: TJSObject): Boolean; overload;
     procedure GetStandardClasses;
@@ -483,6 +484,21 @@ type
     function Call(var bool: Boolean): Boolean; overload;
   end;
 
+  TJSClass = class(TJSBase)
+  private
+    FArgCount: Integer;
+    FClass: TClass;
+    FJSClass: JSClass;
+    FParamTypes: Array of TNativeParam;
+  protected
+    procedure InternalConnect; override;
+  public
+    constructor Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass); overload;
+    constructor Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass; ArgCount: Integer); overload;
+    constructor Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass; ArgCount: Integer; ParamTypes: Array of TNativeParam); overload;
+    destructor Destroy; override;
+  end;
+
   TJSScript = class
   private
     FCode: TBridgeString;
@@ -636,6 +652,8 @@ end;
 
 procedure TJSEngine.AddVar(Obj: TJSBase);
 begin
+  if (HasVar(Obj)) then
+    exit;
   if (FVarCount >= Length(FVarList)) then
     GrowVarList;
   FVarList[FVarCount] := Obj;
@@ -810,6 +828,19 @@ end;
 procedure TJSEngine.GrowVarList;
 begin
   SetLength(FVarList, Length(FVarList)+16);
+end;
+
+function TJSEngine.HasVar(Obj: TJSBase): Boolean;
+var
+  i: Integer;
+begin
+  Result := false;
+  for i := 0 to Length(FVarList)-1 do
+    if (FVarList[i] = Obj) then
+    begin
+      Result := true;
+      exit;
+    end;
 end;
 
 function TJSEngine.InternalCall(const func: PJSFunction; obj: PJSObject; var args: Array of TJSBase; rval: pjsval): Boolean;
@@ -1106,7 +1137,10 @@ procedure TJSBase.SetConnected;
 begin
   FConnected := (FEngine <> nil);
   if (FConnected) then
+  begin
+    FEngine.AddVar(Self);
     InternalConnect;
+  end;
 end;
 
 procedure TJSBase.SetEngine(const Value: TJSEngine);
@@ -3091,6 +3125,35 @@ end;
 procedure TJSDebugger.StopStepping;
 begin
   FStep := false;
+end;
+
+{ TJSClass }
+
+constructor TJSClass.Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass);
+begin
+
+end;
+
+constructor TJSClass.Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass; ArgCount: Integer);
+begin
+
+end;
+
+constructor TJSClass.Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass; ArgCount: Integer; ParamTypes: array of TNativeParam);
+begin
+
+end;
+
+destructor TJSClass.Destroy;
+begin
+
+  inherited;
+end;
+
+procedure TJSClass.InternalConnect;
+begin
+  inherited;
+
 end;
 
 end.

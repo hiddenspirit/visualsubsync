@@ -99,7 +99,6 @@ type
   PInteger = ^Integer;
 
 function  GetParamName(cx: PJSContext; id: jsval): TBridgeString;
-//function GetDelphiObject(cx: PJSContext; obj: PJSObject): TObject;
 
 implementation
 
