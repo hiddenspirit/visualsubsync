@@ -4,7 +4,8 @@
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too long display time',
-  Description : 'An error is detected when the number of Char/s is strictly inferior to the specified value.',
+  Description : 'An error is detected when the number of Char/s is strictly '+
+  	'inferior to the specified value.',
   Color : 0x3787FF, 
   Message : 'Subtitle display time is too long :',
 

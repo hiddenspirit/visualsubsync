@@ -1,12 +1,16 @@
 // Too long line
 // (christophe.paris <at> free.fr)
+//
+// Limitation : Works only on 2 lines, ignore dialogs
 
 var DebugMode = false;
 
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too long line',
-  Description : 'An error is detected when the line length in a subtitle is strictly superior to the specified value.',
+  Description : 'An error is detected when the line length in a subtitle is '+
+  	'strictly superior to the specified value. The "smart" line splitter will '+
+  	'try to break the line in 2 according to this limitation.',
   Color : 0xFFFF37, 
   Message : 'Subtitle has a too long line :',
 
@@ -57,14 +61,14 @@ VSSPlugin = {
     // Check if length is already ok
     if(TextWOLFLen <= this.ParamMaxPerLine.Value) {
 	    if(DebugMode)
-      	ScriptLog('Length already ok, exiting.');    	
+      	ScriptLog('Length already ok, exiting.');
       return;
     }
     
     // We works only on 2 lines max
     if(TextWOLFLen > this.ParamMaxPerLine.Value*2) {
 	    if(DebugMode)
-      	ScriptLog('Text exceed 2 line, exiting.');
+      	ScriptLog('Text exceed 2 lines, exiting.');
       return;
     }
         
@@ -91,10 +95,21 @@ VSSPlugin = {
 			SumFromEndArray[i] = (TextWOLFLen - SumFromStart - 1);
   	}
   	
+  	if(DebugMode) {
+  		DebugMsg = '';
+  		for(i=0; i < WordArrayLen; i++)
+  			DebugMsg += SumFromStartArray[i] + ' ';  			
+			ScriptLog(DebugMsg);
+			DebugMsg = '';
+  		for(i=0; i < WordArrayLen; i++)
+  			DebugMsg += SumFromEndArray[i] + ' ';  			
+			ScriptLog(DebugMsg);
+  	}
+  	
   	var CutList = new Array();
   	var j = 0;
   	
-  	// 1st pass, try to break on ".", "?", or "!"  	
+  	// 1st pass, try to break on ".", "?", or "!"
   	var RegExpEndWithL1 = /[.|?|!]$/;
   	for(i=0; i < WordArrayLen; i++)
   	{
@@ -108,7 +123,7 @@ VSSPlugin = {
   		}
   	}
   	  	
-  	// 2nd pass, try to break on "..." or ";"  	
+  	// 2nd pass, try to break on "..." or ";"
   	var RegExpEndWithL2 = /[...|;]$/;
   	for(i=0; i < WordArrayLen; i++)
   	{
@@ -122,7 +137,7 @@ VSSPlugin = {
   		}
   	}
   	
-  	// 3rd pass, try to break on ","  	
+  	// 3rd pass, try to break on ","
   	var RegExpEndWithL3 = /[,]$/;
   	for(i=0; i < WordArrayLen; i++)
   	{
@@ -205,7 +220,7 @@ VSSPlugin = {
   			ScriptLog('<'+NewText+'>');
   		CurrentSub.Text = NewText;
   	} 	
-  	
+  	  	
   	if(DebugMode)
 			ScriptLog('<===== too_long_lines.js : Leaving FixError.');
   }
