@@ -944,13 +944,14 @@ var
   BOM : array[0..3] of BYTE;
   i : integer;
   Start, Stop : Integer;
-  NextStart, NextStop : Integer;  
+  NextStart, NextStop : Integer;
   Text : string;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
   FS : TFileStream;
   EndOfFile : Boolean;
+  AutoCorrectedFile : Boolean;
 begin
   if not FileExists(Filename) then
   begin
@@ -980,6 +981,7 @@ begin
     FS.Seek(0,soFromBeginning);
   end;
 
+  AutoCorrectedFile := False;
   // Skip lines until a timestamps line
   repeat
     EndOfFile := ReadLineStream(FS, S);
@@ -1006,6 +1008,11 @@ begin
         Delete(Text,i,MaxInt);
         Text := Trim(Text);
       end;
+      if (not EndOfFile) and (Stop = NextStart) then
+      begin
+        AutoCorrectedFile := True;
+        Dec(Stop);
+      end;
       NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
       if IsUTF8 then
         TSubtitleRange(NewRange).Text := UTF8Decode(Text)
@@ -1031,6 +1038,8 @@ begin
   end;
   vtvSubsList.EndUpdate;
   WAVDisplayer.UpdateView([uvfRange]);
+  if AutoCorrectedFile then
+    CurrentProject.IsDirty := True;
   g_WebRWSynchro.EndWrite;
 end;
 
@@ -2631,7 +2640,8 @@ begin
   vtvSubsList.Selected[NewNode] := True;
   vtvSubsList.Repaint;
 
-  WAVDisplayer.SelectedRange := NewRange;
+  if (WAVDisplayer.SelMode = smCoolEdit) then
+    WAVDisplayer.SelectedRange := NewRange;
 
   MemoSubtitleText.SetFocus;
   CurrentProject.IsDirty := True;
