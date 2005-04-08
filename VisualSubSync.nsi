@@ -3,7 +3,7 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.7"
+!define VERSION "0.8"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
@@ -18,6 +18,8 @@
 !define FILE_WEB4 "style.css"
 !define FILE_WEB5 "details.css"
 !define FILE_WEB6 "script.js"
+!define FILE_WEB7 "index_wav.shtml"
+!define FILE_WEB8 "index_wav_export.shtml"
 
 !define DIR_HELP "help\"
 !define FILES_HELP1 "*.html"
@@ -97,6 +99,8 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB4}"
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB5}"
   File "${INPUT_PATH}${DIR_WEB}${FILE_WEB6}"
+  File "${INPUT_PATH}${DIR_WEB}${FILE_WEB7}"
+  File "${INPUT_PATH}${DIR_WEB}${FILE_WEB8}"
 
 	; Help files
   SetOutPath "$INSTDIR\${DIR_HELP}"
@@ -160,7 +164,9 @@ Section "Uninstall"
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB3}"
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB4}"
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB5}"
-  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB6}"  
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB6}"
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB7}"
+  Delete "$INSTDIR\${DIR_WEB}${FILE_WEB8}"
   RMDir "$INSTDIR\${DIR_WEB}"
   
 	; Delete whole help directory
