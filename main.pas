@@ -268,6 +268,7 @@ type
     ActionPlaySelEnd: TTntAction;
     Playselectionstart1: TTntMenuItem;
     Playselectionend1: TTntMenuItem;
+    ActionPlaceKaraokeCursorsAtEnd: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -390,6 +391,7 @@ type
     procedure ActionExportToWAVExecute(Sender: TObject);
     procedure ActionPlaySelStartExecute(Sender: TObject);
     procedure ActionPlaySelEndExecute(Sender: TObject);
+    procedure ActionPlaceKaraokeCursorsAtEndExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -797,6 +799,8 @@ begin
   ActionLoop.Enabled := Enable;
   ActionNextSub.Enabled := Enable;
   ActionPreviousSub.Enabled := Enable;
+  ActionPlaySelStart.Enabled := Enable;
+  ActionPlaySelEnd.Enabled := Enable;
 
   ActionZoomIn.Enabled := Enable;
   ActionZoomOut.Enabled := Enable;
@@ -1247,7 +1251,10 @@ begin
     begin
       WAVDisplayer.UpdateView([uvfRange]);
     end;
-    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+
+    if (EnableExperimentalKaraoke = True) then
+      TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+
   end;
   UpdateLinesCounter;
 end;
@@ -2197,6 +2204,13 @@ end;
 procedure TMainForm.ActionNextSubExecute(Sender: TObject);
 var CurrentNode, NextNode : PVirtualNode;
 begin
+  if Assigned(WAVDisplayer.KaraokeSelectedRange) then
+  begin
+    WAVDisplayer.SelectNextKaraoke;
+    ActionPlay.Execute;
+    Exit;
+  end;
+
   if Assigned(vtvSubsList.FocusedNode) then
     CurrentNode := vtvSubsList.FocusedNode
   else
@@ -2219,6 +2233,13 @@ end;
 procedure TMainForm.ActionPreviousSubExecute(Sender: TObject);
 var CurrentNode, PreviousNode : PVirtualNode;
 begin
+  if Assigned(WAVDisplayer.KaraokeSelectedRange) then
+  begin
+    WAVDisplayer.SelectPreviousKaraoke;
+    ActionPlay.Execute;
+    Exit;
+  end;
+
   if Assigned(vtvSubsList.FocusedNode) then
     CurrentNode := vtvSubsList.FocusedNode
   else
@@ -2878,15 +2899,58 @@ end;
 
 procedure TMainForm.OffsetCurrentSubtitleStartTime(Offset : Integer);
 var NodeData : PTreeData;
+    R : TRange;
+    NewSubTime, bStart, bStop : Integer;
+    Idx : Integer;
 begin
+  if Assigned(WAVDisplayer.KaraokeSelectedRange) then
+  begin
+    R := WAVDisplayer.KaraokeSelectedRange;
+    Idx := (WAVDisplayer.KaraokeSelectedIndex - 1);
+    if (Idx > 0) then
+    begin
+      // Calcul bounds
+      if (Idx = 0) then
+        bStart := R.StartTime + 10
+      else
+        bStart := R.SubTime[Idx-1] + 10;
+
+      if (Idx < Length(R.SubTime)-1) then
+        bStop := R.SubTime[Idx+1] - 10
+      else
+        bStop := R.StopTime - 10;
+
+      R.SubTime[Idx] := R.SubTime[Idx] + Offset;
+      Constrain(R.SubTime[Idx], bStart, bStop);
+      WAVDisplayer.Selection.StartTime := R.SubTime[Idx];
+      WAVDisplayer.UpdateView([uvfRange]);
+      WAVDisplayer1KaraokeChanged(WAVDisplayer,R);
+      WAVDisplayer1SelectionChange(WAVDisplayer);
+      Exit;
+    end;
+  end;
+  
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    g_WebRWSynchro.BeginWrite;
-    NodeData.Range.StartTime := NodeData.Range.StartTime + Offset;
-    g_WebRWSynchro.EndWrite;
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+    if(NodeData.Range.StartTime + Offset < NodeData.Range.StopTime) then
+    begin
+      g_WebRWSynchro.BeginWrite;
+      NodeData.Range.StartTime := NodeData.Range.StartTime + Offset;
+      g_WebRWSynchro.EndWrite;
+      if (WAVDisplayer.SelectedRange = NodeData.Range) or
+         Assigned(WAVDisplayer.KaraokeSelectedRange) then
+      begin
+        WAVDisplayer.Selection.StartTime := NodeData.Range.StartTime;
+        WAVDisplayer1SelectionChange(WAVDisplayer);
+      end;
+      WAVDisplayer.UpdateView([uvfRange]);
+      vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+      if (Length(NodeData.Range.SubTime) > 0) then
+      begin
+        WAVDisplayer1KaraokeChanged(WAVDisplayer, NodeData.Range);
+      end;
+    end;
   end;
 end;
 
@@ -2894,15 +2958,58 @@ end;
 
 procedure TMainForm.OffsetCurrentSubtitleStopTime(Offset : Integer);
 var NodeData : PTreeData;
+    R : TRange;
+    NewSubTime, bStart, bStop : Integer;
+    Idx : Integer;
 begin
+  if Assigned(WAVDisplayer.KaraokeSelectedRange) then
+  begin
+    R := WAVDisplayer.KaraokeSelectedRange;
+    Idx := WAVDisplayer.KaraokeSelectedIndex;
+    if (Idx < Length(R.SubTime)) then
+    begin
+      // Calcul bounds
+      if (Idx = 0) then
+        bStart := R.StartTime + 10
+      else
+        bStart := R.SubTime[Idx-1] + 10;
+
+      if (Idx < Length(R.SubTime)-1) then
+        bStop := R.SubTime[Idx+1] - 10
+      else
+        bStop := R.StopTime - 10;
+
+      R.SubTime[Idx] := R.SubTime[Idx] + Offset;
+      Constrain(R.SubTime[Idx], bStart, bStop);
+      WAVDisplayer.Selection.StopTime := R.SubTime[Idx];
+      WAVDisplayer.UpdateView([uvfRange]);
+      WAVDisplayer1KaraokeChanged(WAVDisplayer,R);
+      WAVDisplayer1SelectionChange(WAVDisplayer);
+      Exit;
+    end;
+  end;
+  
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    g_WebRWSynchro.BeginWrite;
-    NodeData.Range.StopTime := NodeData.Range.StopTime + Offset;
-    g_WebRWSynchro.EndWrite;
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+    if(NodeData.Range.StopTime + Offset > NodeData.Range.StartTime) then
+    begin
+      g_WebRWSynchro.BeginWrite;
+      NodeData.Range.StopTime := NodeData.Range.StopTime + Offset;
+      g_WebRWSynchro.EndWrite;
+      if (WAVDisplayer.SelectedRange = NodeData.Range) or
+         Assigned(WAVDisplayer.KaraokeSelectedRange) then
+      begin
+        WAVDisplayer.Selection.StopTime := NodeData.Range.StopTime;
+        WAVDisplayer1SelectionChange(WAVDisplayer);
+      end;
+      WAVDisplayer.UpdateView([uvfRange]);
+      vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
+      if (Length(NodeData.Range.SubTime) > 0) then
+      begin
+        WAVDisplayer1KaraokeChanged(WAVDisplayer, NodeData.Range);
+      end;
+    end;
   end;
 end;
 
@@ -3333,7 +3440,7 @@ begin
     MemoSubtitleText.Tag := 0;
     MemoSubtitleText.Text := NodeData.Range.Text;
     MemoSubtitleText.Tag := 1;
-    if (WAVDisplayer.KaraokeSekectedRange = NodeData.Range) then
+    if (WAVDisplayer.KaraokeSelectedRange = NodeData.Range) then
       TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex)
     else
       TagHighlight(MemoSubtitleText, -1);
@@ -3528,12 +3635,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-// TODO : auto clear karaoke timing that are out of subtitle bound ???
-// TODO : update documentation (timing button)
-// TODO : inc/dec start/stop time for karaoke time
-
-//------------------------------------------------------------------------------
-
 // Split on white space and on '/' that is used to separate sylables
 procedure WhiteSpaceSplit(Text : WideString; var WordArray : WideStringArray);
 var i, j : Integer;
@@ -3545,7 +3646,7 @@ begin
     if (Text[i] = ' ') or (Text[i] = #10) or (Text[i] = '/') then
     begin
       SetLength(WordArray, Length(WordArray)+1);
-      WordArray[Length(WordArray)-1] := StringReplace(
+      WordArray[Length(WordArray)-1] := WideStringReplace(
         Copy(Text, j, i-j+1),
         '/',
         '',
@@ -3603,7 +3704,7 @@ begin
         total := total + j;
         if (i < Length(WordArray)-1) then
           NodeData.Range.AddSubTime(NodeData.Range.StartTime + (total*10));
-        s := s + Format('{\k%d}%s', [j, WordArray[i]]);
+        s := s + WideFormat('{\k%d}%s', [j, WordArray[i]]);
       end;
     end;
 
@@ -3887,6 +3988,36 @@ begin
       WAVDisplayer.Selection.StopTime);
   end;
 end;
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPlaceKaraokeCursorsAtEndExecute(Sender: TObject);
+var NodeData: PTreeData;
+    NeedUpdate : Boolean;
+    i, s, t : Integer;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    t := 100;
+    s := NodeData.Range.StopTime - (Length(NodeData.Range.SubTime) * t);
+    if (s > NodeData.Range.StartTime) then
+    begin
+      g_WebRWSynchro.BeginWrite;
+      for i:=0 to Length(NodeData.Range.SubTime)-1 do
+      begin
+        NodeData.Range.SubTime[i] := s + (t * i);
+      end;
+      g_WebRWSynchro.EndWrite;
+      WAVDisplayer.UpdateView([uvfRange]);
+      WAVDisplayer1KaraokeChanged(nil, NodeData.Range);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+// TODO : auto clear karaoke timing that are out of subtitle bound ???
+// TODO : update documentation (timing button)
 
 //------------------------------------------------------------------------------
 end.
