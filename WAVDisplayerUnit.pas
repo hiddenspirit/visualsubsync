@@ -121,6 +121,7 @@ type
 
   TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
+  TSubtitleChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
 
   TWAVDisplayer = class(TCustomPanel)
   private
@@ -160,6 +161,7 @@ type
     FOnViewChange : TNotifyEvent;
     FOnSelectedRange : TNotifyEvent;
     FOnSelectedRangeChange : TNotifyEvent;
+    FOnSelectedRangeChanged : TNotifyEvent;
     FOnPeakFileCreation : TPeakFileCreationEvent;
     FOnAutoScrollChange : TNotifyEvent;
     FOnStartPlaying : TNotifyEvent;
@@ -167,6 +169,7 @@ type
     FOnKaraokeChange : TNotifyEvent;
     FOnKaraokeChanged : TKaraokeTimeChangedEvent;
     FOnSelectedKaraokeRange : TSelectedKaraokeRangeEvent;
+
 
     FRenderer : TRenderer;
     FUpdateCursorTimer : TTimer;
@@ -261,11 +264,15 @@ type
     procedure ClearSelection;
     function GetWAVAverageBytePerSecond : Integer;
 
+    procedure SelectNextKaraoke;
+    procedure SelectPreviousKaraoke;
+    procedure SelecteKaraoke(Range : TRange; Index : Integer);
+
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
     property KaraokeSelectedIndex : Integer read FSelectedKaraokeIndex;
-    property KaraokeSekectedRange : TRange read FSelectedKaraokeRange; 
+    property KaraokeSelectedRange : TRange read FSelectedKaraokeRange;
 
   published
     { Published declarations }
@@ -317,7 +324,7 @@ procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
-  s : string;
+  s : WideString;
 begin
   SetLength(WordArray, 0);
   SetLength(TimeArray, 0);
@@ -357,12 +364,14 @@ begin
   end;
 end;
 
+// ------
+
 // include tag in text
 procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
-  s : string;
+  s : WideString;
 begin
   SetLength(WordArray, 0);
   SetLength(TimeArray, 0);
@@ -402,11 +411,13 @@ begin
   end;
 end;
 
+// ------
+
 // just separate tag from text
 procedure KaraSplit3(Text : WideString; var WordArray : WideStringArray);
 var
   i, i1, i2 : integer;
-  s : string;
+  s : WideString;
 begin
   SetLength(WordArray, 0);
   s := Text;
@@ -1898,13 +1909,34 @@ begin
   begin
     FRangeList.FullSort; // TODO : re-sort only selected sub
     FNeedToSortSelectedSub := False;
+    if Assigned(FOnSelectedRangeChanged) and
+       Assigned(FSelectedRange) then
+    begin
+      FOnSelectedRangeChanged(Self);
+    end;
+    if Assigned(FOnKaraokeChanged) and
+       Assigned(FSelectedRange) and
+       (System.Length(FSelectedRange.SubTime) > 0) then
+    begin
+      FOnKaraokeChanged(Self, FSelectedRange);
+    end;
   end;
 
     // TODO : auto clear karoke timing that are out of subtitle bound ???
 
-  if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
+  if (FDynamicEditMode = demKaraoke) and
+     Assigned(FDynamicSelRange) and
+     Assigned(FOnKaraokeChanged) then
   begin
     FOnKaraokeChanged(Self, FDynamicSelRange);
+  end;
+
+  if ((FDynamicEditMode = demStart) or
+      (FDynamicEditMode = demStop)) and
+     Assigned(FDynamicSelRange) and
+     Assigned(FOnSelectedRangeChanged) then
+  begin
+    FOnSelectedRangeChanged(Self);
   end;
 
 
@@ -2789,6 +2821,79 @@ begin
   inherited DoContextPopup(MousePos, Handled);
   // Because R_Click was used for other duties
   Handled := Handled or ((FSelMode = smSSA) and (GetKeyState(VK_SHIFT) >= 0));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SelectNextKaraoke;
+var Idx : Integer;
+    Range : TRange;
+begin
+  if Assigned(KaraokeSelectedRange) then
+  begin
+    if (KaraokeSelectedIndex < System.Length(KaraokeSelectedRange.SubTime)) then
+    begin
+      SelecteKaraoke(FSelectedKaraokeRange, FSelectedKaraokeIndex + 1);
+    end
+    else
+    begin
+      // Go to next sub and select karaokeindex 0
+      Idx := FRangeList.IndexOf(FSelectedKaraokeRange) + 1;
+      if (Idx < FRangeList.Count) then
+      begin
+        Range := FRangeList[Idx];
+        if (System.Length(Range.SubTime) > 0) then
+        begin
+          SelecteKaraoke(Range, 0);
+        end;
+      end;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SelectPreviousKaraoke;
+var Idx : Integer;
+    Range : TRange;
+begin
+  if Assigned(FSelectedKaraokeRange) then
+  begin
+    if (KaraokeSelectedIndex > 0) then
+    begin
+      SelecteKaraoke(FSelectedKaraokeRange, FSelectedKaraokeIndex - 1);
+    end
+    else
+    begin
+      // Go to previous sub and select last karaokeindex
+      Idx := FRangeList.IndexOf(FSelectedKaraokeRange) - 1;
+      if (Idx >= 0) then
+      begin
+        Range := FRangeList[Idx];
+        if (System.Length(Range.SubTime) > 0) then
+        begin
+          SelecteKaraoke(Range, System.Length(Range.SubTime));
+        end;
+      end;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SelecteKaraoke(Range : TRange; Index : Integer);
+begin
+  FSelectedKaraokeIndex := Index;
+  FSelectedKaraokeRange := Range;
+  if Assigned(Range) then
+  begin
+    FSelectedKaraokeRange.GetSubTimeRangeAt(FSelectedKaraokeIndex, FSelection);
+  end;
+  UpdateView([uvfSelection,uvfRange]);
+  if Assigned(FOnSelectionChange) then
+    FOnSelectionChange(Self);
+  if Assigned(FOnSelectedKaraokeRange) then
+    FOnSelectedKaraokeRange(Self, FSelectedKaraokeRange);
 end;
 
 //------------------------------------------------------------------------------
