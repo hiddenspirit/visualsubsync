@@ -312,7 +312,6 @@ procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
-procedure KaraSplit3(Text : WideString; var WordArray : WideStringArray);
 
 implementation
 
@@ -411,50 +410,6 @@ begin
   end;
 end;
 
-// ------
-
-// just separate tag from text
-procedure KaraSplit3(Text : WideString; var WordArray : WideStringArray);
-var
-  i, i1, i2 : integer;
-  s : WideString;
-begin
-  SetLength(WordArray, 0);
-  s := Text;
-  while (Length(s) > 0) do
-  begin
-    i1 := Pos('{\k', s);
-    i2 := Pos('{\K', s);
-    if (i1 = 0) or (i2 = 0) then
-      i := i1 + i2
-    else
-      i := Min(i1, i2);
-    if (i > 0) then
-    begin
-      SetLength(WordArray, Length(WordArray)+1);
-      WordArray[Length(WordArray)-1] := Copy(s, 1, i - 1);
-      Delete(s, 1, i - 1);
-      i := Pos('}', s);
-      if(i > 0) then
-      begin
-        SetLength(WordArray, Length(WordArray)+1);
-        WordArray[Length(WordArray)-1] := Copy(s, 1, i);
-        Delete(s, 1, i);
-      end
-      else
-      begin
-        WordArray[Length(WordArray)-1] := WordArray[Length(WordArray)-1] + s;
-        s := '';
-      end;
-    end
-    else
-    begin
-      SetLength(WordArray, Length(WordArray)+1);
-      WordArray[Length(WordArray)-1] := s;
-      s := '';
-    end;
-  end;
-end;
 // =============================================================================
 
 procedure TRange.AddSubTime(const NewTime : Integer);
@@ -2626,7 +2581,9 @@ begin
     if Assigned(FOnPlayCursorChange) then
       FOnPlayCursorChange(Self);
     // TODO : maybe we could do a nice smooth scrolling :)
-    if FAutoScrolling and ((NewPos < FPositionMs) or (FPlayCursorMs > (FPositionMs + FPageSizeMs))) then
+    if (FAutoScrolling = True) and
+       (FMouseIsDown = False) and
+       ((NewPos < FPositionMs) or (FPlayCursorMs > (FPositionMs + FPageSizeMs))) then
     begin
       SetPositionMs(NewPos - (FPageSizeMs div 10))
     end
