@@ -269,6 +269,13 @@ type
     Playselectionstart1: TTntMenuItem;
     Playselectionend1: TTntMenuItem;
     ActionPlaceKaraokeCursorsAtEnd: TTntAction;
+    ActionPlayToEnd: TTntAction;
+    bttPlayToEnd: TSpeedButton;
+    MenuItemPlayToEnd: TTntMenuItem;
+    bttShowPreferences: TSpeedButton;
+    ActionPlay1sBefore: TTntAction;
+    ActionSelectNextSub: TTntAction;
+    ActionSelectPreviousSub: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -392,6 +399,10 @@ type
     procedure ActionPlaySelStartExecute(Sender: TObject);
     procedure ActionPlaySelEndExecute(Sender: TObject);
     procedure ActionPlaceKaraokeCursorsAtEndExecute(Sender: TObject);
+    procedure ActionPlayToEndExecute(Sender: TObject);
+    procedure ActionPlay1sBeforeExecute(Sender: TObject);
+    procedure ActionSelectNextSubExecute(Sender: TObject);
+    procedure ActionSelectPreviousSubExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -448,7 +459,10 @@ type
 
     procedure AddSubtitle(StartTime, StopTime : Integer;
       AutoSelect : Boolean);
-    procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);      
+    procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
+
+    procedure SelectPreviousSub;
+    procedure SelectNextSub;
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -498,7 +512,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 
 // TODO : Rework project handling which is a bit messy ATM
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
-// TODO : Ignore tags in stats
 
 //==============================================================================
 
@@ -801,6 +814,8 @@ begin
   ActionPreviousSub.Enabled := Enable;
   ActionPlaySelStart.Enabled := Enable;
   ActionPlaySelEnd.Enabled := Enable;
+  ActionPlayToEnd.Enabled := Enable;
+  ActionPlay1sBefore.Enabled := Enable;
 
   ActionZoomIn.Enabled := Enable;
   ActionZoomOut.Enabled := Enable;
@@ -1195,17 +1210,14 @@ end;
 procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
     i, j : Integer;
-    WordArray : WideStringArray;
+    WordArray : WideStringArray2;
 begin
-  if (Pos('{\k', RichEdit.Text) + Pos('{\K', RichEdit.Text)) = 0 then
-    Exit;
-
   RichEdit.Tag := 0;
   RichEdit.Lines.BeginUpdate;
   savSelStart := RichEdit.SelStart;
   savSelLength := RichEdit.SelLength;
 
-  KaraSplit3(RichEdit.Text, WordArray);
+  TagSplit(RichEdit.Text, WordArray);
 
   j := 0;
   for i:=0 to Length(WordArray)-1 do
@@ -1268,6 +1280,23 @@ end;
 
 //------------------------------------------------------------------------------
 
+function MyLineLength(s : WideString) : Integer;
+var i : Integer;
+    wsnotag : WideString;
+begin
+  Result := 0;
+  wsnotag := StripTags(s);
+  // Fix win98 b0rk (#13 #10 are included in the richedit text line)
+  for i:=1 to Length(wsnotag) do
+  begin
+    if (wsnotag[i] = #13) or (wsnotag[i] = #10) then
+      Break;
+    Inc(Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.UpdateLinesCounter;
 var s : string;
     i, CharCount, TotalCharCount, TotalCharCountWithCRLF, CPS : Integer;
@@ -1279,11 +1308,9 @@ begin
   TotalCharCount := 0;
   TotalCharCountWithCRLF := 0;
 
-  // TODO : ignore tags in stats
-
   for i := MemoSubtitleText.Perform(EM_GETFIRSTVISIBLELINE,0,0) to MemoSubtitleText.Lines.Count-1 do
   begin
-    CharCount := Length(MemoSubtitleText.Lines.Strings[i]);
+    CharCount := MyLineLength(MemoSubtitleText.Lines.Strings[i]);
     Inc(TotalCharCount, CharCount);
     s := s + IntToStr(CharCount) + #13#10;
   end;
@@ -1406,8 +1433,8 @@ var
 begin
   if (not WideFileExists(Filename)) then
   begin
-    MessageBoxW(Handle, PWideChar(WideString('The project file "' + Filename +
-      '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+    MessageBoxW(Handle, PWideChar(WideFormat('The project file %s doesn''t exist.', [Filename])),
+      PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
     Exit;
   end;
 
@@ -1443,8 +1470,8 @@ begin
         end
         else
         begin
-          MessageBoxW(Handle, PWideChar(WideString('Can''t open peak file : ' +
-            CurrentProject.PeakFile)),
+          MessageBoxW(Handle, PWideChar(WideFormat('Can''t open peak file : %s',
+            [CurrentProject.PeakFile])),
             PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
           // TODO : Show project page as a new project but with pre-filled data
           Exit;
@@ -1463,8 +1490,8 @@ begin
           LoadWAVOK := WAVDisplayer.LoadWAV(WideChangeFileExt(CurrentProject.PeakFile,'.wav'));
           CurrentProject.IsDirty := True;
           // Show warning
-          MessageBoxW(Handle, PWideChar(WideString('WAV file ' + CurrentProject.WAVFile +
-           ' hasn''t been found, project has been switched to "Peak file only" mode')),
+          MessageBoxW(Handle, PWideChar(WideFormat(
+          'WAV file %s hasn''t been found, project has been switched to "Peak file only" mode', [CurrentProject.WAVFile])),
             PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
         end
         else if WideFileExists(WideChangeFileExt(CurrentProject.WAVFile,'.peak')) then
@@ -1476,8 +1503,8 @@ begin
         end
         else
         begin
-          MessageBoxW(Handle, PWideChar(WideString('Can''t open WAV file : ' +
-            CurrentProject.WAVFile)),
+          MessageBoxW(Handle, PWideChar(WideFormat('Can''t open WAV file : %s',
+            [CurrentProject.WAVFile])),
             PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
           // TODO : Show project page as a new project but with pre-filled data
           Exit;
@@ -1960,7 +1987,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
             Node := vtvSubsList.GetNext(Node);
           end;
         end;
@@ -1970,7 +1997,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
             Node := vtvSubsList.GetNextSelected(Node);
           end;
           FullSortTreeAndSubList;
@@ -1981,7 +2008,7 @@ begin
           while Assigned(Node) do
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
-            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgType.ItemIndex);
+            DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
             Node := vtvSubsList.GetNext(Node);
           end;
           FullSortTreeAndSubList;
@@ -2141,8 +2168,11 @@ begin
   if CurrentProject.IsDirty then
   begin
     // Ask to save the subtitles
-    res := MessageBoxW(Handle, PWideChar(WideString('The subtitle file "' + CurrentProject.SubtitlesFile +
-      '" has changed, do you want to save it before closing ?')), PWideChar(WideString('Warning')), MB_YESNOCANCEL or MB_ICONWARNING);
+    res := MessageBoxW(Handle, PWideChar(WideFormat(
+    'The subtitle file "%s" has changed, do you want to save it before closing ?',
+      [CurrentProject.SubtitlesFile])),
+      PWideChar(WideString('Warning')),
+      MB_YESNOCANCEL or MB_ICONWARNING);
     if (res = IDYES) then
     begin
       SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
@@ -2201,58 +2231,77 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionNextSubExecute(Sender: TObject);
+procedure TMainForm.SelectNextSub;
 var CurrentNode, NextNode : PVirtualNode;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
   begin
     WAVDisplayer.SelectNextKaraoke;
-    ActionPlay.Execute;
-    Exit;
-  end;
-
-  if Assigned(vtvSubsList.FocusedNode) then
-    CurrentNode := vtvSubsList.FocusedNode
+  end
   else
-    CurrentNode := vtvSubsList.GetFirst;
-
-  if Assigned(CurrentNode) then
   begin
-    ActionStop.Execute;
-    NextNode := vtvSubsList.GetNext(CurrentNode);
-    if Assigned(NextNode) then
-      SelectNode(NextNode)
+    if Assigned(vtvSubsList.FocusedNode) then
+      CurrentNode := vtvSubsList.FocusedNode
     else
-      SelectNode(CurrentNode);
+      CurrentNode := vtvSubsList.GetFirst;
+
+    if Assigned(CurrentNode) then
+    begin
+      ActionStop.Execute;
+      NextNode := vtvSubsList.GetNext(CurrentNode);
+      if Assigned(NextNode) then
+        SelectNode(NextNode)
+      else
+        SelectNode(CurrentNode);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionNextSubExecute(Sender: TObject);
+begin
+  SelectNextSub;
+  if (vtvSubsList.RootNodeCount > 0) then
+  begin
     ActionPlay.Execute;
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionPreviousSubExecute(Sender: TObject);
+procedure TMainForm.SelectPreviousSub;
 var CurrentNode, PreviousNode : PVirtualNode;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
   begin
     WAVDisplayer.SelectPreviousKaraoke;
-    ActionPlay.Execute;
-    Exit;
-  end;
-
-  if Assigned(vtvSubsList.FocusedNode) then
-    CurrentNode := vtvSubsList.FocusedNode
+  end
   else
-    CurrentNode := vtvSubsList.GetFirst;
-
-  if Assigned(CurrentNode) then
   begin
-    ActionStop.Execute;
-    PreviousNode := vtvSubsList.GetPrevious(CurrentNode);
-    if Assigned(PreviousNode) then
-      SelectNode(PreviousNode)
+    if Assigned(vtvSubsList.FocusedNode) then
+      CurrentNode := vtvSubsList.FocusedNode
     else
-      SelectNode(CurrentNode);
+      CurrentNode := vtvSubsList.GetFirst;
+
+    if Assigned(CurrentNode) then
+    begin
+      ActionStop.Execute;
+      PreviousNode := vtvSubsList.GetPrevious(CurrentNode);
+      if Assigned(PreviousNode) then
+        SelectNode(PreviousNode)
+      else
+        SelectNode(CurrentNode);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPreviousSubExecute(Sender: TObject);
+begin
+  SelectPreviousSub;
+  if (vtvSubsList.RootNodeCount > 0) then
+  begin
     ActionPlay.Execute;
   end;
 end;
@@ -2900,7 +2949,7 @@ end;
 procedure TMainForm.OffsetCurrentSubtitleStartTime(Offset : Integer);
 var NodeData : PTreeData;
     R : TRange;
-    NewSubTime, bStart, bStop : Integer;
+    bStart, bStop : Integer;
     Idx : Integer;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
@@ -2959,7 +3008,7 @@ end;
 procedure TMainForm.OffsetCurrentSubtitleStopTime(Offset : Integer);
 var NodeData : PTreeData;
     R : TRange;
-    NewSubTime, bStart, bStop : Integer;
+    bStart, bStop : Integer;
     Idx : Integer;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
@@ -3927,7 +3976,8 @@ var
 begin
   if Trim(CurrentProject.WAVFile) = '' then
   begin
-    MessageBoxW(Handle, PWideChar(WideString('You need to create a project with a WAV file')),
+    MessageBoxW(Handle,
+      PWideChar(WideString('You need to create a project with a WAV file')),
       PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
   end
   else
@@ -3992,7 +4042,6 @@ end;
 
 procedure TMainForm.ActionPlaceKaraokeCursorsAtEndExecute(Sender: TObject);
 var NodeData: PTreeData;
-    NeedUpdate : Boolean;
     i, s, t : Integer;
 begin
   if Assigned(vtvSubsList.FocusedNode) then
@@ -4016,8 +4065,74 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ActionPlayToEndExecute(Sender: TObject);
+begin
+  WAVDisplayer.AutoScrolling := True;
+  if WAVDisplayer.SelectionIsEmpty then
+  begin
+    PlayingMode := pmtAll;
+    WAVDisplayer.PlayRange(WAVDisplayer.GetCursorPos,WAVDisplayer.Length)
+  end
+  else
+  begin
+    PlayingMode := pmtSelection;
+    WAVDisplayer.PlayRange(WAVDisplayer.Selection.StartTime,WAVDisplayer.Length);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 // TODO : auto clear karaoke timing that are out of subtitle bound ???
 // TODO : update documentation (timing button)
+
+{
+
+TUndoStack
+
+TUndoTask (list of TUndoBasic)
+
+TUndoBasicDelete (list of subtitle)
+TUndoBasicAdd (list of index)
+TUndoBasicModify (list of subtitle with index)
+TUndoBasicDelay (delay, type, list of index)
+
+}
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPlay1sBeforeExecute(Sender: TObject);
+var NodeData: PTreeData;
+begin
+  if (not WAVDisplayer.SelectionIsEmpty) then
+  begin
+    PlayingMode := pmtSelection;
+    WAVDisplayer.PlayRange(
+      Max(WAVDisplayer.Selection.StartTime - 1000, 0),
+      WAVDisplayer.Selection.StopTime);
+  end
+  else if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    PlayingMode := pmtSelection;
+    WAVDisplayer.PlayRange(
+      Max(NodeData.Range.StartTime - 1000, 0),
+      NodeData.Range.StopTime)
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSelectNextSubExecute(Sender: TObject);
+begin
+  SelectNextSub;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSelectPreviousSubExecute(Sender: TObject);
+begin
+  SelectPreviousSub;
+end;
 
 //------------------------------------------------------------------------------
 end.
