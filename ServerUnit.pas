@@ -69,6 +69,7 @@ type
     procedure SendFile(Filename : string);
     procedure SendStream(Stream : TStream);
     function ProcessVirtualWav(VirtualPath : string) : Boolean;
+    procedure AddStats(Start : Cardinal);    
   protected
     procedure Execute; override;
   public
@@ -441,12 +442,28 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure THTTPRequestThreadProcessor.AddStats(Start : Cardinal);
+var Stop : Cardinal;
+    s : string;
+    i : Integer;
+begin
+  for i:=0 to FEnvVars.Count-1 do
+  begin
+    s := Format ('%s = %s#10#13', [FEnvVars.Names[i], FEnvVars.ValueFromIndex[i]]);
+    FAnswerStream.Write(s[1], Length(s));
+  end;
+  Stop := GetTickCount;
+  s := Format('Generated in %d ms.', [Stop-Start]);
+  FAnswerStream.Write(s[1], Length(s));
+end;
+
+//------------------------------------------------------------------------------
+
 procedure THTTPRequestThreadProcessor.ProcessGet(Path : string);
 var Filename, PossibleFilename, Ext, Params : string;
     i : Integer;
     DirectoryIndexFound : Boolean;
-    Start, Stop : Cardinal;
-    s : string;
+    Start : Cardinal;
 const
   DirectoryIndexLst : array[0..2] of PChar = (
     'index.shtml',
@@ -527,16 +544,7 @@ begin
     begin
       Start := GetTickCount;
       ProcessDynamicPage(Filename);
-      {
-      for i:=0 to FEnvVars.Count-1 do
-      begin
-        s := FEnvVars.Names[i] + ' = ' + FEnvVars.ValueFromIndex[i] + #10#13;
-        FAnswerStream.Write(s[1], Length(s));
-      end;
-      Stop := GetTickCount;
-      s := 'Generated in ' + IntToStr(Stop-Start) + ' ms.';
-      FAnswerStream.Write(s[1], Length(s));
-      }
+      // AddStats(Start);
     end
     else
       FFileToSend := Filename;

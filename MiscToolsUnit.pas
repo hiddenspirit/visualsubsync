@@ -26,6 +26,8 @@ interface
 uses Classes, Graphics;
 
 type
+  WideStringArray2 = array of WideString;
+
   TFileVersion = class
   private
     FFileParsed : Boolean;
@@ -68,12 +70,17 @@ type
   function Font2String(Font : TFont) : string;
   procedure String2Font(s : string; Font : TFont);
 
+
+  procedure TagSplit(Text : WideString; var WordArray : WideStringArray2);
+  function StripTags(Text : WideString) : WideString;
+
 type
   TExplodeArray = array of String;
-  //function Explode(const cSeparator: String; const vString: String): TExplodeArray;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
   function Implode(const cSeparator: String; const cArray: TExplodeArray): String;
-  
+
+
+
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils;
@@ -624,6 +631,114 @@ begin
     Result := 0
   else
     Result := Length(WordArray);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TagSplit(Text : WideString; var WordArray : WideStringArray2);
+var
+  i, i1 : integer;
+  s : WideString;
+  ssaType : Boolean;
+begin
+  SetLength(WordArray, 0);
+  s := Text;
+  ssaType := False;
+  
+  while (Length(s) > 0) do
+  begin
+
+    i1 := 0;
+    for i:=1 to Length(s) do
+    begin
+      if (s[i] = '{') then
+      begin
+        if (i+2 < Length(s)) and
+           (s[i+1] = '\') and
+           ((s[i+2] = 'k') or (s[i+2] = 'K')) then
+        begin
+          i1 := i;
+          ssaType := True;
+          Break;
+        end;
+      end
+      else
+      if (s[i] = '<') then
+      begin
+        i1 := i;
+        ssaType := False;        
+        Break;
+      end;
+    end;
+
+    i := i1;
+    
+    if (i > 0) then
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := Copy(s, 1, i - 1);
+      Delete(s, 1, i - 1);
+
+      i1 := 0;
+      if (ssaType = True) then
+      begin
+        for i:=1 to Length(s) do
+        begin
+          if (s[i] = '}') then
+          begin
+            i1 := i;
+            Break;
+          end
+        end;
+      end
+      else
+      begin
+        for i:=1 to Length(s) do
+        begin
+          if (s[i] = '>') then
+          begin
+            i1 := i;
+            Break;
+          end
+        end;
+      end;
+
+      i := i1;
+
+      if(i > 0) then
+      begin
+        SetLength(WordArray, Length(WordArray)+1);
+        WordArray[Length(WordArray)-1] := Copy(s, 1, i);
+        Delete(s, 1, i);
+      end
+      else
+      begin
+        WordArray[Length(WordArray)-1] := WordArray[Length(WordArray)-1] + s;
+        s := '';
+      end;
+    end
+    else
+    begin
+      SetLength(WordArray, Length(WordArray)+1);
+      WordArray[Length(WordArray)-1] := s;
+      s := '';
+    end;
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function StripTags(Text : WideString) : WideString;
+var i : Integer;
+    WordArray : WideStringArray2;
+begin
+  TagSplit(Text, WordArray);
+  Result := '';
+  for i:=0 to Length(WordArray)-1 do
+  begin
+    if (i mod 2) = 0 then
+      Result := Result + WordArray[i];
+  end;
 end;
 
 // -----------------------------------------------------------------------------

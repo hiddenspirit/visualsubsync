@@ -10,11 +10,14 @@ type
 {$TYPEINFO ON}
   TSubtitleRangeJSWrapper = class(TObject)
   private
+    FStrippedText : WideString;
+    FStrippedTextProcessed : Boolean;
     FOnChange : TSubtitleRangeJSWrapperChangeEvent;
     FSubtitleRange : TSubtitleRange;
     function GetStart : Integer;
     function GetStop : Integer;
     function GetText : WideString;
+    function GetStrippedText : WideString;
     procedure SetStart(Value : Integer);
     procedure SetStop(Value : Integer);
     procedure SetText(Value : WideString);
@@ -25,6 +28,7 @@ type
     property Start : Integer read GetStart write SetStart;
     property Stop : Integer read GetStop write SetStop;
     property Text : WideString read GetText write SetText;
+    property StrippedText : WideString read GetStrippedText write SetText;
   end;
 {$TYPEINFO OFF}
 
@@ -139,7 +143,7 @@ type
   
 implementation
 
-uses SysUtils, Windows, WAVDisplayerUnit;
+uses SysUtils, Windows, WAVDisplayerUnit, MiscToolsUnit;
 
 //------------------------------------------------------------------------------
 
@@ -209,6 +213,16 @@ begin
   Result := FSubtitleRange.Text;
 end;
 
+function TSubtitleRangeJSWrapper.GetStrippedText : WideString;
+begin
+  if (FStrippedTextProcessed = False) then
+  begin
+    FStrippedText := StripTags(FSubtitleRange.Text);
+    FStrippedTextProcessed := True;
+  end;
+  Result := FStrippedText;
+end;
+
 procedure TSubtitleRangeJSWrapper.SetStart(Value : Integer);
 begin
   if (Value <> FSubtitleRange.StartTime) then
@@ -242,6 +256,7 @@ end;
 procedure TSubtitleRangeJSWrapper.SetSubtitle(Value : TSubtitleRange);
 begin
   FSubtitleRange := Value;
+  FStrippedTextProcessed := False;
 end;
 
 // =============================================================================

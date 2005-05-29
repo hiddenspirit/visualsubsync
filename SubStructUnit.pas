@@ -69,6 +69,8 @@ begin
     Result := StringConvertCRLFToBR(SubRange.Text)
   else if (Name = 'raw-text') then
     Result := SubRange.Text
+  else if (Name = 'stripped-text') then
+    Result := StripTags(SubRange.Text)
   else if (Name = 'html-text8') then
     Result := UTF8Encode(StringConvertCRLFToBR(SubRange.Text))
   else if (Name = 'raw-text8') then
