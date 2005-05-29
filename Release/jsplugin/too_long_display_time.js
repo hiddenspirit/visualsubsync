@@ -11,14 +11,21 @@ VSSPlugin = {
 
   // ----- Plugin parameters available from VSS GUI (name must start with "Param") -----
   ParamMinCPS : { Value : 4, Unit : 'Char/s' },
+  ParamIgnoreLinesOf : { Value : 0, Unit : 'Characters' },
 
   // ----- HasError method called for each subtitle during the error checking -----
   // If there is an error on CurrentSub return a string containing the error description.
   // Otherwise return an empty string.
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
+    // Ignore lines with length < to this.ParamIgnoreLinesOf.Value
+    if(CurrentSub.StrippedText.length < this.ParamIgnoreLinesOf.Value)
+    {
+        return '';
+    }
+    
     Duration = CurrentSub.Stop - CurrentSub.Start;
-    CharPerSec = (CurrentSub.Text.length * 1000) / Duration;
+    CharPerSec = (CurrentSub.StrippedText.length * 1000) / Duration;
     if (CharPerSec < this.ParamMinCPS.Value) {
     	return (Math.round(CharPerSec) + ' ' + this.ParamMinCPS.Unit);
     } else {

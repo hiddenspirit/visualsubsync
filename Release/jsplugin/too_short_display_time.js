@@ -5,7 +5,7 @@ VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too short display time',
   Description : 'An error is detected when the number of Char/s is strictly '+
-  	'superior to the specified value.',
+  	'superior to the specified value. ',
   Color : 0xFFC437,
   Message : 'Subtitle display time is too short :',
 
@@ -18,7 +18,7 @@ VSSPlugin = {
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
     Duration = CurrentSub.Stop - CurrentSub.Start;
-    CharPerSec = (CurrentSub.Text.length * 1000) / Duration;
+    CharPerSec = (CurrentSub.StrippedText.length * 1000) / Duration;
     if (CharPerSec > this.ParamMaxCPS.Value) {
     	return (Math.round(CharPerSec) + ' ' + this.ParamMaxCPS.Unit);
     } else {

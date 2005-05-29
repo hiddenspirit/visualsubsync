@@ -1,7 +1,8 @@
 // Too long line
 // (christophe.paris <at> free.fr)
 //
-// Limitation : Works only on 2 lines, ignore dialogs
+// Limitation : Works only on 2 lines, ignore dialogs,
+//   tags are not ignored when splitting
 
 var DebugMode = false;
 
@@ -22,7 +23,7 @@ VSSPlugin = {
   // Otherwise return an empty string.
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
-  	var SubText = CurrentSub.Text;
+  	var SubText = CurrentSub.StrippedText;
   	var MaxLineLen = 0;
   	var LineArray = SubText.split('\r\n');
   	var LineArrayLen = LineArray.length;
