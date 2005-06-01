@@ -1613,32 +1613,36 @@ begin
 
   if (((Range.StopTime - Range.StartTime) / RangeSelWindow) > 2) then
   begin
-    if (Abs(CursorPosMs - Range.StartTime) < RangeSelWindow) then
+    CanvasHeight := GetWavCanvasHeight;
+    if (Y > 0) and (Y < CanvasHeight) then
     begin
-      NewDynamicEditMode := demStart;
-      FDynamicEditTime := Range.StartTime;
-    end
-    else if (Abs(Range.StopTime - CursorPosMs) < RangeSelWindow) then
-    begin
-      NewDynamicEditMode := demStop;
-      FDynamicEditTime := Range.StopTime;
-    end
-    else
-    begin
-      // Karaoke check
-      CanvasHeight := GetWavCanvasHeight;
-      y1 := CanvasHeight div 10;
-      y2 := (CanvasHeight * 9) div 10;
-      if (Y > y1) and (Y < y2) then
+      if (Abs(CursorPosMs - Range.StartTime) < RangeSelWindow) then
       begin
-        // todo : search for the closer time
-        for i:=0 to System.Length(Range.SubTime)-1 do
+        NewDynamicEditMode := demStart;
+        FDynamicEditTime := Range.StartTime;
+      end
+      else if (Abs(Range.StopTime - CursorPosMs) < RangeSelWindow) then
+      begin
+        NewDynamicEditMode := demStop;
+        FDynamicEditTime := Range.StopTime;
+      end
+      else
+      begin
+        // Karaoke check
+        //CanvasHeight := GetWavCanvasHeight;
+        y1 := CanvasHeight div 10;
+        y2 := (CanvasHeight * 9) div 10;
+        if (Y > y1) and (Y < y2) then
         begin
-          if(Abs(CursorPosMs - Range.SubTime[i]) < RangeSelWindow) then
+          // todo : search for the closer time
+          for i:=0 to System.Length(Range.SubTime)-1 do
           begin
-            NewDynamicEditMode := demKaraoke;
-            FDynamicEditTime := i;
-            Break;
+            if(Abs(CursorPosMs - Range.SubTime[i]) < RangeSelWindow) then
+            begin
+              NewDynamicEditMode := demKaraoke;
+              FDynamicEditTime := i;
+              Break;
+            end;
           end;
         end;
       end;
