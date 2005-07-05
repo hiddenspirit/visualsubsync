@@ -1934,6 +1934,7 @@ procedure TMainForm.ActionDelayExecute(Sender: TObject);
 var DelayInMs : Integer;
     Node : PVirtualNode;
     NodeData : PTreeData;
+    DelaySelectedRange : Boolean;
 
     procedure DelaySub(Range : TRange; DelayInMs : Integer;
       ShiftType : Integer);
@@ -1961,6 +1962,7 @@ var DelayInMs : Integer;
 
 begin
   DelayForm := TDelayForm.Create(nil);
+  DelaySelectedRange := False;
 
   // Prefill the dialog
   if (vtvSubsList.SelectedCount > 1) then
@@ -1988,6 +1990,10 @@ begin
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
             DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+            if (NodeData.Range = WAVDisplayer.SelectedRange) then
+            begin
+              DelaySelectedRange := True;
+            end;
             Node := vtvSubsList.GetNext(Node);
           end;
         end;
@@ -1998,6 +2004,10 @@ begin
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
             DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+            if (NodeData.Range = WAVDisplayer.SelectedRange) then
+            begin
+              DelaySelectedRange := True;
+            end;
             Node := vtvSubsList.GetNextSelected(Node);
           end;
           FullSortTreeAndSubList;
@@ -2009,10 +2019,18 @@ begin
           begin
             NodeData := vtvSubsList.GetNodeData(Node);
             DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+            if (NodeData.Range = WAVDisplayer.SelectedRange) then
+            begin
+              DelaySelectedRange := True;
+            end;
             Node := vtvSubsList.GetNext(Node);
           end;
           FullSortTreeAndSubList;
         end;
+    end;
+    if (DelaySelectedRange = True) and Assigned(WAVDisplayer.SelectedRange) then
+    begin
+      DelaySub(WAVDisplayer.Selection, DelayInMs, DelayForm.rgShift.ItemIndex);
     end;
     CurrentProject.IsDirty := True;
     g_WebRWSynchro.EndWrite;    
@@ -3145,9 +3163,10 @@ begin
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
+    MemoTextPipe.Clear;
     MemoTextPipe.Lines.LoadFromFile(TntOpenDialog1.FileName);
     CurrentProject.TextPipeSource := TntOpenDialog1.FileName;
-    if MemoTextPipe.Visible = False then
+    if (MemoTextPipe.Visible = False) then
       ActionShowHideTextPipe.Execute;
   end;
 end;
