@@ -488,26 +488,37 @@ begin
   FCanUseGzip := EnableCompression and
     (Pos('deflate',FRequestHeader.Values['accept-encoding']) <> 0);
 
-  Filename := RootDir + StringReplace(Path,'/','\',[rfReplaceAll]);
+  // Fix slashes
+  Filename := StringReplace(Path,'/','\',[rfReplaceAll]);
 
+
+  // Remove anchor (TODO : anchors + parameters)
   i := Pos('#', Filename);
   if (i > 0) then
-    Delete(Filename,i,Length(Filename));
+    Delete(Filename, i, Length(Filename));
 
+  // Remove and parse parameters
   i := Pos('?', Filename);
   if (i > 0) then
   begin
-    // parse url parameters (?key1=value1&key2=value2....)  
+    // parse url parameters (?key1=value1&key2=value2....)
     Params := Copy(Filename,i+1,Length(Filename));
     Delete(Filename,i,Length(Filename));
     FEnvVars.Delimiter := '&';
     FEnvVars.DelimitedText := Params;
   end;
+
+  // Prefix with root dir
+  Filename := RootDir + Filename;
+
   Filename := ResolvePath(Filename);
   if Pos(ExcludeTrailingPathDelimiter(RootDir), Filename) <> 1 then
   begin
     FAnswerHeader.Add('HTTP/1.0 403 Forbidden');
-    CreateErrorPage(403, 'Forbidden');
+    CreateErrorPage(403, 'Forbidden : RootDir = ' + RootDir + '<br>' +
+      'Access path = ' + Path + '<br>' +
+      'Filename = ' + Filename
+    );
     FAnswerHeader.Add('');
     Exit;
   end;
@@ -552,7 +563,7 @@ begin
   else
   begin
     FAnswerHeader.Add('HTTP/1.0 404 Not Found');
-    CreateErrorPage(404, 'Not Found');
+    CreateErrorPage(404, 'Not Found : ' + Filename);
   end;
   FAnswerHeader.Add('');
 end;
