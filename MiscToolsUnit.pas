@@ -47,7 +47,10 @@ type
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
   function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string = '.') : string;
   function TimeMsToSSAString(TimeMS: Cardinal) : string;  
+
+  function TimeStringToMS_SSA(Time : string) : Integer;
   function TimeStringToMs(Time : string) : Integer;
+
   function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;  
   function StringConvertPipeToCRLF(s : WideString) : WideString;
   function StringConvertPipeToBR(s : WideString) : WideString;
@@ -150,6 +153,34 @@ begin
   if (ms = -1) then
     Exit;
   Result := h * 3600000 + m * 60000 + s * 1000 + ms;
+end;
+
+//------------------------------------------------------------------------------
+
+function TimeStringToMS_SSA(Time : string) : Integer;
+  var h, m, s, ms: Integer;
+begin
+  Result := -1;
+  // 00:50:06.96
+  // 123456789012
+  if Length(Time) < 8 then
+    Exit;
+   if Time[2] = ':' then time := '0' + time;
+if (Time[3] <> ':') or (Time[6] <> ':') then
+    Exit;
+  h := StrToIntDef(Copy(Time, 1,2),-1);
+  if (h = -1) then
+    Exit;
+  m := StrToIntDef(Copy(Time, 4,2),-1);
+  if (m = -1) then
+    Exit;
+  s := StrToIntDef(Copy(Time, 7,2),-1);
+  if (s = -1) then
+    Exit;
+  ms := StrToIntDef(Copy(Time, 10,2),-1);
+  if (ms = -1) then
+    Exit;
+  Result := h * 3600000 + m * 60000 + s * 1000 + 10 * ms;
 end;
 
 //------------------------------------------------------------------------------

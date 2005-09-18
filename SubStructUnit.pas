@@ -28,6 +28,16 @@ uses WAVDisplayerUnit, VirtualTrees, GlobalUnit;
 type
   TSubtitleRange = class(TRange)
     Text : WideString;
+
+    Dialogue : WideString;
+    Effect : WideString;
+    Layer : WideString;
+    Actor : WideString;
+    RightMarg : WideString;
+    LeftMarg : WideString;
+    VertMarg : WideString;
+    Style: WideString;
+    
     Node : PVirtualNode; // TSubtitleRange and tree node are linked both way
   end;
 
@@ -50,6 +60,18 @@ uses MiscToolsUnit, SysUtils;
 function TSubtitleRangeFactory.CreateRange : TRange;
 begin
   Result := TSubtitleRange.Create;
+  Result.StartTime := 0;
+  Result.StopTime := 0;
+  SetLength(Result.SubTime, 0);
+  TSubtitleRange(Result).Text := '';
+  TSubtitleRange(Result).Dialogue := 'Dialogue';
+  TSubtitleRange(Result).Effect := '';
+  TSubtitleRange(Result).Layer := '0';
+  TSubtitleRange(Result).Actor := '';
+  TSubtitleRange(Result).RightMarg := '0000';
+  TSubtitleRange(Result).LeftMarg := '0000';
+  TSubtitleRange(Result).VertMarg := '0000';
+  TSubtitleRange(Result).Style := '*Default';
 end;
 
 //------------------------------------------------------------------------------

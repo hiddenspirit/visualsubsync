@@ -18,6 +18,10 @@
 //  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 //  http://www.gnu.org/copyleft/gpl.html
 // -----------------------------------------------------------------------------
+//
+// SSA/ASS loding code contribution by Mirage (2005)
+//
+// -----------------------------------------------------------------------------
 
 unit main;
 
@@ -261,7 +265,6 @@ type
     ActionShowFrameAtCursor: TTntAction;
     N16: TTntMenuItem;
     ActionExportToSSA: TTntAction;
-    MenuItemExportToSSA: TTntMenuItem;
     MenuItemExportToWAV: TTntMenuItem;
     ActionExportToWAV: TTntAction;
     ActionPlaySelStart: TTntAction;
@@ -394,7 +397,6 @@ type
     procedure ActionShowStartFrameExecute(Sender: TObject);
     procedure ActionShowStopFrameExecute(Sender: TObject);
     procedure ActionShowFrameAtCursorExecute(Sender: TObject);
-    procedure ActionExportToSSAExecute(Sender: TObject);
     procedure ActionExportToWAVExecute(Sender: TObject);
     procedure ActionPlaySelStartExecute(Sender: TObject);
     procedure ActionPlaySelEndExecute(Sender: TObject);
@@ -429,6 +431,7 @@ type
 
     StartSubtitleTime : Integer;
     ToggleStartSubtitleTime : Integer;
+    SubtitleFileHeader : WideString;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -459,10 +462,13 @@ type
 
     procedure AddSubtitle(StartTime, StopTime : Integer;
       AutoSelect : Boolean);
+    procedure SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
-
+    procedure SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
+    procedure LoadSRT(Filename: string; var IsUTF8 : Boolean);
+    procedure LoadASS(Filename: string; var IsUTF8 : Boolean; IsSSA : Boolean);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(Text : WideString);
@@ -1052,6 +1058,25 @@ end;
 // TODO : unicode filename
 
 procedure TMainForm.LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
+var Ext : string;
+begin
+  Ext := LowerCase(ExtractFileExt(Filename));
+  if (Ext = '.srt') then
+    LoadSRT(Filename, IsUTF8);
+  if (Ext = '.ass') then
+    LoadASS(Filename, IsUTF8, False);
+  if (Ext = '.ssa') then
+    LoadASS(Filename, IsUTF8, True);
+  vtvSubsList.EndUpdate;
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.Header.AutoFitColumns(False);
+  vtvSubsList.Repaint;
+  g_WebRWSynchro.EndWrite;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.LoadSRT(Filename: string; var IsUTF8 : Boolean);
 var
   S: string;
   BOM : array[0..3] of BYTE;
@@ -1076,6 +1101,8 @@ begin
     g_WebRWSynchro.EndWrite;
     Exit;
   end;
+
+  SubtitleFileHeader := '';
 
   g_WebRWSynchro.BeginWrite;
   WAVDisplayer.RangeList.Clear;
@@ -1157,6 +1184,157 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   if AutoCorrectedFile then
     CurrentProject.IsDirty := True;
+  vtvSubsList.Header.AutoFitColumns(False);
+  vtvSubsList.Repaint;
+  g_WebRWSynchro.EndWrite;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.LoadASS(Filename: string; var IsUTF8 : Boolean; isSSA : Boolean);
+var
+  i, Start, Stop : Integer;
+  SS : string;
+  Text : string;
+  Layer : string;
+  Dialogue : string;
+  Actor : string;
+  Style : string;
+  Effect : string;
+  RightMarg, LeftMarg, VertMarg : string;
+  NewRange : TRange;
+  S: string;
+  BOM : array[0..3] of BYTE;
+  FS : TFileStream;
+  EndOfFile : Boolean;
+  Node: PVirtualNode;
+  NodeData: PTreeData;
+begin
+  if not FileExists(Filename) then
+  begin
+    g_WebRWSynchro.BeginWrite;
+    WAVDisplayer.RangeList.Clear;
+    vtvSubsList.Clear;
+    vtvSubsList.Repaint;
+    WAVDisplayer.UpdateView([uvfRange]);
+    g_WebRWSynchro.EndWrite;
+    Exit;
+  end;
+
+  g_WebRWSynchro.BeginWrite;
+  WAVDisplayer.RangeList.Clear;
+
+  FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
+
+  // Check for UTF BOM
+  ZeroMemory(@BOM[0],Length(BOM));
+  FS.Read(BOM,4);
+  if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
+  begin
+    // UTF8
+    IsUTF8 := True;
+    FS.Seek(3,soFromBeginning);
+  end
+  else
+  begin
+    IsUTF8 := False;
+    FS.Seek(0,soFromBeginning);
+  end;
+
+
+  // Read header
+  SubtitleFileHeader := '';
+  EndOfFile := False;
+  while (not EndOfFile) do
+  begin
+    EndOfFile := ReadLineStream(FS, S);
+    if (EndOfFile = True) or AnsiStartsText('[Events]',S) then
+      break
+    else
+      SubtitleFileHeader := SubtitleFileHeader + #13#10 + S;
+  end;
+  SubtitleFileHeader := Trim(SubtitleFileHeader);
+
+  
+  // Read events
+  repeat
+    EndOfFile := ReadLineStream(FS, S);
+  until AnsiStartsText('Format:',S) or EndOfFile;
+
+  while (not EndOfFile) do
+  begin
+    EndOfFile := ReadLineStream(FS, S);
+    if EndOfFile then
+      Break;
+
+    Dialogue := Copy(S, 1, AnsiPos(':',S)-1);
+    if isSSA = false then
+      S := Copy(S, AnsiPos(':',S)+1, MaxInt)
+    else
+      S := copy(S, AnsiPos('=',S)+1, MaxInt);
+
+    Layer := Copy(S, 1, AnsiPos(',',S)-1);
+
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    SS := Copy(S, 1, AnsiPos(',',S)-1);
+    Start := TimeStringToMS_SSA(SS);
+
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    SS := Copy(S, 1, AnsiPos(',',S)-1);
+    Stop := TimeStringToMS_SSA(SS);
+
+    S := Copy(S, AnsiPos(',',s)+1, MaxInt);
+    Style := Copy(S, 1, AnsiPos(',',S)-1);
+
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    Actor := Copy(S, 1, AnsiPos(',',S)-1);
+
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    LeftMarg := Copy(s,1,AnsiPos(',',S)-1);
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    RightMarg := Copy(s,1,AnsiPos(',',S)-1);
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    VertMarg := Copy(s,1,AnsiPos(',',S)-1);
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+
+    Effect := Copy(S, 1, AnsiPos(',',S)-1);
+    S := Copy(S, AnsiPos(',',S)+1, MaxInt);
+    Text := S;
+    if (Start <> -1) and (Stop <> -1) then
+    begin
+      NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
+      if IsUTF8 then
+        TSubtitleRange(NewRange).Text := UTF8Decode(Text)
+      else
+        TSubtitleRange(NewRange).Text := Text;
+      TSubtitleRange(NewRange).Dialogue := Dialogue;
+      TSubtitleRange(NewRange).Layer := Layer;
+      TSubtitleRange(NewRange).Effect := Effect;
+      TSubtitleRange(NewRange).RightMarg := RightMarg;
+      TSubtitleRange(NewRange).LeftMarg := LeftMarg;
+      TSubtitleRange(NewRange).VertMarg := VertMarg;
+      TSubtitleRange(NewRange).Style := Style;
+      TSubtitleRange(NewRange).Actor := Actor;
+      if (EnableExperimentalKaraoke = True) then
+        NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
+    end;
+  end;
+  FS.Free;
+  WAVDisplayer.RangeList.FullSort;
+
+  vtvSubsList.Clear;
+  vtvSubsList.Repaint;
+  vtvSubsList.BeginUpdate;
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    Node := vtvSubsList.AddChild(nil);
+    NodeData := vtvSubsList.GetNodeData(Node);
+    NodeData.Range := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
+  end;
+  vtvSubsList.EndUpdate;
+  WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Header.AutoFitColumns(False);
   vtvSubsList.Repaint;
   g_WebRWSynchro.EndWrite;
@@ -1346,19 +1524,9 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitles(Filename: WideString; InUTF8 : Boolean;  BackupOnly : Boolean);
-var i : integer;
-    SubRange : TSubtitleRange;
-    FS : TFileStream;
+procedure TMainForm.SaveSubtitles(Filename: WideString; InUTF8 : Boolean; BackupOnly : Boolean);
+var Ext : WideString;
     BackupDstFilename : WideString;
-const
-    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
-
-    procedure WriteStringLnStream(s : string; Stream : TStream);
-    begin
-      s := s + #13#10;
-      Stream.Write(s[1],Length(s));
-    end;
 begin
   if (not BackupOnly) and WideFileExists(Filename) and ConfigObject.EnableBackup then
   begin
@@ -1367,27 +1535,14 @@ begin
     WideCopyFile(Filename, BackupDstFilename, False);
   end;
 
-  // TODO : FIX unicode Filename
-  FS := TFileStream.Create(Filename, fmCreate);
-  if InUTF8 then
-  begin
-    FS.Write(UTF8BOM[0],Length(UTF8BOM));
-  end;
+  Ext := WideLowerCase(WideExtractFileExt(Filename));
+  if (Ext = '.srt') then
+    SaveSubtitlesAsSRT(Filename, InUTF8)
+  else if (Ext = '.ass') then
+    SaveSubtitlesAsASS(Filename, InUTF8)
+  else if (Ext = '.ssa') then
+    SaveSubtitlesAsSSA(Filename, InUTF8);
 
-  for i:=0 to WAVDisplayer.RangeList.Count-1 do
-  begin
-    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    WriteStringLnStream(IntToStr(i+1), FS);
-    WriteStringLnStream(TimeMsToString(SubRange.StartTime,',') + ' --> ' +
-      TimeMsToString(SubRange.StopTime,','), FS);
-    if InUTF8 then
-      WriteStringLnStream(UTF8Encode(Subrange.Text), FS)
-    else
-      WriteStringLnStream(Subrange.Text, FS);
-    WriteStringLnStream('', FS);
-  end;
-  FS.Free;
-  
   if (not BackupOnly) then
   begin
     ApplyAutoBackupSettings; // Reset auto-backup timing
@@ -1769,11 +1924,32 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionSaveAsExecute(Sender: TObject);
+var InputExt : WideString;
 begin
-  TntSaveDialog1.Filter := 'Subtitles files (*.srt)|*.SRT' + '|' +
+  TntSaveDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+    'SSA files (*.ssa)|*.SSA' + '|' +
+    'ASS files (*.ass)|*.ASS' + '|' +
     'All files (*.*)|*.*';
+  TntSaveDialog1.FileName := CurrentProject.SubtitlesFile;
+  // Preselect format
+  InputExt := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
+  if (InputExt = '.srt') then
+    TntSaveDialog1.FilterIndex := 1
+  else if (InputExt = '.ssa') then
+    TntSaveDialog1.FilterIndex := 2
+  else if (InputExt = '.ass') then
+    TntSaveDialog1.FilterIndex := 3
+  else
+    TntSaveDialog1.FilterIndex := 4;
+
   if TntSaveDialog1.Execute then
   begin
+    // Force extension filter
+    case TntSaveDialog1.FilterIndex of
+      1 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.srt');
+      2 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ssa');
+      3 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ass');
+    end;
     SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.IsUTF8, False);
   end;
 end;
@@ -3899,6 +4075,43 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
+var i : integer;
+    SubRange : TSubtitleRange;
+    FS : TFileStream;
+const
+    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + #13#10;
+      Stream.Write(s[1],Length(s));
+    end;
+begin
+  // TODO : FIX unicode Filename
+  FS := TFileStream.Create(Filename, fmCreate);
+  if InUTF8 then
+  begin
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
+  end;
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    WriteStringLnStream(IntToStr(i+1), FS);
+    WriteStringLnStream(TimeMsToString(SubRange.StartTime,',') + ' --> ' +
+      TimeMsToString(SubRange.StopTime,','), FS);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(Subrange.Text), FS)
+    else
+      WriteStringLnStream(Subrange.Text, FS);
+    WriteStringLnStream('', FS);
+  end;
+  FS.Free;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     SubRange : TSubtitleRange;
@@ -3913,21 +4126,30 @@ const
       Stream.Write(s[1],Length(s));
     end;
 begin
+  // Write BOM if any
   FS := TFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
 
-  WriteStringLnStream('[Script Info]', FS);
-  WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
-  WriteStringLnStream('Title: <untitled>', FS);
-  WriteStringLnStream('Original Script: <unknown>', FS);
-  WriteStringLnStream('ScriptType: v4.00', FS);
-  WriteStringLnStream('', FS);
-  WriteStringLnStream('[V4 Styles]', FS);
-  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
-  WriteStringLnStream('Style: Default,Arial,28,65535,255,16744448,-2147483640,-1,0,1,3,0,2,30,30,30,0,128', FS);
+  // Write Header
+  if (SubtitleFileHeader = '') then
+  begin
+    WriteStringLnStream('[Script Info]', FS);
+    WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
+    WriteStringLnStream('Title: <untitled>', FS);
+    WriteStringLnStream('Original Script: <unknown>', FS);
+    WriteStringLnStream('ScriptType: v4.00', FS);
+    WriteStringLnStream('', FS);
+    WriteStringLnStream('[V4 Styles]', FS);
+    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
+    WriteStringLnStream('Style: Default,Arial,28,65535,255,16744448,-2147483640,-1,0,1,3,0,2,30,30,30,0,128', FS);
+  end
+  else
+  begin
+    WriteStringLnStream(SubtitleFileHeader, FS);
+  end;
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
   WriteStringLnStream('Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
@@ -3937,9 +4159,10 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    s := Format('Dialogue: Marked=0,%s,%s,*Default,,0000,0000,0000,,',
-      [TimeMsToSSAString(SubRange.StartTime),
-       TimeMsToSSAString(SubRange.StopTime)]);
+    s := Format('%s: Marked=%s,%s,%s,%s,%s,%s,%s,%s,%s,',
+      [Subrange.Dialogue, SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
+       TimeMsToSSAString(SubRange.StopTime), SubRange.Style, SubRange.Actor,
+       Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
     if InUTF8 then
       s := s + UTF8Encode(Subrange.Text)
     else
@@ -3951,15 +4174,62 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionExportToSSAExecute(Sender: TObject);
+procedure TMainForm.SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
+var i : integer;
+    SubRange : TSubtitleRange;
+    FS : TFileStream;
+    s : WideString;
+const
+    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + #13#10;
+      Stream.Write(s[1],Length(s));
+    end;
 begin
-  TntSaveDialog1.Filter := 'Subtitles files (*.ssa)|*.SSA' + '|' +
-    'All files (*.*)|*.*';
-  TntSaveDialog1.FileName := WideChangeFileExt(CurrentProject.SubtitlesFile, '.ssa');
-  if TntSaveDialog1.Execute then
+  // Write BOM if any
+  FS := TFileStream.Create(Filename, fmCreate);
+  if InUTF8 then
   begin
-    SaveSubtitlesAsSSA(TntSaveDialog1.FileName, CurrentProject.IsUTF8);
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
+
+  // Write Header
+  if (SubtitleFileHeader = '') then
+  begin
+    WriteStringLnStream('[Script Info]', FS);
+    WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
+    WriteStringLnStream('Title: <untitled>', FS);
+    WriteStringLnStream('Original Script: <unknown>', FS);
+    WriteStringLnStream('ScriptType: v4.00+', FS);
+    WriteStringLnStream('', FS);
+    WriteStringLnStream('[V4+ Styles]', FS);
+    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
+    WriteStringLnStream('Style: *Default,Arial,28,&H00FFFFFF,&H00400040,&H00C0C0C0,&H82C0C0C0,0,0,0,0,100,100,0,0,0,0,0,5,15,15,15,0', FS);
+  end
+  else
+  begin
+    WriteStringLnStream(SubtitleFileHeader, FS);
+  end;
+  WriteStringLnStream('', FS);
+  WriteStringLnStream('[Events]', FS);
+  WriteStringLnStream('Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    s := Format('%s: %s,%s,%s,%s,%s,%s,%s,%s,%s,',
+      [Subrange.Dialogue, SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
+       TimeMsToSSAString(SubRange.StopTime), SubRange.Style,SubRange.Actor,
+       Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
+    if InUTF8 then
+      s := s + UTF8Encode(Subrange.Text)
+    else
+      s := s + Subrange.Text;
+    WriteStringLnStream(s, FS);
+  end;
+  FS.Free;
 end;
 
 //------------------------------------------------------------------------------

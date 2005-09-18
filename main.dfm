@@ -1170,9 +1170,6 @@ object MainForm: TMainForm
         Action = ActionSaveAs
         Caption = 'Save As...'
       end
-      object MenuItemExportToSSA: TTntMenuItem
-        Action = ActionExportToSSA
-      end
       object MenuItemExportToWAV: TTntMenuItem
         Action = ActionExportToWAV
       end
@@ -1790,7 +1787,6 @@ object MainForm: TMainForm
     end
     object ActionExportToSSA: TTntAction
       Caption = 'Export to SSA'
-      OnExecute = ActionExportToSSAExecute
     end
     object ActionExportToWAV: TTntAction
       Caption = 'Export to WAV'

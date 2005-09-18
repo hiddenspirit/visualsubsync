@@ -102,7 +102,7 @@ implementation
 
 {$R *.dfm}
 
-uses WAVExtractFormUnit;
+uses WAVExtractFormUnit, TntSysUtils;
 
 //==============================================================================
 
@@ -245,10 +245,21 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TProjectForm.bttBrowseSubtitleFileClick(Sender: TObject);
+var Ext : WideString; 
 begin
   TntOpenDialog1.FileName := EditSubtitleFilename.Text;
-  TntOpenDialog1.Filter := 'Subtitles files (*.srt)|*.SRT' + '|' +
+  TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+    'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
     'All files (*.*)|*.*';
+    
+  Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
+  if (Ext = '.srt') then
+    TntOpenDialog1.FilterIndex := 1
+  else if (Ext = '.ssa') or (Ext = '.ass') then
+    TntOpenDialog1.FilterIndex := 2
+  else
+    TntOpenDialog1.FilterIndex := 3;
+    
   if TntOpenDialog1.Execute then
   begin
     EditSubtitleFilename.Text := TntOpenDialog1.FileName;
