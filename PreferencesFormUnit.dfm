@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsHotKeys
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -127,6 +127,14 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Enable subtitle creation with space key (toggle) in timing mode'
           TabOrder = 3
+        end
+        object chkEnableMouseAntiOverlapping: TCheckBox
+          Left = 16
+          Top = 88
+          Width = 241
+          Height = 17
+          Caption = 'Enable mouse anti-overlapping'
+          TabOrder = 4
         end
       end
       object GroupBox4: TGroupBox

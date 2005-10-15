@@ -3481,6 +3481,7 @@ begin
     else
       WAVDisplayer.SelMode := smCoolEdit;
   end;
+  WAVDisplayer.EnableMouseAntiOverlapping := ConfigObject.EnableMouseAntiOverlapping;
 end;
 
 //------------------------------------------------------------------------------
@@ -3922,7 +3923,7 @@ begin
   if (Length(Text) > 0) then
   begin
     SetLength(WordArray, Length(WordArray)+1);
-    WordArray[Length(WordArray)-1] := Copy(Text, j, i-j+1);
+    WordArray[Length(WordArray)-1] := Copy(Text, j, Length(Text)-j+1);
   end;
 end;
 
@@ -4399,7 +4400,7 @@ end;
 
 TUndoStack
 
-TUndoTask (list of TUndoBasic)
+TUndoTasks (list of TUndoBasic)
 
 TUndoBasicDelete (list of subtitle)
 TUndoBasicAdd (list of index)

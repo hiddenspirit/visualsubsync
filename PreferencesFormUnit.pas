@@ -78,7 +78,8 @@ type
     // Misc
     SwapSubtitlesList : Boolean;
     DisableSubtitleEdition : Boolean;
-    EnableToggleCreation : Boolean; 
+    EnableToggleCreation : Boolean;
+    EnableMouseAntiOverlapping : Boolean;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -176,6 +177,7 @@ type
     chkDisableSubEditionInTimingMode: TCheckBox;
     chkEnableSubCreationWithSpaceKey: TCheckBox;
     chkAutoSaveWhenPlaying: TCheckBox;
+    chkEnableMouseAntiOverlapping: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -394,6 +396,7 @@ begin
   SwapSubtitlesList := False;
   DisableSubtitleEdition := True;
   EnableToggleCreation := True;
+  EnableMouseAntiOverlapping := True;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -506,6 +509,7 @@ begin
   IniFile.WriteBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
   IniFile.WriteBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   IniFile.WriteBool('Misc','EnableToggleCreation',EnableToggleCreation);
+  IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -571,6 +575,7 @@ begin
   SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
   DisableSubtitleEdition := IniFile.ReadBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   EnableToggleCreation := IniFile.ReadBool('Misc','EnableToggleCreation',EnableToggleCreation);
+  EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -691,6 +696,7 @@ begin
   chkSwapSubList.Checked := Config.SwapSubtitlesList;
   chkDisableSubEditionInTimingMode.Checked := Config.DisableSubtitleEdition;
   chkEnableSubCreationWithSpaceKey.Checked := Config.EnableToggleCreation;
+  chkEnableMouseAntiOverlapping.Checked := Config.EnableMouseAntiOverlapping;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -768,6 +774,7 @@ begin
   Config.SwapSubtitlesList := chkSwapSubList.Checked;
   Config.DisableSubtitleEdition := chkDisableSubEditionInTimingMode.Checked;
   Config.EnableToggleCreation := chkEnableSubCreationWithSpaceKey.Checked;
+  Config.EnableMouseAntiOverlapping := chkEnableMouseAntiOverlapping.Checked;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;

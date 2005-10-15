@@ -191,6 +191,8 @@ type
     FSelectedKaraokeIndex : Integer; // Index of the range, 0 -> [StartTime,SubTime[0]]
     FSelectedKaraokeRange : TRange;
 
+    FEnableMouseAntiOverlapping : Boolean;
+
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -296,6 +298,7 @@ type
     property IsPlaying : Boolean read FIsPlaying;
     property Enabled;
     property Length : Integer read FLengthMs;
+    property EnableMouseAntiOverlapping : Boolean read FEnableMouseAntiOverlapping write FEnableMouseAntiOverlapping;
     property PageSize : Integer read FPageSizeMs;
     property PopupMenu;
     property Position : Integer read FPositionMs;
@@ -1349,7 +1352,7 @@ procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
     ClipKaraokeRect, ClipSubRect : TRect;
-    x1, x2, i, t : Integer;
+    x1, x2, i : Integer;
 begin
   if (ssLeft in Shift) then
   begin
@@ -1440,16 +1443,25 @@ begin
         Include(UpdateFlags, uvfRange);
         if Assigned(FOnSelectedRangeChange) and (FDynamicEditMode = demNone) then
           FOnSelectedRangeChange(Self);
-
-
       end;
       if Assigned(FOnSelectionChange) then
         FOnSelectionChange(Self);
       Include(UpdateFlags, uvfSelection);
+    end else begin
+      if (FSelection.StartTime <> FSelection.StopTime) then
+        Include(UpdateFlags, uvfSelection); // clear selection
+      FSelectedRange := nil;
+      FSelectionOrigin := NewCursorPos;
+      FSelection.StartTime := 0;
+      FSelection.StopTime := 0;
+      if Assigned(FOnSelectionChange) then
+        FOnSelectionChange(Self);
+    end;
 
 
+    if (FEnableMouseAntiOverlapping = True) then
+    begin
       // Clip mouse left/right position to avoid overlapp on previous/next subtitle
-      // TODO : same thing when starting selection
       x1 := 0;
       x2 := Width;
       i := RangeList.FindInsertPos(NewCursorPos,-1);
@@ -1460,15 +1472,16 @@ begin
           if(NewCursorPos = FSelectedRange.StartTime) then
           begin
             if (i > 0) then
-              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs);
-            x2 := TimeToPixel(FSelectedRange.StopTime - FPositionMs);
+            begin
+              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs + 1);
+            end;
+            x2 := TimeToPixel(FSelectedRange.StopTime - FPositionMs - 1);
           end
           else
           begin
             // TODO : better change stop when ovelapping on next sub ???
-            
-            x1 := TimeToPixel(FSelectedRange.StartTime - FPositionMs);
-            x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs);
+            x1 := TimeToPixel(FSelectedRange.StartTime - FPositionMs + 1);
+            x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs - 1);
           end;
         end
         else
@@ -1478,16 +1491,17 @@ begin
              (NewCursorPos <= RangeList[i-1].StopTime) then
           begin
             // Selection only INSIDE subtitle range
-
           end
           else
           begin
             // Selection only OUTSIDE subtitle range
             if (i > 0) then
-              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs);
+            begin
+              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs + 1);
+            end;
             if(i < RangeList.Count) then
             begin
-              x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs);
+              x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs - 1);
             end;
           end;
         end;
@@ -1501,18 +1515,8 @@ begin
       // Convert in screen coordinate
       OffsetRect(ClipSubRect, ClientOrigin.X, ClientOrigin.Y);
       ClipCursor(@ClipSubRect);
-
-
-    end else begin
-      if (FSelection.StartTime <> FSelection.StopTime) then
-        Include(UpdateFlags, uvfSelection); // clear selection
-      FSelectedRange := nil;
-      FSelectionOrigin := NewCursorPos;
-      FSelection.StartTime := 0;
-      FSelection.StopTime := 0;
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
     end;
+
     if (FCursorMs <> NewCursorPos) and (FDynamicEditMode = demNone) then
     begin
       FCursorMs := NewCursorPos;
