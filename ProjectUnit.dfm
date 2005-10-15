@@ -184,7 +184,7 @@ object ProjectForm: TProjectForm
     Top = 304
     Width = 75
     Height = 25
-    Caption = 'Ok'
+    Caption = 'OK'
     TabOrder = 6
     Visible = False
     OnClick = bttOkClick

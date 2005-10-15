@@ -55,7 +55,7 @@ object FindForm: TFindForm
     Top = 8
     Width = 73
     Height = 25
-    Caption = 'Ok'
+    Caption = 'OK'
     TabOrder = 2
     OnClick = TntButton1Click
   end

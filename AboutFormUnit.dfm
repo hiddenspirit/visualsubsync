@@ -144,7 +144,7 @@ object AboutForm: TAboutForm
     Top = 200
     Width = 329
     Height = 25
-    Caption = 'Ok'
+    Caption = 'OK'
     TabOrder = 0
     OnClick = bttOkClick
   end
