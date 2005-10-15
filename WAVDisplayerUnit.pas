@@ -84,8 +84,8 @@ type
     function AddAndReturnSibling(const Range : TRange) : TRange;
     procedure AddAtEnd(const Range : TRange);
     procedure FullSort;
-    function FindInsertPos(const Range : TRange) : Integer;
-    function FindInsertPosSS(const Start,Stop : Integer) : Integer;
+    function FindInsertPos(const Range : TRange) : Integer; overload;
+    function FindInsertPos(const Start, Stop : Integer) : Integer; overload;
     function GetRangeIdxAt(const PosMs : Integer) : Integer;
     procedure Delete(const Index : Integer);
     function IndexOf(const Range : TRange) : Integer;
@@ -718,7 +718,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TRangeList.FindInsertPosSS(const Start,Stop : Integer) : Integer;
+function TRangeList.FindInsertPos(const Start,Stop : Integer) : Integer;
 var Range : TRange;
 begin
   Range := TRange.Create;
@@ -738,7 +738,7 @@ var r : TRange;
     i : Integer;
 begin
   Result := -1;
-  i := FindInsertPosSS(PosMs,-1);
+  i := FindInsertPos(PosMs,-1);
   Constrain(i,0,FList.Count-1);
   while (i >= 0) do
   begin
@@ -811,7 +811,7 @@ function TRangeList.FindFirstRangeAt(const PosMs : Integer; const ExpandBy : Int
 begin
   FSearchStartAt := PosMs;
   FSearchExpandBy := ExpandBy;
-  FSearchIdx := FindInsertPosSS(FSearchStartAt - FSearchExpandBy, -1);
+  FSearchIdx := FindInsertPos(FSearchStartAt - FSearchExpandBy, -1);
   Constrain(FSearchIdx, 0, FList.Count-1);
   while (FSearchIdx > 0) and
         (TRange(FList[FSearchIdx]).StopTime > (FSearchStartAt + FSearchExpandBy)) do
@@ -1348,8 +1348,8 @@ end;
 procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
-    ClipKaraokeRect : TRect;
-    x1, x2 : Integer;
+    ClipKaraokeRect, ClipSubRect : TRect;
+    x1, x2, i, t : Integer;
 begin
   if (ssLeft in Shift) then
   begin
@@ -1440,10 +1440,69 @@ begin
         Include(UpdateFlags, uvfRange);
         if Assigned(FOnSelectedRangeChange) and (FDynamicEditMode = demNone) then
           FOnSelectedRangeChange(Self);
+
+
       end;
       if Assigned(FOnSelectionChange) then
         FOnSelectionChange(Self);
       Include(UpdateFlags, uvfSelection);
+
+
+      // Clip mouse left/right position to avoid overlapp on previous/next subtitle
+      // TODO : same thing when starting selection
+      x1 := 0;
+      x2 := Width;
+      i := RangeList.FindInsertPos(NewCursorPos,-1);
+      if (i >= 0) then
+      begin
+        if Assigned(FSelectedRange) then
+        begin
+          if(NewCursorPos = FSelectedRange.StartTime) then
+          begin
+            if (i > 0) then
+              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs);
+            x2 := TimeToPixel(FSelectedRange.StopTime - FPositionMs);
+          end
+          else
+          begin
+            // TODO : better change stop when ovelapping on next sub ???
+            
+            x1 := TimeToPixel(FSelectedRange.StartTime - FPositionMs);
+            x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs);
+          end;
+        end
+        else
+        begin
+          if (i > 0) and
+             (NewCursorPos >= RangeList[i-1].StartTime) and
+             (NewCursorPos <= RangeList[i-1].StopTime) then
+          begin
+            // Selection only INSIDE subtitle range
+
+          end
+          else
+          begin
+            // Selection only OUTSIDE subtitle range
+            if (i > 0) then
+              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs);
+            if(i < RangeList.Count) then
+            begin
+              x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs);
+            end;
+          end;
+        end;
+      end;
+      Constrain(x1,0,Width);
+      Constrain(x2,0,Width);
+      ClipSubRect.Left := x1;
+      ClipSubRect.Right := x2;
+      ClipSubRect.Top := 0;
+      ClipSubRect.Bottom := Height;
+      // Convert in screen coordinate
+      OffsetRect(ClipSubRect, ClientOrigin.X, ClientOrigin.Y);
+      ClipCursor(@ClipSubRect);
+
+
     end else begin
       if (FSelection.StartTime <> FSelection.StopTime) then
         Include(UpdateFlags, uvfSelection); // clear selection
@@ -1715,7 +1774,7 @@ begin
             end;
           end;
 
-          if (FSelectionOrigin <> -1) then
+          if (FSelectionOrigin <> -1) and (FSelectionOrigin <> NewCursorPos) then
           begin
             // Update selection
             if (NewCursorPos > FSelectionOrigin) then
@@ -1862,6 +1921,14 @@ end;
 procedure TWAVDisplayer.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
+
+  //TODO : Add user setting for anti-empty-selection
+  if ((FSelection.StopTime - FSelection.StartTime) < 80) and
+    (not (Assigned(FSelectedRange) or Assigned(FDynamicSelRange) or
+    Assigned(FSelectedKaraokeRange))) then
+  begin
+    ClearSelection;
+  end;
 
   // The selected sub has changed, we need to keep range list sorted
   if FNeedToSortSelectedSub then
