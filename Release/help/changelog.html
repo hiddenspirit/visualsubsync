@@ -19,9 +19,30 @@
 
 <br>
 
+<div class="Title">Version 0.91 (2005-10-15)</div>
+This is mainly a bug fix release. Though there is one new feature, when
+making selection or modifying existing subtitles in the wav displayer, the
+mouse position is constrained in some way to avoid subtitles overlapping. If
+you don't like this behaviour you can disable it in the preferences (last
+checkbox in "General" tab).
+<br>
+Bug fix and small changes list:
+<ul>
+	<li>Added optionnal mouse anti-overlapping feature</li>
+	<li>The "Find" shortcut (F3) is now configurable</li>
+  <li>Fix shifting of karaoke second syllable start time.</li>
+  <li>Fix for small "false" selection (<80ms)</li>
+  <li>Fix some typo (Ok -&gt) OK</li>
+  <li>Fix Undo/Redo in subtitle text edition field</li>
+  <li>Fix bug in audio extraction (especially for MPEG files)</li>
+</ul>
+Thanks to Mr. kb for his bug report :-)
+<br>
+<br>
+
 <div class="Title">Version 0.9 (2005-09-18)</div>
 Basic support for SSA/ASS file format (contribution by Mirage).<br>
-Bug fix and small changes :
+Bug fix and small changes list:
 <ul>
   <li>Delay selection if the selected subtitle is delayed.</li>
   <li>Fix bug in webserver when path contain the "#" character (bug report by GuYoMe)</li>
@@ -31,7 +52,7 @@ Bug fix and small changes :
 <br>
 
 <div class="Title">Version 0.81 (2005-05-29)</div>
-Bug fix and small changes :
+Bug fix and small changes list:
 <ul>
 	<li>Now ignores SSA and SRT tags when calculating lines length</li>
 	<li>SRT tags colorization</li>
@@ -58,7 +79,7 @@ version of the file to ssa by using the new "Export to SSA..." function.<br>
 Using karaoke in a .srt file is not valid even if vobsub/vsfilter play it.
 <br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
 	<li>Experimental karaoke support</li>
   <li>Added "Show frame at cursor", "Show stop frame" and "Show start frame" hotkeys</li>
@@ -81,7 +102,7 @@ If you want a bit more flexibility, in the HotKeys settings, you also have 3 new
 - "Stop current sub and start new sub"
 <br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
   <li>Added live subtitling function</li>
   <li>Improved dynamic subtitle selection (more visual feedback, now works when you are before or after a subtitle)</li>
@@ -106,7 +127,7 @@ For easier plugins developpement, you can download the JavaScript 1.5 Reference
 A big thanks to the nice guys of the <a href="http://delphi.mozdev.org/">Delphi JavaScript Bridge</a> project.
 <br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
   <li>Added JavaScript plugins support for error detection/correction</li>
   <li>Added dynamic subtitle selection when you click in the neighborhood of a subtitle start/end time</li>
@@ -124,7 +145,7 @@ The timing mode is now more complete thanks to the contribution of Kaiousama
 who added SubStationAlpha like time selection and also mouse wheel key modifier.
 <br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
 	<li>Added new mouse buttons handling in timing mode (left/right button set start/stop time,
 	like in SubStationAlpha, can be disabled in Preferences)</li>
@@ -151,7 +172,7 @@ option to automatically delete the text you added from the pipe, it's why
 it's called a pipe, text his moving out as you add subtitles.
 <br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
 	<li>Added new keyboard shortcuts to shift start/stop time by 10/100 ms</li>
 	<li>Added vertical zoom option</li>
@@ -174,7 +195,7 @@ Others important features are dynamic update of playing range, that can be teste
 by playing in loop mode and changing selection, and the "Save as UTF8" check box
 that allow subtitle creation in every language without charset headache ;-)<br>
 <br>
-Here is a more complete list of changes :
+Here is a more complete list of changes:
 <ul>
 	<li>Added Option to swap subtitles list and subtitle edit zone</li>
 	<li>Added Line number column in subtitles list</li>
