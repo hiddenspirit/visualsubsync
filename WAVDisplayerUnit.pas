@@ -192,7 +192,8 @@ type
     FSelectedKaraokeRange : TRange;
 
     FEnableMouseAntiOverlapping : Boolean;
-
+    FMinSelTime : Integer;
+    FMaxSelTime : Integer;
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -1464,6 +1465,8 @@ begin
       // Clip mouse left/right position to avoid overlapp on previous/next subtitle
       x1 := 0;
       x2 := Width;
+      FMinSelTime := -1;
+      FMaxSelTime := -1;
       i := RangeList.FindInsertPos(NewCursorPos,-1);
       if (i >= 0) then
       begin
@@ -1473,15 +1476,19 @@ begin
           begin
             if (i > 0) then
             begin
-              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs + 1);
+              FMinSelTime := RangeList[i-1].StopTime + 1;
+              x1 := TimeToPixel(FMinSelTime - FPositionMs);
             end;
-            x2 := TimeToPixel(FSelectedRange.StopTime - FPositionMs - 1);
+            FMaxSelTime := FSelectedRange.StopTime - 1;
+            x2 := TimeToPixel(FMaxSelTime - FPositionMs);
           end
           else
           begin
             // TODO : better change stop when ovelapping on next sub ???
-            x1 := TimeToPixel(FSelectedRange.StartTime - FPositionMs + 1);
-            x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs - 1);
+            FMinSelTime := FSelectedRange.StartTime + 1;
+            x1 := TimeToPixel(FMinSelTime - FPositionMs );
+            FMaxSelTime := RangeList[i].StartTime - 1;
+            x2 := TimeToPixel(FMaxSelTime - FPositionMs);
           end;
         end
         else
@@ -1497,19 +1504,23 @@ begin
             // Selection only OUTSIDE subtitle range
             if (i > 0) then
             begin
-              x1 := TimeToPixel(RangeList[i-1].StopTime - FPositionMs + 1);
+              FMinSelTime := RangeList[i-1].StopTime  + 1;
+              x1 := TimeToPixel(FMinSelTime - FPositionMs);
             end;
             if(i < RangeList.Count) then
             begin
-              x2 := TimeToPixel(RangeList[i].StartTime - FPositionMs - 1);
+              FMaxSelTime := RangeList[i].StartTime - 1;
+              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
             end;
           end;
         end;
       end;
       Constrain(x1,0,Width);
       Constrain(x2,0,Width);
-      ClipSubRect.Left := x1;
-      ClipSubRect.Right := x2;
+      // allow the cursor to go a bit further than allowed, we will do the real
+      // clipping based on FMinSelTime and FMaxSelTime.
+      ClipSubRect.Left := x1-2;
+      ClipSubRect.Right := x2+3;
       ClipSubRect.Top := 0;
       ClipSubRect.Bottom := Height;
       // Convert in screen coordinate
@@ -1759,6 +1770,16 @@ begin
           Constrain(X, 0, Width);
           NewCursorPos := PixelToTime(X) + FPositionMs;
 
+          // Make sur to clip selection
+          if(FMinSelTime <> -1) then
+          begin
+            Constrain(NewCursorPos,FMinSelTime,MaxInt);
+          end;
+          if(FMaxSelTime <> -1) then
+          begin
+            Constrain(NewCursorPos,0,FMaxSelTime);
+          end;
+
           if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
           begin
             if (FDynamicEditTime >= 0) and (FDynamicEditTime < System.Length(FDynamicSelRange.SubTime)) then
@@ -1977,6 +1998,8 @@ begin
   FMouseIsDown := False;
   FDynamicEditMode := demNone;
   FDynamicSelRange := nil;
+  FMinSelTime := -1;
+  FMaxSelTime := -1;
   ClipCursor(nil);
 end;
 
