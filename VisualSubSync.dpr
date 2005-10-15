@@ -29,7 +29,8 @@ uses
   DetachedVideoFormUnit in 'DetachedVideoFormUnit.pas' {DetachedVideoForm},
   JavaScriptPluginUnit in 'JavaScriptPluginUnit.pas',
   LogWindowFormUnit in 'LogWindowFormUnit.pas' {LogForm},
-  CursorManager in 'CursorManager.pas';
+  CursorManager in 'CursorManager.pas',
+  tom_TLB in 'tom_TLB.pas';
 
 {$R *.res}
 
