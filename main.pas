@@ -497,7 +497,8 @@ implementation
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows, JavaScriptPluginUnit,
-  LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit;
+  LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
+  tom_TLB, RichEdit;
 
 {$R *.dfm}
 
@@ -1389,11 +1390,24 @@ procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
     i, j : Integer;
     WordArray : WideStringArray2;
+    TxtDocI : ITextDocument;
+    RichEditOle: IUnknown;
+const
+  tomSuspend	= -9999995;
+	tomResume	= -9999994;
 begin
   RichEdit.Tag := 0;
   RichEdit.Lines.BeginUpdate;
   savSelStart := RichEdit.SelStart;
   savSelLength := RichEdit.SelLength;
+
+  if SendMessage(RichEdit.Handle, EM_GETOLEINTERFACE, 0, Longint(@RichEditOle)) <> 0 then
+  begin
+    if RichEditOle.QueryInterface(IID_ITextDocument, TxtDocI) = S_OK then
+    begin
+      TxtDocI.Undo(tomSuspend);
+    end;
+  end;
 
   TagSplit(RichEdit.Text, WordArray);
 
@@ -1413,6 +1427,13 @@ begin
 
   RichEdit.SelStart := savSelStart;
   RichEdit.SelLength := savSelLength;
+
+  if Assigned(TxtDocI) then
+  begin
+    TxtDocI.Undo(tomResume);
+  end;
+  TxtDocI := nil;
+  RichEditOle := nil;
 
   RichEdit.Lines.EndUpdate;
   RichEdit.Tag := 1;
@@ -3150,7 +3171,7 @@ begin
   begin
     R := WAVDisplayer.KaraokeSelectedRange;
     Idx := (WAVDisplayer.KaraokeSelectedIndex - 1);
-    if (Idx > 0) then
+    if (Idx >= 0) then
     begin
       // Calcul bounds
       if (Idx = 0) then
