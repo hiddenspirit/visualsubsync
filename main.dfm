@@ -1484,6 +1484,7 @@ object MainForm: TMainForm
       OnExecute = ActionProjectPropertiesExecute
     end
     object ActionFindNext: TTntAction
+      Tag = 1
       Caption = 'Find next'
       ImageIndex = 10
       ShortCut = 114
