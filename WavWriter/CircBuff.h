@@ -45,26 +45,38 @@ public:
 	unsigned int Left()
 	{
 		if(m_WritePos >= m_ReadPos)
+        {
 			return m_Size - m_WritePos + m_ReadPos;
+        }
 		else 
+        {
 			return m_ReadPos - m_WritePos;
+        }
 	}
 	
 	unsigned int Size()
 	{
 		if(m_WritePos >= m_ReadPos)
+        {
 			return m_WritePos - m_ReadPos;
+        }
 		else
+        {
 			return m_Size - m_ReadPos + m_WritePos;
+        }
 	}
 	
 	void Write(void* Buffer, int Len)
 	{
 		int BytesContiguousLeft = 0;
 		if(m_WritePos >= m_ReadPos)
+        {
 			BytesContiguousLeft = m_Size - m_WritePos;
+        }
 		else
+        {
 			BytesContiguousLeft = m_ReadPos - m_WritePos;
+        }
 		
 		int BytesFirstPart = min(BytesContiguousLeft, Len);
 		memcpy(&m_Data[m_WritePos], Buffer, BytesFirstPart);
@@ -73,6 +85,19 @@ public:
 		int BytesSecondPart = Len - BytesFirstPart;
 		if(BytesSecondPart)
 		{
+            if(m_ReadPos == m_WritePos)
+            {
+                // Something is wrong here :p
+                OutputDebugString("CircBuffer write overflow!!!\n");
+            }
+            BytesContiguousLeft = m_ReadPos - m_WritePos;
+            if(BytesSecondPart > BytesContiguousLeft)
+            {
+                // Again something is wrong :p
+                OutputDebugString("CircBuffer write overflow!!!\n");
+            }
+
+
 			memcpy(&m_Data[m_WritePos], (char*)Buffer+BytesFirstPart, BytesSecondPart);
 			m_WritePos = (m_WritePos + BytesSecondPart) % m_Size;
 		}
@@ -82,9 +107,13 @@ public:
 	{
 		int BytesContiguous = 0;
 		if(m_WritePos >= m_ReadPos)
+        {
 			BytesContiguous = m_WritePos - m_ReadPos;
+        }
 		else
-			BytesContiguous = m_Size - m_ReadPos;
+        {
+		    BytesContiguous = m_Size - m_ReadPos;
+        }
 		
 		int BytesFirstPart = min(BytesContiguous, Len);
 		memcpy(Buffer, &m_Data[m_ReadPos], BytesFirstPart);
@@ -93,6 +122,13 @@ public:
 		int BytesSecondPart = Len - BytesFirstPart;
 		if(BytesSecondPart)
 		{
+            BytesContiguous = m_WritePos - m_ReadPos;
+            if(BytesContiguous < BytesSecondPart)
+            {
+                // Something is wrong here :p
+                OutputDebugString("CircBuffer read overflow!!!\n");
+            }
+
 			memcpy((char*)Buffer+BytesFirstPart, &m_Data[m_ReadPos], BytesSecondPart);
 			m_ReadPos = (m_ReadPos + BytesSecondPart) % m_Size;
 		}

@@ -72,7 +72,7 @@ CFactoryTemplate g_Templates[]= {
 };
 int g_cTemplates = 1;
 
-
+#ifdef _DEBUG
 void DebugLog(char *pFormat,...)
 {
     char szMsg[2000];
@@ -83,6 +83,9 @@ void DebugLog(char *pFormat,...)
 	OutputDebugString(szMsg);
 	va_end(va);
 }
+#else
+#define DebugLog
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -203,6 +206,7 @@ HRESULT CWavWriterFilter::StartWriting()
 			hr = pInAlloc->GetProperties(&InProps);
 			m_InputAllocatorBuffSize = InProps.cbBuffer;
 			pInAlloc->Release();
+            DebugLog("CWavWriterFilter::StartWriting m_InputAllocatorBuffSize=%d", m_InputAllocatorBuffSize);
 		}		
 
 		if(m_bWriteWavFile)
@@ -219,11 +223,13 @@ HRESULT CWavWriterFilter::StartWriting()
 			if(m_ConvBuff)
 				delete[] m_ConvBuff;
 			m_ConvBuff = new char[m_ConvBuffSize];
+            DebugLog("CWavWriterFilter::StartWriting m_ConvBuffSize=%d", m_ConvBuffSize);
 			
 			m_OutBuffSize = max((m_InputAllocatorBuffSize * 2), m_ConvBuffSize);
 			if(m_OutBuff)
 				delete[] m_OutBuff;
 			m_OutBuff = new char[m_OutBuffSize];
+            DebugLog("CWavWriterFilter::StartWriting m_OutBuffSize=%d", m_OutBuffSize);
 			
 			if(m_bFastConvertMode)		
 			{			
@@ -235,6 +241,7 @@ HRESULT CWavWriterFilter::StartWriting()
 
 		InitPeakData();
 		m_Writting = true;
+        dataTotalOut = 0;
 	}
 	return S_OK;
 }
@@ -252,6 +259,7 @@ HRESULT CWavWriterFilter::StopWriting()
 				LONG lOutLength = 0;
 				Convert(NULL, 0, m_OutBuff, &lOutLength, true);
 				PeakProcessing((PBYTE)m_OutBuff, lOutLength, true);
+                dataTotalOut += lOutLength;
 				m_WavFile->WritePCMData(m_OutBuff, lOutLength);
 			}
 			delete m_WavFile;
@@ -260,6 +268,7 @@ HRESULT CWavWriterFilter::StopWriting()
 		CleanPeakData();
 		m_Writting = false;
 	}
+    DebugLog("CWavWriterFilter::StopWriting m_cbWavData=%d, dataTotalOut=%d",m_cbWavData, dataTotalOut);
 	m_cbWavData = 0;
 	return S_OK;
 }
@@ -311,6 +320,7 @@ HRESULT CWavWriterFilter::Write(PBYTE pbData, LONG lDataLength)
 		Convert((char*)pbData, lDataLength, m_OutBuff, &lOutLength, false);
 		if(m_bFastConvertMode)
 			PeakProcessing((PBYTE)m_OutBuff, lOutLength, false);
+        dataTotalOut += lOutLength;
 		if(!m_WavFile->WritePCMData(m_OutBuff, lOutLength))
 		{
 			return S_FALSE;
@@ -327,8 +337,12 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 	{
 		*lOutLength = 0;
 		
+        DebugLog("CWavWriterFilter::Convert lInLength=%d",lInLength);
+
 		if(pInData)
+        {
 			m_ConvCircBuffer->Write(pInData, lInLength);
+        }
 		
 		int BytesToRead = 0, BytesAvailable = 0;
 
@@ -369,7 +383,8 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 						src += m_InputChannels;
 						i++;
 					}
-					*lOutLength = i * sizeof(char);
+					*lOutLength += i * sizeof(char);
+                    pOutData += i * sizeof(char);
 				}
 				break;
 				
@@ -378,7 +393,7 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 					short* src = (short*)m_ConvBuff;
 					short* dst = (short*)pOutData;
 					int i, j;
-					int sample1, sample2;
+					int sample1;
 
 					if ((((BytesToRead / m_InputChannels) / 2) % 2) != 0) {
 						i = 0;
@@ -393,26 +408,16 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 						for(j=0; j < m_InputChannels; j++)
 							sample1 += *src++;
 						sample1 /= m_InputChannels;
-						/**
-						// Read and convert another sample to mono
-						sample2 = 0;
-						for(j=0; j < m_InputChannels; j++)
-							sample2 += *src++;
-						sample2 /= m_InputChannels;
-						// Write the sample
-						*dst++ = (short)((sample1 + sample2) / 2);
-						/**/
-						
-						/**/
+
 						// Skip next sample
 						src += m_InputChannels;
 						// Write the sample
 						*dst++ = (short)sample1;
-						/**/
 
 						i++;
 					}
-					*lOutLength = i * sizeof(short);
+					*lOutLength += i * sizeof(short);
+                    pOutData += i * sizeof(short);
 				}
 				break;
 			}
@@ -421,6 +426,7 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 		CopyMemory((PVOID) pOutData,(PVOID) pInData, lInLength);		
 		*lOutLength = lInLength;
 	}
+    DebugLog("CWavWriterFilter::Convert lOutLength=%d",*lOutLength);
 	return S_OK;
 }
 
@@ -453,6 +459,7 @@ HRESULT CWavWriterFilter::InitPeakData()
 				delete[] m_PeakCalcBuffer;
 			m_PeakCalcBufferSize = (m_SamplePerPeak * (m_wf->wBitsPerSample / 8) * m_wf->nChannels);
 			m_PeakCalcBuffer = new char[m_PeakCalcBufferSize];
+            DebugLog("CWavWriterFilter::InitPeakData m_PeakCalcBufferSize=%d", m_PeakCalcBufferSize);
 			
 			if(m_PeakCircBuffer)
 				delete m_PeakCircBuffer;

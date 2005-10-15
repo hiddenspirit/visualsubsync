@@ -95,6 +95,8 @@ class CWavWriterFilter : public CBaseFilter
 	char* m_PeakCalcBuffer;
 	int m_PeakCalcBufferSize;	
 	int m_InputAllocatorBuffSize;
+
+    ULONG dataTotalOut;
 	
 
 public:
