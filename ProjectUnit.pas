@@ -45,6 +45,11 @@ type
     IsUTF8 : Boolean;
     TextPipeSource : WideString;
     TextPipePosition : Integer;
+    ShowVideo : Boolean;
+    VideoPanelWidth : Integer;
+    VideoPanelHeight : Integer;
+
+    procedure LoadFromINIFile(ProjectFilename : WideString);
   published
     property IsDirty : Boolean read FIsDirty write SetIsDirty;
     property OnDirtyChange : TNotifyEvent read FOnDirtyChange write FOnDirtyChange;
@@ -102,7 +107,7 @@ implementation
 
 {$R *.dfm}
 
-uses WAVExtractFormUnit, TntSysUtils;
+uses WAVExtractFormUnit, TntSysUtils, IniFiles, MiscToolsUnit;
 
 //==============================================================================
 
@@ -116,6 +121,36 @@ begin
       FOnDirtyChange(Self);
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TVSSProject.LoadFromINIFile(ProjectFilename : WideString);
+var
+  ProjectFileIni : TIniFile;
+begin
+    ProjectFileIni := TIniFile.Create(ProjectFilename);
+    Filename := ProjectFilename;
+    VideoSource := ProjectFileIni.ReadString('VisualSubsync','VideoSource','');
+    WAVFile := ProjectFileIni.ReadString('VisualSubsync','WAVFile','');
+    PeakFile := ProjectFileIni.ReadString('VisualSubsync','PeakFile','');
+    WAVMode := TProjectWAVMode(ProjectFileIni.ReadInteger('VisualSubsync','WAVMode',1));
+    SubtitlesFile := ProjectFileIni.ReadString('VisualSubsync','SubtitlesFile','');
+    TextPipeSource := ProjectFileIni.ReadString('VisualSubsync','TextPipeSource','');
+    TextPipePosition := ProjectFileIni.ReadInteger('VisualSubsync','TextPipePosition',0);
+
+    VideoPanelWidth := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelWidth', 0);
+    VideoPanelHeight := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelHeight', 0);
+    ShowVideo := ProjectFileIni.ReadBool('VisualSubsync','ShowVideo', False);
+
+    ProjectFileIni.Free;
+
+    // Resolve relative path
+    VideoSource := WideResolveRelativePath(Filename, VideoSource);
+    WAVFile := WideResolveRelativePath(Filename, WAVFile);
+    PeakFile := WideResolveRelativePath(Filename, PeakFile);
+    SubtitlesFile := WideResolveRelativePath(Filename, SubtitlesFile);
+    TextPipeSource := WideResolveRelativePath(Filename, TextPipeSource);
 end;
 
 //==============================================================================
