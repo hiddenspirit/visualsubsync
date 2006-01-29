@@ -78,7 +78,7 @@ type
     procedure Replay;
     procedure SetDisplayWindow(WinHwnd : THandle);
     procedure UpdateDisplayWindow;
-    procedure KillVideo;    
+    procedure KillVideo;
     procedure Close;
     function IsOpen : Boolean; override;
     procedure SetRate(Rate : Integer); override;
@@ -132,6 +132,7 @@ type
     function GetProgress : Integer;
     function IsFinished : Boolean;
     procedure Close;
+    function GetFilterList(list : TStrings) : Boolean;
 
   published
     property AudioStreamCount : Integer read FAudioStreamCount;
@@ -150,7 +151,7 @@ type
 
 implementation
 
-uses ActiveX, MMSystem, SysUtils, Types;
+uses ActiveX, MMSystem, SysUtils, Types, MiscToolsUnit;
 
 const
   CLSID_WavWriter : TGUID = '{F3AFF1C3-ABBB-41f9-9521-988881D9D640}';
@@ -962,7 +963,9 @@ begin
     if IsEqualGUID(pMT.majortype, MEDIATYPE_Audio) and
       IsEqualGUID(pMT.subtype, MEDIASUBTYPE_PCM) and
       IsEqualGUID(pMT.formattype, FORMAT_WaveFormatEx) and
-      (PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_PCM) then
+      ((PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_PCM) or
+       (PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_EXTENSIBLE))
+       then
     begin
       Result := True;
       Break;
@@ -1021,6 +1024,7 @@ begin
   PinConnectedTo := nil;
   Filter := nil;
   assert(PCMPin <> nil);
+  // TODO : better error handling here
   NukeDownstream(FGraphBuilder,PCMPin);
 
   // We are ready to connect, the WAV writer filter and the File Writer
@@ -1094,6 +1098,110 @@ begin
   begin
     FMediaEventEx.FreeEventParams(evCode, param1, param2);
     Result := (evCode = EC_COMPLETE);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function GetDllFilenameByCLSID(const GUID : TGUID) : string;
+var KeyName, FileName : string;
+    Key : HKEY;
+    dwSize : DWORD;
+begin
+  Result := '';
+  if IsEqualCLSID(GUID, GUID_NULL) then
+    Exit;
+
+  KeyName := Format('Software\Classes\CLSID\%s\InprocServer32', [GUIDToString(GUID)]);
+
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
+  begin
+    dwSize := 0;
+    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
+    begin
+      SetLength(FileName, dwSize-1);
+      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FileName), @dwSize) = ERROR_SUCCESS then
+      begin
+        Result := FileName;
+      end;
+    end;
+    RegCloseKey(Key);
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function GetFriendlyNameByCLSID(const GUID : TGUID) : string;
+var KeyName, FriendlyName : string;
+    Key : HKEY;
+    dwSize : DWORD;
+begin
+  Result := '';
+  if IsEqualCLSID(GUID, GUID_NULL) then
+    Exit;
+
+  KeyName := Format('Software\Classes\CLSID\%s', [GUIDToString(GUID)]);
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
+  begin
+    dwSize := 0;
+    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
+    begin
+      SetLength(FriendlyName, dwSize-1);
+      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FriendlyName), @dwSize) = ERROR_SUCCESS then
+      begin
+        Result := FriendlyName;
+      end;
+    end;
+    RegCloseKey(Key);
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TDSWavExtractor.GetFilterList(list : TStrings) : Boolean;
+var FilterEnum : IEnumFilters;
+    Filter : IBaseFilter;
+    ul: ULONG;
+    FilterInfo : TFilterInfo;
+    s : WideString;
+    FilterGUID : TGUID;
+    FileName, FriendlyName : WideString;
+const
+  IID_IPropertyBag : TGUID = '{55272A00-42CB-11CE-8135-00AA004BB851}';    
+begin
+  list.Clear;
+  Result := False;
+  if Assigned(FGraphBuilder) then
+  begin
+    if Succeeded(FGraphBuilder.EnumFilters(FilterEnum)) then
+    begin
+      while (FilterEnum.Next(1, Filter, @ul) = S_OK) do
+      begin
+        FilterInfo.achName[0] := #0;
+        Filter.QueryFilterInfo(FilterInfo);
+        s := FilterInfo.achName;
+        FilterGUID := GUID_NULL;
+        if Succeeded(Filter.GetClassID(FilterGUID)) then
+        begin
+          FriendlyName := GetFriendlyNameByCLSID(FilterGUID);
+          if (Length(FriendlyName) > 0) and (s <> FriendlyName) then
+          begin
+            s := s + ' - ' + FriendlyName;
+          end;
+          s := s + ' - ' + GUIDToString(FilterGUID);
+          FileName := GetDllFilenameByCLSID(FilterGUID);
+          if (Length(FileName) > 0) then
+          begin
+            s := s + ' - ' + FileName;
+            s := s + ' (' + GetFileVersionString(FileName) + ')';
+          end;
+        end;
+
+        list.Add(s);
+        Filter := nil;
+      end;
+      FilterEnum := nil;
+    end;
   end;
 end;
 
