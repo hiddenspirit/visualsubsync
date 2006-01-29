@@ -321,6 +321,19 @@ implementation
 
 uses SysUtils, Types, MiscToolsUnit;
 
+const
+  WAV_COLOR : TColor = $00A7F24A;
+  WAV_BACK_COLOR : TColor = clBlack;
+  ZERO_LINE_COLOR : TColor = $00518B0A;
+  RANGE_COLOR_1 : TColor = $003333FF;
+  RANGE_COLOR_2 : TColor = $00FF8000;
+  RULER_BACK_COLOR : TColor = $00514741;
+  RULER_TOP_BOTTOM_LINE_COLOR : TColor = $00BEB5AE;
+  RULER_TEXT_COLOR : TColor = $00E0E0E0;
+  RULER_TEXT_SHADOW_COLOR : TColor = clBlack;
+  CURSOR_COLOR : TColor = clYellow;
+  DISABLED_BACK_COLOR : TColor = clGray;
+
 // =============================================================================
 
 procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
@@ -862,7 +875,12 @@ begin
   FSelectedKaraokeRange := nil;
 
   FOffscreen := TBitmap.Create;
+  FOffscreen.PixelFormat := pf32bit; // for faster drawing
   FOffscreenWAV := TBitmap.Create;
+  FOffscreenWAV.PixelFormat := pf32bit; // for faster drawing
+
+  // TODO : use 8 bits and modify palettes ?
+
   FRangeList := TRangeList.Create;
   FSelection := TRange.Create;
   FSelection.StartTime := 0;
@@ -968,11 +986,11 @@ begin
   Middle := Rect.Top + (RectHeight div 2);
 
   // Back
-  ACanvas.Brush.Color := clBlack;
+  ACanvas.Brush.Color := WAV_BACK_COLOR;
   ACanvas.FillRect(Rect);
 
   // Wave
-  ACanvas.Pen.Color := $00A7F24A;
+  ACanvas.Pen.Color := WAV_COLOR;
   ACanvas.Pen.Style := psSolid;
   ACanvas.Pen.Mode := pmCopy;
 
@@ -1004,7 +1022,7 @@ begin
   end;
 
   // 0 line
-  ACanvas.Pen.Color := $00518B0A;
+  ACanvas.Pen.Color := ZERO_LINE_COLOR;
   ACanvas.MoveTo(0, Middle);
   ACanvas.LineTo(Width, Middle);
 end;
@@ -1053,16 +1071,10 @@ begin
   y1 := CanvasHeight div 10;
   y2 := (CanvasHeight * 9) div 10;
 
-  ACanvas.Brush.Color := clBlack;
-
   // TODO : this is very slow when lot's of range are on screen
   // We should do this in 2 pass to group ranges, and use another color
-  // Why dotted line are so slow to draw :(
-  // use scanline to draw dotted line, or maybe we can draw line at 50% transparency
 
   // Range
-  ACanvas.Pen.Color := clRed;
-  ACanvas.Pen.Style := psDot;
   ACanvas.Pen.Mode := pmCopy;
   ACanvas.Brush.Style := bsClear;
   for i:=0 to FRangeList.Count-1 do
@@ -1070,9 +1082,9 @@ begin
     r := FRangeList[i];
     x1 := -1; x2 := -1;
     if (i mod 2) = 0 then
-      ACanvas.Pen.Color := $003333FF
+      ACanvas.Pen.Color := RANGE_COLOR_1
     else
-      ACanvas.Pen.Color := $00FF8000;
+      ACanvas.Pen.Color := RANGE_COLOR_2;
     if (r.StartTime >= FPositionMs) and (r.StartTime <= FPositionMs + FPageSizeMs) then
     begin
       x1 := TimeToPixel(r.StartTime - FPositionMs);
@@ -1124,7 +1136,6 @@ begin
       // Karaoke
       if (System.Length(r.SubTime) > 0) then
       begin
-        //ACanvas.Pen.Color := clBlue;
         for j:=0 to System.Length(r.SubTime)-1 do
         begin
           if (r.SubTime[j] >= FPositionMs) and
@@ -1193,7 +1204,7 @@ begin
   // Cursor
   if (FCursorMs >= FPositionMs) and (FCursorMs <= FPositionMs + FPageSizeMs) then
   begin
-    ACanvas.Pen.Color := clYellow;
+    ACanvas.Pen.Color := CURSOR_COLOR;
     ACanvas.Pen.Style := psDot;
     x := TimeToPixel(FCursorMs - FPositionMs);
     ACanvas.MoveTo(x, 0);
@@ -1229,23 +1240,23 @@ begin
 
     // Draw background
     ACanvas.Brush.Style := bsSolid;
-    ACanvas.Brush.Color := $514741;
+    ACanvas.Brush.Color := RULER_BACK_COLOR;
     ACanvas.FillRect(PosRect);
 
     // Draw horizontal line at top and bottom
     ACanvas.Pen.Mode := pmCopy;  
     ACanvas.Pen.Style := psSolid;
-    ACanvas.Pen.Color := $BEB5AE;
+    ACanvas.Pen.Color := RULER_TOP_BOTTOM_LINE_COLOR;
     ACanvas.MoveTo(0, PosRect.Top);
     ACanvas.LineTo(Width, PosRect.Top);
     ACanvas.MoveTo(0, PosRect.Bottom-1);
     ACanvas.LineTo(Width, PosRect.Bottom-1);
 
     // Set the text font
-    ACanvas.Pen.Color := $E0E0E0; 
+    ACanvas.Pen.Color := RULER_TEXT_COLOR;
     ACanvas.Pen.Style := psSolid;
     ACanvas.Font.Name := 'Time New Roman';
-    ACanvas.Font.Color := $E0E0E0;
+    ACanvas.Font.Color := RULER_TEXT_COLOR;
     ACanvas.Font.Size := 8;
     ACanvas.Brush.Style := bsClear;
 
@@ -1268,10 +1279,10 @@ begin
       // Calculate text coordinate
       x1 := x - (ACanvas.TextWidth(PosString) div 2);
       // Draw text shadow
-      ACanvas.Font.Color := clBlack;
+      ACanvas.Font.Color := RULER_TEXT_SHADOW_COLOR;
       ACanvas.TextOut(x1+2, PosRect.Top + 4 + 2, PosString);
       // Draw text
-      ACanvas.Font.Color := $E0E0E0;
+      ACanvas.Font.Color := RULER_TEXT_COLOR;
       ACanvas.TextOut(x1, PosRect.Top + 4, PosString);
       // Draw subdivision
       x2 := x + TimeToPixel(StepMs div 2);
@@ -1293,10 +1304,10 @@ begin
   FOffscreenWAV.Height := Height - FScrollBar.Height;
   FOffscreen.Width := FOffscreenWAV.Width;
   FOffscreen.Height := FOffscreenWAV.Height;
-
+  
   if (not FPeakDataLoaded) then
   begin
-    FOffscreen.Canvas.Brush.Color := clGray;
+    FOffscreen.Canvas.Brush.Color := DISABLED_BACK_COLOR;
     FOffscreen.Canvas.FillRect(FOffscreen.Canvas.ClipRect);
     Invalidate;
     Exit;
@@ -1487,8 +1498,11 @@ begin
             // TODO : better change stop when ovelapping on next sub ???
             FMinSelTime := FSelectedRange.StartTime + 1;
             x1 := TimeToPixel(FMinSelTime - FPositionMs );
-            FMaxSelTime := RangeList[i].StartTime - 1;
-            x2 := TimeToPixel(FMaxSelTime - FPositionMs);
+            if(i < RangeList.Count) then
+            begin
+              FMaxSelTime := RangeList[i].StartTime - 1;
+              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
+            end;
           end;
         end
         else
