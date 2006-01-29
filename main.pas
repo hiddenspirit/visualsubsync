@@ -405,6 +405,7 @@ type
     procedure ActionPlay1sBeforeExecute(Sender: TObject);
     procedure ActionSelectNextSubExecute(Sender: TObject);
     procedure ActionSelectPreviousSubExecute(Sender: TObject);
+    procedure PanelVideoResize(Sender: TObject);
 
   private
     { Private declarations }
@@ -465,6 +466,7 @@ type
     procedure SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
+    procedure SaveSubtitlesAsCUE(Filename: WideString);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
     procedure LoadSRT(Filename: string; var IsUTF8 : Boolean);
@@ -488,6 +490,7 @@ type
 const
   StartEndPlayingDuration: Integer = 500;
   EnableExperimentalKaraoke: Boolean = True;
+  UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
 
 var
   MainForm: TMainForm;
@@ -604,15 +607,15 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   StartStopServer(True);
-  AudioOnlyRenderer.Free;
-  VideoRenderer.Free;
-  WAVDisplayer.Free;
-  SubRangeFactory.Free;
-  MRUList.Free;
-  ConfigObject.Free;
-  CurrentProject.Free;
+  FreeAndNil(AudioOnlyRenderer);
+  FreeAndNil(VideoRenderer);
+  FreeAndNil(WAVDisplayer);
+  FreeAndNil(SubRangeFactory);
+  FreeAndNil(MRUList);
+  FreeAndNil(ConfigObject);
+  FreeAndNil(CurrentProject);
   if Assigned(LogForm) then
-    LogForm.Free;
+    FreeAndNil(LogForm);
 end;
 
 //------------------------------------------------------------------------------
@@ -685,19 +688,23 @@ end;
 procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
 begin
-  IniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini'));
-  MRUList.SaveIni(IniFile, 'MRUList');
-  ConfigObject.SaveIni(IniFile);
-  SaveFormPosition(IniFile,MainForm);
-  SaveFormPosition(IniFile,ErrorReportForm);
-  SaveFormPosition(IniFile,SuggestionForm);
-  SaveFormPosition(IniFile,DetachedVideoForm);
-  SaveFormPosition(IniFile,LogForm);
+  try
+    IniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini'));
+    MRUList.SaveIni(IniFile, 'MRUList');
+    ConfigObject.SaveIni(IniFile);
+    SaveFormPosition(IniFile,MainForm);
+    SaveFormPosition(IniFile,ErrorReportForm);
+    SaveFormPosition(IniFile,SuggestionForm);
+    SaveFormPosition(IniFile,DetachedVideoForm);
+    SaveFormPosition(IniFile,LogForm);
 
-  IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
-  IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
+    IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
+    IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
 
-  IniFile.Free;
+    IniFile.Free;
+  except
+    on E: Exception do MessageBox(Handle, PChar(E.Message), nil, MB_OK or MB_ICONERROR);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -724,6 +731,7 @@ begin
   PanelBottom.Height := IniFile.ReadInteger('Windows', 'MainForm_PanelBottom_Height',
     PanelBottom.Height);
   TntStatusBar1.Top := Maxint;
+
   IniFile.Free;
 end;
 
@@ -872,6 +880,8 @@ begin
 
   ActionLoopSelStart.Enabled := Enable;
   ActionLoopSelEnd.Enabled := Enable;
+
+  PanelVideo.Enabled := Enable;
 end;
 
 //------------------------------------------------------------------------------
@@ -1562,7 +1572,9 @@ begin
   else if (Ext = '.ass') then
     SaveSubtitlesAsASS(Filename, InUTF8)
   else if (Ext = '.ssa') then
-    SaveSubtitlesAsSSA(Filename, InUTF8);
+    SaveSubtitlesAsSSA(Filename, InUTF8)
+  else if (Ext = '.cue') then
+    SaveSubtitlesAsCUE(Filename);
 
   if (not BackupOnly) then
   begin
@@ -1591,8 +1603,14 @@ procedure TMainForm.UpdateVideoRendererWindow;
 begin
   if not MenuItemDetachVideoWindow.Checked then
   begin
-    if (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    if (CurrentProject.VideoPanelWidth > 0) then
+    begin
+      PanelVideo.Width := CurrentProject.VideoPanelWidth;
+    end
+    else if (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin
       PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
+    end;
     VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
   end
   else
@@ -1603,7 +1621,6 @@ end;
 
 procedure TMainForm.LoadProject(Filename : WideString);
 var
-  ProjectFileIni : TIniFile;
   CM : ICursorManager;
   LoadWAVOK : Boolean;
 begin
@@ -1619,16 +1636,7 @@ begin
   g_WebRWSynchro.BeginWrite;
   CM := TCursorManager.Create(crHourGlass);
   try
-    ProjectFileIni := TIniFile.Create(Filename);
-    CurrentProject.Filename := Filename;
-    CurrentProject.VideoSource := ProjectFileIni.ReadString('VisualSubsync','VideoSource','');
-    CurrentProject.WAVFile := ProjectFileIni.ReadString('VisualSubsync','WAVFile','');
-    CurrentProject.PeakFile := ProjectFileIni.ReadString('VisualSubsync','PeakFile','');
-    CurrentProject.WAVMode := TProjectWAVMode(ProjectFileIni.ReadInteger('VisualSubsync','WAVMode',1));
-    CurrentProject.SubtitlesFile := ProjectFileIni.ReadString('VisualSubsync','SubtitlesFile','');
-    CurrentProject.TextPipeSource := ProjectFileIni.ReadString('VisualSubsync','TextPipeSource','');
-    CurrentProject.TextPipePosition := ProjectFileIni.ReadInteger('VisualSubsync','TextPipePosition',0);
-    ProjectFileIni.Free;
+    CurrentProject.LoadFromINIFile(Filename);
 
     ShowStatusBarMessage('Loading WAV form...');
     LoadWAVOK := False;
@@ -1703,6 +1711,8 @@ begin
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
+      if CurrentProject.ShowVideo <> ShowingVideo then
+        ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
     end;
 
@@ -1742,11 +1752,15 @@ var
   ProjectFileIni : TIniFile;
 begin
   ProjectFileIni := TIniFile.Create(Project.Filename);
-  ProjectFileIni.WriteString('VisualSubsync','VideoSource',Project.VideoSource);
-  ProjectFileIni.WriteString('VisualSubsync','WAVFile',Project.WAVFile);
-  ProjectFileIni.WriteString('VisualSubsync','PeakFile',Project.PeakFile);
-  ProjectFileIni.WriteInteger('VisualSubsync','WAVMode',Ord(Project.WAVMode));
-  ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',Project.SubtitlesFile);
+  ProjectFileIni.WriteString('VisualSubsync','VideoSource',
+    WideMakeRelativePath(Project.Filename, Project.VideoSource));
+  ProjectFileIni.WriteString('VisualSubsync','WAVFile',
+    WideMakeRelativePath(Project.Filename, Project.WAVFile));
+  ProjectFileIni.WriteString('VisualSubsync','PeakFile',
+    WideMakeRelativePath(Project.Filename, Project.PeakFile));
+  ProjectFileIni.WriteInteger('VisualSubsync','WAVMode', Ord(Project.WAVMode));
+  ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',
+    WideMakeRelativePath(Project.Filename, Project.SubtitlesFile));
 
   if Length(Trim(MemoTextPipe.Text)) > 0 then
   begin
@@ -1755,8 +1769,13 @@ begin
     // Save cursor position
     ProjectFileIni.WriteInteger('VisualSubsync', 'TextPipePosition',
       MemoTextPipe.SelStart);
-    ProjectFileIni.WriteString('VisualSubsync', 'TextPipeSource', Project.TextPipeSource);
+    ProjectFileIni.WriteString('VisualSubsync', 'TextPipeSource',
+      WideMakeRelativePath(Project.Filename, Project.TextPipeSource));
   end;
+
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelWidth', Project.VideoPanelWidth);
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelHeight', Project.VideoPanelHeight);
+  ProjectFileIni.WriteBool('VisualSubsync','ShowVideo', Project.ShowVideo);
 
   ProjectFileIni.Free;
 end;
@@ -1905,6 +1924,13 @@ begin
     WAVDisplayer.SetCursorPos(PlayingPos);
     ActionPlay.Execute;
   end;
+
+  if Assigned(CurrentProject) and (ShowingVideo <> CurrentProject.ShowVideo) then
+  begin
+    CurrentProject.ShowVideo := ShowingVideo;
+    SaveProject(CurrentProject);
+  end;
+
 end;
 
 //------------------------------------------------------------------------------
@@ -2002,6 +2028,8 @@ begin
     begin
       CurrentProject.VideoSource := ProjectForm.EditVideoFilename.Text;
       VideoRenderer.Open(CurrentProject.VideoSource);
+      CurrentProject.VideoPanelWidth := 0;
+      CurrentProject.VideoPanelHeight := 0;
       UpdateVideoRendererWindow;
       ProjectHasChanged := True;
     end;
@@ -2331,6 +2359,7 @@ begin
     WAVDisplayer.DeleteRangeAtIdx(Idx,False);
     vtvSubsList.DeleteNode(Node);
   end;
+  DeleteList.Free;
 
   // Make sure to update display
   CurrentProject.IsDirty := True;
@@ -2341,7 +2370,7 @@ begin
   WAVDisplayer.ClearSelection;
   WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
   vtvSubsList.Repaint;
-
+  
   g_WebRWSynchro.EndWrite;
 end;
 
@@ -2567,6 +2596,8 @@ begin
         SubRange := TSubtitleRange(WAVDisplayer.RangeList[Idx]);
         Node := SubRange.Node;
         vtvSubsList.ScrollIntoView(Node,True);
+        // Needed if subtitle node is already the focused node
+        vtvSubsList.FocusedNode := nil;
         vtvSubsList.FocusedNode := Node;
         vtvSubsList.ClearSelection;
         vtvSubsList.Selected[Node] := True;
@@ -3519,6 +3550,8 @@ begin
     if ShowingVideo then
       ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
     DetachedVideoForm.Visible := ShowingVideo;
+    // workaround to resize buf ??? force repaint
+    WAVDisplayer.UpdateView([uvfPageSize]);
   end;
   MenuItemDetachVideoWindow.Checked := not MenuItemDetachVideoWindow.Checked;
 end;
@@ -4101,8 +4134,6 @@ procedure TMainForm.SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     SubRange : TSubtitleRange;
     FS : TFileStream;
-const
-    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4139,8 +4170,6 @@ var i : integer;
     SubRange : TSubtitleRange;
     FS : TFileStream;
     s : WideString;
-const
-    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4201,8 +4230,6 @@ var i : integer;
     SubRange : TSubtitleRange;
     FS : TFileStream;
     s : WideString;
-const
-    UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4236,7 +4263,7 @@ begin
   end;
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
-  WriteStringLnStream('Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
+  WriteStringLnStream('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
 
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
@@ -4443,6 +4470,55 @@ end;
 procedure TMainForm.ActionSelectPreviousSubExecute(Sender: TObject);
 begin
   SelectPreviousSub;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SaveSubtitlesAsCUE(Filename: WideString);
+var i : integer;
+    SubRange : TSubtitleRange;
+    FS : TFileStream;
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + #13#10;
+      Stream.Write(s[1],Length(s));
+    end;
+begin
+  FS := TFileStream.Create(Filename, fmCreate);
+
+  WriteStringLnStream('FILE "YourFileHere.wav" WAVE', FS);
+  WriteStringLnStream('  PERFORMER "Performer Here"',FS);
+  WriteStringLnStream('  TRACK 01 AUDIO', FS);
+  WriteStringLnStream('    INDEX 01 00:00:00', FS);
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+2]), FS);
+    WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StartTime)]), FS);
+    WriteStringLnStream(Format('    TITLE "%s"', [SubRange.Text]), FS);
+    
+    WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+3]), FS);
+    WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StopTime)]), FS);
+  end;
+  FS.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.PanelVideoResize(Sender: TObject);
+begin
+  if Assigned(CurrentProject) and PanelVideo.Enabled and
+    ((CurrentProject.VideoPanelWidth <> PanelVideo.Width) or
+     (CurrentProject.VideoPanelHeight <> PanelVideo.Height))
+    then
+  begin
+    CurrentProject.VideoPanelWidth := PanelVideo.Width;
+    // todo : change height ???
+    //CurrentProject.VideoPanelHeight := PanelVideo.Height;
+    SaveProject(CurrentProject);
+  end;
 end;
 
 //------------------------------------------------------------------------------

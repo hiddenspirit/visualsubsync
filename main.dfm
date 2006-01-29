@@ -83,9 +83,11 @@ object MainForm: TMainForm
       BevelOuter = bvNone
       Caption = 'PanelVideo'
       Color = clBlack
+      Enabled = False
       FullRepaint = False
       TabOrder = 0
       Visible = False
+      OnResize = PanelVideoResize
     end
     object PanelWAVDisplay: TPanel
       Left = 256
