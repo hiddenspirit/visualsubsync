@@ -47,6 +47,7 @@ type
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
   function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string = '.') : string;
   function TimeMsToSSAString(TimeMS: Cardinal) : string;  
+  function TimeMsToCUE(TimeMS: Cardinal) : string;
 
   function TimeStringToMS_SSA(Time : string) : Integer;
   function TimeStringToMs(Time : string) : Integer;
@@ -77,6 +78,9 @@ type
   procedure TagSplit(Text : WideString; var WordArray : WideStringArray2);
   function StripTags(Text : WideString) : WideString;
 
+  function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
+  function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
+
 type
   TExplodeArray = array of String;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
@@ -86,7 +90,7 @@ type
 
 implementation
 
-uses SysUtils, Windows, Registry, ShlObj, StrUtils;
+uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils;
 
 // -----------------------------------------------------------------------------
 
@@ -181,6 +185,21 @@ if (Time[3] <> ':') or (Time[6] <> ':') then
   if (ms = -1) then
     Exit;
   Result := h * 3600000 + m * 60000 + s * 1000 + 10 * ms;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TimeMsToCUE(TimeMS: Cardinal) : string;
+var
+  hh, min, sec, ms, ff: Cardinal;
+begin
+  ms := TimeMs div 1000;
+  hh := ms div 3600;
+  min := ms mod 3600 div 60;
+  sec := ms mod 3600 mod 60;
+  ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
+  ff := Round(ms / (1000 / 75));
+  Result := Format('%2.2d:%2.2d:%2.2d', [min, sec, ff])
 end;
 
 //------------------------------------------------------------------------------
@@ -770,6 +789,67 @@ begin
     if (i mod 2) = 0 then
       Result := Result + WordArray[i];
   end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
+begin
+  Result := WideExtractRelativePath(BaseName, DestName);
+end;
+
+// -----------------------------------------------------------------------------
+
+function WideIsAbsolutePath(const Path : WideString) : Boolean;
+begin
+  Result := (Pos(':', Path) = 2) or (Pos('\\', Path) = 1);
+end;
+
+// -----------------------------------------------------------------------------
+
+function WideResolvePath(Filename : WideString) : WideString;
+var i, j, p : integer;
+    PathElem : string;
+begin
+  i := 1;
+  p := 1;
+  while (p <> 0) do
+  begin
+    p := PosEx('\', Filename, i);
+    if (p > 0) then
+      PathElem := Copy(Filename, i, p-i)
+    else
+      PathElem := Copy(Filename, i, Length(Filename));
+
+    if (PathElem = '..') then
+    begin
+      j := Length(Result);
+      while (j > 0) and (Result[j] <> '\') do
+        Dec(j);
+      Delete(Result, j, Length(Result));
+    end
+    else if (PathElem <> '.') and (PathElem <> '') then
+      Result := Result + '\' + PathElem;
+    i := p+1;
+  end;
+  // Remove slash at start
+  Delete(Result, 1, 1);
+end;
+
+// -----------------------------------------------------------------------------
+
+function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
+begin
+  if WideIsAbsolutePath(DestName) then
+    Result := DestName
+  else if (Length(Trim(DestName)) > 0) then
+  begin
+    Result := WideExtractFilePath(BaseName);
+    Result := Result + DestName;
+    Result := WideResolvePath(Result);
+  end
+  else
+    Result := '';
 end;
 
 // -----------------------------------------------------------------------------
