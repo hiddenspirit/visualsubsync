@@ -43,12 +43,14 @@ type
     rbFastConversion: TRadioButton;
     rbNoConversion: TRadioButton;
     rbOnlyPeak: TRadioButton;
+    bttDebug: TTntButton;
     procedure bttExtractClick(Sender: TObject);
     procedure bttCloseClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure bttStopClick(Sender: TObject);
     procedure rbOnlyPeakClick(Sender: TObject);
+    procedure bttDebugClick(Sender: TObject);
   private
     { Private declarations }
     DSWavExtractor : TDSWavExtractor;
@@ -176,6 +178,34 @@ end;
 procedure TExtractWAVForm.rbOnlyPeakClick(Sender: TObject);
 begin
   CurrentExtractionType := TComponent(Sender).Tag;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.bttDebugClick(Sender: TObject);
+var slist : TStringList;
+    i : Integer;
+begin
+  MemoVideoInfo.Lines.Add('--- Filters list ---');
+
+  if AudioPinIsSelected then
+  begin
+    DSWavExtractor.Close;
+    DSWavExtractor.Open(VideoFilename);
+  end;
+
+  DSWavExtractor.DestinationFilename := DestinationFilename;
+  DSWavExtractor.WAVExtractionType := TWAVExtractionType(CurrentExtractionType);
+  DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
+  AudioPinIsSelected := True;
+
+  slist := TStringList.Create;
+  DSWavExtractor.GetFilterList(slist);
+  for i:=0 to slist.Count-1 do
+  begin
+    MemoVideoInfo.Lines.Add(slist[i]);
+  end;
+  slist.Free;
 end;
 
 // -----------------------------------------------------------------------------

@@ -135,6 +135,15 @@ object ExtractWAVForm: TExtractWAVForm
     TabOrder = 5
     OnClick = bttStopClick
   end
+  object bttDebug: TTntButton
+    Left = 208
+    Top = 272
+    Width = 75
+    Height = 25
+    Caption = 'Debug'
+    TabOrder = 6
+    OnClick = bttDebugClick
+  end
   object Timer1: TTimer
     Enabled = False
     Interval = 500
