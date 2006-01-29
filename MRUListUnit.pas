@@ -36,6 +36,8 @@ type
     FOnRecentMenuItemClick : TNotifyEvent;
 
     procedure FillMenuItem(MenuItem : TMenuItem);
+    procedure OnClearItemClick(Sender: TObject);
+    procedure OnClearDeadEntriesItemClick(Sender: TObject);
   public
     constructor Create(RootMenuItem : TMenuItem);
     destructor Destroy; override;
@@ -98,6 +100,20 @@ begin
     NewItem.OnClick := FOnRecentMenuItemClick;
     MenuItem.Add(NewItem);
   end;
+  // Add special "Clear list" menu
+  NewItem := TMenuItem.Create(MenuItem);
+  NewItem.Caption := '-';
+  MenuItem.Add(NewItem);
+
+  NewItem := TMenuItem.Create(MenuItem);
+  NewItem.Caption := 'Clear list';
+  NewItem.OnClick := OnClearItemClick;
+  MenuItem.Add(NewItem);
+
+  NewItem := TMenuItem.Create(MenuItem);
+  NewItem.Caption := 'Clear dead entries';
+  NewItem.OnClick := OnClearDeadEntriesItemClick;
+  MenuItem.Add(NewItem);
 end;
 
 // -----------------------------------------------------------------------------
@@ -127,6 +143,29 @@ begin
     s := Trim(s);
     if (s <> '') then
       FFileList.Add(s);
+  end;
+  FillMenuItem(FRootMenuItem);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TMRUList.OnClearItemClick(Sender: TObject);
+begin
+  FFileList.Clear;
+  FillMenuItem(FRootMenuItem);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TMRUList.OnClearDeadEntriesItemClick(Sender: TObject);
+var i : Integer;
+begin
+  for i:=FFileList.Count-1 downto 0 do
+  begin
+    if not FileExists(FFileList[i]) then
+    begin
+      FFileList.Delete(i);
+    end;
   end;
   FillMenuItem(FRootMenuItem);
 end;
