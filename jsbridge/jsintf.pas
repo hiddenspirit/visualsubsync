@@ -1724,9 +1724,7 @@ begin
         JS_DefineUCProperty(cx, js, CreateWideString(LName), Length(LName), JSVAL_NULL, nil, nil, JSPROP_ENUMERATE or JSPROP_PERMANENT);
         {$ENDIF}
       end;
-    (*
     FreeMem(plist);
-    *)
 
     methods := TNamedArray.Create;
     methods.OwnsValues := false;
