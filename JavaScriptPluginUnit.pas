@@ -45,7 +45,7 @@ type
     UnitStr : WideString;
   end;
 
-  TJSPluginErrorNotifyEvent = procedure (Msg : WideString) of object;
+  TJSPluginErrorNotifyEvent = procedure (const Msg : WideString) of object;
 
   TJavaScriptPlugin = class
   private
@@ -263,6 +263,7 @@ end;
 
 constructor TJavaScriptPlugin.Create;
 begin
+  inherited Create;
   FEngine := TJSEngine.Create(40000);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
@@ -295,6 +296,8 @@ begin
   FPreviousSub.Free;
   FCurrentSub.Free;
   FEngine.Free;
+
+  inherited;
 end;
 
 //------------------------------------------------------------------------------
@@ -527,6 +530,7 @@ end;
 
 constructor TJavaScriptPluginEnumerator.Create(PluginPath : WideString);
 begin
+  inherited Create;
   FPluginPath := WideIncludeTrailingBackslash(PluginPath);
   FFindFileAttrs := faAnyFile;
   FSearchRec.FindHandle := INVALID_HANDLE_VALUE;
@@ -538,6 +542,7 @@ destructor TJavaScriptPluginEnumerator.Destroy;
 begin
   if (FSearchRec.FindHandle <> INVALID_HANDLE_VALUE) then
     WideFindClose(FSearchRec);
+  inherited;
 end;
 
 //------------------------------------------------------------------------------
@@ -617,6 +622,7 @@ end;
 
 constructor TCachedJavaScriptPluginEnumerator.Create(PluginPath : WideString);
 begin
+  inherited Create;
   FJSPluginList := TList.Create;
   FPluginIdx := 0;
   FPluginPath := PluginPath;
@@ -628,6 +634,7 @@ destructor TCachedJavaScriptPluginEnumerator.Destroy;
 begin
   ClearPluginList;
   FJSPluginList.Free;
+  inherited;
 end;
 
 //------------------------------------------------------------------------------

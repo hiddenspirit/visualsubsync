@@ -40,7 +40,7 @@ type
     function GetNbsSamples : Cardinal;
   public
     destructor Destroy; override;
-    function Open(filename : string) : Boolean;
+    function Open(Filename : string) : Boolean;
     function Read(Buffer : Pointer; Count : Integer) : Integer;
     procedure Close;
     function GetWaveFormatEx : PWaveFormatEx;

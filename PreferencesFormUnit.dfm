@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsGeneral
+    ActivePage = tsFonts
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -306,7 +306,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 154
+            Width = 150
             WideText = 'Value'
           end
           item

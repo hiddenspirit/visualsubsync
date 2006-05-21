@@ -48,7 +48,7 @@ type
   TSubtitleRangeWrapper = class(TContext)
     Index : Integer;
     SubRange : TSubtitleRange;
-    function GetFieldValue(Name : string) : string; override;
+    function GetFieldValue(Name : string; var Found : Boolean) : string; override;
   end;
 
 implementation
@@ -76,9 +76,10 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TSubtitleRangeWrapper.GetFieldValue(Name : string) : string;
+function TSubtitleRangeWrapper.GetFieldValue(Name : string; var Found : Boolean) : string;
 var i : Integer;
 begin
+  Found := True;
   if (Name = 'index') then
     Result := IntToStr(Index)
   else if (Name = 'time-index') then
@@ -109,6 +110,8 @@ begin
   end
   else if (Name = 'index-padded') then
     Result := Format('%6.6d',[Index])
+  else
+    Found := False
 end;
 
 //==============================================================================

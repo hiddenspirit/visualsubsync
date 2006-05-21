@@ -59,7 +59,7 @@ type
     // !!! Indexes used below are index of the interval between markers !!!
     function  GetSubTimeRange(const PosMS : Integer; Range : TRange) : Integer;
     procedure GetSubTimeRangeAt(const Idx : Integer; Range : TRange);
-    function UpdateSubTimeFromText(Text : WideString) : Boolean;
+    function UpdateSubTimeFromText(const Text : WideString) : Boolean;
   end;
 
   TRangeFactory = class
@@ -312,9 +312,9 @@ type
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
-procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
+procedure KaraSplit(const Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
-procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
+procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 
 implementation
@@ -336,7 +336,7 @@ const
 
 // =============================================================================
 
-procedure KaraSplit(Text : WideString; var WordArray : WideStringArray;
+procedure KaraSplit(const Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
@@ -383,7 +383,7 @@ end;
 // ------
 
 // include tag in text
-procedure KaraSplit2(Text : WideString; var WordArray : WideStringArray;
+procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
   var TimeArray : IntegerArray);
 var
   i, i1, i2 : integer;
@@ -478,7 +478,7 @@ function TRange.GetSubTimeRange(const PosMS : Integer; Range : TRange) : Integer
 var i, KStart, KStop : Integer;
 begin
   Result := -1;
-  if(Length(SubTime) <= 0) or (PosMs < StartTime) or (PosMs > StopTime) then
+  if(Length(SubTime) <= 0) or (PosMS < StartTime) or (PosMS > StopTime) then
     Exit;
     
   KStart := -1;
@@ -541,7 +541,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TRange.UpdateSubTimeFromText(Text : WideString) : Boolean;
+function TRange.UpdateSubTimeFromText(const Text : WideString) : Boolean;
 var
   WordArray : WideStringArray;
   KTimeArray : IntegerArray;
@@ -870,10 +870,16 @@ begin
 
   TabStop := True;
   FSelectionOrigin := -1;
+  FScrollOrigin := -1;  
   FDynamicEditMode := demNone;
+  FDynamicSelRange := nil;
+  FDynamicSelRangeOld := nil;
   FSelectedKaraokeIndex := -1;
   FSelectedKaraokeRange := nil;
-
+  FMouseIsDown := False;
+  FMinSelTime := -1;
+  FMaxSelTime := -1;
+  
   FOffscreen := TBitmap.Create;
   FOffscreen.PixelFormat := pf32bit; // for faster drawing
   FOffscreenWAV := TBitmap.Create;
@@ -1045,7 +1051,7 @@ begin
   ms := TimeMs div 1000;
   min := ms div 60;
   sec := ms mod 60;
-  ms := (TimeMs - (min * 60 * 1000) - (sec * 1000)) div Precision;
+  ms := (TimeMS - (min * 60 * 1000) - (sec * 1000)) div Precision;
   if (min > 0) then
   begin
     if (ms > 0) then
@@ -2612,7 +2618,7 @@ begin
   Idx := FRangeList.GetRangeIdxAt(Pos);
   if Idx <> -1 then
   begin
-    DeleteRangeAtIdx(idx);
+    DeleteRangeAtIdx(Idx);
   end;
 end;
 

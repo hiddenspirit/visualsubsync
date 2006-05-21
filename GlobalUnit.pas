@@ -28,14 +28,14 @@ uses MiscToolsUnit, Forms, WAVDisplayerUnit, ProjectUnit, SysUtils;
 type
   TContext = class
     Parent : TContext;
-    function GetFieldValue(Name : string) : string; virtual; abstract;
+    function GetFieldValue(Name : string; var Found : Boolean) : string; virtual; abstract;
   end;
 
   TGlobalContext = class(TContext)
     WavAverageBytePerSecond : Integer;
     SubList : TRangeList;
     CurrentProject : TVSSProject;
-    function GetFieldValue(Name : string) : string; override;
+    function GetFieldValue(Name : string; var Found : Boolean) : string; override;
   end;
 
   procedure CheckBackupDirectory;
@@ -55,12 +55,15 @@ implementation
 
 uses TntSysUtils, TntForms;
 
-function TGlobalContext.GetFieldValue(Name : string) : string;
+function TGlobalContext.GetFieldValue(Name : string; var Found : Boolean) : string;
 begin
+  Found := True;
   if (Name = 'version') then
     Result := g_ApplicationVersion.VersionString
   else if (Name = 'project-filename') then
     Result := ExtractFileName(CurrentProject.Filename)
+  else
+    Found := False
 end;
 
 procedure CheckBackupDirectory;

@@ -51,6 +51,26 @@ implementation
 
 uses SysUtils, MiscToolsUnit, SubStructUnit;
 
+const
+  KnownKeywordLst : array[0..15] of string = (
+    '$|version|$',
+    '$|count|$',
+    '$|index|$',
+    '$|start|$',
+    '$|stop|$',
+    '$|text|$',
+    '$$ FOREACH * $$',
+    '$$ ENDFOREACH $$',
+    '$|time-index|$',
+    '$|html-text|$',
+    '$|raw-text|$',
+    '$|stripped-text|$',
+    '$|html-text8|$',
+    '$|raw-text8|$',
+    '$|wav-size|$',
+    '$|index-padded|$'
+  );
+
 //------------------------------------------------------------------------------
 
 constructor TPageProcessor.Create;
@@ -69,15 +89,17 @@ end;
 
 procedure TPageProcessor.ProcessField(Name : string; OutputStream : TStream; Context : TContext);
 var s : string;
-    ContextCursor : TContext; 
+    ContextCursor : TContext;
+    Found : Boolean; 
 begin
+  Found := False;
   ContextCursor := Context;
-  while (ContextCursor <> nil) and (Length(s) = 0) do
+  while (ContextCursor <> nil) and (Length(s) = 0) and (Found <> True) do
   begin
-    s := ContextCursor.GetFieldValue(Name);
+    s := ContextCursor.GetFieldValue(Name, Found);
     ContextCursor := ContextCursor.Parent;
   end;
-  if (Length(s) = 0) then
+  if (Length(s) = 0) and (Found = False) then
   begin
     s := FEnvVars.Values[Name];
     if (Length(s) = 0) then

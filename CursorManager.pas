@@ -24,11 +24,13 @@ uses Forms;
 
 constructor TCursorManager.Create;
 begin
+  inherited Create;
   FOldCursor := Screen.Cursor;
 end;
 
 constructor TCursorManager.Create(NewCursor : TCursor);
 begin
+  inherited Create;
   FOldCursor := Screen.Cursor;
   Screen.Cursor := NewCursor;
 end;

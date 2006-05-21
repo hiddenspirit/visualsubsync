@@ -21,8 +21,8 @@ type
     { Private declarations }
   public
     { Public declarations }
-    procedure LogMsg(Msg : WideString);
-    procedure SilentLogMsg(Msg : WideString);
+    procedure LogMsg(const Msg : WideString);
+    procedure SilentLogMsg(const Msg : WideString);
     procedure Clear;
   end;
 
@@ -38,14 +38,14 @@ begin
   Visible := False;
 end;
 
-procedure TLogForm.LogMsg(Msg : WideString);
+procedure TLogForm.LogMsg(const Msg : WideString);
 begin
   MemoLog.Lines.Add(Msg);
   if (not miStayHidden.Checked) and (Visible = False) then
     Visible := True;
 end;
 
-procedure TLogForm.SilentLogMsg(Msg : WideString);
+procedure TLogForm.SilentLogMsg(const Msg : WideString);
 begin
   MemoLog.Lines.Add(Msg);
 end;

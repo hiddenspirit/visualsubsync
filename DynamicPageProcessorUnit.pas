@@ -80,9 +80,9 @@ type
     function GetOutputStream : TStream;
   end;
 
-implementation
-
 //==============================================================================
+
+implementation
 
 procedure TInstructionNode.Execute(OutStream : TStream);
 begin
@@ -121,6 +121,7 @@ end;
 
 constructor TDataNode.Create(Data : string);
 begin
+  inherited Create;
   Self.Data := Data;
   Id := kIdData;
 end;
@@ -149,6 +150,7 @@ end;
 
 constructor TDynamicPageProcessor.Create;
 begin
+  inherited;
   FOutputStream := TMemoryStream.Create;
   FStack := TStack.Create;
   FInstructionTree := TInstructionNode.Create;
@@ -161,6 +163,7 @@ begin
   FOutputStream.Free;
   FStack.Free;
   FInstructionTree.Free;
+  inherited;
 end;
 
 //------------------------------------------------------------------------------

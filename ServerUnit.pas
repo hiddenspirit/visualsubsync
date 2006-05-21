@@ -26,7 +26,15 @@ interface
 uses Classes, WinSock2, Windows, Contnrs, WAVDisplayerUnit, IniFiles;
 
 type
-  THTTPServer = class(TThread)
+  TMyNamedThread = class(TThread)
+  private
+    FName : string;
+    procedure SetName;
+  public
+    constructor Create(CreateSuspended : Boolean; Name : string = '');
+  end;
+
+  THTTPServer = class(TMyNamedThread)
   private
     FRootDir : string;
     FRunning : Boolean;
@@ -44,7 +52,7 @@ type
     property EnableCompression : Boolean read FEnableCompression write FEnableCompression;
   end;
 
-  THTTPRequestThreadProcessor = class(TThread)
+  THTTPRequestThreadProcessor = class(TMyNamedThread)
   private
     FRequest : TStringList;
     FRequestHeader : TStringList; // "field = value"
@@ -87,6 +95,20 @@ type
     mime : PChar;
   end;
 
+  TThreadNameInfo = record
+    FType: LongWord;     // must be 0x1000
+    FName: PChar;        // pointer to name (in user address space)
+    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
+    FFlags: LongWord;    // reserved for future use, must be zero
+  end;
+
+// =============================================================================
+
+implementation
+
+uses SysUtils, StrUtils, PageProcessorUnit, GlobalUnit, WAVFileUnit,
+  MiscToolsUnit, SuggestionFormUnit, ZLib;
+
 const
   CR : Char = #13;
   LF : Char = #10;
@@ -108,11 +130,6 @@ const
     (ext: '.mp3'; mime: 'audio/mpeg')
   );
 
-implementation
-
-uses SysUtils, StrUtils, PageProcessorUnit, GlobalUnit, WAVFileUnit,
-  MiscToolsUnit, SuggestionFormUnit, ZLib;
-
 // =============================================================================
 
 function ParseTimeHexa(TimeStr : string; var Start,Stop : Integer) : Boolean;
@@ -131,6 +148,33 @@ begin
     Stop := StrToIntDef(StrStop,-1);
     if (Start <> -1) and (Stop <> -1) or (Start < Stop) then
       Result := True;
+  end;
+end;
+
+// =============================================================================
+
+constructor TMyNamedThread.Create(CreateSuspended : Boolean; Name : string);
+begin
+  inherited Create(CreateSuspended);
+  
+  if (Length(Name) = 0) then
+    FName := Self.ClassName
+  else
+    FName := Name;
+end;
+
+procedure TMyNamedThread.SetName;
+var
+  ThreadNameInfo: TThreadNameInfo;
+begin
+  ThreadNameInfo.FType := $1000;
+  ThreadNameInfo.FName := PAnsiChar(FName);
+  ThreadNameInfo.FThreadID := $FFFFFFFF;
+  ThreadNameInfo.FFlags := 0;
+
+  try
+    RaiseException( $406D1388, 0, sizeof(ThreadNameInfo) div sizeof(LongWord), @ThreadNameInfo );
+  except
   end;
 end;
 
@@ -184,6 +228,8 @@ var ClientSock : TSocket;
     SizeOfClientAddrIn : Integer;
     RequestThreadProcessor : THTTPRequestThreadProcessor;
 begin
+  SetName;
+
   FListenSock := socket(AF_INET, SOCK_STREAM, 0);
   if (FListenSock = INVALID_SOCKET) then
     Exit;
@@ -247,6 +293,8 @@ end;
 
 procedure THTTPRequestThreadProcessor.Execute;
 begin
+  SetName;
+  
   FRequest.Clear;
   FRequestHeader.Clear;
   FAnswerHeader.Clear;
@@ -696,15 +744,21 @@ begin
     FUseGzip := True;
     CStream := TCompressionStream.Create(clDefault,FAnswerStream);
     g_WebRWSynchro.BeginRead;
-    PP.ProcessPage(Filename, CStream, FEnvVars);
-    g_WebRWSynchro.EndRead;
+    try
+      PP.ProcessPage(Filename, CStream, FEnvVars);
+    finally
+      g_WebRWSynchro.EndRead;
+    end;
     CStream.Free;
   end
   else
   begin
     g_WebRWSynchro.BeginRead;
-    PP.ProcessPage(Filename, FAnswerStream, FEnvVars);
-    g_WebRWSynchro.EndRead;
+    try
+      PP.ProcessPage(Filename, FAnswerStream, FEnvVars);
+    finally
+      g_WebRWSynchro.EndRead;
+    end;
   end;
   PP.Free;
 end;
@@ -786,8 +840,11 @@ begin
     begin
       WAVFile := TWAVFile.Create;
       g_WebRWSynchro.BeginRead;
-      s := g_GlobalContext.CurrentProject.WAVFile;
-      g_WebRWSynchro.EndRead;
+      try
+        s := g_GlobalContext.CurrentProject.WAVFile;
+      finally
+        g_WebRWSynchro.EndRead;
+      end;
       if WAVFile.Open(s) then
       begin
         // TODO : send the wav directly on the socket

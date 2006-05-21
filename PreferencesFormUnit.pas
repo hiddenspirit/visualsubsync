@@ -61,12 +61,6 @@ type
     ShortCut : string;
   end;
 
-const
-  DefaultTimingShortcuts : array[0..1] of TDefaultActionShortcut = (
-    (ActionName: 'ActionStop'; ShortCut: 'Esc'),
-    (ActionName: 'ActionPlay'; ShortCut: 'F1')    
-  );
-
 type
   TConfigObject = class
   private
@@ -254,6 +248,12 @@ uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows, TntSysUtils,
   TntForms, Mask, TntClasses, LogWindowFormUnit;
 
 {$R *.dfm}
+
+const
+  DefaultTimingShortcuts : array[0..1] of TDefaultActionShortcut = (
+    (ActionName: 'ActionStop'; ShortCut: 'Esc'),
+    (ActionName: 'ActionPlay'; ShortCut: 'F1')    
+  );
 
 // =============================================================================
 

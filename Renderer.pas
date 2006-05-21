@@ -308,6 +308,8 @@ begin
   FDisplayWindow := 0;
   FDisplayWindowProc := nil;
   FDisplayWindowOldProc := nil;
+  FVideoWidth := 0;
+  FVideoHeight := 0;
   InitializeCriticalSection(FStartStopAccessCS);
 end;
 
@@ -724,6 +726,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWaitCompletionThread.Execute;
+const WAIT_TIMEOUT : Integer = 2;
 var
   hInQueueEvent : THandle;
   evCode, param1, param2 : Integer;
@@ -746,7 +749,7 @@ TWaitCompletionThread_Restart:
   bDone := False;
   while (not bDone) and (not Self.Terminated) do
   begin
-    WaitResult := WaitForMultipleObjects(2, @EventsArray, False, 40);
+    WaitResult := WaitForMultipleObjects(2, @EventsArray, False, WAIT_TIMEOUT);
     if (WaitResult = WAIT_OBJECT_0+1) then
     begin
       while (FRenderer.FMediaEventEx.GetEvent(evCode, param1, param2, 0) = S_OK) do
@@ -757,8 +760,8 @@ TWaitCompletionThread_Restart:
     end;
     // Check position
     FRenderer.FMediaSeeking.GetCurrentPosition(CurrentPos);
-    if ((CurrentPos >= FRenderer.StopTime) or
-       ((Abs(CurrentPos - FRenderer.StopTime)) <= (20*10000))) or
+    if (CurrentPos >= FRenderer.StopTime) or
+       (Abs(CurrentPos - FRenderer.StopTime) <= ((WAIT_TIMEOUT div 2)*10000)) or
        ((CurrentPos + 20*10000) < FRenderer.StartTime) then
     begin
       bDone := True;
@@ -858,7 +861,7 @@ begin
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaEventEx, FMediaEventEx);
   if (FLastResult <> S_OK) then Exit;
 
-  FLastResult := FGraphBuilder.AddSourceFilter(@filename[1],nil,Filter);
+  FLastResult := FGraphBuilder.AddSourceFilter(@Filename[1],nil,Filter);
   if (FLastResult <> S_OK) then Exit;
 
   // Try to render all pins on the filter

@@ -38,29 +38,29 @@ type
     function GetVersionString : string;
     function GetShortVersionString : string;
   public
-    constructor Create(filename : string);
+    constructor Create(Filename : string);
   published
     property VersionString : string read GetVersionString;
     property ShortVersionString : string read GetShortVersionString;
   end;
 
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
-  function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string = '.') : string;
-  function TimeMsToSSAString(TimeMS: Cardinal) : string;  
-  function TimeMsToCUE(TimeMS: Cardinal) : string;
+  function TimeMsToString(const TimeMS: Cardinal; const DecimalSeparator : string = '.') : string;
+  function TimeMsToSSAString(const TimeMS: Cardinal) : string;
+  function TimeMsToCUE(const TimeMS: Cardinal) : string;
 
   function TimeStringToMS_SSA(Time : string) : Integer;
-  function TimeStringToMs(Time : string) : Integer;
+  function TimeStringToMs(const Time : string) : Integer;
 
-  function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;  
-  function StringConvertPipeToCRLF(s : WideString) : WideString;
-  function StringConvertPipeToBR(s : WideString) : WideString;
-  function StringConvertCRLFToPipe(s : WideString) : WideString;
-  function StringConvertCRLFToBR(s : WideString) : WideString;  
-  function GetFileVersionString(filename : string) : string;
+  function IsTimeStampsLine(const Line : string; var Start, Stop : Integer) : Boolean;  
+  function StringConvertPipeToCRLF(const s : WideString) : WideString;
+  function StringConvertPipeToBR(const s : WideString) : WideString;
+  function StringConvertCRLFToPipe(const s : WideString) : WideString;
+  function StringConvertCRLFToBR(const s : WideString) : WideString;
+  function GetFileVersionString(Filename : string) : string;
 
-  function PosStream(SubString : string; Stream : TStream; StartPos : Integer = -1) : Integer;
-  function PosStreamEx(SubString : string; Stream : TStream; StartPos, StopPos : Integer) : Integer;
+  function PosStream(const SubString : string; Stream : TStream; StartPos : Integer = -1) : Integer;
+  function PosStreamEx(const SubString : string; Stream : TStream; StartPos, StopPos : Integer) : Integer;
 
   function URLDecode(ASrc: string): string;
 
@@ -69,14 +69,14 @@ type
   procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
 
   function ReadLineStream(Stream : TStream; var s : string) : Boolean;
-  function RPos(Substr: string; S: string): Integer;
+  function RPos(const Substr: string; const S: string): Integer;
 
   function Font2String(Font : TFont) : string;
   procedure String2Font(s : string; Font : TFont);
 
 
-  procedure TagSplit(Text : WideString; var WordArray : WideStringArray2);
-  function StripTags(Text : WideString) : WideString;
+  procedure TagSplit(const Text : WideString; var WordArray : WideStringArray2);
+  function StripTags(const Text : WideString) : WideString;
 
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
   function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
@@ -104,7 +104,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToString(TimeMS: Cardinal; DecimalSeparator : string) : string;
+function TimeMsToString(const TimeMS: Cardinal; const DecimalSeparator : string) : string;
 var
   hh, min, sec, ms: Cardinal;
 begin
@@ -112,13 +112,13 @@ begin
   hh := ms div 3600;
   min := ms mod 3600 div 60;
   sec := ms mod 3600 mod 60;
-  ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
+  ms := TimeMS - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
   Result := Format('%2.2d:%2.2d:%2.2d%s%3.3d', [hh, min, sec, DecimalSeparator, ms])
 end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToSSAString(TimeMS: Cardinal) : string;
+function TimeMsToSSAString(const TimeMS: Cardinal) : string;
 var
   hh, min, sec, ms, cs: Cardinal;
 begin
@@ -126,14 +126,14 @@ begin
   hh := ms div 3600;
   min := ms mod 3600 div 60;
   sec := ms mod 3600 mod 60;
-  ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
+  ms := TimeMS - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
   cs := ms div 10;
   Result := Format('%d:%2.2d:%2.2d%s%2.2d', [hh, min, sec, '.', cs])
 end;
 
 //------------------------------------------------------------------------------
 
-function TimeStringToMs(Time : string) : Integer;
+function TimeStringToMs(const Time : string) : Integer;
   var h, m, s, ms: Integer;
 begin
   Result := -1;
@@ -169,8 +169,9 @@ begin
   // 123456789012
   if Length(Time) < 8 then
     Exit;
-   if Time[2] = ':' then time := '0' + time;
-if (Time[3] <> ':') or (Time[6] <> ':') then
+  if Time[2] = ':' then
+    Time := '0' + Time;
+  if (Time[3] <> ':') or (Time[6] <> ':') then
     Exit;
   h := StrToIntDef(Copy(Time, 1,2),-1);
   if (h = -1) then
@@ -189,7 +190,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToCUE(TimeMS: Cardinal) : string;
+function TimeMsToCUE(const TimeMS: Cardinal) : string;
 var
   hh, min, sec, ms, ff: Cardinal;
 begin
@@ -197,14 +198,14 @@ begin
   hh := ms div 3600;
   min := ms mod 3600 div 60;
   sec := ms mod 3600 mod 60;
-  ms := TimeMs - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
+  ms := TimeMS - (hh * 3600 * 1000) - (min * 60 * 1000) - (sec * 1000);
   ff := Round(ms / (1000 / 75));
   Result := Format('%2.2d:%2.2d:%2.2d', [min, sec, ff])
 end;
 
 //------------------------------------------------------------------------------
 
-function IsTimeStampsLine(Line : string; var Start, Stop : Integer) : Boolean;
+function IsTimeStampsLine(const Line : string; var Start, Stop : Integer) : Boolean;
 var i : integer;
     SS : string;
 begin
@@ -222,7 +223,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function StringConvertPipeToCRLF(s : WideString) : WideString;
+function StringConvertPipeToCRLF(const s : WideString) : WideString;
 var i : integer;
 begin
   Result := '';
@@ -237,7 +238,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function StringConvertCRLFToPipe(s : WideString) : WideString;
+function StringConvertCRLFToPipe(const s : WideString) : WideString;
 var i : integer;
 begin
   Result := '';
@@ -257,7 +258,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function StringConvertPipeToBR(s : WideString) : WideString;
+function StringConvertPipeToBR(const s : WideString) : WideString;
 var i : integer;
 begin
   Result := '';
@@ -272,7 +273,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function StringConvertCRLFToBR(s : WideString) : WideString;
+function StringConvertCRLFToBR(const s : WideString) : WideString;
 var i : integer;
 begin
   Result := '';
@@ -377,7 +378,7 @@ end;
 // Equivalent of Pos but on TStream
 //==============================================================================
 
-function PosStream(SubString : string; Stream : TStream; StartPos : Integer = -1) : Integer;
+function PosStream(const SubString : string; Stream : TStream; StartPos : Integer = -1) : Integer;
 var i : Integer;
     c : Char;
     OriginalPos : Int64;
@@ -407,7 +408,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function PosStreamEx(SubString : string; Stream : TStream; StartPos, StopPos : Integer) : Integer;
+function PosStreamEx(const SubString : string; Stream : TStream; StartPos, StopPos : Integer) : Integer;
 var i : Integer;
     c : Char;
     OriginalPos : Int64;
@@ -593,7 +594,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function RPos(Substr: string; S: string): Integer;
+function RPos(const Substr: string; const S: string): Integer;
 var i,j : integer;
 begin
   i := Length(S);
@@ -685,7 +686,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TagSplit(Text : WideString; var WordArray : WideStringArray2);
+procedure TagSplit(const Text : WideString; var WordArray : WideStringArray2);
 var
   i, i1 : integer;
   s : WideString;
@@ -778,7 +779,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function StripTags(Text : WideString) : WideString;
+function StripTags(const Text : WideString) : WideString;
 var i : Integer;
     WordArray : WideStringArray2;
 begin

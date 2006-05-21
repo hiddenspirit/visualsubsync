@@ -1545,6 +1545,7 @@ object MainForm: TMainForm
       OnExecute = ActionPreferencesExecute
     end
     object ActionClose: TTntAction
+      Tag = 1
       Caption = 'Close'
       ImageIndex = 13
       OnExecute = ActionCloseExecute

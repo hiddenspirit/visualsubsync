@@ -58,13 +58,13 @@ type
     FBoldFont : HFONT;
     FNormalFont : HFONT;
     
-    procedure CreateFont;
     function CalculateNodeHeight : Integer;
   public
     { Public declarations }
     procedure AddSuggestion(Range : TSubtitleRange;
       Start, Stop : Integer; Text : WideString);
     procedure Clear;
+    procedure UpdateFonts;    
   end;
 
 var
@@ -96,14 +96,14 @@ begin
       [toShowTreeLines,toShowRoot] +
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
   end;
-  CreateFont;
+  UpdateFonts;
   vtvSuggestionsLst.DefaultNodeHeight := CalculateNodeHeight;
   InitializeCriticalSection(FCriticalSection);
 end;
 
 // -----------------------------------------------------------------------------
 
-procedure TSuggestionForm.CreateFont;
+procedure TSuggestionForm.UpdateFonts;
 var FontLOG : LOGFONT;
 begin
   if (FBoldFont <> 0) then
@@ -197,6 +197,8 @@ begin
   SelectObject(DC, FNormalFont);
   Msg := StringConvertCRLFToPipe(pSuggestionData.Text);
   TextOutW(DC, x, y, PWideChar(Msg), Length(Msg));
+//  ExtTextOutW(DC, x, y, 0, nil, PWideChar(Msg), Length(Msg), nil);
+
 
   if (vtvSuggestionsLst.FocusedNode = PaintInfo.Node) then
     DrawFocusRect(DC, PaintInfo.CellRect);
