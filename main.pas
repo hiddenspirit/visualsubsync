@@ -24,11 +24,6 @@
 // -----------------------------------------------------------------------------
 
 // TODO and stuff
-// Added configurable hotkey for "Close" current file action
-// Added req #743 : Translate line break in "\N" for .ssa and .ass
-// Fixed bug #758 : Network mode fails when subtitles are modified
-// Fixed bug #739 : WAV selection error after first load
-// Suggestion window now use the same font has subtitles list
 
 // quand j'utilise la fonction "play selection end" et que je bouge grâce au
 // clic droit ma selection, la lecture s'arrête. pour que ça ne s'arrete pas

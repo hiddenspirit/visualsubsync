@@ -197,8 +197,6 @@ begin
   SelectObject(DC, FNormalFont);
   Msg := StringConvertCRLFToPipe(pSuggestionData.Text);
   TextOutW(DC, x, y, PWideChar(Msg), Length(Msg));
-//  ExtTextOutW(DC, x, y, 0, nil, PWideChar(Msg), Length(Msg), nil);
-
 
   if (vtvSuggestionsLst.FocusedNode = PaintInfo.Node) then
     DrawFocusRect(DC, PaintInfo.CellRect);
