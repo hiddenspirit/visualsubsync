@@ -81,6 +81,9 @@ type
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
   function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
 
+  function TColor2AssColorString(Input: Cardinal): WideString;
+  function AssColorString2TColor(Color: string): TColor;
+
 type
   TExplodeArray = array of String;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
@@ -851,6 +854,60 @@ begin
   end
   else
     Result := '';
+end;
+
+// -----------------------------------------------------------------------------
+
+function TColor2AssColorString(Input: Cardinal): WideString;
+var
+  R,G,B,A : Byte;
+begin
+  R := (Input and $000000FF);
+  G := (Input and $0000FF00) shr 8;
+  B := (Input and $00FF0000) shr 16;
+  A := (Input and $FF000000) shr 24;
+  Result := Format('&H%.2x%.2x%.2x%.2x', [A, B, G, R]);
+end;
+
+// -----------------------------------------------------------------------------
+
+function AssColorString2TColor(Color: string): TColor;
+var ColorInt : Cardinal;
+    R, G, B, A : Cardinal;
+begin
+  ColorInt := 0;
+  if (Length(Color) > 0) then
+  begin
+    if (Color[1] = '&') then
+    begin
+      // ASS color : &AABBGGRR
+      //             123456789
+      if (Length(Color) = 9)  then
+      begin
+        R := StrToIntDef(Copy(Color, 8, 2), 0);
+        G := StrToIntDef(Copy(Color, 6, 2), 0);
+        B := StrToIntDef(Copy(Color, 4, 2), 0);
+        A := StrToIntDef(Copy(Color, 2, 2), 0);
+        ColorInt := (A shl 24) or (B shl 16) or (G shl 8) or R;
+      end
+      else if (Length(Color) = 7)  then
+      begin
+        // ASS color : &BBGGRR
+        //             1234567
+        R := StrToIntDef(Copy(Color, 6, 2), 0);
+        G := StrToIntDef(Copy(Color, 4, 2), 0);
+        B := StrToIntDef(Copy(Color, 2, 2), 0);
+        A := 0;
+        ColorInt := (A shl 24) or (B shl 16) or (G shl 8) or R;
+      end;
+    end
+    else
+    begin
+      // SSA color
+      ColorInt := StrToIntDef(Color, 0);
+    end;
+  end;
+  Result := ColorInt;
 end;
 
 // -----------------------------------------------------------------------------
