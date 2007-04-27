@@ -49,7 +49,7 @@ uses
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
-  DetachedVideoFormUnit;
+  DetachedVideoFormUnit, XPMan;
 
 type
   TTreeData = record
@@ -294,6 +294,15 @@ type
     ActionPlay1sBefore: TTntAction;
     ActionSelectNextSub: TTntAction;
     ActionSelectPreviousSub: TTntAction;
+    XPManifest1: TXPManifest;
+    bttStyles: TTntButton;
+    SubListHeaderPopupMenu: TTntPopupMenu;
+    ActionSetSubtitleStartTime: TTntAction;
+    ActionSetSubtitleStopTime: TTntAction;
+    ActionSetSubtitleStopTimeAndGoToNext: TTntAction;
+    cbStyles: TTntComboBox;
+    ActionStyles: TTntAction;
+    Styles1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -421,6 +430,11 @@ type
     procedure ActionSelectNextSubExecute(Sender: TObject);
     procedure ActionSelectPreviousSubExecute(Sender: TObject);
     procedure PanelVideoResize(Sender: TObject);
+    procedure ActionSetSubtitleStartTimeExecute(Sender: TObject);
+    procedure ActionSetSubtitleStopTimeExecute(Sender: TObject);
+    procedure ActionSetSubtitleStopTimeAndGoToNextExecute(Sender: TObject);
+    procedure cbStylesSelect(Sender: TObject);
+    procedure ActionStylesExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -484,8 +498,12 @@ type
     procedure SaveSubtitlesAsCUE(Filename: WideString);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
-    procedure LoadSRT(Filename: string; var IsUTF8 : Boolean);
-    procedure LoadASS(Filename: string; var IsUTF8 : Boolean; IsSSA : Boolean);
+    function LoadSRT(Filename: string; var IsUTF8 : Boolean) : Boolean;
+    function LoadASS(Filename: string; var IsUTF8 : Boolean; IsSSA : Boolean) : Boolean;
+    procedure AdvanceToNextSubtitleAfterFocus;
+    procedure SetFocusedSubtitleStopTime(Advance: Boolean);
+    procedure UpdateStylesComboboxFromSelection;
+    procedure UpdateStylesComboBox;        
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString);
@@ -500,6 +518,7 @@ type
     procedure FinishLoadSettings;
     function CanFixError(PluginFilename : WideString) : Boolean;
     procedure FixErrorInList(ErrorList : TList);
+    procedure RenameStyle(OldName, NewName : WideString);    
   end;
 
 const
@@ -516,7 +535,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows, JavaScriptPluginUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
-  tom_TLB, RichEdit;
+  tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings;
 
 {$R *.dfm}
 
@@ -568,7 +587,7 @@ begin
       if PanelPlaybackControl.Controls[i] is TSpeedButton then
         TSpeedButton(PanelPlaybackControl.Controls[i]).Caption := '';
 
-  bttWorkingMode.Caption := 'Normal mode';
+  bttWorkingMode.Caption := 'Normal';
 
   SubRangeFactory := TSubtitleRangeFactory.Create;
 
@@ -777,21 +796,31 @@ begin
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
     Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
+
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
     Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
+
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 100;
     Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
+
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 100;
     Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
+
+    Column := Header.Columns.Add;
+    Column.Text := 'Style';
+    Column.Width := 100;
+    Column.MinWidth := 50;
+    Column.Options := Column.Options - [coAllowClick,coDraggable];
+
     Column := Header.Columns.Add;
     Column.Text := 'Text';
     Column.Options := Column.Options - [coAllowClick,coDraggable];
@@ -821,7 +850,7 @@ procedure TMainForm.ShowStatusBarMessage(const Text : WideString);
 begin
   TntStatusBar1.Panels[1].Text := Text;
   TntStatusBar1.Repaint;
-  TimerStatusBarMsg.Interval := 2500;
+  TimerStatusBarMsg.Interval := 4000;
   TimerStatusBarMsg.Enabled := True;
 end;
 
@@ -895,6 +924,10 @@ begin
 
   ActionLoopSelStart.Enabled := Enable;
   ActionLoopSelEnd.Enabled := Enable;
+
+  ActionStyles.Enabled := Enable;
+  cbStyles.Enabled := Enable;
+  bttStyles.Enabled := Enable;
 
   PanelVideo.Enabled := Enable;
 end;
@@ -1074,14 +1107,14 @@ begin
     NodeData := vtvSubsList.GetNodeData(NewNode);
     NodeData.Range := NewSubRange;
     NewSubRange.Node := NewNode;
-    g_WebRWSynchro.BeginWrite;
+    g_WebRWSynchro.BeginWrite;    
     try
       WAVDisplayer.AddRange(NewSubRange);
-      vtvSubsList.Repaint;
       CurrentProject.IsDirty := True;
     finally
       g_WebRWSynchro.EndWrite;
     end;
+    vtvSubsList.Repaint;    
   end;
 end;
 
@@ -1091,28 +1124,40 @@ end;
 
 procedure TMainForm.LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
 var Ext : string;
+    StyleColumn : TVirtualTreeColumn;
 begin
+  StyleColumn := vtvSubsList.Header.Columns.Items[3];
   g_WebRWSynchro.BeginWrite;
   try
+    vtvSubsList.BeginUpdate;
     Ext := LowerCase(ExtractFileExt(Filename));
     if (Ext = '.srt') then
+    begin
       LoadSRT(Filename, IsUTF8);
-    if (Ext = '.ass') then
+      StyleColumn.Options := StyleColumn.Options - [coVisible];
+    end
+    else if (Ext = '.ass') then
+    begin
       LoadASS(Filename, IsUTF8, False);
-    if (Ext = '.ssa') then
+      StyleColumn.Options := StyleColumn.Options + [coVisible];
+    end
+    else if (Ext = '.ssa') then
+    begin
       LoadASS(Filename, IsUTF8, True);
-    vtvSubsList.EndUpdate;
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.Header.AutoFitColumns(False);
-    vtvSubsList.Repaint;
+      StyleColumn.Options := StyleColumn.Options + [coVisible];
+    end;
   finally
     g_WebRWSynchro.EndWrite;
+    vtvSubsList.EndUpdate;
   end;
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.Header.AutoFitColumns(False);
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.LoadSRT(Filename: string; var IsUTF8 : Boolean);
+function TMainForm.LoadSRT(Filename: string; var IsUTF8 : Boolean) : Boolean;
 var
   S: string;
   BOM : array[0..3] of BYTE;
@@ -1127,266 +1172,166 @@ var
   EndOfFile : Boolean;
   AutoCorrectedFile : Boolean;
 begin
+  Result := False;
   if not FileExists(Filename) then
   begin
-    g_WebRWSynchro.BeginWrite;
-    try
-      WAVDisplayer.RangeList.Clear;
-      vtvSubsList.Clear;
-      vtvSubsList.Repaint;
-      WAVDisplayer.UpdateView([uvfRange]);
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
+    WAVDisplayer.RangeList.Clear;
+    vtvSubsList.Clear;
     Exit;
   end;
 
   SubtitleFileHeader := '';
 
-  g_WebRWSynchro.BeginWrite;
-  try
-    WAVDisplayer.RangeList.Clear;
-    FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
-    ZeroMemory(@BOM[0],Length(BOM));
-    FS.Read(BOM,4);
-    if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
-    begin
-      // UTF8
-      IsUTF8 := True;
-      FS.Seek(3,soFromBeginning);
-    end
-    else
-    begin
-      IsUTF8 := False;  
-      FS.Seek(0,soFromBeginning);
-    end;
-
-    AutoCorrectedFile := False;
-    // Skip lines until a timestamps line
-    repeat
-      EndOfFile := ReadLineStream(FS, S);
-    until IsTimeStampsLine(S, Start, Stop) or EndOfFile;
-    while not EndOfFile do
-    begin
-      // Copy text until a timestamps line
-      Text := '';
-      while True do
-      begin
-        EndOfFile := ReadLineStream(FS, S);
-        if EndOfFile or IsTimeStampsLine(S, NextStart, NextStop) then
-          Break;
-        S := Trim(S);        
-        Text := Text + S + #13#10;
-      end;
-      Text := TrimRight(Text);
-      if (Start <> -1) and (Stop <> -1) then
-      begin
-        // Remove the index line if any
-        i := RPos(#13#10, Text);
-        if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (not EndOfFile)) then
-        begin
-          Delete(Text, i, MaxInt);
-        end;
-        Text := Trim(Text);      
-        if (not EndOfFile) and (Stop = NextStart) then
-        begin
-          AutoCorrectedFile := True;
-          Dec(Stop);
-        end;
-        NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-        if IsUTF8 then
-          TSubtitleRange(NewRange).Text := UTF8Decode(Text)
-        else
-          TSubtitleRange(NewRange).Text := Text;
-
-        if (EnableExperimentalKaraoke = True) then
-          NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
-
-        WAVDisplayer.RangeList.AddAtEnd(NewRange);
-      end;
-      Start := NextStart;
-      Stop := NextStop;
-    end;
-    FS.Free;
-    WAVDisplayer.RangeList.FullSort;
-
-    vtvSubsList.Clear;
-    vtvSubsList.Repaint;
-    vtvSubsList.BeginUpdate;
-    for i:=0 to WAVDisplayer.RangeList.Count-1 do
-    begin
-      Node := vtvSubsList.AddChild(nil);
-      NodeData := vtvSubsList.GetNodeData(Node);
-      NodeData.Range := TSubtitleRange(WAVDisplayer.RangeList[i]);
-      TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
-    end;
-    vtvSubsList.EndUpdate;
-    WAVDisplayer.UpdateView([uvfRange]);
-    if AutoCorrectedFile then
-      CurrentProject.IsDirty := True;
-    vtvSubsList.Header.AutoFitColumns(False);
-    vtvSubsList.Repaint;
-  finally
-    g_WebRWSynchro.EndWrite;
+  WAVDisplayer.RangeList.Clear;
+  FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
+  ZeroMemory(@BOM[0],Length(BOM));
+  FS.Read(BOM,4);
+  if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
+  begin
+    // UTF8
+    IsUTF8 := True;
+    FS.Seek(3,soFromBeginning);
+  end
+  else
+  begin
+    IsUTF8 := False;  
+    FS.Seek(0,soFromBeginning);
   end;
+
+  AutoCorrectedFile := False;
+  // Skip lines until a timestamps line
+  repeat
+    EndOfFile := ReadLineStream(FS, S);
+  until IsTimeStampsLine(S, Start, Stop) or EndOfFile;
+  while not EndOfFile do
+  begin
+    // Copy text until a timestamps line
+    Text := '';
+    while True do
+    begin
+      EndOfFile := ReadLineStream(FS, S);
+      if EndOfFile or IsTimeStampsLine(S, NextStart, NextStop) then
+        Break;
+      S := Trim(S);
+      Text := Text + S + #13#10;
+    end;
+    Text := TrimRight(Text);
+    if (Start <> -1) and (Stop <> -1) then
+    begin
+      // Remove the index line if any
+      i := RPos(#13#10, Text);
+      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (not EndOfFile)) then
+      begin
+        Delete(Text, i, MaxInt);
+      end;
+      Text := Trim(Text);      
+      if (not EndOfFile) and (Stop = NextStart) then
+      begin
+        AutoCorrectedFile := True;
+        Dec(Stop);
+      end;
+      NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
+      if IsUTF8 then
+        TSubtitleRange(NewRange).Text := UTF8Decode(Text)
+      else
+        TSubtitleRange(NewRange).Text := Text;
+
+      if (EnableExperimentalKaraoke = True) then
+        NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
+
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
+    end;
+    Start := NextStart;
+    Stop := NextStop;
+  end;
+  FS.Free;
+  WAVDisplayer.RangeList.FullSort;
+
+  vtvSubsList.Clear;
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    Node := vtvSubsList.AddChild(nil);
+    NodeData := vtvSubsList.GetNodeData(Node);
+    NodeData.Range := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
+  end;
+  WAVDisplayer.UpdateView([uvfRange]);
+  if AutoCorrectedFile then
+    CurrentProject.IsDirty := True;
+  Result := True;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.LoadASS(Filename: string; var IsUTF8 : Boolean; isSSA : Boolean);
+function TMainForm.LoadASS(Filename: string; var IsUTF8 : Boolean; isSSA : Boolean) : Boolean;
 var
   i, Start, Stop : Integer;
-  SS : string;
   Text : string;
-  Layer : string;
-  Dialogue : string;
-  Actor : string;
-  Style : string;
-  Effect : string;
-  RightMarg, LeftMarg, VertMarg : string;
   NewRange : TRange;
-  S: string;
-  BOM : array[0..3] of BYTE;
-  FS : TFileStream;
-  EndOfFile : Boolean;
   Node: PVirtualNode;
   NodeData: PTreeData;
+  ssaParser : TSSAParser;
 begin
+  Result := False;
   if not FileExists(Filename) then
   begin
-    g_WebRWSynchro.BeginWrite;
-    try
-      WAVDisplayer.RangeList.Clear;
-      vtvSubsList.Clear;
-      vtvSubsList.Repaint;
-      WAVDisplayer.UpdateView([uvfRange]);
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
+    WAVDisplayer.RangeList.Clear;
+    vtvSubsList.Clear;
     Exit;
   end;
 
-  g_WebRWSynchro.BeginWrite;
+  WAVDisplayer.RangeList.Clear;
 
-  try
-    WAVDisplayer.RangeList.Clear;
+  ssaParser := TSSAParser.Create;
+  ssaParser.Parse(Filename);
+  IsUTF8 := ssaParser.GetIsUTF8;
+  SubtitleFileHeader := ssaParser.GetHeader;
 
-    FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
+  StyleForm.LoadStylesFromParser(ssaParser);
+  UpdateStylesComboBox;
 
-    // Check for UTF BOM
-    ZeroMemory(@BOM[0],Length(BOM));
-    FS.Read(BOM,4);
-    if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
+  for i := 0 to ssaParser.GetDialoguesCount-1 do
+  begin
+    Start := TimeStringToMS_SSA(ssaParser.GetDialogueValueAsString(i, 'Start'));
+    Stop := TimeStringToMS_SSA(ssaParser.GetDialogueValueAsString(i, 'End'));
+    if (Start <> -1) and (Stop <> -1) then
     begin
-      // UTF8
-      IsUTF8 := True;
-      FS.Seek(3,soFromBeginning);
-    end
-    else
-    begin
-      IsUTF8 := False;
-      FS.Seek(0,soFromBeginning);
-    end;
-
-
-    // Read header
-    SubtitleFileHeader := '';
-    EndOfFile := False;
-    while (not EndOfFile) do
-    begin
-      EndOfFile := ReadLineStream(FS, S);
-      if (EndOfFile = True) or AnsiStartsText('[Events]',S) then
-        break
+      NewRange := SubRangeFactory.CreateRangeSS(Start, Stop);
+      Text := ssaParser.GetDialogueValueAsString(i, 'Text');
+      // TODO : ssaParser.isASS / isSSA
+      if IsUTF8 then
+        TSubtitleRange(NewRange).Text := UTF8Decode(Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]))
       else
-        SubtitleFileHeader := SubtitleFileHeader + #13#10 + S;
-    end;
-    SubtitleFileHeader := Trim(SubtitleFileHeader);
-
-
-    // Read events
-    repeat
-      EndOfFile := ReadLineStream(FS, S);
-    until AnsiStartsText('Format:',S) or EndOfFile;
-
-    while (not EndOfFile) do
-    begin
-      EndOfFile := ReadLineStream(FS, S);
-      if EndOfFile then
-        Break;
-
-      Dialogue := Copy(S, 1, AnsiPos(':',S)-1);
-      if IsSSA = false then
-        S := Copy(S, AnsiPos(':',S)+1, MaxInt)
+        TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]);
+      if IsSSA then
+        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Marked')
       else
-        S := copy(S, AnsiPos('=',S)+1, MaxInt);
-
-      Layer := Copy(S, 1, AnsiPos(',',S)-1);
-
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      SS := Copy(S, 1, AnsiPos(',',S)-1);
-      Start := TimeStringToMS_SSA(SS);
-
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      SS := Copy(S, 1, AnsiPos(',',S)-1);
-      Stop := TimeStringToMS_SSA(SS);
-
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      Style := Copy(S, 1, AnsiPos(',',S)-1);
-
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      Actor := Copy(S, 1, AnsiPos(',',S)-1);
-
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      LeftMarg := Copy(S,1,AnsiPos(',',S)-1);
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      RightMarg := Copy(S,1,AnsiPos(',',S)-1);
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      VertMarg := Copy(S,1,AnsiPos(',',S)-1);
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-
-      Effect := Copy(S, 1, AnsiPos(',',S)-1);
-      S := Copy(S, AnsiPos(',',S)+1, MaxInt);
-      Text := S;
-      if (Start <> -1) and (Stop <> -1) then
-      begin
-        NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-        if IsUTF8 then
-          TSubtitleRange(NewRange).Text := UTF8Decode(WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]))
-        else
-          TSubtitleRange(NewRange).Text := WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]);
-        TSubtitleRange(NewRange).Dialogue := Dialogue;
-        TSubtitleRange(NewRange).Layer := Layer;
-        TSubtitleRange(NewRange).Effect := Effect;
-        TSubtitleRange(NewRange).RightMarg := RightMarg;
-        TSubtitleRange(NewRange).LeftMarg := LeftMarg;
-        TSubtitleRange(NewRange).VertMarg := VertMarg;
-        TSubtitleRange(NewRange).Style := Style;
-        TSubtitleRange(NewRange).Actor := Actor;
-        if (EnableExperimentalKaraoke = True) then
-          NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
-        WAVDisplayer.RangeList.AddAtEnd(NewRange);
-      end;
+        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Layer');
+      TSubtitleRange(NewRange).Effect := ssaParser.GetDialogueValueAsString(i, 'Effect');
+      TSubtitleRange(NewRange).RightMarg := ssaParser.GetDialogueValueAsString(i, 'MarginR');
+      TSubtitleRange(NewRange).LeftMarg := ssaParser.GetDialogueValueAsString(i, 'MarginL');
+      TSubtitleRange(NewRange).VertMarg := ssaParser.GetDialogueValueAsString(i, 'MarginV');
+      TSubtitleRange(NewRange).Style := ssaParser.GetDialogueValueAsString(i, 'Style');
+      TSubtitleRange(NewRange).Actor := ssaParser.GetDialogueValueAsString(i, 'Name');
+      if (EnableExperimentalKaraoke = True) then
+        NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
     end;
-    FS.Free;
-    WAVDisplayer.RangeList.FullSort;
-
-    vtvSubsList.Clear;
-    vtvSubsList.Repaint;
-    vtvSubsList.BeginUpdate;
-    for i:=0 to WAVDisplayer.RangeList.Count-1 do
-    begin
-      Node := vtvSubsList.AddChild(nil);
-      NodeData := vtvSubsList.GetNodeData(Node);
-      NodeData.Range := TSubtitleRange(WAVDisplayer.RangeList[i]);
-      TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
-    end;
-    vtvSubsList.EndUpdate;
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.Header.AutoFitColumns(False);
-    vtvSubsList.Repaint;
-  finally
-    g_WebRWSynchro.EndWrite;
   end;
+  ssaParser.Free;
+
+  WAVDisplayer.RangeList.FullSort;
+
+  vtvSubsList.Clear;
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    Node := vtvSubsList.AddChild(nil);
+    NodeData := vtvSubsList.GetNodeData(Node);
+    NodeData.Range := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
+  end;
+
+  Result := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -1404,7 +1349,8 @@ begin
     0: CellText := IntToStr(Node.Index+1);
     1: CellText := TimeMsToString(NodeData.Range.StartTime);
     2: CellText := TimeMsToString(NodeData.Range.StopTime);
-    3: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
+    3: CellText := NodeData.Range.Style;
+    4: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
   end;
 end;
 
@@ -2414,18 +2360,19 @@ begin
     end;
     DeleteList.Free;
 
-    // Make sure to update display
     CurrentProject.IsDirty := True;
-    Node := vtvSubsList.GetFirstSelected;
-    vtvSubsList.FocusedNode := Node;
-    if Assigned(WAVDisplayer.SelectedRange) then
-      WAVDisplayer.SelectedRange := nil;
-    WAVDisplayer.ClearSelection;
-    WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
-    vtvSubsList.Repaint;
   finally
     g_WebRWSynchro.EndWrite;
   end;
+  
+  // Make sure to update display
+  Node := vtvSubsList.GetFirstSelected;
+  vtvSubsList.FocusedNode := Node;
+  if Assigned(WAVDisplayer.SelectedRange) then
+    WAVDisplayer.SelectedRange := nil;
+  WAVDisplayer.ClearSelection;
+  WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
+  vtvSubsList.Repaint;  
 end;
 
 //------------------------------------------------------------------------------
@@ -2815,9 +2762,22 @@ procedure TMainForm.ApplyFontSettings;
 var DC : HDC;
     MLCanvas : TCanvas;
     TxtWidth : Integer;
+    Node : PVirtualNode;
 begin
+  // Update subtitle list font
   String2Font(ConfigObject.SubListFont, vtvSubsList.Font);
   vtvSubsList.Header.AutoFitColumns(False);
+  vtvSubsList.Canvas.Font.Assign(vtvSubsList.Font);
+  // Update subtitle node height
+  vtvSubsList.DefaultNodeHeight := Round(vtvSubsList.Canvas.TextHeight('Tj') * 1.1);
+  vtvSubsList.BeginUpdate;
+  Node := vtvSubsList.GetFirst;
+  while Assigned(Node) do
+  begin
+    vtvSubsList.NodeHeight[Node] := vtvSubsList.DefaultNodeHeight;
+    Node := vtvSubsList.GetNext(Node);
+  end;
+  vtvSubsList.EndUpdate;
 
   SuggestionForm.vtvSuggestionsLst.Font.Name := vtvSubsList.Font.Name;
   SuggestionForm.vtvSuggestionsLst.Canvas.Font.Name := vtvSubsList.Font.Name;
@@ -2839,6 +2799,11 @@ begin
     ReleaseDC(0,DC);
     MemoLinesCounter.Width := TxtWidth + 2*4;
   end;
+
+  // Adjust status bar panel size for people using bigger fonts
+  TntStatusBar1.Canvas.Font.Assign(TntStatusBar1.Font);
+  TntStatusBar1.Panels[0].Width :=  TntStatusBar1.Canvas.TextWidth(
+    'Line: 99, Column: 999 | Total: 999, Char/s: 99');
 end;
 
 //------------------------------------------------------------------------------
@@ -3003,6 +2968,7 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
@@ -3083,7 +3049,7 @@ procedure TMainForm.bttWorkingModeClick(Sender: TObject);
 begin
   if (bttWorkingMode.Tag = 0) then
   begin
-    bttWorkingMode.Caption := 'Timing mode';
+    bttWorkingMode.Caption := 'Timing';
     bttWorkingMode.Font.Color := clRed;
     bttWorkingMode.Tag := 1;
     if ConfigObject.MouseEnableSSATimingMode then
@@ -3093,7 +3059,7 @@ begin
   end
   else
   begin
-    bttWorkingMode.Caption := 'Normal mode';
+    bttWorkingMode.Caption := 'Normal';
     bttWorkingMode.Tag := 0;
     bttWorkingMode.Font.Color := clWindowText;
     WAVDisplayer.SelMode := smCoolEdit;
@@ -3819,7 +3785,6 @@ var NodeData: PTreeData;
 begin
   if (Node <> nil) then
   begin
-
     NodeData := Sender.GetNodeData(Node);
     MemoSubtitleText.Tag := 0;
     MemoSubtitleText.Text := NodeData.Range.Text;
@@ -3828,7 +3793,8 @@ begin
       TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex)
     else
       TagHighlight(MemoSubtitleText, -1);
-
+    // Update styles combobox
+    UpdateStylesComboboxFromSelection;
   end
   else
   begin
@@ -3969,10 +3935,15 @@ procedure TMainForm.TntFormKeyDown(Sender: TObject; var Key: Word;
 begin
   // subtitle dynamic creation (toggle mode) in timing mode only
   if (bttWorkingMode.Tag = 1) and (Key = VK_SPACE) and
-    (ConfigObject.EnableToggleCreation = True) then
+    (ConfigObject.EnableToggleCreation = True) and
+    (WAVDisplayer.IsPlaying = True) then
   begin
-    if (WAVDisplayer.IsPlaying = True) and (ToggleStartSubtitleTime = -1) then
+    if (ToggleStartSubtitleTime = -1) then
+    begin
       ToggleStartSubtitleTime := WAVDisplayer.GetPlayCursorPos;
+      if ConfigObject.SpaceKeyModifyTiming then
+        ActionSetSubtitleStartTime.Execute;
+    end;
     Key := 0;
   end;
 end;
@@ -3984,15 +3955,23 @@ procedure TMainForm.TntFormKeyUp(Sender: TObject; var Key: Word;
 begin
   // subtitle dynamic creation (toggle mode) in timing mode only
   if (bttWorkingMode.Tag = 1) and (Key = VK_SPACE) and
-    (ConfigObject.EnableToggleCreation = True) then
+    (ConfigObject.EnableToggleCreation = True) and
+    (WAVDisplayer.IsPlaying = True) then
   begin
-    if (ToggleStartSubtitleTime <> -1) and
-      (WAVDisplayer.GetPlayCursorPos > (ToggleStartSubtitleTime + 400)) then
-    begin
-      AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, False);
+      if ToggleStartSubtitleTime <> -1 then
+      begin
+      if ConfigObject.SpaceKeyModifyTiming then
+      begin
+        SetFocusedSubtitleStopTime(True);
+      end
+      else
+      begin
+        if (WAVDisplayer.GetPlayCursorPos > (ToggleStartSubtitleTime + 400)) then
+          AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, False);
+      end;
+      ToggleStartSubtitleTime := -1;
     end;
-    ToggleStartSubtitleTime := -1;
-    Key := 0;    
+    Key := 0;
   end;
 end;
 
@@ -4033,7 +4012,7 @@ begin
     if (Text[i] = ' ') or (Text[i] = #10) or (Text[i] = '/') then
     begin
       SetLength(WordArray, Length(WordArray)+1);
-      WordArray[Length(WordArray)-1] := WideStringReplace(
+      WordArray[Length(WordArray)-1] := Tnt_WideStringReplace(
         Copy(Text, j, i-j+1),
         '/',
         '',
@@ -4267,7 +4246,8 @@ var i : integer;
     Subrange : TSubtitleRange;
     FS : TFileStream;
     s : WideString;
-
+    style : TSSAStyle;
+    
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
       s := s + #13#10;
@@ -4296,7 +4276,15 @@ begin
   end
   else
   begin
-    WriteStringLnStream(SubtitleFileHeader, FS);
+    WriteStringLnStream(Trim(SubtitleFileHeader), FS);
+    WriteStringLnStream('', FS);    
+    WriteStringLnStream('[V4 Styles]', FS);  
+    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
+    for i:=0 to StyleForm.GetCount-1 do
+    begin
+      style := StyleForm.GetStyleAt(i);
+      WriteStringLnStream(style.getAsSSA, FS);
+    end;
   end;
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
@@ -4307,14 +4295,14 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    s := Format('%s: Marked=%s,%s,%s,%s,%s,%s,%s,%s,%s,',
-      [Subrange.Dialogue, SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
+    s := Format('Dialogue: %s,%s,%s,%s,%s,%s,%s,%s,%s,',
+      [SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style, SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
     if InUTF8 then
-      s := s + UTF8Encode(WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]))
+      s := s + UTF8Encode(Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]))
     else
-      s := s + WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
+      s := s + Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
     WriteStringLnStream(s, FS);
   end;
   FS.Free;
@@ -4327,6 +4315,7 @@ var i : integer;
     Subrange : TSubtitleRange;
     FS : TFileStream;
     s : WideString;
+    style : TSSAStyle;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4356,7 +4345,15 @@ begin
   end
   else
   begin
-    WriteStringLnStream(SubtitleFileHeader, FS);
+    WriteStringLnStream(Trim(SubtitleFileHeader), FS);
+    WriteStringLnStream('', FS);
+    WriteStringLnStream('[V4+ Styles]', FS);
+    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
+    for i:=0 to StyleForm.GetCount-1 do
+    begin
+      style := StyleForm.GetStyleAt(i);
+      WriteStringLnStream(style.getAsASS, FS);
+    end;
   end;
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
@@ -4365,14 +4362,14 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    s := Format('%s: %s,%s,%s,%s,%s,%s,%s,%s,%s,',
-      [Subrange.Dialogue, SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
+    s := Format('Dialogue: %s,%s,%s,%s,%s,%s,%s,%s,%s,',
+      [SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style,SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
     if InUTF8 then
-      s := s + UTF8Encode(WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]))
+      s := s + UTF8Encode(Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]))
     else
-      s := s + WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
+      s := s + Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
     WriteStringLnStream(s, FS);
   end;
   FS.Free;
@@ -4618,6 +4615,240 @@ begin
     // todo : change height ???
     //CurrentProject.VideoPanelHeight := PanelVideo.Height;
     SaveProject(CurrentProject);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetSubtitleStartTimeExecute(Sender: TObject);
+var NodeData : PTreeData;
+    NewStartTime : Cardinal;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    try
+      g_WebRWSynchro.BeginWrite;
+      NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+      if WAVDisplayer.IsPlaying then
+        NewStartTime := WAVDisplayer.GetPlayCursorPos
+      else
+        NewStartTime := WAVDisplayer.GetCursorPos;
+      NodeData.Range.StartTime := NewStartTime;
+      if (NewStartTime > NodeData.Range.StopTime) then
+      begin
+        NodeData.Range.StopTime := NewStartTime + 100;
+      end;
+      FullSortTreeAndSubList; // lazy me :) but well it's fast enough
+      CurrentProject.IsDirty := True;
+    finally
+      g_WebRWSynchro.EndWrite;
+    end;
+
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SetFocusedSubtitleStopTime(Advance: Boolean);
+var NodeData : PTreeData;
+    NewStopTime : Cardinal;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    if WAVDisplayer.IsPlaying then
+      NewStopTime := WAVDisplayer.GetPlayCursorPos
+    else
+      NewStopTime := WAVDisplayer.GetCursorPos;
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    if (NewStopTime > NodeData.Range.StartTime) then
+    begin
+      try
+        g_WebRWSynchro.BeginWrite;
+        NodeData.Range.StopTime := NewStopTime;
+        CurrentProject.IsDirty := True;
+      finally
+        g_WebRWSynchro.EndWrite;
+      end;
+
+      if Advance then
+        AdvanceToNextSubtitleAfterFocus;
+
+      WAVDisplayer.UpdateView([uvfRange]);
+      vtvSubsList.Repaint;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetSubtitleStopTimeExecute(Sender: TObject);
+begin
+  SetFocusedSubtitleStopTime(False);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.AdvanceToNextSubtitleAfterFocus;
+var
+  NextNodeToFocus : PVirtualNode;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
+    if Assigned(NextNodeToFocus) then
+    begin
+      vtvSubsList.FocusedNode := NextNodeToFocus;
+      vtvSubsList.ClearSelection;
+      vtvSubsList.Selected[NextNodeToFocus] := True;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetSubtitleStopTimeAndGoToNextExecute(Sender: TObject);
+begin
+  SetFocusedSubtitleStopTime(True);
+end;
+
+//------------------------------------------------------------------------------
+procedure TMainForm.cbStylesSelect(Sender: TObject);
+var
+  Node : PVirtualNode;
+  NodeData : PTreeData;
+  NewStyle : WideString;
+  SubChanged : Boolean;
+begin
+  if cbStyles.ItemIndex = -1 then
+    Exit;
+  try
+    g_WebRWSynchro.BeginWrite;
+    NewStyle := cbStyles.Items.Strings[cbStyles.ItemIndex];
+    Node := vtvSubsList.GetFirstSelected;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      if (NodeData.Range.Style <> NewStyle) then
+      begin
+        NodeData.Range.Style := NewStyle;
+        SubChanged := True;
+      end;
+      Node := vtvSubsList.GetNextSelected(node);
+    end;
+    if SubChanged then
+    begin
+      CurrentProject.IsDirty := True;
+    end;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  if SubChanged then
+  begin
+    vtvSubsList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateStylesComboBox;
+var i : Cardinal;
+    style : TSSAStyle;
+begin
+  cbStyles.Clear;
+  for i := 0 to StyleForm.GetCount-1 do
+  begin
+    style := StyleForm.GetStyleAt(i);
+    cbStyles.AddItem(style.name, nil);
+  end;
+  UpdateStylesComboboxFromSelection;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionStylesExecute(Sender: TObject);
+begin
+  // Try to pres select current subtitle style
+  StyleForm.PreSelect(cbStyles.Text);
+  StyleForm.ShowModal;
+  if StyleForm.HaveStylesChanged then
+  begin
+    UpdateStylesComboBox;
+    g_WebRWSynchro.BeginWrite;
+    try
+      CurrentProject.IsDirty := True;
+    finally
+      g_WebRWSynchro.EndWrite;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateStylesComboboxFromSelection;
+var NodeCursor : PVirtualNode;
+    NodeCursorData, PreviousNodeData : PTreeData;
+    SeveralStylesSelected : Boolean;
+begin
+  SeveralStylesSelected := False;
+  PreviousNodeData := nil;
+  NodeCursor := vtvSubsList.GetFirstSelected;
+  while Assigned(NodeCursor) do
+  begin
+    NodeCursorData := vtvSubsList.GetNodeData(NodeCursor);
+    if (PreviousNodeData <> nil) and (NodeCursorData.Range.Style <> PreviousNodeData.Range.Style) then
+    begin
+      SeveralStylesSelected := True;
+      Break;
+    end;
+    PreviousNodeData := NodeCursorData;
+    NodeCursor := vtvSubsList.GetNextSelected(NodeCursor);
+  end;
+
+  if SeveralStylesSelected then
+    cbStyles.ItemIndex := -1
+  else
+  begin
+    NodeCursor := vtvSubsList.GetFirstSelected;
+    if Assigned(NodeCursor) then
+    begin
+      NodeCursorData := vtvSubsList.GetNodeData(NodeCursor);
+      cbStyles.ItemIndex := cbStyles.Items.IndexOf(NodeCursorData.Range.Style);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.RenameStyle(OldName, NewName : WideString);
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+    SubChanged : Boolean;
+begin
+  g_WebRWSynchro.BeginWrite;
+  try
+    Node := vtvSubsList.GetFirst;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      if (NodeData.Range.Style = OldName) then
+      begin
+        NodeData.Range.Style := NewName;
+        SubChanged := True;
+      end;
+      Node := vtvSubsList.GetNext(Node);
+    end;
+    if SubChanged then
+    begin
+      CurrentProject.IsDirty := True;
+    end;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  if SubChanged then
+  begin
+    vtvSubsList.Repaint;
   end;
 end;
 
