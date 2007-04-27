@@ -31,7 +31,9 @@ uses
   JavaScriptPluginUnit in 'JavaScriptPluginUnit.pas',
   LogWindowFormUnit in 'LogWindowFormUnit.pas' {LogForm},
   CursorManager in 'CursorManager.pas',
-  tom_TLB in 'tom_TLB.pas';
+  tom_TLB in 'tom_TLB.pas',
+  StyleFormUnit in 'StyleFormUnit.pas' {StyleForm},
+  SSAParserUnit in 'SSAParserUnit.pas';
 
 {$R *.res}
 
@@ -45,6 +47,7 @@ begin
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TPreferencesForm, PreferencesForm);
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
+  Application.CreateForm(TStyleForm, StyleForm);
   MainForm.LoadSettings;
   Application.ProcessMessages;  
   MainForm.FinishLoadSettings;

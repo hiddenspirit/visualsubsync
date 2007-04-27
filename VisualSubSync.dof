@@ -80,7 +80,7 @@ UnsafeType=0
 UnsafeCode=0
 UnsafeCast=0
 [Linker]
-MapFile=0
+MapFile=3
 OutputObjs=0
 ConsoleApp=1
 DebugInfo=0
@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=0
 MinorVer=9
 Release=4
-Build=732
+Build=741
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=0.9.4.732
+FileVersion=0.9.4.741
 InternalName=
 LegalCopyright=
 LegalTrademarks=
