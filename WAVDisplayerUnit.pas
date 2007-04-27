@@ -233,6 +233,7 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure WM_EraseBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure Paint; override;
+    procedure Resize; override;
 
   public
     constructor Create(AOwner: TComponent); override;
@@ -2969,6 +2970,15 @@ begin
     FOnSelectionChange(Self);
   if Assigned(FOnSelectedKaraokeRange) then
     FOnSelectedKaraokeRange(Self, FSelectedKaraokeRange);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.Resize;
+begin
+  inherited;
+  // Fix repaing bug
+  Repaint;
 end;
 
 //------------------------------------------------------------------------------
