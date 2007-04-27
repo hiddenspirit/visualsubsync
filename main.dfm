@@ -1,8 +1,8 @@
 object MainForm: TMainForm
-  Left = 263
-  Top = 118
-  Width = 720
-  Height = 589
+  Left = 249
+  Top = 105
+  Width = 780
+  Height = 581
   Caption = 'VisualSubSync'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -25,8 +25,8 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 454
-    Width = 712
+    Top = 446
+    Width = 772
     Height = 5
     Cursor = crVSplit
     Align = alBottom
@@ -37,7 +37,7 @@ object MainForm: TMainForm
   object Splitter2: TSplitter
     Left = 0
     Top = 225
-    Width = 712
+    Width = 772
     Height = 5
     Cursor = crVSplit
     Align = alTop
@@ -47,7 +47,7 @@ object MainForm: TMainForm
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 712
+    Width = 772
     Height = 225
     Align = alTop
     BevelOuter = bvLowered
@@ -56,7 +56,7 @@ object MainForm: TMainForm
     FullRepaint = False
     TabOrder = 0
     object SplitterWAVDisplay_Video: TSplitter
-      Left = 505
+      Left = 565
       Top = 1
       Width = 5
       Height = 223
@@ -75,7 +75,7 @@ object MainForm: TMainForm
       Visible = False
     end
     object PanelVideo: TPanel
-      Left = 510
+      Left = 570
       Top = 1
       Width = 201
       Height = 223
@@ -92,7 +92,7 @@ object MainForm: TMainForm
     object PanelWAVDisplay: TPanel
       Left = 256
       Top = 1
-      Width = 249
+      Width = 309
       Height = 223
       Align = alClient
       BevelOuter = bvNone
@@ -120,8 +120,8 @@ object MainForm: TMainForm
   end
   object TntStatusBar1: TTntStatusBar
     Left = 0
-    Top = 524
-    Width = 712
+    Top = 516
+    Width = 772
     Height = 19
     Panels = <
       item
@@ -133,8 +133,8 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 459
-    Width = 712
+    Top = 451
+    Width = 772
     Height = 65
     Align = alBottom
     BevelOuter = bvNone
@@ -144,7 +144,7 @@ object MainForm: TMainForm
     object MemoSubtitleText: TTntRichEdit
       Left = 35
       Top = 0
-      Width = 677
+      Width = 737
       Height = 65
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -175,8 +175,8 @@ object MainForm: TMainForm
   object PanelMiddle: TPanel
     Left = 0
     Top = 230
-    Width = 712
-    Height = 224
+    Width = 772
+    Height = 216
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -184,12 +184,12 @@ object MainForm: TMainForm
     object vtvSubsList: TVirtualStringTree
       Left = 0
       Top = 70
-      Width = 712
-      Height = 154
+      Width = 772
+      Height = 146
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
-      Font.Height = -11
+      Font.Height = -13
       Font.Name = 'Arial'
       Font.Style = []
       Header.AutoSizeIndex = -1
@@ -200,6 +200,7 @@ object MainForm: TMainForm
       Header.Font.Style = []
       Header.MainColumn = -1
       Header.Options = [hoColumnResize, hoDrag]
+      Header.PopupMenu = SubListHeaderPopupMenu
       ParentFont = False
       PopupMenu = SubListPopupMenu
       TabOrder = 0
@@ -211,7 +212,7 @@ object MainForm: TMainForm
     object PanelPlaybackControl: TPanel
       Left = 0
       Top = 0
-      Width = 712
+      Width = 772
       Height = 70
       Align = alTop
       BevelOuter = bvNone
@@ -823,13 +824,19 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttWorkingMode: TTntSpeedButton
-        Left = 632
-        Top = 32
-        Width = 73
+        Left = 720
+        Top = 0
+        Width = 49
         Height = 25
         AllowAllUp = True
         GroupIndex = 1
-        Caption = 'Normal mode'
+        Caption = 'Normal'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = [fsBold]
+        ParentFont = False
         OnClick = bttWorkingModeClick
       end
       object bttZoomVertical: TSpeedButton
@@ -1132,6 +1139,24 @@ object MainForm: TMainForm
           TabOrder = 5
         end
       end
+      object bttStyles: TTntButton
+        Left = 632
+        Top = 40
+        Width = 41
+        Height = 25
+        Action = ActionStyles
+        TabOrder = 3
+      end
+      object cbStyles: TTntComboBox
+        Left = 680
+        Top = 42
+        Width = 89
+        Height = 21
+        Style = csDropDownList
+        ItemHeight = 13
+        TabOrder = 4
+        OnSelect = cbStylesSelect
+      end
     end
   end
   object TntMainMenu1: TTntMainMenu
@@ -1238,6 +1263,9 @@ object MainForm: TMainForm
       end
       object N5: TTntMenuItem
         Caption = '-'
+      end
+      object Styles1: TTntMenuItem
+        Action = ActionStyles
       end
       object SubMenuItemWebServer: TTntMenuItem
         Caption = 'Web server'
@@ -1840,6 +1868,25 @@ object MainForm: TMainForm
       Category = 'Playback'
       Caption = 'Select previous sub'
       OnExecute = ActionSelectPreviousSubExecute
+    end
+    object ActionSetSubtitleStartTime: TTntAction
+      Tag = 1
+      Caption = 'Set subtitle start time'
+      OnExecute = ActionSetSubtitleStartTimeExecute
+    end
+    object ActionSetSubtitleStopTime: TTntAction
+      Tag = 1
+      Caption = 'Set subtitle stop time'
+      OnExecute = ActionSetSubtitleStopTimeExecute
+    end
+    object ActionSetSubtitleStopTimeAndGoToNext: TTntAction
+      Tag = 1
+      Caption = 'Set subtitle stop time / go to next'
+      OnExecute = ActionSetSubtitleStopTimeAndGoToNextExecute
+    end
+    object ActionStyles: TTntAction
+      Caption = 'Styles'
+      OnExecute = ActionStylesExecute
     end
   end
   object ImageList1: TImageList
@@ -3342,7 +3389,7 @@ object MainForm: TMainForm
   end
   object SubListPopupMenu: TTntPopupMenu
     OnPopup = SubListPopupMenuPopup
-    Left = 8
+    Left = 160
     Top = 312
     object pmiSubListDelete: TTntMenuItem
       Caption = 'Delete'
@@ -3464,5 +3511,13 @@ object MainForm: TMainForm
     OnTimer = TimerAutoBackupTimer
     Left = 344
     Top = 475
+  end
+  object XPManifest1: TXPManifest
+    Left = 72
+    Top = 40
+  end
+  object SubListHeaderPopupMenu: TTntPopupMenu
+    Left = 192
+    Top = 312
   end
 end
