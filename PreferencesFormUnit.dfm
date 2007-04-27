@@ -1,6 +1,6 @@
 object PreferencesForm: TPreferencesForm
-  Left = 204
-  Top = 215
+  Left = 267
+  Top = 172
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Preferences'
@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsFonts
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -128,12 +128,12 @@ object PreferencesForm: TPreferencesForm
           Caption = 'Enable subtitle creation with space key (toggle) in timing mode'
           TabOrder = 3
         end
-        object chkEnableMouseAntiOverlapping: TCheckBox
-          Left = 16
+        object chkSpaceKeyModifyTiming: TCheckBox
+          Left = 48
           Top = 88
-          Width = 241
+          Width = 249
           Height = 17
-          Caption = 'Enable mouse anti-overlapping'
+          Caption = 'Space key modify existing subtitles timing'
           TabOrder = 4
         end
       end
@@ -306,7 +306,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 150
+            Width = 154
             WideText = 'Value'
           end
           item
@@ -384,7 +384,7 @@ object PreferencesForm: TPreferencesForm
         TabOrder = 4
         Text = 'Normal'
         OnSelect = ComboHotkeyModeSelect
-        Items.WideStrings = (
+        Items.Strings = (
           'Normal'
           'Timing')
       end
@@ -470,6 +470,7 @@ object PreferencesForm: TPreferencesForm
           Font.Style = [fsBold]
           ParentColor = False
           ParentFont = False
+          Transparent = False
         end
         object Label5: TLabel
           Left = 124
@@ -487,6 +488,7 @@ object PreferencesForm: TPreferencesForm
           Font.Style = [fsBold]
           ParentColor = False
           ParentFont = False
+          Transparent = False
         end
         object ComboWheelTimeScrollModifier: TComboBox
           Left = 124
@@ -554,6 +556,14 @@ object PreferencesForm: TPreferencesForm
             'Left/right mouse button set start/stop time in Timing Mode (SSA ' +
             'mouse mode)'
           TabOrder = 0
+        end
+        object chkEnableMouseAntiOverlapping: TCheckBox
+          Left = 16
+          Top = 40
+          Width = 385
+          Height = 17
+          Caption = 'Enable mouse anti-overlapping'
+          TabOrder = 1
         end
       end
     end
@@ -650,6 +660,7 @@ object PreferencesForm: TPreferencesForm
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
     Font.Style = []
+    Options = [fdAnsiOnly, fdEffects, fdNoVectorFonts, fdScalableOnly]
     Left = 4
     Top = 336
   end
