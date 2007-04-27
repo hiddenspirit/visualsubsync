@@ -33,7 +33,7 @@ UnitAliases=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=
 NamespacePrefix=
 SymbolDeprecated=1
 SymbolLibrary=1
-SymbolPlatform=1
+SymbolPlatform=0
 UnitLibrary=1
 UnitPlatform=1
 UnitDeprecated=1
@@ -94,7 +94,7 @@ OutputDir=.\Release
 UnitOutputDir=dcu
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=F:\Borland\Compo\DirectX;.\WinSock2
+SearchPath=F:\Borland\Compo\DirectX;.\WinSock2;.\jsbridge
 Packages=vcl;rtl;vclx;indy;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;dsnapcon;vcldb;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;vclshlctrls;MiscCompo;FlatStyle_D6;CCCompo;RegComponents6;CoolTrayIcon_D6;SxMagD5
 Conditionals=
 DebugSourceDirs=
@@ -113,9 +113,9 @@ RootDir=F:\Borland\Delphi7\Bin\
 IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=0
-MinorVer=3
-Release=0
-Build=429
+MinorVer=9
+Release=4
+Build=732
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=0.3.0.429
+FileVersion=0.9.4.732
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -134,61 +134,16 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
-[HistoryLists\hlDebugSourcePath]
-Count=1
-Item0=G:\CoreCodec\PowerDivX4\PDNG_Player\Packages\SxMag13Reg\SxMagSrc\
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=30
-Item0=F:\Borland\Compo\DirectX;.\WinSock2
-Item1=F:\Borland\Compo\DirectX;.\WinSock2;.\paszlib
-Item2=F:\Borland\Compo\DirectX
-Item3=$(DELPHI)\Lib\Debug;.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source;.\Packages\ZipMaster;.\Packages\CoreCodec;.\Packages\VirtualTreeView
-Item4=$(DELPHI)\Lib\Debug;.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source;.\Packages\ZipMaster;.\Packages\CoreCodec
-Item5=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source;.\Packages\ZipMaster;.\Packages\CoreCodec
-Item6=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source;.\Packages\ZipMaster
-Item7=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source;.\Packages\ZipMaster
-Item8=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc;.\Packages\FlatStyle\Source
-Item9=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon;.\Packages\SxMag13Reg\SxMagSrc
-Item10=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components;.\Packages\TrayIcon
-Item11=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty;.\Packages\DragDrop\Components
-Item12=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\Cipher\Hashes;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty
-Item13=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\Cipher\Ciphers;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty
-Item14=.\Packages\MiscCompo;.\Packages\Cipher;.\Packages\BarMenu\Source;.\Packages\ifps3;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\ThirdParty
-Item15=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\Packages\ifps3;.\Packages\BarMenu\Source;.\ThirdParty
-Item16=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\Packages\ifps3;.\Packages\BarMenu\Source
-Item17=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core;.\Packages\ifps3
-Item18=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack;.\Core
-Item19=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified;.\Modified\DSPack
-Item20=.\Packages\MiscCompo;.\CoreSubtitles\CompoSub;.\DirectX;.\ATL;.\Modified
-Item21=.\Packages\MiscCompo
-Item22=.\Packages\MiscCompo;.\Packages\MiscCompo\BigSkinLabel
-Item23=.\Compiled\dcu
-Item24=F:\Borland\CoreCodec\PDNG_Player\Compiled\dcu
-Item25=.\Packages;.\Packages\Divers;.\Packages;.\Libraries;C:\Program Files\BUPack\Sources;.\Packages\Bigskinlabel;.\Packages\skinlabel;.\Packages\bc_menu23\Source;C:\Program Files\Borland\Delphi6PE\Lib;.\Packages\Com\CPort263\Sources;C:\Program Files\GpProfile;.\Packages\trayicon;.\Packages\JediVCL_R131\source;.\Packages\DRAGDROP\Components;.\Packages\SxMag13Reg\SxMagSrc;G:\CoreCodec\PowerDivX4\PDNG_Player\Core
-Item26=$(DELPHI)\Lib\Debug;.\Packages;.\Packages\Divers;.\Packages;.\Libraries;C:\Program Files\BUPack\Sources;.\Packages\Bigskinlabel;.\Packages\skinlabel;.\Packages\bc_menu23\Source;C:\Program Files\Borland\Delphi6PE\Lib;.\Packages\Com\CPort263\Sources;C:\Program Files\GpProfile;.\Packages\trayicon;.\Packages\JediVCL_R131\source;.\Packages\DRAGDROP\Components;.\Packages\SxMag13Reg\SxMagSrc;G:\CoreCodec\PowerDivX4\PDNG_Player\Core
-Item27=.\Packages;.\Packages\Divers;.\Packages;.\Libraries;..\PDNG_CoreDLL;C:\Program Files\BUPack\Sources;.\Packages\Bigskinlabel;.\Packages\skinlabel;.\Packages\bc_menu23\Source;C:\Program Files\Borland\Delphi6PE\Lib;.\Packages\Com\CPort263\Sources;C:\Program Files\GpProfile;.\Packages\trayicon;.\Packages\JediVCL_R131\source;.\Packages\DRAGDROP\Components;.\Packages\SxMag13Reg\SxMagSrc
-Item28=$(DELPHI)\Lib\Debug;.\Packages;.\Packages\Divers;.\Packages;.\Libraries;..\PDNG_CoreDLL;C:\Program Files\BUPack\Sources;.\Packages\Bigskinlabel;.\Packages\skinlabel;.\Packages\bc_menu23\Source;C:\Program Files\Borland\Delphi6PE\Lib;.\Packages\Com\CPort263\Sources;C:\Program Files\GpProfile;.\Packages\trayicon;.\Packages\JediVCL_R131\source;.\Packages\DRAGDROP\Components;.\Packages\SxMag13Reg\SxMagSrc
-Item29=.\Packages;.\Packages\Divers;.\Packages;.\Libraries;..\PDNG_CoreDLL;C:\Program Files\BUPack\Sources;.\Packages\Bigskinlabel;.\Packages\skinlabel;.\Packages\bc_menu23\Source;C:\Program Files\Borland\Delphi6PE\Lib;.\Packages\Com\CPort263\Sources;C:\Program Files\GpProfile;.\Packages\trayicon;.\Packages\JediVCL_R131\source;.\Packages\SxMag13\SxMagD6;.\Packages\DRAGDROP\Components;.\Packages\SxMag13Reg\SxMagSrc
+Count=2
+Item0=F:\Borland\Compo\DirectX;.\WinSock2;.\jsbridge
+Item1=C:\Borland\Delphi7\Source\ToolsAPI
 [HistoryLists\hlUnitOutputDirectory]
-Count=3
+Count=1
 Item0=dcu
-Item1=.\Compiled\dcu
-Item2=.\Compiled
 [HistoryLists\hlOutputDirectorry]
-Count=7
+Count=1
 Item0=.\Release
-Item1=$(TCMPDIR)
-Item2=$(TCMPDIR)\The Core Media Player
-Item3=C:\Program Files\CoreCodec\The Core Media Player
-Item4=F:\The Core Media Player
-Item5=g:\CoreCodec\PowerDivX4\PDNG_Player\Release
-Item6=f:\CoreCodec\PowerDivX4\PDNG_Player\Release
-[HistoryLists\hlBPLOutput]
-Count=1
-Item0=.\Compiled\bpl
-[HistoryLists\hlDCPOutput]
-Count=1
-Item0=.\Compiled\dcp

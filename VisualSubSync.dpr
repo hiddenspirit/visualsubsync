@@ -3,6 +3,7 @@ program VisualSubSync;
 {%File 'GlobalUnit.pas'}
 
 uses
+  //FastMM4,
   Forms,
   main in 'main.pas' {MainForm},
   WAVDisplayerUnit in 'WAVDisplayerUnit.pas',
