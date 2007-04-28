@@ -34,6 +34,11 @@
 		<td class="HeaderListen">Listen</td>
 		<td class="CellListen"><a href="wav/$|time-index|$.wav">WAV format</a> ($|wav-size|$)</td>
 	</tr>
+	<!--tr>
+		<td class="HeaderSuggestionCount">Number of suggestions</td>
+		<td class="CellSuggestionCount">$|suggestions-count|$</td>
+	</tr-->
+
 	<tr>
 		<td class="HeaderSuggestion">Suggestion</td>
 		<td class="CellSuggestion">
