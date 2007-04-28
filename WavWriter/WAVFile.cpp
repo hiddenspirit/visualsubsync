@@ -24,7 +24,7 @@
 
 // ============================================================================
 
-int CWin32File::Open(const char* Filename, CWin32FileOpenMode OpenMode)
+int CWin32File::Open(TCHAR* Filename, CWin32FileOpenMode OpenMode)
 {
 	if(OpenMode == CWin32File_READ_MODE)
 	{
@@ -57,11 +57,21 @@ int CWin32File::Open(const char* Filename, CWin32FileOpenMode OpenMode)
 
 int CWin32File::Open2(LPOLESTR Filename, CWin32FileOpenMode OpenMode)
 {
-	char pFileName[MAX_PATH];	
-	if(!WideCharToMultiByte(CP_ACP,0,Filename,-1,pFileName,MAX_PATH,0,0)) {
-		return 0;
-	}
-	return Open(pFileName,OpenMode);
+
+    TCHAR *pFileName = NULL;
+    
+#if defined(WIN32) && !defined(UNICODE)
+    char convert[MAX_PATH];
+    
+    if(!WideCharToMultiByte(CP_ACP,0,Filename,-1,convert,MAX_PATH,0,0))
+        return 0;
+    
+    pFileName = convert;
+#else
+    pFileName = Filename;
+#endif
+
+	return Open(pFileName, OpenMode);
 }
 
 // ----------------------------------------------------------------------------
@@ -121,6 +131,7 @@ void CWin32File::Close()
 	if(m_hFile != INVALID_HANDLE_VALUE)
 	{		
 		CloseHandle(m_hFile);
+        m_hFile = INVALID_HANDLE_VALUE;
 	}
 }
 

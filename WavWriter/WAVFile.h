@@ -33,7 +33,7 @@ class CWin32File
 public:
 	CWin32File() : m_hFile(INVALID_HANDLE_VALUE), m_i64FileSize(0) { }
 	~CWin32File() { Close(); }
-	int Open(const char* Filename, CWin32FileOpenMode OpenMode);
+	int Open(TCHAR* Filename, CWin32FileOpenMode OpenMode);
 	int Open2(LPOLESTR Filename, CWin32FileOpenMode OpenMode);
 	unsigned int Read(void *Buffer, unsigned int Size);
 	unsigned int Write(void *Buffer, unsigned int Size);

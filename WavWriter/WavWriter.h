@@ -79,7 +79,7 @@ class CWavWriterFilter : public CBaseFilter
 	DWORD m_SamplePerPeakRatio;
 	DWORD m_SamplePerPeak;
 	bool m_bWritePeakFile;
-	char* m_pPeakFileName;
+	LPOLESTR m_pPeakFileName;
 
 	int  m_OutBuffSize;
 	char* m_OutBuff;
@@ -90,7 +90,7 @@ class CWavWriterFilter : public CBaseFilter
 
 	Peak m_Peak;
 	PeakFileHeader m_PeakFileHeader;
-	FILE* m_PeakFile;
+	CWin32File* m_PeakFile;
 	CircBuffer* m_PeakCircBuffer;
 	char* m_PeakCalcBuffer;
 	int m_PeakCalcBufferSize;	
