@@ -24,14 +24,14 @@
 
 <div class="Title">Presentation</div>
 <p>
-VisualSubSync is a subtitle program aimed to facilitate subtitle synchronization by showing you the audio
-form and allowing the WORLD to see the subtitle timestamp breakdowns via a webpage and allowing them to
-submit corrections.
+VisualSubSync is a subtitle program using audio waveform representation as it's cornerstone.<br>
+SRT and SSA/ASS subtitle formats are supported.<br>
+It also provides some tools (error checking, speed indicators, network suggestions) to help improving the quality of your subtitle.  
 </p>
 
 <div class="Title">Download (Version 0.9.9)</div>
 <p>
-<a href="http://corecodec.org/frs/?group_id=13">Click here</a><br>
+<a href="http://coreforge.org/frs/?group_id=29">Click here</a><br>
 <a href="changelog.html">Changelog</a>
 </p>
 
@@ -65,10 +65,10 @@ submit corrections.
 	(<i>Edit &gt; Preferences &gt; General &gt; Misc</i>) subtitles with just
 	one key by pressing it when subtitle start,	then releasing it when subtitle stop.
 	</li>
-	<li><b>What is VSFilter?</b><br>
+	<li><b>What is VSFilter/VobSub?</b><br>
 		It's a DirectShow filter (a sort of plugin) that allows to add subtitles at playback time to a video file in
 		any compatible player including Windows Media Player and a lot of other players.
-		You can download VSFilter <a href="http://sf.net/guliverkli">here</a>.</li>
+		You can download VSFilter <a href="http://sourceforge.net/projects/guliverkli/">here</a>.</li>
 	<li><b>How do I create a karaoke?</b><br>
 		The easiest way is to first do the timing for the lyrics, sentence by sentence.
 		Then you separate each syllable by the slash character: '/'. Then select the subtitle,
@@ -80,12 +80,18 @@ submit corrections.
 	go to the <i>Misc</i> tab and uncheck <i>Pre-buffer subpicture</i>.</li>
 	<li><b>What is the Text Pipe?</b><br>
 		See <a href="tutorial2.html">this</a> tutorial for more information.</li>
+  <li><b>How can I help the project?</b><br>
+		You can write some new tutorials/documentation, translate or help to improve the existing ones.
+		Some flash animated tutorial could be nice also.<br>
+		You can write and share some of your javascript plugins.
+		</li>
 </ul>
 
 <div class="Title">Known issues</div>
 <ul>
 	<li>Some version of Internet Explorer wrongly report support for deflate html page compression, so disable it if you use IE and the network mode.</li>
 	<li>When extracting WAV make sure you have enough disk space because there is no checking yet.</li>
+	<li>Showing still image of the video doesn't always works with mpeg file.</li>
 </ul>
 
 <div class="Title">Links</div>
@@ -97,11 +103,11 @@ You can also find there an amazing <a href="http://perso.orange.fr/sweetkaraoke/
 
 <div class="Title">Contact</div>
 <p>
-Homepage : <a href="http://visualsubsync.corecodec.org">http://visualsubsync.corecodec.org</a>&nbsp;-&nbsp;<a href="http://vss-mirror.go.dyndns.org">Mirror</a><br>
-Project homepage : <a href="http://corecodec.org/projects/visualsubsync">http://corecodec.org/projects/visualsubsync</a><br>
-Bug report / feature request page : <a href="http://corecodec.org/tracker/?group_id=13">http://corecodec.org/tracker/?group_id=13</a><br>
-IRC : On the CoreCodec irc server : irc.corecodec.com - You can try <a href="irc://irc.corecodec.com/VisualSubSync">#VisualSubSync</a> or if I'm not here,
-I usually hang around on <a href="irc://irc.corecodec.com/matroska">#matroska</a> and <a href="irc://irc.corecodec.com/tcmp">#tcmp</a>.
+Homepage : <a href="http://visualsubsync.com">http://visualsubsync.com</a>&nbsp;-&nbsp;<a href="http://visualsubsync.coreforge.org">http://visualsubsync.coreforge.org</a>&nbsp;-&nbsp;<a href="http://vss-mirror.go.dyndns.org">Mirror</a><br>
+Project homepage : <a href="http://coreforge.org/projects/visualsubsync">http://coreforge.org/projects/visualsubsync</a><br>
+Bug report / feature request page : <a href="http://coreforge.org/tracker/?group_id=29">http://coreforge.org/tracker/?group_id=29</a><br>
+IRC : On the CoreCodec irc server : irc.corecodec.com - The channel is <a href="irc://irc.corecodec.com/VisualSubSync">#VisualSubSync</a> I'm usually available here between 19-22h GMT+1.<br>
+E-mail : It's available in VSS about box.
 </p>
 
 <br>
@@ -109,18 +115,18 @@ I usually hang around on <a href="irc://irc.corecodec.com/matroska">#matroska</a
 <!--
 	if (String(location).substring(0,4) != 'http')
 	{
-		document.writeln('You can find the online version of this page <a href="http://visualsubsync.corecodec.org">here</a>');
+		document.writeln('You can find the online version of this page <a href="http://visualsubsync.coreforge.org">here</a>');
 	}
 //-->
 </script>
 
 </div> <!-- MainColumn -->
 
-<center>
-	<a href="http://corecodec.org">
-		<img src="http://corecodec.org/logo.php?group_id=13&official=1" alt="Open Source Audio and Video" border="0">
+<!--center>
+	<a href="http://coreforge.org">
+		<img src="http://coreforge.org/logo.php?group_id=29&official=1" alt="Open Source Audio and Video" border="0">
 	</a>
-</center>
+</center-->
 
 </body>
 </html>

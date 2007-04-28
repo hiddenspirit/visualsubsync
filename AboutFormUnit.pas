@@ -40,6 +40,7 @@ type
     TntLabel5: TTntLabel;
     TntLabel6: TTntLabel;
     TntLabel7: TTntLabel;
+    TntLabel8: TTntLabel;
     procedure bttOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TntLabel3Click(Sender: TObject);

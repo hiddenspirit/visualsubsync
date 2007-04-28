@@ -196,7 +196,7 @@ begin
   inherited;
   name := 'New Style';
   fontname := 'Arial';
-  fontsize := 22;
+  fontsize := 24;
   primaryColor := clYellow;
   secondaryColor := clBlack;
   outlineColor := clBlack;
@@ -210,7 +210,7 @@ begin
   spacing := 0.0;
   angle := 0.0;
   borderStyle := 1;
-  outline := 1.0;
+  outline := 2.0;
   shadow := 0.0;
   alignment := Ord(alassBottomCenter);
   marginL := 15;
