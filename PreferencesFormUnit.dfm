@@ -1,6 +1,6 @@
 object PreferencesForm: TPreferencesForm
-  Left = 267
-  Top = 172
+  Left = 254
+  Top = 141
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Preferences'
@@ -112,35 +112,11 @@ object PreferencesForm: TPreferencesForm
           Caption = 'Swap subtitles list'
           TabOrder = 1
         end
-        object chkDisableSubEditionInTimingMode: TCheckBox
-          Left = 16
-          Top = 56
-          Width = 385
-          Height = 17
-          Caption = 'Disable subtitle edition in timing mode'
-          TabOrder = 2
-        end
-        object chkEnableSubCreationWithSpaceKey: TCheckBox
-          Left = 16
-          Top = 72
-          Width = 385
-          Height = 17
-          Caption = 'Enable subtitle creation with space key (toggle) in timing mode'
-          TabOrder = 3
-        end
-        object chkSpaceKeyModifyTiming: TCheckBox
-          Left = 48
-          Top = 88
-          Width = 249
-          Height = 17
-          Caption = 'Space key modify existing subtitles timing'
-          TabOrder = 4
-        end
       end
       object GroupBox4: TGroupBox
         Left = 0
         Top = 64
-        Width = 419
+        Width = 418
         Height = 81
         Caption = ' Backup : '
         TabOrder = 2
@@ -160,12 +136,12 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 0
         end
         object bttOpenBackupDir: TButton
-          Left = 374
+          Left = 296
           Top = 49
-          Width = 28
+          Width = 90
           Height = 20
-          Hint = 'Open backup directory'
-          Caption = '...'
+          Hint = 'Open backup directory in VisualSubSync directory'
+          Caption = 'Show backups...'
           ParentShowHint = False
           ShowHint = True
           TabOrder = 1
@@ -194,6 +170,18 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Auto save when playing start'
           TabOrder = 4
+        end
+        object bttOpenBackupTempDir: TButton
+          Left = 392
+          Top = 49
+          Width = 18
+          Height = 20
+          Hint = 'Open backup on any modification in TEMP directory'
+          Caption = '2'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 5
+          OnClick = bttOpenBackupTempDirClick
         end
       end
     end
@@ -306,7 +294,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 154
+            Width = 150
             WideText = 'Value'
           end
           item
@@ -623,6 +611,122 @@ object PreferencesForm: TPreferencesForm
           Caption = '...'
           TabOrder = 1
           OnClick = bttSubTextFontClick
+        end
+      end
+    end
+    object tsTimingMode: TTntTabSheet
+      BorderWidth = 4
+      Caption = 'TimingMode'
+      object TntGroupBox4: TTntGroupBox
+        Left = 0
+        Top = 0
+        Width = 418
+        Height = 288
+        Align = alClient
+        TabOrder = 0
+        object TntLabel2: TTntLabel
+          Left = 16
+          Top = 104
+          Width = 143
+          Height = 13
+          Caption = 'Characters per second target :'
+        end
+        object TntLabel7: TTntLabel
+          Left = 16
+          Top = 132
+          Width = 145
+          Height = 13
+          Caption = 'Minimal subtitle duration (ms) :'
+        end
+        object TntLabel8: TTntLabel
+          Left = 16
+          Top = 160
+          Width = 140
+          Height = 13
+          Caption = 'Blank between subtitles (ms) :'
+        end
+        object chkEnableSubCreationWithSpaceKey: TCheckBox
+          Left = 16
+          Top = 56
+          Width = 385
+          Height = 17
+          Caption = 'Enable subtitle creation with space key (toggle) in timing mode'
+          TabOrder = 0
+        end
+        object chkSpaceKeyModifyTiming: TCheckBox
+          Left = 48
+          Top = 72
+          Width = 217
+          Height = 17
+          Caption = 'Space key modify existing subtitles timing'
+          TabOrder = 1
+        end
+        object chkDisableSubEditionInTimingMode: TCheckBox
+          Left = 16
+          Top = 24
+          Width = 385
+          Height = 17
+          Caption = 'Disable subtitle edition in timing mode'
+          TabOrder = 2
+        end
+        object EditCPSTarget: TTntEdit
+          Left = 168
+          Top = 100
+          Width = 81
+          Height = 21
+          TabOrder = 3
+          Text = '5'
+        end
+        object EditMinimalDuration: TTntEdit
+          Left = 168
+          Top = 128
+          Width = 81
+          Height = 21
+          TabOrder = 4
+          Text = '500'
+        end
+        object UpDownCPSTarget: TTntUpDown
+          Left = 249
+          Top = 100
+          Width = 16
+          Height = 21
+          Associate = EditCPSTarget
+          Min = 5
+          Max = 50
+          Position = 5
+          TabOrder = 5
+          Thousands = False
+        end
+        object UpDownMinimalDuration: TTntUpDown
+          Left = 249
+          Top = 128
+          Width = 16
+          Height = 21
+          Associate = EditMinimalDuration
+          Min = 500
+          Max = 5000
+          Increment = 100
+          Position = 500
+          TabOrder = 6
+          Thousands = False
+        end
+        object EditBlankBetweenSub: TTntEdit
+          Left = 168
+          Top = 156
+          Width = 81
+          Height = 21
+          TabOrder = 7
+          Text = '0'
+        end
+        object UpDownBlankBetweenSub: TTntUpDown
+          Left = 249
+          Top = 156
+          Width = 16
+          Height = 21
+          Associate = EditBlankBetweenSub
+          Max = 500
+          Increment = 10
+          TabOrder = 8
         end
       end
     end

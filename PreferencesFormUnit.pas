@@ -75,6 +75,9 @@ type
     EnableToggleCreation : Boolean;
     EnableMouseAntiOverlapping : Boolean;
     SpaceKeyModifyTiming : Boolean;
+    SpaceKeyCPSTarget : Integer;
+    SpaceKeyMinimalDuration : Integer;
+    SpaceKeyBlankBetweenSubtitles : Integer;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -169,11 +172,23 @@ type
     TntGroupBox3: TTntGroupBox;
     EditSubTextFont: TTntEdit;
     bttSubTextFont: TTntButton;
-    chkDisableSubEditionInTimingMode: TCheckBox;
-    chkEnableSubCreationWithSpaceKey: TCheckBox;
     chkAutoSaveWhenPlaying: TCheckBox;
-    chkSpaceKeyModifyTiming: TCheckBox;
     chkEnableMouseAntiOverlapping: TCheckBox;
+    tsTimingMode: TTntTabSheet;
+    TntGroupBox4: TTntGroupBox;
+    chkEnableSubCreationWithSpaceKey: TCheckBox;
+    chkSpaceKeyModifyTiming: TCheckBox;
+    chkDisableSubEditionInTimingMode: TCheckBox;
+    EditCPSTarget: TTntEdit;
+    TntLabel2: TTntLabel;
+    EditMinimalDuration: TTntEdit;
+    TntLabel7: TTntLabel;
+    UpDownCPSTarget: TTntUpDown;
+    UpDownMinimalDuration: TTntUpDown;
+    TntLabel8: TTntLabel;
+    EditBlankBetweenSub: TTntEdit;
+    UpDownBlankBetweenSub: TTntUpDown;
+    bttOpenBackupTempDir: TButton;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -199,6 +214,7 @@ type
     procedure ListErrorCheckingClickCheck(Sender: TObject);
     procedure bttSubListFontClick(Sender: TObject);
     procedure bttSubTextFontClick(Sender: TObject);
+    procedure bttOpenBackupTempDirClick(Sender: TObject);
       
   private
     { Private declarations }
@@ -215,7 +231,7 @@ type
     { Public declarations }
     procedure LoadConfig(Config : TConfigObject);
     procedure SaveConfig(Config : TConfigObject);
-    function GetMode : Boolean;    
+    function GetMode : Boolean;
     procedure SetMode(Timing : Boolean);
   end;
 
@@ -252,9 +268,11 @@ uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows, TntSysUtils,
 {$R *.dfm}
 
 const
-  DefaultTimingShortcuts : array[0..1] of TDefaultActionShortcut = (
+  DefaultTimingShortcuts : array[0..3] of TDefaultActionShortcut = (
     (ActionName: 'ActionStop'; ShortCut: 'Esc'),
-    (ActionName: 'ActionPlay'; ShortCut: 'F1')    
+    (ActionName: 'ActionPlay'; ShortCut: 'F1'),
+    (ActionName: 'ActionShowHideVideo'; ShortCut: 'F4'),
+    (ActionName: 'ActionSave'; ShortCut: 'Ctrl+S')        
   );
 
 // =============================================================================
@@ -400,6 +418,9 @@ begin
   EnableToggleCreation := True;
   EnableMouseAntiOverlapping := True;
   SpaceKeyModifyTiming := True;
+  SpaceKeyCPSTarget := 18;
+  SpaceKeyMinimalDuration := 1000;
+  SpaceKeyBlankBetweenSubtitles := 120;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -409,7 +430,7 @@ begin
   MouseWheelTimeScrollModifier := mwmCtrl;
   MouseWheelVZoomModifier := mwmShift;
   MouseWheelHZoomModifier := mwmNone;
-  MouseEnableSSATimingMode := True;
+  MouseEnableSSATimingMode := False;
   // Backup
   EnableBackup := True;
   AutoBackupEvery := 0;
@@ -513,7 +534,10 @@ begin
   IniFile.WriteBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   IniFile.WriteBool('Misc','EnableToggleCreation',EnableToggleCreation);
   IniFile.WriteBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  IniFile.WriteInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
+  IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
+  IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -580,7 +604,10 @@ begin
   DisableSubtitleEdition := IniFile.ReadBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   EnableToggleCreation := IniFile.ReadBool('Misc','EnableToggleCreation',EnableToggleCreation);
   SpaceKeyModifyTiming := IniFile.ReadBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  SpaceKeyCPSTarget := IniFile.ReadInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
+  SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
+  SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -703,6 +730,9 @@ begin
   chkEnableSubCreationWithSpaceKey.Checked := Config.EnableToggleCreation;
   chkEnableMouseAntiOverlapping.Checked := Config.EnableMouseAntiOverlapping;
   chkSpaceKeyModifyTiming.Checked := Config.SpaceKeyModifyTiming;
+  UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
+  UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
+  UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -727,7 +757,6 @@ begin
     ListErrorChecking.Checked[i] := JSPluginInfoSrc.Enabled;
   end;
   // Select the first item
-  // TODO : we could try to restore the selected item
   if (ListErrorChecking.Items.Count > 0) then
   begin
     ListErrorChecking.ItemIndex := 0;
@@ -782,7 +811,10 @@ begin
   Config.EnableToggleCreation := chkEnableSubCreationWithSpaceKey.Checked;
   Config.EnableMouseAntiOverlapping := chkEnableMouseAntiOverlapping.Checked;
   Config.SpaceKeyModifyTiming := chkSpaceKeyModifyTiming.Checked;
-  
+  Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
+  Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
+  Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
+
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;
@@ -1305,6 +1337,19 @@ begin
   begin
     EditSubTextFont.Font.Assign(FontDialog1.Font);
     EditSubTextFont.Text := Font2String(EditSubTextFont.Font);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.bttOpenBackupTempDirClick(Sender: TObject);
+var TmpFolder : WideString;
+begin
+  TmpFolder := GetTemporaryFolder + 'VisualSubSync\';
+  if WideDirectoryExists(TmpFolder) then
+  begin
+    Tnt_ShellExecuteW(Handle, 'explore', PWideChar(TmpFolder), nil,
+      nil, SW_SHOWNORMAL);
   end;
 end;
 
