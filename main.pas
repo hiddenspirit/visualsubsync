@@ -1325,7 +1325,6 @@ var
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
-  EndOfFile : Boolean;
   AutoCorrectedFile : Boolean;
   Source : TTntStringList;
 begin
@@ -1349,6 +1348,10 @@ begin
   AutoCorrectedFile := False;
   lineIndex := 0;
 
+  // Add a blank line because TTntStringList is eating the last line
+  // if it's blank. This is safe because we will trim the text later anyway.
+  Source.Add('');
+
   // Skip lines until a timestamps line
   while (lineIndex < Source.Count) do
   begin
@@ -1362,32 +1365,32 @@ begin
   begin
     // Copy text until a timestamps line
     Text := '';
-    while True do
+    while (lineIndex < Source.Count) do
     begin
       S := Source[lineIndex];
       Inc(lineIndex);
-      if (lineIndex >= Source.Count) or IsTimeStampsLine(S, NextStart, NextStop) then
+      if IsTimeStampsLine(S, NextStart, NextStop) then
         Break;
-      S := Trim(S);
-      Text := Text + S + #13#10;
+      Text := Text + Trim(S) + CRLF;
     end;
     Text := TrimRight(Text);
     if (Start <> -1) and (Stop <> -1) then
     begin
-      // Remove the index line if any
-      i := RPos(#13#10, Text);
-      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (lineIndex < Source.Count)) then
-      begin
-        Delete(Text, i, MaxInt);
-      end;
-      Text := Trim(Text);      
-      if (lineIndex < Source.Count) and (Stop = NextStart) then
+      // Auto fix timestamp if this subtitle stop time is equal
+      // to next subtitle start time
+      if (Stop = NextStart) then
       begin
         AutoCorrectedFile := True;
         Dec(Stop);
       end;
+      // Remove the index line if any
+      i := RPos(CRLF, Text);
+      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (lineIndex < Source.Count)) then
+      begin
+        Delete(Text, i, MaxInt);
+      end;
       NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-      TSubtitleRange(NewRange).Text := Text;
+      TSubtitleRange(NewRange).Text := Trim(Text);
 
       if (EnableExperimentalKaraoke = True) then
         NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
@@ -3358,6 +3361,8 @@ begin
 
     if AutoSelect and (WAVDisplayer.SelMode = smCoolEdit) then
       WAVDisplayer.SelectedRange := NewRange;
+
+    UpdateStylesComboboxFromSelection;
 
     CurrentProject.IsDirty := True;
   finally
