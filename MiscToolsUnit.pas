@@ -84,6 +84,9 @@ type
   function TColor2AssColorString(Input: Cardinal): WideString;
   function AssColorString2TColor(Color: string): TColor;
 
+  function GetUserApplicationDataFolder : WideString;
+  function GetTemporaryFolder : WideString;
+
 type
   TExplodeArray = array of String;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
@@ -93,7 +96,7 @@ type
 
 implementation
 
-uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils;
+uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows;
 
 // -----------------------------------------------------------------------------
 
@@ -708,8 +711,7 @@ begin
       if (s[i] = '{') then
       begin
         if (i+2 < Length(s)) and
-           (s[i+1] = '\') and
-           ((s[i+2] = 'k') or (s[i+2] = 'K')) then
+           (s[i+1] = '\') then
         begin
           i1 := i;
           ssaType := True;
@@ -874,42 +876,62 @@ end;
 function AssColorString2TColor(Color: string): TColor;
 var ColorInt : Cardinal;
     R, G, B, A : Cardinal;
+    CleanColor : string;
+    Len : Cardinal;
 begin
   ColorInt := 0;
   if (Length(Color) > 0) then
   begin
-    if (Color[1] = '&') then
+    // &HAABBGGRR& or &HAABBGGRR& or &HBBGGRR&
+    if Pos('&H',Color) = 1 then
     begin
-      // ASS color : &AABBGGRR
-      //             123456789
-      if (Length(Color) = 9)  then
-      begin
-        R := StrToIntDef(Copy(Color, 8, 2), 0);
-        G := StrToIntDef(Copy(Color, 6, 2), 0);
-        B := StrToIntDef(Copy(Color, 4, 2), 0);
-        A := StrToIntDef(Copy(Color, 2, 2), 0);
-        ColorInt := (A shl 24) or (B shl 16) or (G shl 8) or R;
-      end
-      else if (Length(Color) = 7)  then
-      begin
-        // ASS color : &BBGGRR
-        //             1234567
-        R := StrToIntDef(Copy(Color, 6, 2), 0);
-        G := StrToIntDef(Copy(Color, 4, 2), 0);
-        B := StrToIntDef(Copy(Color, 2, 2), 0);
+      // ASS hexadecimal color
+      // &HAABBGGRR& or &HAABBGGRR& or &HBBGGRR&
+      CleanColor := StringReplace(Color, '&', '', [rfReplaceAll]);
+      CleanColor := StringReplace(CleanColor, 'H', '', [rfReplaceAll]);
+      Len := Length(CleanColor);
+      R := StrToIntDef('$' + Copy(CleanColor, Len-1, 2), 0);
+      G := StrToIntDef('$' + Copy(CleanColor, Len-3, 2), 0);
+      B := StrToIntDef('$' + Copy(CleanColor, Len-5, 2), 0);
+      if (Len > 6) then
+        A := StrToIntDef('$' + Copy(CleanColor, Len-7, 2), 0)
+      else
         A := 0;
-        ColorInt := (A shl 24) or (B shl 16) or (G shl 8) or R;
-      end;
+      ColorInt := (A shl 24) or (B shl 16) or (G shl 8) or R;
     end
     else
     begin
-      // SSA color
+      // SSA/ASS decimal color
       ColorInt := StrToIntDef(Color, 0);
     end;
   end;
   Result := ColorInt;
 end;
 
+// -----------------------------------------------------------------------------
+
+function GetUserApplicationDataFolder : WideString;
+var FolderName : WideString;
+begin
+  SetLength(FolderName, MAX_PATH);
+  if SHGetSpecialFolderPathW(0, @FolderName[1], CSIDL_APPDATA, False) then
+    Result := PWideChar(@FolderName[1])
+  else
+    Result := '';
+end;
+
+// -----------------------------------------------------------------------------
+
+function GetTemporaryFolder : WideString;
+var TmpFolderLen : Cardinal;
+begin
+  SetLength(Result, MAX_PATH);
+  TmpFolderLen := Tnt_GetTempPathW(MAX_PATH, @Result[1]);
+  if (TmpFolderLen > 0) then
+    SetLength(Result, TmpFolderLen)
+  else
+    Result := '';
+end;
 // -----------------------------------------------------------------------------
 end.
 // -----------------------------------------------------------------------------
