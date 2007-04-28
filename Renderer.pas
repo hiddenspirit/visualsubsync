@@ -23,7 +23,7 @@ unit Renderer;
 
 interface
 
-uses Classes, Windows, DirectShow9, Messages;
+uses Classes, Windows, DirectShow9, Messages, DirectVobsubInterface;
 
 type
   TWaitCompletionThread = class;
@@ -33,11 +33,15 @@ type
     FOnStopPlaying : TNotifyEvent;
   public
     function PlayRange(Start, Stop : Cardinal; Loop : Boolean = False) : Boolean; virtual; abstract;
+    procedure Pause; virtual; abstract;
+    procedure Resume; virtual; abstract;
     procedure UpdatePlayRange(Start, Stop : Cardinal); virtual;
     function GetPosition : Cardinal; virtual; abstract;
-    procedure Stop; virtual; abstract;
+    procedure Stop(CallOnStopPlaying : Boolean = True); virtual; abstract;
     function IsOpen : Boolean; virtual; abstract;
     procedure SetRate(Rate : Integer); virtual;
+    procedure SetVolume(Vol : Integer); virtual; abstract;
+    procedure CopyState(Renderer : TRenderer); virtual; abstract;
   published
     property OnStopPlaying : TNotifyEvent read FOnStopPlaying write FOnStopPlaying;
   end;
@@ -49,6 +53,7 @@ type
     FMediaSeeking : IMediaSeeking;
     FMediaEventEx : IMediaEventEx;
     FVideoWindow : IVideoWindow;
+    FBasicAudio : IBasicAudio;
     FDisplayWindowProc, FDisplayWindowOldProc : TFarProc;
     FLastResult : HRESULT;
     FWaitThread : TWaitCompletionThread;
@@ -58,10 +63,15 @@ type
     FDisplayWindow : THandle;
     FIsOpen : Boolean;
     FStartStopAccessCS : TRtlCriticalSection;
+    FAutoInsertCustomVSFilter : Boolean;
+    FHCustomVSFilterInst : THandle;
+    FCustomVSFilterIntallOk : Boolean;
 
     function FGetStart : Int64;
     function FGetStop : Int64;
-
+    function GetDirectVobSubFilter : IBaseFilter;
+    function GetDirectVobSubInterface : IDirectVobSub;
+    
   protected
     procedure DisplayWindowProc(var Mesg : TMessage);
 
@@ -69,12 +79,15 @@ type
     constructor Create;
     destructor Destroy; override;
     function GetLastErrorString : string;
-    function Open(filename : string) : Boolean;
+    function Open(filename : WideString) : Boolean;
     function PlayRange(Start, Stop : Cardinal; Loop : Boolean = False) : Boolean; override;
+    procedure Pause; override;
+    procedure Resume; override;
     procedure UpdatePlayRange(Start, Stop : Cardinal); override;
     function GetPosition : Cardinal; override;
-    procedure Stop; override;
+    procedure Stop(CallOnStopPlaying : Boolean = True); override;
     function IsPlaying : Boolean;
+    function IsPaused : Boolean;
     procedure Replay;
     procedure SetDisplayWindow(WinHwnd : THandle);
     procedure UpdateDisplayWindow;
@@ -83,6 +96,14 @@ type
     function IsOpen : Boolean; override;
     procedure SetRate(Rate : Integer); override;
     procedure ShowImageAt(TimeMs : Cardinal);
+    procedure SetVolume(Vol : Integer); override;
+    procedure SetSubtitleFilename(Filename : WideString);
+    procedure SetAutoInsertCustomVSFilter(AutoInsert : Boolean);
+    procedure UpdateImage;
+    procedure CopyState(Renderer : TRenderer); override;
+    function GetVSFilterFPS : Double;
+    function GetFilters(list : TStrings) : Boolean;
+        
   published
     property OnStopPlaying;
     property VideoWidth : Integer read FVideoWidth;
@@ -132,7 +153,7 @@ type
     function GetProgress : Integer;
     function IsFinished : Boolean;
     procedure Close;
-    function GetFilterList(list : TStrings) : Boolean;
+    function GetFilters(list : TStrings) : Boolean;
 
   published
     property AudioStreamCount : Integer read FAudioStreamCount;
@@ -151,7 +172,7 @@ type
 
 implementation
 
-uses ActiveX, MMSystem, SysUtils, Types, MiscToolsUnit;
+uses ActiveX, MMSystem, SysUtils, Types, MiscToolsUnit, Math, TntSysUtils;
 
 const
   CLSID_WavWriter : TGUID = '{F3AFF1C3-ABBB-41f9-9521-988881D9D640}';
@@ -173,6 +194,34 @@ begin
       Result := ClassFactory.CreateInstance(nil,IBaseFilter,Filter);
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+function FindFilterByCLSID(GraphBuilder : IGraphBuilder; CLSID: TGUID): IBaseFilter;
+var 
+  EnumFilter: IEnumFilters;
+  Fetched: ULong;
+  BaseFilter: IBaseFilter;
+  FilterCLSID: TGuid;
+begin
+  Result := nil;
+
+  if GraphBuilder.EnumFilters(EnumFilter) <> S_Ok then
+    Exit;
+  
+  while EnumFilter.Next(1, BaseFilter, @Fetched) = S_Ok do
+  begin
+    BaseFilter.GetClassID(FilterCLSID);
+    if IsEqualGUID(FilterCLSID, CLSID) then
+    begin 
+      Result := BaseFilter;
+      Break;
+    end;
+    BaseFilter := nil;
+  end;
+  BaseFilter := nil;
+  EnumFilter := nil;
 end;
 
 //------------------------------------------------------------------------------
@@ -279,6 +328,110 @@ begin
   EnumMT := nil;
 end;
 
+//------------------------------------------------------------------------------
+
+function GetDllFilenameByCLSID(const GUID : TGUID) : string;
+var KeyName, FileName : string;
+    Key : HKEY;
+    dwSize : DWORD;
+begin
+  Result := '';
+  if IsEqualCLSID(GUID, GUID_NULL) then
+    Exit;
+
+  KeyName := Format('Software\Classes\CLSID\%s\InprocServer32', [GUIDToString(GUID)]);
+
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
+  begin
+    dwSize := 0;
+    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
+    begin
+      SetLength(FileName, dwSize-1);
+      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FileName), @dwSize) = ERROR_SUCCESS then
+      begin
+        Result := FileName;
+      end;
+    end;
+    RegCloseKey(Key);
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function GetFriendlyNameByCLSID(const GUID : TGUID) : string;
+var KeyName, FriendlyName : string;
+    Key : HKEY;
+    dwSize : DWORD;
+begin
+  Result := '';
+  if IsEqualCLSID(GUID, GUID_NULL) then
+    Exit;
+
+  KeyName := Format('Software\Classes\CLSID\%s', [GUIDToString(GUID)]);
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
+  begin
+    dwSize := 0;
+    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
+    begin
+      SetLength(FriendlyName, dwSize-1);
+      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FriendlyName), @dwSize) = ERROR_SUCCESS then
+      begin
+        Result := FriendlyName;
+      end;
+    end;
+    RegCloseKey(Key);
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
+function GetFiltersList(GraphBuilder : IGraphBuilder; list : TStrings) : Boolean;
+var FilterEnum : IEnumFilters;
+    Filter : IBaseFilter;
+    ul: ULONG;
+    FilterInfo : TFilterInfo;
+    s : WideString;
+    FilterGUID : TGUID;
+    FileName, FriendlyName : WideString;
+const
+  IID_IPropertyBag : TGUID = '{55272A00-42CB-11CE-8135-00AA004BB851}';    
+begin
+  list.Clear;
+  Result := False;
+  if Assigned(GraphBuilder) then
+  begin
+    if Succeeded(GraphBuilder.EnumFilters(FilterEnum)) then
+    begin
+      while (FilterEnum.Next(1, Filter, @ul) = S_OK) do
+      begin
+        FilterInfo.achName[0] := #0;
+        Filter.QueryFilterInfo(FilterInfo);
+        s := FilterInfo.achName;
+        FilterGUID := GUID_NULL;
+        if Succeeded(Filter.GetClassID(FilterGUID)) then
+        begin
+          FriendlyName := GetFriendlyNameByCLSID(FilterGUID);
+          if (Length(FriendlyName) > 0) and (s <> FriendlyName) then
+          begin
+            s := s + ' - ' + FriendlyName;
+          end;
+          s := s + ' - ' + GUIDToString(FilterGUID);
+          FileName := GetDllFilenameByCLSID(FilterGUID);
+          if (Length(FileName) > 0) then
+          begin
+            s := s + ' - ' + FileName;
+            s := s + ' (' + GetFileVersionString(FileName) + ')';
+          end;
+        end;
+
+        list.Add(s);
+        Filter := nil;
+      end;
+      FilterEnum := nil;
+    end;
+  end;
+end;
+
 //==============================================================================
 
 procedure TRenderer.UpdatePlayRange(Start, Stop : Cardinal);
@@ -310,6 +463,10 @@ begin
   FDisplayWindowOldProc := nil;
   FVideoWidth := 0;
   FVideoHeight := 0;
+  FCustomVSFilterIntallOk := False;
+  FAutoInsertCustomVSFilter := False;
+  FHCustomVSFilterInst := 0;
+
   InitializeCriticalSection(FStartStopAccessCS);
 end;
 
@@ -339,10 +496,28 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TDShowRenderer.Open(filename : string) : Boolean;
+function TDShowRenderer.GetFilters(list : TStrings) : Boolean;
+begin
+  Result := GetFiltersList(FGraphBuilder, list);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.SetAutoInsertCustomVSFilter(AutoInsert : Boolean);
+begin
+  if (FAutoInsertCustomVSFilter <> AutoInsert) then
+  begin
+    FAutoInsertCustomVSFilter := AutoInsert;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.Open(filename : WideString) : Boolean;
 var
-  filenameW : array[0..MAX_PATH-1] of wchar;
   BasicVideoI : IBasicVideo2;
+  VSFilter : IBaseFilter;
+  VSFilterVendorInfo : PWideChar;
 begin
   if Assigned(FGraphBuilder) then
     Close;
@@ -351,14 +526,29 @@ begin
     TGUID(IID_IGraphBuilder), FGraphBuilder);
   GetLastErrorString;
   if (FLastResult <> S_OK) then Exit;
+
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaControl, FMediaControl);
   if (FLastResult <> S_OK) then Exit;
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaSeeking, FMediaSeeking);
   if (FLastResult <> S_OK) then Exit;
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaEventEx, FMediaEventEx);
   if (FLastResult <> S_OK) then Exit;
-  MultiByteToWideChar(CP_ACP, 0, pChar(filename), -1, @filenameW, MAX_PATH);
-  FLastResult := FGraphBuilder.RenderFile(filenameW,nil);
+
+  FCustomVSFilterIntallOk := False;
+  if (FAutoInsertCustomVSFilter) then
+  begin
+    FHCustomVSFilterInst := CoLoadLibrary('VSSCustomVSFilter.dll',True);
+    if (FHCustomVSFilterInst <> 0) then
+    begin
+      FLastResult := CreateFilterFromFile(FHCustomVSFilterInst,
+        CLSID_DirectVobSubFilter, VSFilter);
+      if Succeeded(FLastResult) then
+        FGraphBuilder.AddFilter(VSFilter, 'VSS Custom VSFilter');
+      VSFilter := nil;
+    end;
+  end;
+  
+  FLastResult := FGraphBuilder.RenderFile(@filename[1], nil);
   Result := (FLastResult = S_OK);
   FIsOpen := Result;
 
@@ -366,6 +556,19 @@ begin
   BasicVideoI.get_VideoWidth(FVideoWidth);
   BasicVideoI.get_VideoHeight(FVideoHeight);
   BasicVideoI := nil;
+
+  FGraphBuilder.QueryInterface(IID_IBasicAudio, FBasicAudio);
+
+  VSFilter := GetDirectVobSubFilter;
+  if Assigned(VSFilter) then
+  begin
+    FLastResult := VSFilter.QueryVendorInfo(VSFilterVendorInfo);
+    if Succeeded(FLastResult) then
+    begin
+      FCustomVSFilterIntallOk := Pos('VSS Custom VSFilter', VSFilterVendorInfo) = 1;
+      CoTaskMemFree(VSFilterVendorInfo);
+    end;
+  end;
 
   SetRate(100);
 end;
@@ -415,6 +618,32 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TDShowRenderer.Pause;
+var FilterState : TFilterState;
+begin
+  FilterState := State_Stopped;
+  FMediaControl.GetState(1000, FilterState);
+  if FilterState = State_Running then
+  begin
+    FMediaControl.Pause;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.Resume;
+var FilterState : TFilterState;
+begin
+  FilterState := State_Stopped; 
+  FMediaControl.GetState(1000,FilterState);
+  if FilterState = State_Paused then
+  begin
+    FMediaControl.Run;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TDShowRenderer.UpdatePlayRange(Start, Stop : Cardinal);
 begin
   EnterCriticalSection(FStartStopAccessCS);
@@ -443,10 +672,10 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TDShowRenderer.Stop;
+procedure TDShowRenderer.Stop(CallOnStopPlaying : Boolean);
 begin
-  //FMediaControl.Stop;
-  FMediaControl.Pause;
+  //FRenderer.FMediaControl.Pause;
+  FMediaControl.Stop;
   if Assigned(FWaitThread) then
   begin
     FWaitThread.SignalTermination;
@@ -454,7 +683,7 @@ begin
     FWaitThread.Free;
     FWaitThread := nil;
   end;
-  if Assigned(FOnStopPlaying) then
+  if CallOnStopPlaying and Assigned(FOnStopPlaying) then
     FOnStopPlaying(Self);
 end;
 
@@ -464,6 +693,10 @@ function TDShowRenderer.GetPosition : Cardinal;
 var CurrentTime : Int64;
 begin
   FMediaSeeking.GetCurrentPosition(CurrentTime);
+  if (CurrentTime < 0) then
+  begin
+    OutputDebugString('WARN in TDShowRenderer.GetPosition : CurrentTime < 0');
+  end;
   Result := CurrentTime div 10000;
 end;
 
@@ -482,6 +715,19 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TDShowRenderer.IsPaused : Boolean;
+var State : TFilterState;
+begin
+  Result := False;
+  if Assigned(FMediaControl) then
+  begin
+    FMediaControl.GetState(0, State);
+    Result := (State = State_Paused);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TDShowRenderer.Replay;
 begin
   PlayRange(FStart, FStop, FLoop);
@@ -493,8 +739,11 @@ procedure TDShowRenderer.DisplayWindowProc(var Mesg : TMessage);
 begin
   with Mesg do
   begin
-    if Msg = WM_SIZE then
+    if (Msg = WM_SIZE) then
+    begin
       UpdateDisplayWindow;
+    end;
+    
     Result := CallWindowProc(FDisplayWindowOldProc, FDisplayWindow, Msg,
       WParam, LParam);
   end;
@@ -516,7 +765,7 @@ begin
   begin
     FVideoWindow.put_Visible(False);
     FVideoWindow.put_MessageDrain(0);
-    // This steal the focus, so we do it only that before releasing the graph
+    // This steal the focus, so we do it only before releasing the graph
     if WinHwnd = 0 then
       FVideoWindow.put_Owner(0);
     FVideoWindow := nil;
@@ -569,7 +818,7 @@ begin
      (FVideoWidth = 0) or (FVideoHeight = 0) then
     Exit;
 
-  if(GetWindowRect(FDisplayWindow, Rect) = False) then
+  if (GetWindowRect(FDisplayWindow, Rect) = False) then
     Exit;
   WinWidth := Rect.Right - Rect.Left;
   WinHeight := Rect.Bottom - Rect.Top;
@@ -663,6 +912,25 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TDShowRenderer.SetVolume(Vol : Integer);
+var NewVolume : Integer;
+begin
+  if Assigned(FBasicAudio) then
+  begin
+    if (Vol <= 0) then
+    begin
+      FBasicAudio.put_Volume(-10000);
+    end
+    else
+    begin
+      NewVolume := Round(1000*Log2(Vol / 100.0));
+      FBasicAudio.put_Volume(NewVolume);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TDShowRenderer.ShowImageAt(TimeMs : Cardinal);
 var SeekToTime100NS, StopDummy : Int64;
 begin
@@ -692,10 +960,137 @@ begin
   FIsOpen := False;
   if Assigned(FMediaControl) then FMediaControl.Stop;
   SetDisplayWindow(0);
+  if Assigned(FBasicAudio) then FBasicAudio := nil;
   if Assigned(FMediaControl) then FMediaControl := nil;
   if Assigned(FMediaEventEx) then FMediaEventEx := nil;
   if Assigned(FMediaSeeking) then FMediaSeeking := nil;
   if Assigned(FGraphBuilder) then FGraphBuilder := nil;
+  if (FHCustomVSFilterInst <> 0) then
+  begin
+    CoFreeLibrary(FHCustomVSFilterInst);
+    FHCustomVSFilterInst := 0;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.GetDirectVobSubFilter : IBaseFilter;
+begin
+  Result := nil;
+  if not Assigned(FGraphBuilder) then
+    Exit;
+  Result := FindFilterByCLSID(FGraphBuilder,
+    CLSID_DirectVobSubFilter);
+  if not Assigned(Result) then
+  begin
+    Result := FindFilterByCLSID(FGraphBuilder, CLSID_DirectVobSubFilterAuto);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.GetDirectVobSubInterface : IDirectVobSub;
+var DirectVobSubFilter : IBaseFilter;
+begin
+  Result := nil;
+  DirectVobSubFilter := GetDirectVobSubFilter;
+  if not Assigned(DirectVobSubFilter) then
+    Exit;
+  
+  DirectVobSubFilter.QueryInterface(IID_IIDirectVobSub, Result);
+  if not Assigned(Result) then
+  begin
+    DirectVobSubFilter := nil;
+    Exit;
+  end;
+  DirectVobSubFilter := nil;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.SetSubtitleFilename(Filename : WideString);
+var DirectVobSub :IDirectVobSub;
+begin
+  DirectVobSub := GetDirectVobSubInterface;
+  if Assigned(DirectVobSub) then
+  begin
+    if FCustomVSFilterIntallOk then
+    begin
+      DirectVobSub.put_PreBuffering(FALSE);
+      DirectVobSub.put_SubtitleReloader(TRUE);
+      DirectVobSub.put_LoadSettings(2, FALSE, FALSE, FALSE);
+      DirectVobSub.put_FileName(PWideChar(Filename));
+    end;
+    DirectVobSub := nil;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.UpdateImage;
+var SeekToTime100NS, StopDummy : Int64;
+begin
+  if Assigned(FMediaSeeking) then
+  begin
+    FMediaSeeking.GetCurrentPosition(SeekToTime100NS);
+    StopDummy := 0;
+
+    FLastResult := FMediaSeeking.SetPositions(SeekToTime100NS,
+      AM_SEEKING_AbsolutePositioning,
+      StopDummy,
+      AM_SEEKING_NoPositioning);
+    if (FLastResult <> S_OK) then
+      Exit;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.CopyState(Renderer : TRenderer);
+var CurrentPosition, StopDummy : Int64;
+    DShowRenderer : TDShowRenderer;
+begin
+  DShowRenderer := Renderer as TDShowRenderer;
+  if Assigned(DShowRenderer) and Assigned(FMediaSeeking) and Assigned(DShowRenderer.FMediaSeeking) then
+  begin
+    DShowRenderer.FMediaSeeking.GetCurrentPosition(CurrentPosition);
+    FMediaSeeking.SetPositions(CurrentPosition,
+      AM_SEEKING_AbsolutePositioning,
+      StopDummy,
+      AM_SEEKING_NoPositioning);
+    FLoop := DShowRenderer.FLoop;
+    FStart := DShowRenderer.FStart;
+    FStop := DShowRenderer.FStop;
+    if DShowRenderer.IsPlaying or DShowRenderer.IsPaused then
+    begin
+      // Renderer will be in paused state after copy state
+      if Assigned(FWaitThread) then
+      begin
+        FWaitThread.SignalTermination;
+        FWaitThread.WaitFor;
+        FWaitThread.Free;
+      end;
+      FWaitThread := TWaitCompletionThread.Create(Self);
+      FLastResult := FMediaControl.Pause;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.GetVSFilterFPS : Double;
+var DirectVobSub :IDirectVobSub;
+    fpsEnabled : LongBool;
+    fps : Double;
+begin
+  fps := -1.0;
+  fpsEnabled := False;
+  DirectVobSub := GetDirectVobSubInterface;
+  if Assigned(DirectVobSub) then
+  begin
+    DirectVobSub.get_MediaFPS(fpsEnabled, fps);
+  end;
+  Result := fps;
 end;
 
 //==============================================================================
@@ -781,8 +1176,8 @@ TWaitCompletionThread_Restart:
     end
     else
     begin
-      FRenderer.FMediaControl.Pause;
-      //FRenderer.FMediaControl.Stop;
+      //FRenderer.FMediaControl.Pause;
+      FRenderer.FMediaControl.Stop;
       if Assigned(FRenderer.FOnStopPlaying) then
         FRenderer.FOnStopPlaying(FRenderer);
     end;
@@ -1045,7 +1440,7 @@ begin
       else if (FWAVExtractionType = wetFastConversion) then
         WavWriterInterface.SetFastConversionMode(1);
       WavWriterInterface.SetWritePeakFile(1);
-      DestinationFilenamePeak := ChangeFileExt(DestinationFilename,'.peak');
+      DestinationFilenamePeak := WideChangeFileExt(DestinationFilename,'.peak');
       WavWriterInterface.SetPeakFileName(@DestinationFilenamePeak[1]);
       WavWriterInterface.SetSamplesPerPeakRatio(100);
       WavWriterInterface := nil;
@@ -1104,108 +1499,11 @@ begin
   end;
 end;
 
-//------------------------------------------------------------------------------
-
-function GetDllFilenameByCLSID(const GUID : TGUID) : string;
-var KeyName, FileName : string;
-    Key : HKEY;
-    dwSize : DWORD;
-begin
-  Result := '';
-  if IsEqualCLSID(GUID, GUID_NULL) then
-    Exit;
-
-  KeyName := Format('Software\Classes\CLSID\%s\InprocServer32', [GUIDToString(GUID)]);
-
-  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
-  begin
-    dwSize := 0;
-    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
-    begin
-      SetLength(FileName, dwSize-1);
-      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FileName), @dwSize) = ERROR_SUCCESS then
-      begin
-        Result := FileName;
-      end;
-    end;
-    RegCloseKey(Key);
-  end;
-end;
-
 // -----------------------------------------------------------------------------
 
-function GetFriendlyNameByCLSID(const GUID : TGUID) : string;
-var KeyName, FriendlyName : string;
-    Key : HKEY;
-    dwSize : DWORD;
+function TDSWavExtractor.GetFilters(list : TStrings) : Boolean;
 begin
-  Result := '';
-  if IsEqualCLSID(GUID, GUID_NULL) then
-    Exit;
-
-  KeyName := Format('Software\Classes\CLSID\%s', [GUIDToString(GUID)]);
-  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, PChar(KeyName), 0, KEY_READ, Key) = ERROR_SUCCESS) then
-  begin
-    dwSize := 0;
-    if (RegQueryValueEx(Key, nil, nil, nil, nil, @dwSize) = ERROR_SUCCESS) then
-    begin
-      SetLength(FriendlyName, dwSize-1);
-      if RegQueryValueEx(Key, nil, nil, nil, PBYTE(FriendlyName), @dwSize) = ERROR_SUCCESS then
-      begin
-        Result := FriendlyName;
-      end;
-    end;
-    RegCloseKey(Key);
-  end;
-end;
-
-// -----------------------------------------------------------------------------
-
-function TDSWavExtractor.GetFilterList(list : TStrings) : Boolean;
-var FilterEnum : IEnumFilters;
-    Filter : IBaseFilter;
-    ul: ULONG;
-    FilterInfo : TFilterInfo;
-    s : WideString;
-    FilterGUID : TGUID;
-    FileName, FriendlyName : WideString;
-const
-  IID_IPropertyBag : TGUID = '{55272A00-42CB-11CE-8135-00AA004BB851}';    
-begin
-  list.Clear;
-  Result := False;
-  if Assigned(FGraphBuilder) then
-  begin
-    if Succeeded(FGraphBuilder.EnumFilters(FilterEnum)) then
-    begin
-      while (FilterEnum.Next(1, Filter, @ul) = S_OK) do
-      begin
-        FilterInfo.achName[0] := #0;
-        Filter.QueryFilterInfo(FilterInfo);
-        s := FilterInfo.achName;
-        FilterGUID := GUID_NULL;
-        if Succeeded(Filter.GetClassID(FilterGUID)) then
-        begin
-          FriendlyName := GetFriendlyNameByCLSID(FilterGUID);
-          if (Length(FriendlyName) > 0) and (s <> FriendlyName) then
-          begin
-            s := s + ' - ' + FriendlyName;
-          end;
-          s := s + ' - ' + GUIDToString(FilterGUID);
-          FileName := GetDllFilenameByCLSID(FilterGUID);
-          if (Length(FileName) > 0) then
-          begin
-            s := s + ' - ' + FileName;
-            s := s + ' (' + GetFileVersionString(FileName) + ')';
-          end;
-        end;
-
-        list.Add(s);
-        Filter := nil;
-      end;
-      FilterEnum := nil;
-    end;
-  end;
+  Result := GetFiltersList(FGraphBuilder, list);
 end;
 
 //------------------------------------------------------------------------------

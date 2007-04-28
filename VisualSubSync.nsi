@@ -3,13 +3,14 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.9.4"
+!define VERSION "0.9.9"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
 !define FILE1 "VisualSubSync.exe"
 !define FILE2 "WavWriter.dll"
 !define FILE3 "js3215R.dll"
+!define FILE4 "VSSCustomVSFilter.dll"
 
 !define DIR_WEB "web\"
 !define FILE_WEB1 "index.shtml"
@@ -33,6 +34,10 @@
 !define FILES_JSPLUGIN3 "too_long_display_time.js"
 !define FILES_JSPLUGIN4 "too_long_line.js"
 !define FILES_JSPLUGIN5 "too_short_display_time.js"
+
+!define DIR_JSPLUGIN_GENERAL "jsplugin\general\"
+!define FILES_JSPLUGIN_GENERAL1 "general_plugin.js"
+
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -90,6 +95,7 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${FILE1}"
   File "${INPUT_PATH}${FILE2}"
   File "${INPUT_PATH}${FILE3}"
+  File "${INPUT_PATH}${FILE4}"
 
 	; Web files
   SetOutPath "$INSTDIR\${DIR_WEB}"
@@ -116,6 +122,8 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN3}"
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN4}"
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN5}"
+  SetOutPath "$INSTDIR\${DIR_JSPLUGIN_GENERAL}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL1}"
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
@@ -157,6 +165,8 @@ Section "Uninstall"
 	; Delete main files
 	Delete "$INSTDIR\${FILE1}"
   Delete "$INSTDIR\${FILE2}"
+  Delete "$INSTDIR\${FILE3}"
+  Delete "$INSTDIR\${FILE4}"
   
   ; Delete web files and directory if empty
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB1}"
@@ -173,6 +183,8 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\${DIR_HELP}"
   
   ; Javascript plugins  
+  Delete "$INSTDIR\${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL1}"  
+  RMDir "$INSTDIR\${DIR_JSPLUGIN_GENERAL}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN1}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN2}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN3}"

@@ -33,7 +33,9 @@ uses
   CursorManager in 'CursorManager.pas',
   tom_TLB in 'tom_TLB.pas',
   StyleFormUnit in 'StyleFormUnit.pas' {StyleForm},
-  SSAParserUnit in 'SSAParserUnit.pas';
+  SSAParserUnit in 'SSAParserUnit.pas',
+  DirectVobsubInterface in 'DirectVobsubInterface.pas',
+  RGBHSLColorUnit in 'RGBHSLColorUnit.pas';
 
 {$R *.res}
 
