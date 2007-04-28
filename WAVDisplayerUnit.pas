@@ -122,6 +122,7 @@ type
   TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSubtitleChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
+  TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
 
   TWAVDisplayer = class(TCustomPanel)
   private
@@ -159,7 +160,7 @@ type
     FOnPlayCursorChange : TNotifyEvent;
     FOnSelectionChange : TNotifyEvent;
     FOnViewChange : TNotifyEvent;
-    FOnSelectedRange : TNotifyEvent;
+    FOnSelectedRange : TSelectedRangeEvent;
     FOnSelectedRangeChange : TNotifyEvent;
     FOnSelectedRangeChanged : TNotifyEvent;
     FOnPeakFileCreation : TPeakFileCreationEvent;
@@ -238,7 +239,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function LoadWAV(filename : string) : Boolean;
+    function LoadWAV(filename : WideString) : Boolean;
     procedure Close;
     function GetCursorPos : Integer;
     procedure SetCursorPos(NewPos : Integer);
@@ -258,6 +259,7 @@ type
 
     procedure PlayRange(const Range : TRange; const Loop : Boolean = False); overload;
     procedure PlayRange(const Start, Stop : Integer; const Loop : Boolean = False); overload;
+    procedure Pause;
     procedure UpdatePlayRange(const Start, Stop : Integer);
     procedure Stop;
     function SelectionIsEmpty : Boolean;
@@ -284,7 +286,7 @@ type
     property OnPlayCursorChange : TNotifyEvent read FOnPlayCursorChange write FOnPlayCursorChange;
     property OnSelectionChange : TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnViewChange : TNotifyEvent read FOnViewChange write FOnViewChange;
-    property OnSelectedRange : TNotifyEvent read FOnSelectedRange write FOnSelectedRange;
+    property OnSelectedRange : TSelectedRangeEvent read FOnSelectedRange write FOnSelectedRange;
     property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;
     property OnPeakFileCreation : TPeakFileCreationEvent read FOnPeakFileCreation write FOnPeakFileCreation;
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
@@ -320,7 +322,7 @@ procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
 
 implementation
 
-uses SysUtils, Types, MiscToolsUnit;
+uses SysUtils, Types, MiscToolsUnit, TntClasses, TntSysUtils;
 
 const
   WAV_COLOR : TColor = $00A7F24A;
@@ -1423,12 +1425,12 @@ begin
 
     if (ssShift in Shift) or (FDynamicEditMode = demStart) or (FDynamicEditMode = demStop) then
     begin
-      if Assigned(FDynamicSelRange) then
+      if Assigned(FDynamicSelRange) and (FDynamicSelRange <> FSelectedRange) then
       begin
         SetSelectedRangeEx(FDynamicSelRange, False);
         Include(UpdateFlags, uvfSelection);
         if Assigned(FOnSelectedRange) then
-          FOnSelectedRange(Self);
+          FOnSelectedRange(Self, FSelectedRange, True);
       end;
 
       // Selection modification using shift key
@@ -2139,9 +2141,9 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TWAVDisplayer.LoadWAV(filename : string) : Boolean;
-var PeakFilename : string;
-    PeakFS : TFileStream;
+function TWAVDisplayer.LoadWAV(filename : WideString) : Boolean;
+var PeakFilename : WideString;
+    PeakFS : TTntFileStream;
     PeakFileIDRead : string;
     PeakFileVerRead : Cardinal;
     WAVFile : TWAVFile;
@@ -2155,13 +2157,13 @@ begin
   CreatePeakFile := True;
 
   // Search for a "peak" file with the same name
-  PeakFilename := ChangeFileExt(filename,'.peak');
-  if FileExists(PeakFilename) then
+  PeakFilename := WideChangeFileExt(filename,'.peak');
+  if WideFileExists(PeakFilename) then
   begin
     // TODO : check if the wav file match, if it exists
 
     // Load peak file
-    PeakFS := TFileStream.Create(PeakFilename, fmOpenRead or fmShareDenyWrite);
+    PeakFS := TTntFileStream.Create(PeakFilename, fmOpenRead or fmShareDenyWrite);
 
     // Check filesize, we need at least
     HDRSize := System.Length(PeakFileID) + SizeOf(PeakFileVerRead) + SizeOf(FLengthMs) +
@@ -2191,7 +2193,7 @@ begin
   if CreatePeakFile then
   begin
     // No peak file
-    if not FileExists(filename) then
+    if not WideFileExists(filename) then
     begin
       Result := False;
       Exit;
@@ -2209,7 +2211,7 @@ begin
     // Create the "peak" file
     CreatePeakTab(WAVFile);
     // Save it
-    PeakFS := TFileStream.Create(PeakFilename,fmCreate);
+    PeakFS := TTntFileStream.Create(PeakFilename, fmCreate);
     PeakFS.WriteBuffer(PeakFileID[1], System.Length(PeakFileID));
     PeakFS.WriteBuffer(PeakFileVer, SizeOf(PeakFileVer));
     PeakFS.WriteBuffer(FLengthMs, SizeOf(FLengthMs));
@@ -2606,7 +2608,7 @@ begin
       if Assigned(FOnSelectionChange) then
         FOnSelectionChange(Self);
       if Assigned(FOnSelectedRange) then
-        FOnSelectedRange(Self);
+        FOnSelectedRange(Self, FSelectedRange, False);
     end;
   end;
 end;
@@ -2650,7 +2652,7 @@ begin
   if Assigned(FOnStartPlaying) then
     FOnStartPlaying(Self);
   FRenderer.OnStopPlaying := InternalOnStopPlaying;
-  FRenderer.PlayRange(Start,Stop, Loop);
+  FRenderer.PlayRange(Start, Stop, Loop);
   FUpdateCursorTimer.Enabled := True;
   FIsPlaying := True;
 end;
@@ -2797,19 +2799,22 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.SetRenderer(Renderer : TRenderer);
+var WasPaused : Boolean;
 begin
+  WasPaused := False;
   if FIsPlaying then
   begin
-    Stop;
-    while FIsPlaying do // yeah a bit ugly :p
-    begin
-      Sleep(40);
-    end;
+    WasPaused := (not FUpdateCursorTimer.Enabled);
+    FRenderer.Pause;
+    Renderer.CopyState(FRenderer);
+    FRenderer.Stop(False);
   end;
   if (FRenderer <> Renderer) then
   begin
     FRenderer := Renderer;
   end;
+  if FIsPlaying and not WasPaused then
+    FRenderer.Resume;
 end;
 
 //------------------------------------------------------------------------------
@@ -2979,6 +2984,22 @@ begin
   inherited;
   // Fix repaing bug
   Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.Pause;
+begin
+  if FUpdateCursorTimer.Enabled then
+  begin
+    FUpdateCursorTimer.Enabled := False;
+    FRenderer.Pause;
+  end
+  else
+  begin
+    FUpdateCursorTimer.Enabled := True;
+    FRenderer.Resume;
+  end;
 end;
 
 //------------------------------------------------------------------------------
