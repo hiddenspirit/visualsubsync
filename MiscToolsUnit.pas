@@ -45,9 +45,9 @@ type
   end;
 
   procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
-  function TimeMsToString(const TimeMS: Cardinal; const DecimalSeparator : string = '.') : string;
-  function TimeMsToSSAString(const TimeMS: Cardinal) : string;
-  function TimeMsToCUE(const TimeMS: Cardinal) : string;
+  function TimeMsToString(const TimeMS: Integer; const DecimalSeparator : string = '.') : string;
+  function TimeMsToSSAString(const TimeMS: Integer) : string;
+  function TimeMsToCUE(const TimeMS: Integer) : string;
 
   function TimeStringToMS_SSA(Time : string) : Integer;
   function TimeStringToMs(const Time : string) : Integer;
@@ -110,9 +110,9 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToString(const TimeMS: Cardinal; const DecimalSeparator : string) : string;
+function TimeMsToString(const TimeMS: Integer; const DecimalSeparator : string) : string;
 var
-  hh, min, sec, ms: Cardinal;
+  hh, min, sec, ms: Integer;
 begin
   ms := TimeMs div 1000;
   hh := ms div 3600;
@@ -124,9 +124,9 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToSSAString(const TimeMS: Cardinal) : string;
+function TimeMsToSSAString(const TimeMS: Integer) : string;
 var
-  hh, min, sec, ms, cs: Cardinal;
+  hh, min, sec, ms, cs: Integer;
 begin
   ms := TimeMs div 1000;
   hh := ms div 3600;
@@ -196,9 +196,9 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TimeMsToCUE(const TimeMS: Cardinal) : string;
+function TimeMsToCUE(const TimeMS: Integer) : string;
 var
-  hh, min, sec, ms, ff: Cardinal;
+  hh, min, sec, ms, ff: Integer;
 begin
   ms := TimeMs div 1000;
   hh := ms div 3600;

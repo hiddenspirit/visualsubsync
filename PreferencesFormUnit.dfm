@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsGeneral
+    ActivePage = tsTimingMode
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -294,7 +294,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 150
+            Width = 154
             WideText = 'Value'
           end
           item
@@ -634,7 +634,7 @@ object PreferencesForm: TPreferencesForm
         object TntLabel7: TTntLabel
           Left = 16
           Top = 132
-          Width = 145
+          Width = 140
           Height = 13
           Caption = 'Minimal subtitle duration (ms) :'
         end
@@ -703,7 +703,7 @@ object PreferencesForm: TPreferencesForm
           Width = 16
           Height = 21
           Associate = EditMinimalDuration
-          Min = 500
+          Min = 200
           Max = 5000
           Increment = 100
           Position = 500

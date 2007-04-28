@@ -34,7 +34,7 @@ object DelayForm: TDelayForm
     Height = 81
     Caption = ' Apply to '
     ItemIndex = 0
-    Items.WideStrings = (
+    Items.Strings = (
       'All subtitles'
       'Selected subtitles'
       'All subtitles from cursor to end')
@@ -48,7 +48,7 @@ object DelayForm: TDelayForm
     Caption = ' Type : '
     Columns = 2
     ItemIndex = 0
-    Items.WideStrings = (
+    Items.Strings = (
       'Positive (+)'
       'Negative (-)')
     TabOrder = 2
@@ -78,7 +78,7 @@ object DelayForm: TDelayForm
     Height = 81
     Caption = ' Shift '
     ItemIndex = 0
-    Items.WideStrings = (
+    Items.Strings = (
       'Start and end time'
       'Start time only'
       'End time only')

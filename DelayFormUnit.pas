@@ -28,6 +28,9 @@ uses
   Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, Mask;
 
 type
+  TDelayShiftType = (dstBothTime, dstStartTimeOnly, dstStopTimeOnly);
+  TDelayApplyToType = (dattAll, dattSelected, dattFromCursor);
+
   TDelayForm = class(TForm)
     meDelay: TMaskEdit;
     rgApplyTo: TTntRadioGroup;
@@ -41,12 +44,22 @@ type
     { Private declarations }
   public
     { Public declarations }
+    function GetDelayShiftType : TDelayShiftType;
+    procedure SetDelayShiftType(DelayShiftType : TDelayShiftType);
+
+    function GetDelayApplyToType : TDelayApplyToType;
+    procedure SetDelayApplyToType(DelayApplyToType : TDelayApplyToType);
+
+    function GetDelayInMs : Integer;
+    procedure SetDelayInMS(DelayInMs : Integer);
   end;
 
 var
   DelayForm: TDelayForm;
 
 implementation
+
+uses MiscToolsUnit;
 
 {$R *.dfm}
 
@@ -62,6 +75,50 @@ end;
 procedure TDelayForm.bttCancelClick(Sender: TObject);
 begin
   ModalResult := mrCancel;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TDelayForm.GetDelayShiftType : TDelayShiftType;
+begin
+  Result := TDelayShiftType(rgShift.ItemIndex);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TDelayForm.SetDelayShiftType(DelayShiftType : TDelayShiftType);
+begin
+  rgShift.ItemIndex := Ord(DelayShiftType);
+end;
+
+// -----------------------------------------------------------------------------
+
+function TDelayForm.GetDelayApplyToType : TDelayApplyToType;
+begin
+  Result := TDelayApplyToType(rgApplyTo.ItemIndex);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TDelayForm.SetDelayApplyToType(DelayApplyToType : TDelayApplyToType);
+begin
+  rgApplyTo.ItemIndex := Ord(DelayApplyToType);
+end;
+
+// -----------------------------------------------------------------------------
+
+function TDelayForm.GetDelayInMs : Integer;
+begin
+  Result := TimeStringToMs(meDelay.EditText);
+  if rgType.ItemIndex = 1 then
+    Result := -Result;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TDelayForm.SetDelayInMS(DelayInMs : Integer);
+begin
+  meDelay.Text := TimeMsToString(DelayInMs);
 end;
 
 // -----------------------------------------------------------------------------
