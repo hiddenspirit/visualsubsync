@@ -46,32 +46,35 @@ type
     vtvErrorList: TVirtualDrawTree;
     TntStatusBar1: TTntStatusBar;
     ErrorListPopupMenu: TTntPopupMenu;
-    pmiClear: TTntMenuItem;
+    pmiClearAll: TTntMenuItem;
     TntMainMenu1: TTntMainMenu;
     miFile: TTntMenuItem;
     miRecheck: TTntMenuItem;
     miClose: TTntMenuItem;
     N1: TTntMenuItem;
     miPreferences: TTntMenuItem;
-    Clear1: TTntMenuItem;
+    miClearAll: TTntMenuItem;
     N2: TTntMenuItem;
     pmiFixError: TTntMenuItem;
     pmiFixAllXXX: TTntMenuItem;
     pmiFixAllYYY: TTntMenuItem;
-    procedure pmiClearClick(Sender: TObject);
+    miClear: TTntMenuItem;
+    N3: TTntMenuItem;
+    procedure pmiClearAllClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure vtvErrorListDrawNode(Sender: TBaseVirtualTree;
       const PaintInfo: TVTPaintInfo);
     procedure FormDestroy(Sender: TObject);
     procedure vtvErrorListDblClick(Sender: TObject);
     procedure miCloseClick(Sender: TObject);
-    procedure Clear1Click(Sender: TObject);
+    procedure miClearAllClick(Sender: TObject);
     procedure pmiFixErrorClick(Sender: TObject);
     procedure ErrorListPopupMenuPopup(Sender: TObject);
     procedure pmiFixAllXXXClick(Sender: TObject);
     procedure pmiFixAllYYYClick(Sender: TObject);
     procedure vtvErrorListFocusChanged(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex);
+    procedure miClearClick(Sender: TObject);
   private
     { Private declarations }
     BoldFont : HFONT;
@@ -85,6 +88,8 @@ type
       GlobalMsg, ContextMsg, Filename, PluginName : WideString);
     procedure Clear;
     procedure DeleteError(Range : TSubtitleRange);
+    procedure GoToNextError;
+    procedure GoToPreviousError;
   end;
 
 var
@@ -151,7 +156,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TErrorReportForm.pmiClearClick(Sender: TObject);
+procedure TErrorReportForm.pmiClearAllClick(Sender: TObject);
 begin
   Clear;
 end;
@@ -311,7 +316,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TErrorReportForm.Clear1Click(Sender: TObject);
+procedure TErrorReportForm.miClearAllClick(Sender: TObject);
 begin
   Clear;
 end;
@@ -429,6 +434,68 @@ begin
     pError := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
     MainForm.SelectNode(pError.Range.Node);
   end
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.GoToNextError;
+var NextNode : PVirtualNode;
+
+begin
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    NextNode := vtvErrorList.GetNext(vtvErrorList.FocusedNode);
+    if Assigned(NextNode) then
+    begin
+      vtvErrorList.Selected[vtvErrorList.FocusedNode] := False;
+      vtvErrorList.Selected[NextNode] := True;
+      vtvErrorList.FocusedNode := NextNode;
+    end;
+  end
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.GoToPreviousError;
+var PreviousNode : PVirtualNode;
+
+begin
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    PreviousNode := vtvErrorList.GetPrevious(vtvErrorList.FocusedNode);
+    if Assigned(PreviousNode) then
+    begin
+      vtvErrorList.Selected[vtvErrorList.FocusedNode] := False;
+      vtvErrorList.Selected[PreviousNode] := True;
+      vtvErrorList.FocusedNode := PreviousNode;
+    end;
+  end
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.miClearClick(Sender: TObject);
+var FirstSel, Cursor : PVirtualNode;
+begin
+  FirstSel := vtvErrorList.GetFirstSelected;
+  Cursor := FirstSel;
+  while Assigned(Cursor) do
+  begin
+    if (not (vsSelected in Cursor.States)) then
+      Break;
+    Cursor := vtvErrorList.GetNext(Cursor);
+  end;
+
+  if not Assigned(Cursor) and Assigned(FirstSel) then
+  begin
+    Cursor := vtvErrorList.GetPrevious(FirstSel);
+  end;
+  vtvErrorList.DeleteSelectedNodes;
+  if Assigned(Cursor) then
+  begin
+    vtvErrorList.FocusedNode := Cursor;
+    vtvErrorList.Selected[Cursor] := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------

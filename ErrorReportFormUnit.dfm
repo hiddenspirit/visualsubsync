@@ -58,10 +58,6 @@ object ErrorReportForm: TErrorReportForm
     OnPopup = ErrorListPopupMenuPopup
     Left = 16
     Top = 48
-    object pmiClear: TTntMenuItem
-      Caption = 'Clear'
-      OnClick = pmiClearClick
-    end
     object pmiFixError: TTntMenuItem
       Caption = 'Fix error'
       OnClick = pmiFixErrorClick
@@ -74,6 +70,17 @@ object ErrorReportForm: TErrorReportForm
       Caption = 'Fix all errors with same error msg'
       OnClick = pmiFixAllYYYClick
     end
+    object N3: TTntMenuItem
+      Caption = '-'
+    end
+    object miClear: TTntMenuItem
+      Caption = 'Clear'
+      OnClick = miClearClick
+    end
+    object pmiClearAll: TTntMenuItem
+      Caption = 'Clear all'
+      OnClick = pmiClearAllClick
+    end
   end
   object TntMainMenu1: TTntMainMenu
     Left = 16
@@ -84,9 +91,9 @@ object ErrorReportForm: TErrorReportForm
       object miRecheck: TTntMenuItem
         Action = MainForm.ActionCheckErrors
       end
-      object Clear1: TTntMenuItem
-        Caption = 'Clear'
-        OnClick = Clear1Click
+      object miClearAll: TTntMenuItem
+        Caption = 'Clear all'
+        OnClick = miClearAllClick
       end
       object N2: TTntMenuItem
         Caption = '-'
