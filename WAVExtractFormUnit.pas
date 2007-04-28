@@ -200,7 +200,7 @@ begin
   AudioPinIsSelected := True;
 
   slist := TStringList.Create;
-  DSWavExtractor.GetFilterList(slist);
+  DSWavExtractor.GetFilters(slist);
   for i:=0 to slist.Count-1 do
   begin
     MemoVideoInfo.Lines.Add(slist[i]);
