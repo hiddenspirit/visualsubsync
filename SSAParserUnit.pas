@@ -1,83 +1,123 @@
+// -----------------------------------------------------------------------------
+//  VisualSubSync
+// -----------------------------------------------------------------------------
+//  Copyright (C) 2006 Christophe Paris
+// -----------------------------------------------------------------------------
+//  This Program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2, or (at your option)
+//  any later version.
+//
+//  This Program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with GNU Make; see the file COPYING.  If not, write to
+//  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+//  http://www.gnu.org/copyleft/gpl.html
+// -----------------------------------------------------------------------------
 unit SSAParserUnit;
 
 interface
 
-uses Classes;
+uses Classes, TntClasses;
 
 type
   TAbstractLineParser = class
-    procedure ParseLine(line: string); virtual; abstract;
+    procedure ParseLine(line: WideString); virtual; abstract;
   end;
 
   TMemorizerParser = class(TAbstractLineParser)
   private
-    memory : string;
+    memory : WideString;
   public
-    procedure ParseLine(line: string); override;
+    procedure ParseLine(line: WideString); override;
   end;
 
   TFormatedParser = class(TAbstractLineParser)
   private
-    keywordLst : TStringList;
+    keywordLst : TTntStringList;
     parsedLines : TList;
   public
     constructor Create;
     destructor Destroy; override;
-    function ParseFormatLine(line: string; start : string) : Integer;
-    function ParseFormatedLine(line: string; start : string) : Integer;
+    function ParseFormatLine(line: WideString; start : WideString) : Integer;
+    function ParseFormatedLine(line: WideString; start : WideString) : Integer;
     function GetCount : Integer;
-    function GetValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
-    function GetValueAsString(lineIndex : integer; valueKey : string) : string;
-    function GetValueAsBoolean(lineIndex : integer; valueKey : string) : Boolean;
-    function KeyExists(key : string) : Boolean;
+    function GetValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
+    function GetValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
+    function GetValueAsBoolean(lineIndex : integer; valueKey : WideString) : Boolean;
+    function GetValueAsDouble(lineIndex : integer; valueKey : WideString) : Double;
+    function KeyExists(key : WideString) : Boolean;
+  end;
+
+  TScriptInfoParser = class(TAbstractLineParser)
+  private
+    KeyValueLst : TTntStringList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function IsSection(line : WideString) : Boolean;
+    procedure ParseLine(line: WideString); override;
+    function GetCount : Integer;
+    function KeyExists(key : WideString) : Boolean;
+    function GetValueAsString(Index : integer) : WideString; overload;
+    function GetValueAsString(Key : WideString) : WideString; overload;
+    function GetAsString : WideString;
   end;
 
   TStyleParser = class(TFormatedParser)
   public
-    function IsSection(line : string) : Boolean;
-    procedure ParseLine(line: string); override;
+    function IsSection(line : WideString) : Boolean;
+    procedure ParseLine(line: WideString); override;
   end;
 
   TDialogueParser = class(TFormatedParser)
   public
-    function IsSection(line : string) : Boolean;
-    procedure ParseLine(line: string); override;
+    function IsSection(line : WideString) : Boolean;
+    procedure ParseLine(line: WideString); override;
   end;
 
   TSSAParser = class
   private
+    ScriptInfoParser : TScriptInfoParser;
     StyleParser : TStyleParser;
     DialogueParser : TDialogueParser;
-    HeaderParser : TMemorizerParser;
-    SubtitleFileHeader : string;
+    FooterParser : TMemorizerParser;
     IsUTF8 : Boolean;
+    IsASS : Boolean;
 
-    function GetParserForSection(line : string) : TAbstractLineParser;
+    function GetParserForSection(line : WideString) : TAbstractLineParser;
   public
     constructor Create;
     destructor Destroy; override;
 
-    procedure Parse(Filename: string);
+    procedure Parse(Filename: WideString);
     function GetStylesCount : Integer;
     function GetDialoguesCount : Integer;
-    function GetStyleValueAsString(lineIndex : integer; valueKey : string) : string;
-    function GetStyleValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
-    function GetStyleValueAsBoolean(lineIndex : integer; valueKey : string) : Boolean;
-    function GetDialogueValueAsString(lineIndex : integer; valueKey : string) : string;
-    function GetDialogueValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
-    function GetHeader : string;
+    function GetStyleValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
+    function GetStyleValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
+    function GetStyleValueAsBoolean(lineIndex : integer; valueKey : WideString) : Boolean;
+    function GetStyleValueAsDouble(lineIndex : integer; valueKey : WideString) : Double;
+    function GetDialogueValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
+    function GetDialogueValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
+    function GetHeaderLines : WideString;
+    function GetFooterLines : WideString;
     function GetIsUTF8 : Boolean;
-    function StyleKeyExists(key : string) : Boolean;
-    function DialogueKeyExists(key : string) : Boolean;
+    function GetIsASS : Boolean;
+    function StyleKeyExists(key : WideString) : Boolean;
+    function DialogueKeyExists(key : WideString) : Boolean;
   end;
 
 implementation
 
-uses SysUtils, StrUtils, MiscToolsUnit, Windows;
+uses SysUtils, StrUtils, MiscToolsUnit, Windows, TntWideStrings;
 
 // =============================================================================
 
-procedure TMemorizerParser.ParseLine(line: string);
+procedure TMemorizerParser.ParseLine(line: WideString);
 begin
   if Length(memory) > 0 then
     memory := memory + #13#10 + line
@@ -89,19 +129,24 @@ end;
 
 constructor TFormatedParser.Create;
 begin
-  keywordLst := TStringList.Create;
+  keywordLst := TTntStringList.Create;
   keywordLst.CaseSensitive := False;
   parsedLines := TList.Create;
 end;
 
 destructor TFormatedParser.Destroy;
+var tmpSL : TTntStringList;
+    i : Integer;
 begin
   keywordLst.Free;
-  while (parsedLines.Count > 0) do
+  for i:=0 to parsedLines.Count-1 do
   begin
-    TStringList(parsedLines.Items[0]).Free;
-    parsedLines.Delete(0);
+    tmpSL := TTntStringList(parsedLines.Items[i]);
+    tmpSL.Clear;
+    tmpSL.Free;
   end;
+  parsedLines.Clear;
+  parsedLines.Free;
 end;
 
 function TFormatedParser.GetCount : Integer;
@@ -109,7 +154,7 @@ begin
   Result := parsedLines.Count;
 end;
 
-function TFormatedParser.ParseFormatLine(line: string; start : string) : Integer;
+function TFormatedParser.ParseFormatLine(line: WideString; start : WideString) : Integer;
 var p : integer;
 begin
   Delete(line, 1, Length(start));
@@ -127,11 +172,12 @@ begin
   Result := keywordLst.Count;
 end;
 
-function TFormatedParser.ParseFormatedLine(line: string; start : string) : Integer;
-var parsedLine : TStringList;
+function TFormatedParser.ParseFormatedLine(line: WideString; start : WideString) : Integer;
+var parsedLine : TTntStringList;
     p : integer;
+    tmpLine : WideString;
 begin
-  parsedLine := TStringList.Create;
+  parsedLine := TTntStringList.Create;
   Delete(line, 1, Length(start));
   while True do
   begin
@@ -149,8 +195,10 @@ begin
       Break;
     end;
 
-    parsedLine.Add(Trim(Copy(line, 1, p - 1)));
-    Delete(line,1,p);
+    tmpLine := Copy(line, 1, p - 1);
+    tmpLine := Trim(tmpLine);
+    parsedLine.Add(tmpLine);
+    Delete(line, 1, p);
   end;
   parsedLines.Add(parsedLine);
   if (parsedLine.Count < keywordLst.Count) then
@@ -159,7 +207,7 @@ begin
     Result := parsedLine.Count;
 end;
 
-function TFormatedParser.GetValueAsBoolean(lineIndex : integer; valueKey : string) : Boolean;
+function TFormatedParser.GetValueAsBoolean(lineIndex : integer; valueKey : WideString) : Boolean;
 var intResult : Integer;
 begin
   intResult := GetValueAsInteger(lineIndex, valueKey);
@@ -169,16 +217,26 @@ begin
     Result := True;
 end;
 
-function TFormatedParser.GetValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
-var valueAsString : string;
+function TFormatedParser.GetValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
+var valueAsString : WideString;
 begin
   valueAsString := GetValueAsString(lineIndex, valueKey);
   Result := StrToIntDef(valueAsString,0);
 end;
 
-function TFormatedParser.GetValueAsString(lineIndex : integer; valueKey : string) : string;
+function TFormatedParser.GetValueAsDouble(lineIndex : integer; valueKey : WideString) : Double;
+var valueAsString : WideString;
+    ssaFloatFormatSettings : TFormatSettings;
+begin
+  GetLocaleFormatSettings(0,ssaFloatFormatSettings);
+  ssaFloatFormatSettings.DecimalSeparator := '.';
+  valueAsString := GetValueAsString(lineIndex, valueKey);
+  Result := StrToFloatDef(valueAsString, 0.0, ssaFloatFormatSettings);
+end;
+
+function TFormatedParser.GetValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
 var keyIndex : Integer;
-    lineValues : TStringList;
+    lineValues : TTntStringList;
 begin
   Result := '';
   keyIndex := keywordLst.IndexOf(valueKey);
@@ -186,7 +244,7 @@ begin
   begin
     if (lineIndex < parsedLines.Count) then
     begin
-      lineValues := TStringList(parsedLines[lineIndex]);
+      lineValues := TTntStringList(parsedLines[lineIndex]);
       if (keyIndex < lineValues.Count) then
       begin
         Result := lineValues[keyIndex];
@@ -195,25 +253,39 @@ begin
   end;
 end;
 
-function TFormatedParser.KeyExists(key : string) : Boolean;
+function TFormatedParser.KeyExists(key : WideString) : Boolean;
 begin
   Result := keywordLst.IndexOf(key) <> -1;
 end;
 
 // =============================================================================
 
-function TStyleParser.IsSection(line : string) : Boolean;
+function StartsText(StartWidth, Text : WideString) : Boolean;
+var ls : WideString;
 begin
-  Result := AnsiStartsText('[V4', Trim(line)) and AnsiEndsText('Styles]', Trim(line));
+  ls := LeftStr(Text, Length(StartWidth));
+  Result := (WideCompareText(ls, StartWidth) = 0);
 end;
 
-procedure TStyleParser.ParseLine(line: string);
+function EndsText(EndWidth, Text : WideString) : Boolean;
+var rs : WideString;
 begin
-  if AnsiStartsText('Format:', line) then
+  rs := RightStr(Text,Length(EndWidth));
+  Result := (WideCompareText(rs, EndWidth) = 0);
+end;
+
+function TStyleParser.IsSection(line : WideString) : Boolean;
+begin
+  Result := StartsText('[v4', Trim(line)) and EndsText('Styles]', Trim(line));
+end;
+
+procedure TStyleParser.ParseLine(line: WideString);
+begin
+  if StartsText('Format:', line) then
   begin
     ParseFormatLine(line, 'Format:');
   end
-  else if AnsiStartsText('Style:', line) then
+  else if StartsText('Style:', line) then
   begin
     ParseFormatedLine(line, 'Style:');
   end;
@@ -221,18 +293,18 @@ end;
 
 // =============================================================================
 
-function TDialogueParser.IsSection(line : string) : Boolean;
+function TDialogueParser.IsSection(line : WideString) : Boolean;
 begin
-  Result := AnsiStartsText('[Events]', Trim(line));
+  Result := StartsText('[Events]', Trim(line));
 end;
 
-procedure TDialogueParser.ParseLine(line: string);
+procedure TDialogueParser.ParseLine(line: WideString);
 begin
-  if AnsiStartsText('Format:', line) then
+  if StartsText('Format:', line) then
   begin
     ParseFormatLine(line, 'Format:');
   end
-  else if AnsiStartsText('Dialogue:', line) then
+  else if StartsText('Dialogue:', line) then
   begin
     ParseFormatedLine(line, 'Dialogue:');
   end;
@@ -240,66 +312,121 @@ end;
 
 // =============================================================================
 
+constructor TScriptInfoParser.Create;
+begin
+  KeyValueLst := TTntStringList.Create;
+  KeyValueLst.CaseSensitive := False;
+  KeyValueLst.NameValueSeparator := ':';
+end;
+
+destructor TScriptInfoParser.Destroy;
+begin
+  KeyValueLst.Free;
+end;
+
+function TScriptInfoParser.IsSection(line : WideString) : Boolean;
+begin
+  Result := StartsText('[Script Info]', Trim(line));
+end;
+
+procedure TScriptInfoParser.ParseLine(line: WideString);
+var PosSemiColon : Integer;
+begin
+  if not StartsText(';', line) then
+  begin
+    PosSemiColon := Pos(':', line);
+    if PosSemiColon > 0 then
+    begin
+      KeyValueLst.Add(line);
+    end;
+  end;
+end;
+
+function TScriptInfoParser.GetCount : Integer;
+begin
+  Result := KeyValueLst.Count;
+end;
+
+function TScriptInfoParser.KeyExists(Key : WideString) : Boolean;
+begin
+  Result := Length(KeyValueLst.Values[Key]) > 0;
+end;
+
+function TScriptInfoParser.GetValueAsString(Index : integer) : WideString;
+begin
+  Result := KeyValueLst.ValueFromIndex[Index];
+end;
+
+function TScriptInfoParser.GetValueAsString(Key : WideString) : WideString;
+begin
+  Result := KeyValueLst.Values[Key];
+end;
+
+function TScriptInfoParser.GetAsString : WideString;
+begin
+  Result := KeyValueLst.Text;
+end;
+
+// =============================================================================
+
 constructor TSSAParser.Create;
 begin
+  ScriptInfoParser := TScriptInfoParser.Create;
   StyleParser := TStyleParser.Create;
   DialogueParser := TDialogueParser.Create;
-  HeaderParser := TMemorizerParser.Create;
+  FooterParser := TMemorizerParser.Create;
 end;
 
 destructor TSSAParser.Destroy;
 begin
+  ScriptInfoParser.Free;
   StyleParser.Free;
   DialogueParser.Free;
-  HeaderParser.Free;
+  FooterParser.Free;
   inherited Destroy;
 end;
 
-function TSSAParser.GetParserForSection(line : string) : TAbstractLineParser;
+function TSSAParser.GetParserForSection(line : WideString) : TAbstractLineParser;
 begin
-  if StyleParser.IsSection(line) then
+  if ScriptInfoParser.IsSection(line) then
+    Result := ScriptInfoParser
+  else if StyleParser.IsSection(line) then
     Result := StyleParser
   else if DialogueParser.IsSection(line) then
     Result := DialogueParser
   else
-    Result := HeaderParser;
+    Result := FooterParser;
 end;
 
-procedure TSSAParser.Parse(Filename: string);
-var FS : TFileStream;
-    BOM : array[0..3] of BYTE;
-    line : string;
+procedure TSSAParser.Parse(Filename: WideString);
+var Source : TTntStringList;
+    line : WideString;
     sectionParser : TAbstractLineParser;
+    ScriptType : WideString;
+    i : Integer;
 begin
-  FS := TFileStream.Create(Filename, fmOpenRead or fmShareDenyWrite);
+  Source := TTntStringList.Create;
+  Source.LoadFromFile(Filename);
 
-  // Check for UTF BOM
-  ZeroMemory(@BOM[0], Length(BOM));
-  FS.Read(BOM, 4);
-  if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
-  begin
-    // UTF8
-    IsUTF8 := True;
-    FS.Seek(3, soFromBeginning);
-  end
-  else
-  begin
-    IsUTF8 := False;
-    FS.Seek(0, soFromBeginning);
-  end;
+  IsUTF8 := (Source.LastFileCharSet <> csAnsi);
 
   // Read file
-  sectionParser := HeaderParser;
-  while not ReadLineStream(FS, line) do
+  sectionParser := FooterParser;
+
+  for i := 0 to Source.Count-1 do
   begin
-    if AnsiStartsText('[', line) and AnsiEndsText(']', Trim(line))  then
+    line := Source.Strings[i];
+    if StartsText('[', line) and EndsText(']', Trim(line))  then
     begin
       // New section
       sectionParser := GetParserForSection(line);
     end;
     sectionParser.ParseLine(line);
   end;
-  FS.Free;
+  Source.Free;
+
+  ScriptType := Trim(ScriptInfoParser.GetValueAsString('ScriptType'));
+  IsASS := StartsText('v4.00+',ScriptType);
 end;
 
 function TSSAParser.GetStylesCount : Integer;
@@ -312,34 +439,44 @@ begin
   Result := DialogueParser.GetCount;
 end;
 
-function TSSAParser.GetStyleValueAsString(lineIndex : integer; valueKey : string) : string;
+function TSSAParser.GetStyleValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
 begin
   Result := StyleParser.GetValueAsString(lineIndex, valueKey);
 end;
 
-function TSSAParser.GetStyleValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
+function TSSAParser.GetStyleValueAsDouble(lineIndex : integer; valueKey : WideString) : Double;
+begin
+  Result := StyleParser.GetValueAsDouble(lineIndex, valueKey);
+end;
+
+function TSSAParser.GetStyleValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
 begin
   Result := StyleParser.GetValueAsInteger(lineIndex, valueKey);
 end;
 
-function TSSAParser.GetStyleValueAsBoolean(lineIndex : integer; valueKey : string) : Boolean;
+function TSSAParser.GetStyleValueAsBoolean(lineIndex : integer; valueKey : WideString) : Boolean;
 begin
   Result := StyleParser.GetValueAsBoolean(lineIndex, valueKey);
 end;
 
-function TSSAParser.GetDialogueValueAsString(lineIndex : integer; valueKey : string) : string;
+function TSSAParser.GetDialogueValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
 begin
   Result := DialogueParser.GetValueAsString(lineIndex, valueKey);
 end;
 
-function TSSAParser.GetDialogueValueAsInteger(lineIndex : integer; valueKey : string) : Integer;
+function TSSAParser.GetDialogueValueAsInteger(lineIndex : integer; valueKey : WideString) : Integer;
 begin
   Result := DialogueParser.GetValueAsInteger(lineIndex, valueKey);
 end;
 
-function TSSAParser.GetHeader : string;
+function TSSAParser.GetHeaderLines : WideString;
 begin
-  Result := HeaderParser.memory;
+  Result := ScriptInfoParser.GetAsString;
+end;
+
+function TSSAParser.GetFooterLines : WideString;
+begin
+  Result := FooterParser.memory;
 end;
 
 function TSSAParser.GetIsUTF8 : Boolean;
@@ -347,12 +484,17 @@ begin
   Result := IsUTF8;
 end;
 
-function TSSAParser.StyleKeyExists(key : string) : Boolean;
+function TSSAParser.GetIsASS : Boolean;
+begin
+  Result := IsASS;
+end;
+
+function TSSAParser.StyleKeyExists(key : WideString) : Boolean;
 begin
   Result := StyleParser.KeyExists(key);
 end;
 
-function TSSAParser.DialogueKeyExists(key : string) : Boolean;
+function TSSAParser.DialogueKeyExists(key : WideString) : Boolean;
 begin
   Result := DialogueParser.KeyExists(key);
 end;

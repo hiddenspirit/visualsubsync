@@ -4,39 +4,47 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, SSAParserUnit;
+  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, SSAParserUnit, ComCtrls,
+  TntComCtrls, PopupTrackbarUnit;
 
 type
   TSSAAlignment = (
-    alBottomLeft = 1, alBottomCenter = 2, alBottomRight = 3,
-    alMiddleLeft = 4, alMiddleCenter = 5, alMiddleRight = 6,
-    alTopLeft = 7, alTopCenter = 8, alTopRight = 9);
+    alssaBottomLeft = 1, alssaBottomCenter = 2, alssaBottomRight = 3,
+    alssaMiddleLeft = 9, alssaMiddleCenter = 10, alssaMiddleRight = 11,
+    alssaTopLeft = 5, alssaTopCenter = 6, alssaTopRight = 7);
+
+  TASSAlignment = (
+    alassBottomLeft = 1, alassBottomCenter = 2, alassBottomRight = 3,
+    alassMiddleLeft = 4, alassMiddleCenter = 5, alassMiddleRight = 6,
+    alassTopLeft = 7, alassTopCenter = 8, alassTopRight = 9);
+
+  TStyleFormMode = (sfmSSA,sfmASS);
 
   TSSAStyle = class
     name : string;
     fontname : string;
-    fontsize : integer;
+    fontsize : double;
     primaryColor : cardinal;
     secondaryColor : cardinal;
     outlineColor : cardinal;
     backColor : cardinal;
-    bold : cardinal;
-    italic : cardinal;
-    underline : cardinal;
-    strikeout : cardinal;
+    bold : integer;
+    italic : integer;
+    underline : integer;
+    strikeout : integer;
     scaleX : double;
     scaleY : double;
     spacing : double;
     angle : double;
-    borderStyle : cardinal;
-    outline : cardinal;
-    shadow : cardinal;
-    alignment : cardinal;
-    marginL : cardinal;
-    marginR : cardinal;
-    marginV : cardinal;
-    alphaLevel : cardinal;
-    encoding : cardinal;
+    borderStyle : integer;
+    outline : double;
+    shadow : double;
+    alignment : integer;
+    marginL : integer;
+    marginR : integer;
+    marginV : integer;
+    alphaLevel : integer;
+    encoding : integer;
 
     constructor Create;
     procedure Assign(style : TSSAStyle);
@@ -51,7 +59,7 @@ type
     bttFont: TTntButton;
     rgVAlignment: TTntRadioGroup;
     TntGroupBox2: TTntGroupBox;
-    edHMargin: TTntEdit;
+    edLMargin: TTntEdit;
     rgHAlignment: TTntRadioGroup;
     TntGroupBox1: TTntGroupBox;
     edVMargin: TTntEdit;
@@ -77,11 +85,24 @@ type
     bttCopy: TTntButton;
     TntLabel10: TTntLabel;
     edStyleName: TTntEdit;
-    TntLabel11: TTntLabel;
-    TntLabel12: TTntLabel;
     edShadow: TTntEdit;
     bttApply: TTntButton;
     bttReset: TTntButton;
+    gbScaleX: TTntGroupBox;
+    edScaleX: TTntEdit;
+    gbScaleY: TTntGroupBox;
+    edScaleY: TTntEdit;
+    TntLabel13: TTntLabel;
+    TntLabel14: TTntLabel;
+    TntLabel15: TTntLabel;
+    edSpacing: TTntEdit;
+    edAngle: TTntEdit;
+    TntLabel11: TTntLabel;
+    bttHValue: TTntButton;
+    bttSValue: TTntButton;
+    bttLValue: TTntButton;
+    TntGroupBox3: TTntGroupBox;
+    edRMargin: TTntEdit;
     procedure bttFontClick(Sender: TObject);
     procedure bttPrimaryColorClick(Sender: TObject);
     procedure pnlColorClick(Sender: TObject);
@@ -95,12 +116,17 @@ type
     procedure FormShow(Sender: TObject);
     procedure checkChangedSender(Sender: TObject);
     procedure bttResetClick(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure bttHSLButtonClick(Sender: TObject);
   private
     { Private declarations }
     FStylesChanged : Boolean;
+    FPopupTrackbar : TPopupTrackbar;
+    FPrimaryColor, FSecondaryColor, FOutlineColor, FBackColor : TColor;
+    FHue, FSaturation, FLuminance : Double;
     
     procedure ShowSelection;
-    procedure Clear;
+    procedure ClearForm;
     procedure ClearList;
     procedure FormToData(var style : TSSAStyle);
     procedure DataToForm(style : TSSAStyle);
@@ -108,13 +134,18 @@ type
     procedure EnableControls(Enable : Boolean);
     procedure CheckChange;
     function GetSelectedStyle : TSSAStyle;
+    procedure OnPopupTrackbarValueChanged(Sender: TObject);
+    procedure ClearHSLBtt;
   public
     { Public declarations }
     procedure LoadStylesFromParser(ssaParser : TSSAParser);
-    function GetCount : Cardinal;
-    function GetStyleAt(Index : Cardinal) : TSSAStyle;
+    function GetCount : Integer;
+    function GetStyleAt(Index : Integer) : TSSAStyle;
     function HaveStylesChanged : Boolean;
-    procedure PreSelect(StyleName : WideString);    
+    procedure PreSelect(StyleName : WideString);
+    procedure ClearAll;
+    procedure ConfigureMode(StyleFormMode : TStyleFormMode);
+    procedure AddDefaultStyle;
   end;
 
 var
@@ -124,15 +155,48 @@ implementation
 
 {$R *.dfm}
 
-uses MiscToolsUnit, Math, main;
+uses MiscToolsUnit, Math, main, RGBHSLColorUnit;
 
 // =============================================================================
 
+function SSAToASSAlignment(SSAAlignment : TSSAAlignment) : TASSAlignment;
+begin
+  Result := alassBottomCenter;
+  case SSAAlignment of
+  alssaBottomLeft: Result := alassBottomLeft;
+  alssaBottomCenter: Result := alassBottomCenter;
+  alssaBottomRight: Result := alassBottomRight;
+  alssaMiddleLeft: Result := alassMiddleLeft;
+  alssaMiddleCenter: Result := alassMiddleCenter;
+  alssaMiddleRight: Result := alassMiddleRight;
+  alssaTopLeft: Result := alassTopLeft;
+  alssaTopCenter: Result := alassTopCenter;
+  alssaTopRight: Result := alassTopRight;
+  end;
+end;
+
+function ASSToSSAAlignment(ASSAlignment : TASSAlignment) : TSSAAlignment;
+begin
+  Result := alssaBottomCenter;
+  case ASSAlignment of
+  alassBottomLeft: Result := alssaBottomLeft;
+  alassBottomCenter: Result := alssaBottomCenter;
+  alassBottomRight: Result := alssaBottomRight;
+  alassMiddleLeft: Result := alssaMiddleLeft;
+  alassMiddleCenter: Result := alssaMiddleCenter;
+  alassMiddleRight: Result := alssaMiddleRight;
+  alassTopLeft: Result := alssaTopLeft;
+  alassTopCenter: Result := alssaTopCenter;
+  alassTopRight: Result := alssaTopRight;
+  end;
+end;
+
 constructor TSSAStyle.Create;
 begin
+  inherited;
   name := 'New Style';
   fontname := 'Arial';
-  fontsize := 16;
+  fontsize := 22;
   primaryColor := clYellow;
   secondaryColor := clBlack;
   outlineColor := clBlack;
@@ -141,14 +205,14 @@ begin
   italic := 0;
   underline := 0;
   strikeout := 0;
-  scaleX := 100;
-  scaleY := 100;
-  spacing := 0;
-  angle := 0;
-  borderStyle :=0;
-  outline := 1;
-  shadow := 0;
-  alignment := 2;
+  scaleX := 100.0;
+  scaleY := 100.0;
+  spacing := 0.0;
+  angle := 0.0;
+  borderStyle := 1;
+  outline := 1.0;
+  shadow := 0.0;
+  alignment := Ord(alassBottomCenter);
   marginL := 15;
   marginR := 15;
   marginV := 15;
@@ -186,24 +250,34 @@ begin
 end;
 
 function TSSAStyle.getAsSSA : string;
+var SSAAlignment : Integer;
 begin
+  SSAAlignment := Ord(ASSToSSAAlignment(TASSAlignment(alignment)));
   // Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
   // Style: Default,Arial,28,65535,255,16744448,-2147483640,-1,0,1,3,0,2,30,30,30,0,128
   Result := Format('Style: %s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d',
-    [name, fontname, fontsize, primaryColor, secondaryColor, outlineColor, backColor,
-      bold, italic, borderStyle, outline, shadow, alignment, marginL, marginR, marginV,
-      alphaLevel, encoding]);
+    [name, fontname, Round(fontsize), primaryColor, secondaryColor, outlineColor, backColor,
+      bold, italic, borderStyle, Round(outline), Round(shadow), SSAAlignment,
+      marginL, marginR, marginV, alphaLevel, encoding]);
 end;
 
 function TSSAStyle.getAsASS : string;
+var ssaFormat : TFormatSettings;
 begin
+  GetLocaleFormatSettings(0,ssaFormat);
+  ssaFormat.DecimalSeparator := '.';
+
   // Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
   // Style: *Default,Arial,28,&H00FFFFFF,&H00400040,&H00C0C0C0,&H82C0C0C0,0,0,0,0,100,100,0,0,0,0,0,5,15,15,15,0
-  Result := Format('Style: %s,%s,%d,%s,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,',
-    [name, fontname, fontsize, TColor2AssColorString(primaryColor),
+  Result := Format('Style: %s,%s,%d,%s,%s,%s,%s,%d,%d,%d,%d,%s,%s,%s,%s,%d,%s,%s,%d,%d,%d,%d,%d',
+    [name, fontname, Round(fontsize), TColor2AssColorString(primaryColor),
     TColor2AssColorString(secondaryColor), TColor2AssColorString(outlineColor),
-    TColor2AssColorString(backColor), bold, italic, underline, strikeout, scaleX, scaleY,
-    spacing, angle, borderStyle, outline, shadow, alignment, marginL, marginR, marginV, encoding]);
+    TColor2AssColorString(backColor), bold, italic, underline, strikeout,
+    FloatToStr(scaleX, ssaFormat), FloatToStr(scaleY, ssaFormat),
+    FloatToStr(spacing, ssaFormat), FloatToStr(angle, ssaFormat),
+    borderStyle,
+    FloatToStr(outline, ssaFormat), FloatToStr(shadow, ssaFormat),
+    alignment, marginL, marginR, marginV, encoding]);
 end;
 
 function TSSAStyle.Equals(style : TSSAStyle) : Boolean;
@@ -262,13 +336,17 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure TStyleForm.pnlColorClick(Sender: TObject);
-var panel : TTntStaticText;
+var Panel : TTntStaticText;
 begin
-  panel := Sender as TTntStaticText;
-  ColorDialog1.Color := panel.Color;
+  Panel := Sender as TTntStaticText;
+  ColorDialog1.Color := Panel.Color;
   if ColorDialog1.Execute then
   begin
-    panel.Color := ColorDialog1.Color;
+    Panel.Color := ColorDialog1.Color;
+    FPrimaryColor := pnlPrimaryColor.Color;
+    FSecondaryColor := pnlSecondaryColor.Color;
+    FOutlineColor := pnlOutlineColor.Color;
+    FBackColor := pnlBackColor.Color;
     CheckChange;
   end;
 end;
@@ -291,6 +369,7 @@ begin
   lstStyles.ItemIndex := lstStyles.Count-1;
   ShowSelection;
   EnableControls(True);
+  FStylesChanged := True;
 end;
 
 // -----------------------------------------------------------------------------
@@ -308,6 +387,7 @@ begin
     lstStyles.AddItem(newStyle.name, newStyle);
     lstStyles.ItemIndex := lstStyles.Count-1;
     ShowSelection;
+    FStylesChanged := True;
   end;
 end;
 
@@ -323,6 +403,7 @@ begin
     style := TSSAStyle(lstStyles.Items.Objects[index]);
     style.Free;
     lstStyles.DeleteSelected;
+    FStylesChanged := True;
     // calculate new selection index
     if (index >= lstStyles.Count) then
       index := lstStyles.Count-1;
@@ -333,7 +414,7 @@ begin
     end
     else
     begin
-      Clear;
+      ClearForm;
       EnableControls(False);
     end;
   end
@@ -370,18 +451,22 @@ end;
 
 procedure TStyleForm.DataToForm(style : TSSAStyle);
 var newFontStyles : TFontStyles;
+    ssaFormat : TFormatSettings;
 begin
+  GetLocaleFormatSettings(0,ssaFormat);
+  ssaFormat.DecimalSeparator := '.';
+  
   edStyleName.Text := style.name;
   stFontPreview.Font.Name := style.fontname;
-  stFontPreview.Font.Size := style.fontsize;
+  stFontPreview.Font.Size := Round(style.fontsize);
   newFontStyles := [];
-  if (style.bold = 1) then
+  if (style.bold <> 0) then
     newFontStyles := newFontStyles + [fsBold];
-  if (style.italic = 1) then
+  if (style.italic <> 0) then
     newFontStyles := newFontStyles + [fsItalic];
-  if (style.underline = 1) then
+  if (style.underline <> 0) then
     newFontStyles := newFontStyles + [fsUnderline];
-  if (style.strikeout = 1) then
+  if (style.strikeout <> 0) then
     newFontStyles := newFontStyles + [fsStrikeOut];
   stFontPreview.Font.Style := newFontStyles;
   stFontPreview.Font.Color := clBlack;
@@ -391,34 +476,48 @@ begin
   // 4 5 6
   // 1 2 3
   case style.alignment of
-    7,4,1: rgHAlignment.ItemIndex := 0;
-    8,5,2: rgHAlignment.ItemIndex := 1;
-    9,6,3: rgHAlignment.ItemIndex := 2
+    Ord(alassTopLeft),Ord(alassMiddleLeft),Ord(alassBottomLeft): rgHAlignment.ItemIndex := 0;
+    Ord(alassTopCenter),Ord(alassMiddleCenter),Ord(alassBottomCenter): rgHAlignment.ItemIndex := 1;
+    Ord(alassTopRight),Ord(alassMiddleRight),Ord(alassBottomRight): rgHAlignment.ItemIndex := 2
   end;
   case style.alignment of
-    7,8,9: rgVAlignment.ItemIndex := 0;
-    4,5,6: rgVAlignment.ItemIndex := 1;
-    1,2,3: rgVAlignment.ItemIndex := 2;
+    Ord(alassTopLeft),Ord(alassTopCenter),Ord(alassTopRight): rgVAlignment.ItemIndex := 0;
+    Ord(alassMiddleLeft),Ord(alassMiddleCenter),Ord(alassMiddleRight): rgVAlignment.ItemIndex := 1;
+    Ord(alassBottomLeft),Ord(alassBottomCenter),Ord(alassBottomRight): rgVAlignment.ItemIndex := 2;
   end;
-  edHMargin.Text := IntToStr(Max(style.marginR,style.marginL));
+  edLMargin.Text := IntToStr(style.marginL);
+  edRMargin.Text := IntToStr(style.marginR);
   edVMargin.Text := IntToStr(style.marginV);
   pnlPrimaryColor.Color := style.primaryColor;
   pnlSecondaryColor.Color := style.secondaryColor;
   pnlOutlineColor.Color := style.outlineColor;
   pnlBackColor.Color := style.backColor;
-  edOutline.Text := IntToStr(style.outline);
-  edShadow.Text := IntToStr(style.shadow);
+  FPrimaryColor := style.primaryColor;
+  FSecondaryColor := style.secondaryColor;
+  FOutlineColor := style.outlineColor;
+  FBackColor := style.backColor;
+
+  edOutline.Text := FloatToStr(style.outline, ssaFormat);
+  edShadow.Text := FloatToStr(style.shadow, ssaFormat);
+
+  edScaleX.Text := FloatToStr(style.scaleX, ssaFormat);
+  edScaleY.Text := FloatToStr(style.scaleY, ssaFormat);
+  edSpacing.Text := FloatToStr(style.spacing, ssaFormat);
+  edAngle.Text := FloatToStr(style.angle, ssaFormat);
+
+  ClearHSLBtt;
 end;
 
 // -----------------------------------------------------------------------------
 
-procedure TStyleForm.Clear;
+procedure TStyleForm.ClearForm;
 begin
   edStyleName.Text := '';
   stFontPreview.Caption := '';
   rgHAlignment.ItemIndex := -1;
   rgVAlignment.ItemIndex := -1;
-  edHMargin.Text := '';
+  edLMargin.Text := '';
+  edRMargin.Text := '';
   edVMargin.Text := '';
   pnlPrimaryColor.Color := clBlack;
   pnlSecondaryColor.Color := clBlack;
@@ -426,6 +525,12 @@ begin
   pnlBackColor.Color := clBlack;
   edOutline.Text := '';
   edShadow.Text := '';
+  edScaleX.Text := '';
+  edScaleY.Text := '';
+  edSpacing.Text := '';
+  edAngle.Text := '';
+  FPopupTrackbar.Value := 0;
+  ClearHSLBtt;
 end;
 
 // -----------------------------------------------------------------------------
@@ -445,54 +550,63 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure TStyleForm.FormToData(var style : TSSAStyle);
+var ssaFloatFormatSettings : TFormatSettings;
 begin
+  GetLocaleFormatSettings(0,ssaFloatFormatSettings);
+  ssaFloatFormatSettings.DecimalSeparator := '.';
+
   style.name := edStyleName.Text;
   style.fontname := stFontPreview.Font.Name;
   style.fontsize := stFontPreview.Font.Size;
   if fsBold in stFontPreview.Font.Style then
-    style.bold := 1
+    style.bold := -1
   else
     style.bold := 0;
   if fsItalic in stFontPreview.Font.Style then
-    style.italic := 1
+    style.italic := -1
   else
     style.italic := 0;
   if fsUnderline in stFontPreview.Font.Style then
-    style.underline := 1
+    style.underline := -1
   else
     style.underline := 0;
   if fsStrikeOut in stFontPreview.Font.Style then
-    style.strikeout := 1
+    style.strikeout := -1
   else
     style.strikeout := 0;
       
   case rgHAlignment.ItemIndex of
     0: case rgVAlignment.ItemIndex of
-          0: style.alignment := Ord(alTopLeft);
-          1: style.alignment := Ord(alMiddleLeft);
-          2: style.alignment := Ord(alBottomLeft);
+          0: style.alignment := Ord(alassTopLeft);
+          1: style.alignment := Ord(alassMiddleLeft);
+          2: style.alignment := Ord(alassBottomLeft);
        end;
     1: case rgVAlignment.ItemIndex of
-          0: style.alignment := Ord(alTopCenter);
-          1: style.alignment := Ord(alMiddleCenter);
-          2: style.alignment := Ord(alBottomCenter);
+          0: style.alignment := Ord(alassTopCenter);
+          1: style.alignment := Ord(alassMiddleCenter);
+          2: style.alignment := Ord(alassBottomCenter);
        end;
     2: case rgVAlignment.ItemIndex of
-          0: style.alignment := Ord(alTopRight);
-          1: style.alignment := Ord(alMiddleRight);
-          2: style.alignment := Ord(alBottomRight);
+          0: style.alignment := Ord(alassTopRight);
+          1: style.alignment := Ord(alassMiddleRight);
+          2: style.alignment := Ord(alassBottomRight);
        end;
   end;
-  style.marginR := StrToIntDef(edHMargin.Text,0);
-  style.marginL := StrToIntDef(edHMargin.Text,0);
+  style.marginR := StrToIntDef(edRMargin.Text,0);
+  style.marginL := StrToIntDef(edLMargin.Text,0);
   style.marginV := StrToIntDef(edVMargin.Text,0);
 
   style.primaryColor := pnlPrimaryColor.Color;
   style.secondaryColor := pnlSecondaryColor.Color;
   style.outlineColor := pnlOutlineColor.Color;
   style.backColor := pnlBackColor.Color;
-  style.outline := StrToIntDef(edOutline.Text,0);
-  style.shadow := StrToIntDef(edShadow.Text,0);
+  style.outline := StrToFloatDef(edOutline.Text, 0.0, ssaFloatFormatSettings);
+  style.shadow := StrToFloatDef(edShadow.Text, 0.0, ssaFloatFormatSettings);
+
+  style.scaleX := StrToFloatDef(edScaleX.Text, 0.0, ssaFloatFormatSettings);
+  style.scaleY := StrToFloatDef(edScaleY.Text, 0.0, ssaFloatFormatSettings);
+  style.spacing := StrToFloatDef(edSpacing.Text, 0.0, ssaFloatFormatSettings);
+  style.angle := StrToFloatDef(edAngle.Text, 0.0, ssaFloatFormatSettings);
 end;
 
 // -----------------------------------------------------------------------------
@@ -503,6 +617,14 @@ begin
   if (lstStyles.ItemIndex <> -1) then
   begin
     style := GetSelectedStyle;
+    // Check for comma in style name
+    if Pos(',',edStyleName.Text) > 0 then
+    begin
+      MessageBoxW(Handle, PWideChar(WideString('Comma is not an authorized character in style name.')),
+        PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+      edStyleName.SetFocus;
+      Exit;
+    end;
     // If the style name has changed, check if doesn't exist yet
     if (style.name <> edStyleName.Text) then
     begin
@@ -522,7 +644,9 @@ begin
     FormToData(style);
     lstStyles.Items.Strings[lstStyles.ItemIndex] := style.name;
     FStylesChanged := True;
+    MainForm.CurrentProjectSetDirty;
     CheckChange;
+    ClearHSLBtt;
   end;
 end;
 
@@ -541,7 +665,8 @@ begin
   bttFont.Enabled := Enable;
   rgHAlignment.Enabled := Enable;
   rgVAlignment.Enabled := Enable;
-  edHMargin.Enabled := Enable;
+  edLMargin.Enabled := Enable;
+  edRMargin.Enabled := Enable;
   edVMargin.Enabled := Enable;
   pnlPrimaryColor.Enabled := Enable;
   pnlSecondaryColor.Enabled := Enable;
@@ -556,6 +681,9 @@ end;
 procedure TStyleForm.FormCreate(Sender: TObject);
 begin
   EnableControls(False);
+  FPopupTrackbar := TPopupTrackbar.Create(Self);
+  FPopupTrackbar.OnValueChanged := OnPopupTrackbarValueChanged;
+  ClearHSLBtt;
 end;
 
 // -----------------------------------------------------------------------------
@@ -563,15 +691,15 @@ end;
 procedure TStyleForm.LoadStylesFromParser(ssaParser : TSSAParser);
 var i : integer;
     newStyle : TSSAStyle;
+    alignment : Integer;
 begin
-  Clear;
-  ClearList;
+  ClearAll;
   for i := 0 to ssaParser.GetStylesCount-1 do
   begin
     newStyle := TSSAStyle.Create;
     newStyle.name := ssaParser.GetStyleValueAsString(i, 'Name');
     newStyle.fontname := ssaParser.GetStyleValueAsString(i, 'Fontname');
-    newStyle.fontsize := ssaParser.GetStyleValueAsInteger(i, 'Fontsize');
+    newStyle.fontsize := ssaParser.GetStyleValueAsDouble(i, 'Fontsize');
     newStyle.primaryColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'PrimaryColour'));
     newStyle.secondaryColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'SecondaryColour'));
     if ssaParser.StyleKeyExists('TertiaryColour') then
@@ -583,14 +711,20 @@ begin
     newStyle.italic := ssaParser.GetStyleValueAsInteger(i, 'Italic');
     newStyle.underline := ssaParser.GetStyleValueAsInteger(i, 'Underline');
     newStyle.strikeout := ssaParser.GetStyleValueAsInteger(i, 'Strikeout');
-    newStyle.scaleX := ssaParser.GetStyleValueAsInteger(i, 'ScaleX');
-    newStyle.scaleY := ssaParser.GetStyleValueAsInteger(i, 'ScaleY');
-    newStyle.spacing := ssaParser.GetStyleValueAsInteger(i, 'Spacing');
-    newStyle.angle := ssaParser.GetStyleValueAsInteger(i, 'Angle');
+    if ssaParser.StyleKeyExists('ScaleX') then
+      newStyle.scaleX := ssaParser.GetStyleValueAsDouble(i, 'ScaleX');
+    if ssaParser.StyleKeyExists('ScaleY') then
+      newStyle.scaleY := ssaParser.GetStyleValueAsDouble(i, 'ScaleY');
+    newStyle.spacing := ssaParser.GetStyleValueAsDouble(i, 'Spacing');
+    newStyle.angle := ssaParser.GetStyleValueAsDouble(i, 'Angle');
     newStyle.borderStyle := ssaParser.GetStyleValueAsInteger(i, 'BorderStyle');
-    newStyle.outline := ssaParser.GetStyleValueAsInteger(i, 'Outline');
-    newStyle.shadow := ssaParser.GetStyleValueAsInteger(i, 'Shadow');
-    newStyle.alignment := ssaParser.GetStyleValueAsInteger(i, 'Alignment');
+    newStyle.outline := ssaParser.GetStyleValueAsDouble(i, 'Outline');
+    newStyle.shadow := ssaParser.GetStyleValueAsDouble(i, 'Shadow');
+    alignment := ssaParser.GetStyleValueAsInteger(i, 'Alignment');
+    if ssaParser.GetIsASS then
+      newStyle.alignment := alignment
+    else
+      newStyle.alignment := Ord(SSAToASSAlignment(TSSAAlignment(alignment)));
     newStyle.marginL := ssaParser.GetStyleValueAsInteger(i, 'MarginL');
     newStyle.marginR := ssaParser.GetStyleValueAsInteger(i, 'MarginR');
     newStyle.marginV := ssaParser.GetStyleValueAsInteger(i, 'MarginV');
@@ -598,14 +732,18 @@ begin
     newStyle.encoding := ssaParser.GetStyleValueAsInteger(i, 'Encoding');
     lstStyles.AddItem(newStyle.name, newStyle);
   end;
+  if (ssaParser.GetStylesCount = 0) then
+  begin
+    AddDefaultStyle;
+  end;
 end;
 
-function TStyleForm.GetCount : Cardinal;
+function TStyleForm.GetCount : Integer;
 begin
   Result := lstStyles.Count;
 end;
 
-function TStyleForm.GetStyleAt(Index : Cardinal) : TSSAStyle;
+function TStyleForm.GetStyleAt(Index : Integer) : TSSAStyle;
 begin
   Result := TSSAStyle(lstStyles.Items.Objects[Index]);
 end;
@@ -629,6 +767,7 @@ begin
   FormToData(maybeChangedStyle);
   bttApply.Enabled := not MaybeChangedStyle.Equals(GetSelectedStyle);
   bttReset.Enabled := bttApply.Enabled;
+  MaybeChangedStyle.Free;
 end;
 
 procedure TStyleForm.checkChangedSender(Sender: TObject);
@@ -658,6 +797,129 @@ begin
   begin
     lstStyles.ItemIndex := 0;
   end;
+end;
+
+procedure TStyleForm.ClearAll;
+begin
+  ClearForm;
+  ClearList;
+end;
+
+procedure TStyleForm.ConfigureMode(StyleFormMode : TStyleFormMode);
+begin
+  edScaleX.Enabled := (StyleFormMode = sfmASS);
+  edScaleY.Enabled := (StyleFormMode = sfmASS);
+  edSpacing.Enabled := (StyleFormMode = sfmASS);
+  edAngle.Enabled := (StyleFormMode = sfmASS);
+
+  if (StyleFormMode = sfmASS) then
+    FontDialog1.Options := FontDialog1.Options + [fdEffects]
+  else
+    FontDialog1.Options := FontDialog1.Options - [fdEffects];
+end;
+
+procedure TStyleForm.AddDefaultStyle;
+var newStyle : TSSAStyle;
+begin
+  // Create a style with default settings
+  newStyle := TSSAStyle.Create;
+  newStyle.name := 'Default';
+  lstStyles.AddItem(newStyle.name, newStyle);
+end;
+
+procedure TStyleForm.FormDestroy(Sender: TObject);
+begin
+  ClearAll;
+end;
+
+procedure TStyleForm.OnPopupTrackbarValueChanged(Sender: TObject);
+var Panel : TPopupTrackbar;
+    Button : TWinControl;
+    text : string;
+    H, S, L : Single;
+begin
+  Panel := Sender as TPopupTrackbar;
+  Button := Panel.Parent as TControl;
+  if (Button = bttHValue) then
+  begin
+    text := 'H=';
+    FHue := Panel.Value;
+  end
+  else if (Button = bttSValue) then
+  begin
+    text := 'S=';
+    FSaturation := Panel.Value;
+  end
+  else if (Button = bttLValue) then
+  begin
+    text := 'L=';
+    FLuminance := Panel.Value;
+  end;
+  text := text + IntToStr(Round(Panel.Value));
+  Button.SetTextBuf(@text[1]);
+
+  H := FHue / 360.0;
+  S := FSaturation / 100.0;
+  L := FLuminance / 100.;
+  pnlPrimaryColor.Color := ChangeColorHSL(FPrimaryColor, H, S, L);
+  pnlSecondaryColor.Color := ChangeColorHSL(FSecondaryColor, H, S, L);
+  pnlOutlineColor.Color := ChangeColorHSL(FOutlineColor, H, S, L);
+  pnlBackColor.Color := ChangeColorHSL(FBackColor, H, S, L);
+  CheckChange;
+end;
+
+procedure TStyleForm.bttHSLButtonClick(Sender: TObject);
+var SenderWC : TWinControl;
+begin
+  SenderWC := Sender as TWinControl;
+
+  if FPopupTrackbar.IsDisplayed then
+  begin
+    FPopupTrackbar.Close;
+    if (FPopupTrackbar.Parent = SenderWC) then
+      Exit;
+  end;
+  if FPopupTrackbar.IsDisplayed then
+    FPopupTrackbar.Close;
+  FPopupTrackbar.Parent := SenderWC;
+  FPopupTrackbar.Width := 200;
+  FPopupTrackbar.Height := SenderWC.Height;
+
+  if (Sender = bttHValue) then
+  begin
+    FPopupTrackbar.MinValue := 0;
+    FPopupTrackbar.MaxValue := 360;
+    FPopupTrackbar.Value := FHue;
+  end
+  else if (Sender = bttSValue) then
+  begin
+    FPopupTrackbar.MinValue := -100;
+    FPopupTrackbar.MaxValue := 100;
+    FPopupTrackbar.Value := FSaturation;
+  end
+  else if (Sender = bttLValue) then
+  begin
+    FPopupTrackbar.MinValue := -100;
+    FPopupTrackbar.MaxValue := 100;
+    FPopupTrackbar.Value := FLuminance;
+  end;
+
+  FPopupTrackbar.Popup;
+end;
+
+procedure TStyleForm.ClearHSLBtt;
+begin
+  FHue := 0;
+  FSaturation := 0;
+  FLuminance := 0;
+  bttHValue.Caption := 'H=0';
+  bttSValue.Caption := 'S=0';
+  bttLValue.Caption := 'L=0';
+  FPopupTrackbar.Value := 0;
+  FPrimaryColor := pnlPrimaryColor.Color;
+  FSecondaryColor := pnlSecondaryColor.Color;
+  FOutlineColor := pnlOutlineColor.Color;
+  FBackColor := pnlBackColor.Color;
 end;
 
 end.
