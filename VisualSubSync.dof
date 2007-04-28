@@ -114,8 +114,8 @@ IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=0
 MinorVer=9
-Release=4
-Build=741
+Release=9
+Build=797
 Debug=0
 PreRelease=0
 Special=0
@@ -125,13 +125,13 @@ Locale=1036
 CodePage=1252
 [Version Info Keys]
 CompanyName=
-FileDescription=
-FileVersion=0.9.4.741
+FileDescription=VisualSubSync
+FileVersion=0.9.9.797
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
-ProductName=
+ProductName=VisualSubSync
 ProductVersion=1.0.0.0
 Comments=
 [HistoryLists\hlUnitAliases]
