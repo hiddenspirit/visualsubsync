@@ -53,9 +53,6 @@ begin
   MainForm.LoadSettings;
   Application.ProcessMessages;  
   MainForm.FinishLoadSettings;
-  if (ParamCount = 1) then
-  begin
-    MainForm.LoadProject(ParamStr(1));
-  end;
+  MainForm.ProcessParams;
   Application.Run;
 end.

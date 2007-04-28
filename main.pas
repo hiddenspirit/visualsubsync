@@ -556,6 +556,7 @@ type
     procedure CurrentProjectSetDirty;
     function GetVideoRendererFiltersList(list : TStrings) : Boolean;
     procedure SetStatusBarPrimaryText(const Text : WideString);
+    procedure ProcessParams;
   end;
 
 const
@@ -573,7 +574,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
-  TntIniFiles, TntGraphics;
+  TntIniFiles, TntGraphics, TntSystem;
 
 {$R *.dfm}
 
@@ -1780,7 +1781,6 @@ begin
   CM := TCursorManager.Create(crHourGlass);
   try
     CurrentProject.LoadFromINIFile(Filename);
-
     ShowStatusBarMessage('Loading WAV form...');
     LoadWAVOK := False;
     if CurrentProject.WAVMode = pwmPeakOnly then
@@ -1808,7 +1808,9 @@ begin
     else
     begin
       if WideFileExists(CurrentProject.WAVFile) then
-        LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile)
+      begin
+        LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
+      end
       else
       begin
         if WideFileExists(CurrentProject.PeakFile) then
@@ -5476,6 +5478,16 @@ begin
   // Windows version inferior to Windows Vista
   TntPanel := Panel as TTntStatusPanel;
   WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ProcessParams;
+begin
+  if (WideParamCount = 1) then
+  begin
+    MainForm.LoadProject(WideParamStr(1));
+  end;
 end;
 
 //------------------------------------------------------------------------------

@@ -19,7 +19,7 @@
 
 <br>
 
-<div class="Title">Version 0.9.9 (2007-01-XX)</div>
+<div class="Title">Version 0.9.9 (2007-02-24)</div>
 This is a kind of release contest version before 1.0, so don't forget to report any bugs, thanks.<br/>
 There is two big improvements in this version: the subtitles video preview and the SSA/ASS style editor.<br>
 With SSA/ASS support getting more complete, it's important to know that you can directly create your project
@@ -32,7 +32,7 @@ Here is a more complete changelog :
 <ul>
 	<li>Improved subtitles video preview by using a custom VSFilter version.
 		Saving subtitles is not needed anymore to have an updated preview. If playing is stopped
-		you will need to play the subtitle again.	If you pause the video, you can see modifications in real time.</li> 
+		you will need to play the subtitle again to update the preview.	If you pause the video, you can see modifications in real time.</li> 
   <li>Added SSA/ASS style editor</li>
   <li>Added new configurable shortcuts to set subtitle start/stop time during "live timing" :
   	<i>Set subtitle start time</i>, <i>Set subtitle stop time</i>, <i>Set subtitle stop time / go to next</i></li>
@@ -46,9 +46,11 @@ Here is a more complete changelog :
   <li>Detached video window state is now saved per project</li>
   <li>Added support for reading UTF-16 Unicode files</li>
   <li>Added configurable shortcut ("next error") to go to next error.</li>
-  <li>Added a "general" JavaScript plugin with 2 functions (OnSubtitleModification and OnSubtitleSelection). It can be used to show statistics for example.</li>
+  <li>Added a "general" JavaScript plugin with 2 functions (OnSubtitleModification and OnSubtitleSelection).
+    It is currently used to show statistics (can be disabled by deleting
+    jsplugin\general\general_plugin.js)</li>
 </ul>
-Thanks to Guilamu, Sixe and Stef for suggestions and testing.
+Thanks to Guilamu, Sixe, Thyresias and Stef for suggestions and testing.
 <br>
 <br>
 
