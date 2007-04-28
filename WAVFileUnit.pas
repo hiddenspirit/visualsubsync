@@ -23,12 +23,12 @@ unit WAVFileUnit;
 
 interface
 
-uses Windows, Classes, MMSystem, Sysutils, Math;
+uses Windows, Classes, MMSystem, Sysutils, Math, TntClasses;
 
 type
   TWAVFile = class
   private
-    FFS: TFileStream;
+    FFS: TTntFileStream;
     FHeaderSize, FDataSize : Integer;
     FWFX: TWaveFormatEx;
     FIsOpen : Boolean;
@@ -40,7 +40,7 @@ type
     function GetNbsSamples : Cardinal;
   public
     destructor Destroy; override;
-    function Open(Filename : string) : Boolean;
+    function Open(Filename : WideString) : Boolean;
     function Read(Buffer : Pointer; Count : Integer) : Integer;
     procedure Close;
     function GetWaveFormatEx : PWaveFormatEx;
@@ -80,7 +80,7 @@ type
 implementation
 
 uses
-  Dialogs;
+  Dialogs, TntSysUtils;
 
 // -----------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TWAVFile.Open(filename : string) : Boolean;
+function TWAVFile.Open(filename : WideString) : Boolean;
 var Buff : array[0..3] of Char;
     Size, Size2 : Integer;
 begin
@@ -104,11 +104,11 @@ begin
   if FIsOpen then
     Close;
 
-  if not FileExists(FileName) then
+  if not WideFileExists(filename) then
     Exit;
 
   try
-    FFS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+    FFS := TTntFileStream.Create(filename, fmOpenRead or fmShareDenyWrite);
   except
     Exit;
   end;
