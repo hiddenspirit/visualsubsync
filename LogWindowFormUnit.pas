@@ -14,9 +14,12 @@ type
     miClose: TMenuItem;
     miClear: TMenuItem;
     MemoLog: TTntMemo;
+    Debug: TMenuItem;
+    ListDirectShowfilters1: TMenuItem;
     procedure miCloseClick(Sender: TObject);
     procedure miStayHiddenClick(Sender: TObject);
     procedure miClearClick(Sender: TObject);
+    procedure ListDirectShowfilters1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -30,6 +33,8 @@ var
   LogForm: TLogForm;
 
 implementation
+
+uses Main;
 
 {$R *.dfm}
 
@@ -63,6 +68,17 @@ end;
 procedure TLogForm.Clear;
 begin
   MemoLog.Clear;
+end;
+
+procedure TLogForm.ListDirectShowfilters1Click(Sender: TObject);
+var slist : TStringList;
+begin
+  MemoLog.Lines.Add('--- Start of filters list --->');
+  slist := TStringList.Create;
+  MainForm.GetVideoRendererFiltersList(slist);
+  MemoLog.Lines.AddStrings(slist);
+  slist.Free;
+  MemoLog.Lines.Add('<--- End of filters list ---');  
 end;
 
 end.

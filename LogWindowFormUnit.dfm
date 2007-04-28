@@ -44,5 +44,12 @@ object LogForm: TLogForm
         OnClick = miCloseClick
       end
     end
+    object Debug: TMenuItem
+      Caption = 'Debug'
+      object ListDirectShowfilters1: TMenuItem
+        Caption = 'List used DirectShow filters'
+        OnClick = ListDirectShowfilters1Click
+      end
+    end
   end
 end
