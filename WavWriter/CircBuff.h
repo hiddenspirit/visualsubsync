@@ -88,13 +88,13 @@ public:
             if(m_ReadPos == m_WritePos)
             {
                 // Something is wrong here :p
-                OutputDebugString("CircBuffer write overflow!!!\n");
+                OutputDebugString(TEXT("CircBuffer write overflow!!!\n"));
             }
             BytesContiguousLeft = m_ReadPos - m_WritePos;
             if(BytesSecondPart > BytesContiguousLeft)
             {
                 // Again something is wrong :p
-                OutputDebugString("CircBuffer write overflow!!!\n");
+                OutputDebugString(TEXT("CircBuffer write overflow!!!\n"));
             }
 
 
@@ -126,7 +126,7 @@ public:
             if(BytesContiguous < BytesSecondPart)
             {
                 // Something is wrong here :p
-                OutputDebugString("CircBuffer read overflow!!!\n");
+                OutputDebugString(TEXT("CircBuffer read overflow!!!\n"));
             }
 
 			memcpy((char*)Buffer+BytesFirstPart, &m_Data[m_ReadPos], BytesSecondPart);

@@ -73,9 +73,9 @@ CFactoryTemplate g_Templates[]= {
 int g_cTemplates = 1;
 
 #ifdef _DEBUG
-void DebugLog(char *pFormat,...)
+void DebugLog(TCHAR *pFormat,...)
 {
-    char szMsg[2000];
+    TCHAR szMsg[2000];
     va_list va;		
     va_start(va, pFormat);
     wvsprintf(szMsg, pFormat, va);
@@ -206,7 +206,8 @@ HRESULT CWavWriterFilter::StartWriting()
 			hr = pInAlloc->GetProperties(&InProps);
 			m_InputAllocatorBuffSize = InProps.cbBuffer;
 			pInAlloc->Release();
-            DebugLog("CWavWriterFilter::StartWriting m_InputAllocatorBuffSize=%d", m_InputAllocatorBuffSize);
+            DebugLog(TEXT("CWavWriterFilter::StartWriting m_InputAllocatorBuffSize=%d"),
+                m_InputAllocatorBuffSize);
 		}		
 
 		if(m_bWriteWavFile)
@@ -223,13 +224,13 @@ HRESULT CWavWriterFilter::StartWriting()
 			if(m_ConvBuff)
 				delete[] m_ConvBuff;
 			m_ConvBuff = new char[m_ConvBuffSize];
-            DebugLog("CWavWriterFilter::StartWriting m_ConvBuffSize=%d", m_ConvBuffSize);
+            DebugLog(TEXT("CWavWriterFilter::StartWriting m_ConvBuffSize=%d"), m_ConvBuffSize);
 			
 			m_OutBuffSize = max((m_InputAllocatorBuffSize * 2), m_ConvBuffSize);
 			if(m_OutBuff)
 				delete[] m_OutBuff;
 			m_OutBuff = new char[m_OutBuffSize];
-            DebugLog("CWavWriterFilter::StartWriting m_OutBuffSize=%d", m_OutBuffSize);
+            DebugLog(TEXT("CWavWriterFilter::StartWriting m_OutBuffSize=%d"), m_OutBuffSize);
 			
 			if(m_bFastConvertMode)		
 			{			
@@ -268,7 +269,8 @@ HRESULT CWavWriterFilter::StopWriting()
 		CleanPeakData();
 		m_Writting = false;
 	}
-    DebugLog("CWavWriterFilter::StopWriting m_cbWavData=%d, dataTotalOut=%d",m_cbWavData, dataTotalOut);
+    DebugLog(TEXT("CWavWriterFilter::StopWriting m_cbWavData=%d, dataTotalOut=%d"),
+        m_cbWavData, dataTotalOut);
 	m_cbWavData = 0;
 	return S_OK;
 }
@@ -337,7 +339,7 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 	{
 		*lOutLength = 0;
 		
-        DebugLog("CWavWriterFilter::Convert lInLength=%d",lInLength);
+        DebugLog(TEXT("CWavWriterFilter::Convert lInLength=%d"),lInLength);
 
 		if(pInData)
         {
@@ -426,7 +428,7 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 		CopyMemory((PVOID) pOutData,(PVOID) pInData, lInLength);		
 		*lOutLength = lInLength;
 	}
-    DebugLog("CWavWriterFilter::Convert lOutLength=%d",*lOutLength);
+    DebugLog(TEXT("CWavWriterFilter::Convert lOutLength=%d"),*lOutLength);
 	return S_OK;
 }
 
@@ -447,19 +449,21 @@ HRESULT CWavWriterFilter::InitPeakData()
 		m_PeakFileHeader.Channels = m_wf->nChannels;
 		m_PeakFileHeader.BitsPerSample = m_wf->wBitsPerSample;
 		m_PeakFileHeader.Version = PeakFileVer;
-		m_PeakFileHeader.SamplePerPeak = m_SamplePerPeak;
-		m_PeakFile = fopen(m_pPeakFileName, "wb");
-		if(!m_PeakFile)
+		m_PeakFileHeader.SamplePerPeak = m_SamplePerPeak;        
+        m_PeakFile = new CWin32File();
+		if(!m_PeakFile->Open2(m_pPeakFileName, CWin32File_WRITE_MODE))
 		{
+            delete m_PeakFile;
+			m_PeakFile = NULL;
 			m_bWritePeakFile = false;
 		} else {
-			fwrite(&m_PeakFileHeader,1,sizeof(m_PeakFileHeader),m_PeakFile);
+            m_PeakFile->Write(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
 			
 			if(m_PeakCalcBuffer)
 				delete[] m_PeakCalcBuffer;
 			m_PeakCalcBufferSize = (m_SamplePerPeak * (m_wf->wBitsPerSample / 8) * m_wf->nChannels);
 			m_PeakCalcBuffer = new char[m_PeakCalcBufferSize];
-            DebugLog("CWavWriterFilter::InitPeakData m_PeakCalcBufferSize=%d", m_PeakCalcBufferSize);
+            DebugLog(TEXT("CWavWriterFilter::InitPeakData m_PeakCalcBufferSize=%d"), m_PeakCalcBufferSize);
 			
 			if(m_PeakCircBuffer)
 				delete m_PeakCircBuffer;
@@ -510,7 +514,7 @@ void CWavWriterFilter::PeakProcessing(BYTE* pInData, LONG lInLength, bool finali
 				}
 				m_Peak.Max <<= 16;
 				m_Peak.Min <<= 16;
-				fwrite(&m_Peak, 1, sizeof(m_Peak), m_PeakFile);
+                m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
 				m_PeakFileHeader.PeakTabLen++;
 			}
 			break;
@@ -526,7 +530,7 @@ void CWavWriterFilter::PeakProcessing(BYTE* pInData, LONG lInLength, bool finali
 					if(src[i] < m_Peak.Min)
 						m_Peak.Min = src[i];
 				}
-				fwrite(&m_Peak, 1, sizeof(m_Peak), m_PeakFile);
+                m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
 				m_PeakFileHeader.PeakTabLen++;
 			}
 			break;
@@ -545,9 +549,10 @@ void CWavWriterFilter::CleanPeakData()
 		// Update length in ms
 		double LengthMs = (double)(m_cbWavData / m_InputChannels / (m_wf->wBitsPerSample / 8)) / m_InputSampleRate;
 		m_PeakFileHeader.LengthMs = (int)(LengthMs * 1000 + 0.5);
-		fseek(m_PeakFile,0,SEEK_SET);
-		fwrite(&m_PeakFileHeader, 1, sizeof(m_PeakFileHeader), m_PeakFile);		
-		fclose(m_PeakFile);
+        m_PeakFile->Seek(0, FILE_BEGIN);
+        m_PeakFile->Write(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
+        delete m_PeakFile;
+		m_PeakFile = NULL;
 		delete[] m_PeakCalcBuffer;
 		m_PeakCalcBuffer = NULL;
 		delete m_PeakCircBuffer;
@@ -573,7 +578,7 @@ STDMETHODIMP CWavWriterFilter::SetFileName(LPCOLESTR pszFileName,const AM_MEDIA_
     if (m_pFileName == 0)
         return E_OUTOFMEMORY;
 	
-    lstrcpyW(m_pFileName,pszFileName);
+    lstrcpyW(m_pFileName, pszFileName);
 		
     return S_OK;
 	
@@ -738,17 +743,19 @@ STDMETHODIMP CWavWriterFilter::SetWriteWavFile(DWORD WriteWavFile)
 
 STDMETHODIMP CWavWriterFilter::SetPeakFileName(LPCOLESTR pszFileName)
 {	
-	int cch = lstrlenW(pszFileName) + 1;
-	
-	if(m_pPeakFileName)
-		delete[] m_pPeakFileName;
-	
-	m_pPeakFileName = new char[cch * 2];
-	
-	WideCharToMultiByte(GetACP(), 0, pszFileName, -1,
-		m_pPeakFileName, cch, NULL, NULL);
-
-	return S_OK;
+    CheckPointer(pszFileName,E_POINTER);
+    if(wcslen(pszFileName) > MAX_PATH)
+        return ERROR_FILENAME_EXCED_RANGE;
+    
+    // Take a copy of the filename
+    
+    m_pPeakFileName = new WCHAR[1+lstrlenW(pszFileName)];
+    if (m_pPeakFileName == 0)
+        return E_OUTOFMEMORY;
+    
+    lstrcpyW(m_pPeakFileName,pszFileName);
+    
+    return S_OK;
 }
 
 //=============================================================================
