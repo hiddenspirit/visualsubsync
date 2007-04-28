@@ -45,23 +45,40 @@ type
     UnitStr : WideString;
   end;
 
-  TJSPluginErrorNotifyEvent = procedure (const Msg : WideString) of object;
+  TJSPluginNotifyEvent = procedure (const Msg : WideString) of object;
 
-  TJavaScriptPlugin = class
-  private
+  TBaseJavascriptPlugin = class
+  protected
     FEngine : TJSEngine;
     FScriptLogJsFunc : TJSFunction;
+    FLastErrorMsg : WideString;
+    FFatalError : Boolean;
+    FVSSPluginObject : TJSObject;
+    FFilename : WideString;
+    FOnJSPluginError : TJSPluginNotifyEvent;
+
+    procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
+      report: PJSErrorReport);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function LoadScript(Filename : WideString) : Boolean;
+
+    property Filename : WideString read FFilename;
+    property LastErrorMsg : WideString read FLastErrorMsg;
+    property FatalError : Boolean read FFatalError;    
+    property OnJSPluginError : TJSPluginNotifyEvent read FOnJSPluginError write FOnJSPluginError;
+  end;
+
+  TJavaScriptPlugin = class(TBaseJavascriptPlugin)
+  private
     FHasErrorFunc, FFixErrorFunc : TJSFunction;
     FVSSPluginObject : TJSObject;
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
     FCurrentSubJS, FPreviousSubJS, FNextSubJS : TJSObject;
     FParamCount : Integer;
-    FLastErrorMsg : WideString;
-    FFatalError : Boolean;
-    FFilename : WideString;
-    FOnJSPluginError : TJSPluginErrorNotifyEvent;
     FOnSubtitleChange : TSubtitleRangeJSWrapperChangeEvent;
-    FParamArray : array[0..2] of TJSBase; // use when calling a JS function 
+    FParamArray : array[0..2] of TJSBase; // used when calling a JS function
 
     // ----- Plugin constant -----
     FName : WideString;
@@ -69,8 +86,6 @@ type
     FColor : Integer;
     FMessage : WideString;
 
-    procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
-      report: PJSErrorReport);
     procedure FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
     procedure SetOnSubtitleChangeEvent(Value : TSubtitleRangeJSWrapperChangeEvent);
 
@@ -78,31 +93,54 @@ type
     constructor Create;
     destructor Destroy; override;
     function LoadScript(Filename : WideString) : Boolean;
+
     procedure FillParamList(ParamList : TList);
     procedure SetParamValue(Name, Value : WideString);
     function HasError(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     procedure FixError(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
     function CanFixError : Boolean;
 
+    property Filename;
+    property OnJSPluginError;
+    property LastErrorMsg;
+    property FatalError;
+
     property Name : WideString read FName;
     property Description : WideString read FDescription;
     property Color : Integer read FColor;
     property Msg : WideString read FMessage;
-    property Filename : WideString read FFilename;
-    property LastErrorMsg : WideString read FLastErrorMsg;
-    property FatalError : Boolean read FFatalError;
-    property OnJSPluginError : TJSPluginErrorNotifyEvent read FOnJSPluginError write FOnJSPluginError;
     property OnSubtitleChange : TSubtitleRangeJSWrapperChangeEvent read FOnSubtitleChange write SetOnSubtitleChangeEvent;
+  end;
+
+  TSimpleJavascriptWrapper = class(TBaseJavascriptPlugin)
+  private
+    FSetStatusBarTextJsFunc : TJSFunction;
+    FNotifySubtitleModificationFunc : TJSFunction;
+    FNotifySelectionModificationFunc : TJSFunction;
+    FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
+    FCurrentSubJS, FPreviousSubJS, FNextSubJS : TJSObject;
+    FVSSPluginObject : TJSObject;
+    FParamArray : array[0..2] of TJSBase; // used when calling a JS function
+    FOnJSPluginSetStatusBarText : TJSPluginNotifyEvent;
+    
+    procedure FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function LoadScript(Filename : WideString) : Boolean;
+    function NotifySubtitleModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifySelectionModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    property OnJSPluginSetStatusBarText : TJSPluginNotifyEvent read FOnJSPluginSetStatusBarText write FOnJSPluginSetStatusBarText;
   end;
 
   TAbstractJavaScriptPluginEnumerator = class
   protected
-    FOnJSPluginError : TJSPluginErrorNotifyEvent;
+    FOnJSPluginError : TJSPluginNotifyEvent;
   public
     procedure Reset; virtual; abstract;
     function GetNext(var JSP : TJavaScriptPlugin) : Boolean; virtual; abstract;
 
-    property OnJSPluginError : TJSPluginErrorNotifyEvent read FOnJSPluginError write FOnJSPluginError;
+    property OnJSPluginError : TJSPluginNotifyEvent read FOnJSPluginError write FOnJSPluginError;
   end;
 
   TJavaScriptPluginEnumerator = class(TAbstractJavaScriptPluginEnumerator)
@@ -184,14 +222,33 @@ end;
 function _JS_ScriptLog(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval: pjsval): JSBool; cdecl;
 var
   jseng: TJSEngine;
-  jsplugin : TJavaScriptPlugin;
+  jsplugin : TBaseJavascriptPlugin;
 begin
   if (argc = 1) then
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
-    jsplugin := TJavaScriptPlugin(jseng.UserData);
+    jsplugin := TBaseJavascriptPlugin(jseng.UserData);
     if Assigned(jsplugin.FOnJSPluginError) then
       jsplugin.FOnJSPluginError( JSStringToString(JSValToJSString(argv^)) );
+  end;
+  Result := JS_TRUE;
+end;
+
+//------------------------------------------------------------------------------
+
+function _JS_SetStatusBarText(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval: pjsval): JSBool; cdecl;
+var
+  jseng: TJSEngine;
+  jsplugin : TSimpleJavascriptWrapper;
+begin
+  if (argc = 1) then
+  begin
+    jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
+    jsplugin := TSimpleJavascriptWrapper(jseng.UserData);
+    if Assigned(jsplugin.FOnJSPluginSetStatusBarText) then
+    begin
+      jsplugin.FOnJSPluginSetStatusBarText(JSStringToString(JSValToJSString(argv^)));
+    end;
   end;
   Result := JS_TRUE;
 end;
@@ -261,48 +318,29 @@ end;
 
 // =============================================================================
 
-constructor TJavaScriptPlugin.Create;
+constructor TBaseJavascriptPlugin.Create;
 begin
   inherited Create;
   FEngine := TJSEngine.Create(40000);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
   FScriptLogJsFunc := FEngine.Global.AddMethod('ScriptLog', _JS_ScriptLog, 1);
-  FCurrentSub := TSubtitleRangeJSWrapper.Create;
-  FPreviousSub := TSubtitleRangeJSWrapper.Create;
-  FNextSub := TSubtitleRangeJSWrapper.Create;
-  FCurrentSubJS := nil; FPreviousSubJS := nil; FNextSubJS := nil;
 end;
 
 //------------------------------------------------------------------------------
 
-destructor TJavaScriptPlugin.Destroy;
+destructor TBaseJavascriptPlugin.Destroy;
 begin
-  if Assigned(FCurrentSubJS) then
-    FreeAndNil(FCurrentSubJS);
-  if Assigned(FPreviousSubJS) then
-    FreeAndNil(FPreviousSubJS);
-  if Assigned(FNextSubJS) then
-    FreeAndNil(FNextSubJS);
   if Assigned(FScriptLogJsFunc) then
     FreeAndNil(FScriptLogJsFunc);
-  if Assigned(FHasErrorFunc) then
-    FreeAndNil(FHasErrorFunc);
-  if Assigned(FFixErrorFunc) then
-    FreeAndNil(FFixErrorFunc);
-  if Assigned(FVSSPluginObject) then
-    FreeAndNil(FVSSPluginObject);
-  FNextSub.Free;
-  FPreviousSub.Free;
-  FCurrentSub.Free;
   FEngine.Free;
-
   inherited;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TJavaScriptPlugin.OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar; report: PJSErrorReport);
+procedure TBaseJavascriptPlugin.OnJsError(eng : TJSEngine; cx: PJSContext;
+  Msg: PChar; report: PJSErrorReport);
 var
 	ErrorTypeStr: WideString;
 begin
@@ -329,6 +367,66 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TBaseJavascriptPlugin.LoadScript(Filename : WideString) : Boolean;
+var FScript : TJSScript;
+begin
+  Result := False;
+  FFilename := Filename;
+  
+  FScript := TJSScript.Create;
+  FScript.LoadRaw(Filename);
+  FScript.Compile(FEngine); // try to compile the script
+  if (not FScript.Compiled) then
+  begin
+    FScript.Free;
+    Exit;
+  end;
+  Result := FScript.Execute(FEngine);
+  FScript.Free;
+end;
+
+// =============================================================================
+
+constructor TJavaScriptPlugin.Create;
+begin
+  inherited Create;
+
+  FCurrentSub := TSubtitleRangeJSWrapper.Create;
+  FPreviousSub := TSubtitleRangeJSWrapper.Create;
+  FNextSub := TSubtitleRangeJSWrapper.Create;
+  FCurrentSubJS := nil; FPreviousSubJS := nil; FNextSubJS := nil;
+  FHasErrorFunc := nil; FFixErrorFunc := nil;
+  FVSSPluginObject := nil;
+end;
+
+//------------------------------------------------------------------------------
+
+destructor TJavaScriptPlugin.Destroy;
+begin
+  if Assigned(FCurrentSubJS) then
+    FreeAndNil(FCurrentSubJS);
+  if Assigned(FPreviousSubJS) then
+    FreeAndNil(FPreviousSubJS);
+  if Assigned(FNextSubJS) then
+    FreeAndNil(FNextSubJS);
+
+  if Assigned(FHasErrorFunc) then
+    FreeAndNil(FHasErrorFunc);
+  if Assigned(FFixErrorFunc) then
+    FreeAndNil(FFixErrorFunc);
+  if Assigned(FVSSPluginObject) then
+    FreeAndNil(FVSSPluginObject);
+  
+  FNextSub.Free;
+  FPreviousSub.Free;
+  FCurrentSub.Free;
+
+  inherited;
+end;
+
+
+//------------------------------------------------------------------------------
+
 procedure TJavaScriptPlugin.SetOnSubtitleChangeEvent(Value : TSubtitleRangeJSWrapperChangeEvent);
 begin
   if (@Value <> @FOnSubtitleChange) then
@@ -343,23 +441,9 @@ end;
 //------------------------------------------------------------------------------
 
 function TJavaScriptPlugin.LoadScript(Filename : WideString) : Boolean;
-var FScript : TJSScript;
-    ExecutionOK : Boolean;
 begin
-  Result := False;
-  FFilename := Filename;
-  
-  FScript := TJSScript.Create;
-  FScript.LoadRaw(Filename);
-  FScript.Compile(FEngine); // try to compile the script
-  if (not FScript.Compiled) then
-  begin
-    FScript.Free;
-    Exit;
-  end;
-  ExecutionOK := FScript.Execute(FEngine);
-  FScript.Free;
-  if not ExecutionOK then
+  Result := inherited LoadScript(Filename);
+  if not Result then
     Exit;
 
   if FEngine.Global.GetProperty('VSSPlugin', FVSSPluginObject) then
@@ -722,6 +806,120 @@ begin
       Result := JPlugin;
       Break;
     end;
+  end;
+end;
+
+// =============================================================================
+
+constructor TSimpleJavascriptWrapper.Create;
+begin
+  inherited Create;
+
+  FSetStatusBarTextJsFunc := FEngine.Global.AddMethod('SetStatusBarText', _JS_SetStatusBarText, 1);
+
+  FCurrentSub := TSubtitleRangeJSWrapper.Create;
+  FPreviousSub := TSubtitleRangeJSWrapper.Create;
+  FNextSub := TSubtitleRangeJSWrapper.Create;
+  FCurrentSubJS := nil; FPreviousSubJS := nil; FNextSubJS := nil;
+  FVSSPluginObject := nil;
+  FNotifySubtitleModificationFunc := nil;
+end;
+
+//------------------------------------------------------------------------------
+
+destructor TSimpleJavascriptWrapper.Destroy;
+begin
+  if Assigned(FCurrentSubJS) then
+    FreeAndNil(FCurrentSubJS);
+  if Assigned(FPreviousSubJS) then
+    FreeAndNil(FPreviousSubJS);
+  if Assigned(FNextSubJS) then
+    FreeAndNil(FNextSubJS);
+
+  if Assigned(FNotifySubtitleModificationFunc) then
+    FreeAndNil(FNotifySubtitleModificationFunc);
+  if Assigned(FVSSPluginObject) then
+    FreeAndNil(FVSSPluginObject);
+
+  FNextSub.Free;
+  FPreviousSub.Free;
+  FCurrentSub.Free;
+
+  if Assigned(FSetStatusBarTextJsFunc) then
+    FreeAndNil(FSetStatusBarTextJsFunc);
+
+  inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.NotifySubtitleModification(CurrentSub, PreviousSub,
+  NextSub : TSubtitleRange) : WideString;
+begin
+  if Assigned(FNotifySubtitleModificationFunc) then
+  begin
+    FillParamArray(CurrentSub, PreviousSub, NextSub);
+    FNotifySubtitleModificationFunc.Call(FParamArray, Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.NotifySelectionModification(CurrentSub, PreviousSub,
+  NextSub : TSubtitleRange) : WideString;
+begin
+  if Assigned(FNotifySelectionModificationFunc) then
+  begin
+    FillParamArray(CurrentSub, PreviousSub, NextSub);
+    FNotifySelectionModificationFunc.Call(FParamArray, Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.LoadScript(Filename : WideString) : Boolean;
+begin
+  Result := inherited LoadScript(Filename);
+  if not Result then
+    Exit;
+
+  if FEngine.Global.GetProperty('VSSPlugin', FVSSPluginObject) then
+  begin
+    FCurrentSubJS := FVSSPluginObject.AddNativeObject(FCurrentSub,'');
+    FPreviousSubJS := FVSSPluginObject.AddNativeObject(FPreviousSub,'');
+    FNextSubJS := FVSSPluginObject.AddNativeObject(FNextSub,'');
+
+    FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
+    FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
+
+    // We need at least one function
+    Result := (FNotifySubtitleModificationFunc <> nil) or
+      (FNotifySelectionModificationFunc <> nil);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TSimpleJavascriptWrapper.FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+var i : Integer;
+begin
+  for i:=0 to Length(FParamArray)-1 do
+    FParamArray[i] := nil;
+  
+  if Assigned(CurrentSub) then
+  begin
+    FCurrentSub.SetSubtitle(CurrentSub);
+    FParamArray[0] := FCurrentSubJS;
+  end;
+  if Assigned(PreviousSub) then
+  begin
+    FPreviousSub.SetSubtitle(PreviousSub);
+    FParamArray[1] := FPreviousSubJS;
+  end;
+  if Assigned(NextSub) then
+  begin
+    FNextSub.SetSubtitle(NextSub);
+    FParamArray[2] := FNextSubJS;
   end;
 end;
 
