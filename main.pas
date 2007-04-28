@@ -23,21 +23,6 @@
 //
 // -----------------------------------------------------------------------------
 
-// TODO and stuff
-
-// quand j'utilise la fonction "play selection end" et que je bouge grâce au
-// clic droit ma selection, la lecture s'arrête. pour que ça ne s'arrete pas
-// il ne faut pas que je bouge de trop la fin de la selection(à peu près 1sec,
-// j'ai pas calculé^^) donc si je veut que la lecture ne s'arrete pas je suis
-// obligé de faire glisser ma souris en maintenant le clic droit en gardant
-// une distance minimale entre la barre de lecture et la fin de la selection.
-// Ce qui serai bien et qui existé déjà sur sub station alpha, ça serai que la
-// lecture continue malgrè le déplacement de la fin de la selection.
-// J'utilisai beaucoup cette fonction sur sub station alpha, ca fait gagner du temps^^
-
-// Another one would be to have "Extend to", similar what Subtitle Workshop has,
-// where you could extend the time to next/previouss subtitle without overlapping.
-
 unit main;
 
 interface
@@ -49,7 +34,7 @@ uses
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
-  DetachedVideoFormUnit, XPMan;
+  DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit;
 
 type
   TTreeData = record
@@ -97,7 +82,6 @@ type
     ActionOpenProject: TTntAction;
     N4: TTntMenuItem;
     MenuItemProjectProperties: TTntMenuItem;
-    TntStatusBar1: TTntStatusBar;
     ActionFind: TTntAction;
     MenuItemFind: TTntMenuItem;
     ActionSave: TTntAction;
@@ -303,13 +287,30 @@ type
     cbStyles: TTntComboBox;
     ActionStyles: TTntAction;
     Styles1: TTntMenuItem;
+    ActionSetPlaybackRate70: TTntAction;
+    ActionSetPlaybackRate60: TTntAction;
+    Setplaybackrateat701: TTntMenuItem;
+    Setplaybackrateat601: TTntMenuItem;
+    bttPause: TSpeedButton;
+    ActionPause: TTntAction;
+    MenuItemPause: TTntMenuItem;
+    ActionToggleTimingMode: TTntAction;
+    tbVolume: TTntTrackBar;
+    lblVolume: TTntLabel;
+    ActionSetEditorFocus: TTntAction;
+    ActionSetEditorFocusAndSelect: TTntAction;
+    MenuItemShowFrameAtCursor: TTntMenuItem;
+    MenuItemShowStartFrame: TTntMenuItem;
+    MenuItemShowStopFrame: TTntMenuItem;
+    ActionNextError: TTntAction;
+    TntStatusBar1: TTntStatusBar;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
     procedure WAVDisplayer1PlayCursorChange(Sender: TObject);
     procedure WAVDisplayer1SelectionChange(Sender: TObject);
     procedure WAVDisplayer1ViewChange(Sender: TObject);
-    procedure WAVDisplayer1SelectedRange(Sender: TObject);
+    procedure WAVDisplayer1SelectedRange(Sender: TObject; SelectedRange : TRange; IsDynamic : Boolean);
     procedure WAVDisplayer1SelectedRangeChange(Sender: TObject);
     procedure WAVDisplayer1AutoScrollChange(Sender: TObject);
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
@@ -435,7 +436,17 @@ type
     procedure ActionSetSubtitleStopTimeAndGoToNextExecute(Sender: TObject);
     procedure cbStylesSelect(Sender: TObject);
     procedure ActionStylesExecute(Sender: TObject);
-
+    procedure ActionSetPlaybackRate70Execute(Sender: TObject);
+    procedure ActionSetPlaybackRate60Execute(Sender: TObject);
+    procedure ActionPauseExecute(Sender: TObject);
+    procedure ActionToggleTimingModeExecute(Sender: TObject);
+    procedure tbVolumeChange(Sender: TObject);
+    procedure ActionSetEditorFocusExecute(Sender: TObject);
+    procedure ActionSetEditorFocusAndSelectExecute(Sender: TObject);
+    procedure ActionNextErrorExecute(Sender: TObject);
+    procedure TntStatusBar1DrawPanel(StatusBar: TStatusBar;
+      Panel: TStatusPanel; const Rect: TRect);
+   
   private
     { Private declarations }
     WAVDisplayer : TWAVDisplayer;
@@ -462,19 +473,29 @@ type
     StartSubtitleTime : Integer;
     ToggleStartSubtitleTime : Integer;
     SubtitleFileHeader : WideString;
+    SubtitleFileFooter : WideString;
+    VideoPreviewNeedSubtitleUpdate : Boolean;
+    DisableVideoUpdatePreview : Boolean;
+
+    StatusBarPrimaryText : WideString;
+    StatusBarSecondaryText : WideString;
+
+    GeneralJSPlugin : TSimpleJavascriptWrapper;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
-    procedure LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
+    procedure EnableStyleControls(Enable : Boolean);
+    procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
     procedure SaveSubtitles(Filename: WideString; InUTF8 : Boolean; BackupOnly : Boolean);
-    procedure SaveProject(Project : TVSSProject);
+    procedure SaveProject(Project : TVSSProject; SilentSave : Boolean);
     procedure UpdateLinesCounter;
     function CheckSubtitlesAreSaved : Boolean;
 
     procedure WAVDisplayer1OnPeakFileCreation(Sender: TObject;
       EventType : TPeakFileCreationEventType; Param : Integer);
     procedure CurrentProjectOnDirtyChange(Sender : TObject);
-
+    procedure CurrentProjectOnDirtySet(Sender: TObject);
+    
     procedure FullSortTreeAndSubList;
 
     procedure OnRecentMenuItemClick(Sender : TObject);
@@ -498,12 +519,25 @@ type
     procedure SaveSubtitlesAsCUE(Filename: WideString);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
-    function LoadSRT(Filename: string; var IsUTF8 : Boolean) : Boolean;
-    function LoadASS(Filename: string; var IsUTF8 : Boolean; IsSSA : Boolean) : Boolean;
+    function LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
+    function LoadASS(Filename: WideString; var IsUTF8 : Boolean; IsSSA : Boolean) : Boolean;
     procedure AdvanceToNextSubtitleAfterFocus;
-    procedure SetFocusedSubtitleStopTime(Advance: Boolean);
+    procedure SetFocusedSubtitleStopTime(Advance: Boolean; KeepStopIfSuperiorToCPSTarget : Boolean);
     procedure UpdateStylesComboboxFromSelection;
-    procedure UpdateStylesComboBox;        
+    procedure UpdateStylesComboBox;
+    procedure UpdateVolume;
+    procedure UpdateSubtitleForPreview(ForceUpdate: Boolean);
+    procedure SetSubtitleStartTime(SetStopTime : Boolean);
+
+    function DetectCharsetDataLoss : Boolean;
+
+    // General JS plugins
+    procedure CallJSOnSubtitleModification;
+    procedure CallJSOnSelectedSubtitle;
+    procedure GetCurrentPreviousNextSubtitles(var CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+    procedure UpdateStatusBar;
+    procedure OnJsSetStatusBarText(const Msg : WideString);
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString);
@@ -518,7 +552,10 @@ type
     procedure FinishLoadSettings;
     function CanFixError(PluginFilename : WideString) : Boolean;
     procedure FixErrorInList(ErrorList : TList);
-    procedure RenameStyle(OldName, NewName : WideString);    
+    procedure RenameStyle(OldName, NewName : WideString);
+    procedure CurrentProjectSetDirty;
+    function GetVideoRendererFiltersList(list : TStrings) : Boolean;
+    procedure SetStatusBarPrimaryText(const Text : WideString);
   end;
 
 const
@@ -533,19 +570,20 @@ implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
-  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows, JavaScriptPluginUnit,
+  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
-  tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings;
+  tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
+  TntIniFiles, TntGraphics;
 
 {$R *.dfm}
 
 //==============================================================================
 
+// TODO : Configurable backup directory, backup n last version
+
 // TODO : Test project properties dialog
 // TODO : When opening a project fail show the project properties page for modification
 // TODO : Add some checking in project unit ok button
-
-// TODO : Better vobsub support (auto select file, force loading, make a customized version maybe)
 
 // TODO : Web : number of suggestion for current sub, and current suggestions
 // TODO : Web : We need real gzip compression, deflate support is b0rked in IE
@@ -561,6 +599,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
+    GeneralJSFilename : WideString;
 begin
   // Enable/disable experimental karaoke stuff
   pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
@@ -578,7 +617,7 @@ begin
   ServerRootDir := IncludeTrailingPathDelimiter(ServerRootDir) + 'web\';
 
   vtvSubsList.Constraints.MinWidth := 600;
-  PanelMiddle.Constraints.MinHeight := 140;
+  PanelMiddle.Constraints.MinHeight := 125;
   PanelBottom.Constraints.MinHeight := 60;
   Splitter1.MinSize := 1;
 
@@ -622,18 +661,42 @@ begin
   MemoTextPipe.Font.Assign(MemoSubtitleText.Font);
 
   EnableControl(False);
+  EnableStyleControls(False);
 
   CurrentProject := TVSSProject.Create;
   CurrentProject.OnDirtyChange := CurrentProjectOnDirtyChange;
+  CurrentProject.OnDirtySet := CurrentProjectOnDirtySet;
   AudioOnlyRenderer := TDShowRenderer.Create;
+  AudioOnlyRenderer.SetAutoInsertCustomVSFilter(True);
   VideoRenderer := TDShowRenderer.Create;
+  VideoRenderer.SetAutoInsertCustomVSFilter(True);
   ShowingVideo := False;
+  VideoPreviewNeedSubtitleUpdate := False;
+  DisableVideoUpdatePreview := False;
 
   g_GlobalContext.SubList := WAVDisplayer.RangeList;
   g_GlobalContext.CurrentProject := CurrentProject;
   StartSubtitleTime := -1;
   ToggleStartSubtitleTime := -1;
   //StartStopServer;
+
+  GeneralJSPlugin := TSimpleJavascriptWrapper.Create;
+  GeneralJSFilename := g_PluginPath + 'general\general_plugin.js';
+  if WideFileExists(GeneralJSFilename) then
+  begin
+    if GeneralJSPlugin.LoadScript(GeneralJSFilename) then
+    begin
+      GeneralJSPlugin.OnJSPluginError := LogForm.LogMsg;
+      GeneralJSPlugin.OnJSPluginSetStatusBarText := OnJsSetStatusBarText;
+    end
+    else
+      LogForm.SilentLogMsg('Can''t load ' + GeneralJSFilename);
+  end
+  else
+    LogForm.SilentLogMsg('Can''t find ' + GeneralJSFilename);
+
+  StatusBarPrimaryText := '';
+  StatusBarSecondaryText := '';
 end;
 
 //------------------------------------------------------------------------------
@@ -641,6 +704,7 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   StartStopServer(True);
+  FreeAndNil(GeneralJSPlugin);
   FreeAndNil(AudioOnlyRenderer);
   FreeAndNil(VideoRenderer);
   FreeAndNil(WAVDisplayer);
@@ -719,11 +783,31 @@ end;
 
 //------------------------------------------------------------------------------
 
+function GetIniFilename : WideString;
+var ApplicationPath, IniFilename : WideString;
+begin
+  // By default place the ini file in the application directory
+  Result := WideChangeFileExt(TntApplication.ExeName, '.ini');
+
+  // Check if application path and ini file is writable
+  ApplicationPath := WideExtractFilePath(TntApplication.ExeName);
+  if WideFileIsReadOnly(ApplicationPath) or (WideFileExists(Result) and WideFileIsReadOnly(Result)) then
+  begin
+    // The ini file is in read only mode, work in user application data directory
+    IniFilename := GetUserApplicationDataFolder;
+    IniFilename := WideIncludeTrailingPathDelimiter(IniFilename);
+    IniFilename := IniFilename + 'VisualSubSync.ini';
+    Result := IniFilename;
+  end;
+end;
+
 procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
+    IniFilename : WideString;
 begin
+  IniFilename := GetIniFilename;
   try
-    IniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini'));
+    IniFile := TIniFile.Create(IniFilename);
     MRUList.SaveIni(IniFile, 'MRUList');
     ConfigObject.SaveIni(IniFile);
     SaveFormPosition(IniFile,MainForm);
@@ -735,6 +819,8 @@ begin
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
     IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
 
+    IniFile.WriteInteger('General', 'Volume', tbVolume.Position);
+
     IniFile.Free;
   except
     on E: Exception do MessageBox(Handle, PChar(E.Message), nil, MB_OK or MB_ICONERROR);
@@ -745,8 +831,10 @@ end;
 
 procedure TMainForm.LoadSettings;
 var IniFile : TIniFile;
+    IniFilename : WideString;
 begin
-  IniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini'));
+  IniFilename := GetIniFilename;
+  IniFile := TIniFile.Create(IniFilename);
   MRUList.LoadIni(IniFile, 'MRUList');
   ConfigObject.LoadIni(IniFile);
   SetShortcut(False);
@@ -765,6 +853,8 @@ begin
   PanelBottom.Height := IniFile.ReadInteger('Windows', 'MainForm_PanelBottom_Height',
     PanelBottom.Height);
   TntStatusBar1.Top := Maxint;
+
+  tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
 
   IniFile.Free;
 end;
@@ -796,19 +886,16 @@ begin
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
     Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
-
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
     Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
-
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 100;
     Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
-
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 100;
@@ -818,7 +905,7 @@ begin
     Column := Header.Columns.Add;
     Column.Text := 'Style';
     Column.Width := 100;
-    Column.MinWidth := 50;
+    Column.MinWidth := 60;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
 
     Column := Header.Columns.Add;
@@ -846,10 +933,50 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.SetStatusBarPrimaryText(const Text : WideString);
+begin
+  StatusBarPrimaryText := Text;
+  UpdateStatusBar;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateStatusBar;
+var NewText : WideString;
+begin
+  if Length(StatusBarPrimaryText) > 0 then
+  begin
+    if Length(StatusBarSecondaryText) > 0 then
+    begin
+      NewText := StatusBarSecondaryText + ' (' + StatusBarPrimaryText + ')';
+    end
+    else
+    begin
+      NewText := StatusBarPrimaryText;
+    end;
+  end
+  else
+  begin
+    NewText := StatusBarSecondaryText;
+  end;
+
+  if (NewText <> TntStatusBar1.Panels[1].Text) then
+  begin
+    TntStatusBar1.Panels[1].Text := NewText;
+    TntStatusBar1.Repaint;
+//    TCustomStatusBar.UpdatePanel
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.ShowStatusBarMessage(const Text : WideString);
 begin
-  TntStatusBar1.Panels[1].Text := Text;
-  TntStatusBar1.Repaint;
+  if (Text <> StatusBarSecondaryText) then
+  begin
+    StatusBarSecondaryText := Text;
+    UpdateStatusBar;
+  end;
   TimerStatusBarMsg.Interval := 4000;
   TimerStatusBarMsg.Enabled := True;
 end;
@@ -858,8 +985,18 @@ end;
 
 procedure TMainForm.TimerStatusBarMsgTimer(Sender: TObject);
 begin
-  TntStatusBar1.Panels[1].Text := '';
-  TimerStatusBarMsg.Enabled := False;  
+  StatusBarSecondaryText := '';
+  TimerStatusBarMsg.Enabled := False;
+  UpdateStatusBar;  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.EnableStyleControls(Enable : Boolean);
+begin
+  ActionStyles.Enabled := Enable;
+  cbStyles.Enabled := Enable;
+  bttStyles.Enabled := Enable;
 end;
 
 //------------------------------------------------------------------------------
@@ -875,6 +1012,7 @@ begin
   ActionPlaySelEnd.Enabled := Enable;
   ActionPlayToEnd.Enabled := Enable;
   ActionPlay1sBefore.Enabled := Enable;
+  ActionPause.Enabled := Enable;
 
   ActionZoomIn.Enabled := Enable;
   ActionZoomOut.Enabled := Enable;
@@ -918,6 +1056,8 @@ begin
   ActionClose.Enabled := Enable;
   ActionSave.Enabled := False;
 
+  ActionSetPlaybackRate60.Enabled := Enable;
+  ActionSetPlaybackRate70.Enabled := Enable;
   ActionSetPlaybackRate80.Enabled := Enable;
   ActionSetPlaybackRate90.Enabled := Enable;
   ActionSetPlaybackRate100.Enabled := Enable;
@@ -925,9 +1065,8 @@ begin
   ActionLoopSelStart.Enabled := Enable;
   ActionLoopSelEnd.Enabled := Enable;
 
-  ActionStyles.Enabled := Enable;
-  cbStyles.Enabled := Enable;
-  bttStyles.Enabled := Enable;
+  lblVolume.Enabled := Enable;
+  tbVolume.Enabled := Enable;
 
   PanelVideo.Enabled := Enable;
 end;
@@ -985,7 +1124,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.WAVDisplayer1SelectedRange(Sender: TObject);
+procedure TMainForm.WAVDisplayer1SelectedRange(Sender: TObject; SelectedRange : TRange; IsDynamic : Boolean);
 var Node : PVirtualNode;
 begin
   if Assigned(WAVDisplayer.SelectedRange) then
@@ -995,6 +1134,14 @@ begin
     vtvSubsList.FocusedNode := Node;
     vtvSubsList.ClearSelection;
     vtvSubsList.Selected[Node] := True;
+    if not MemoSubtitleText.Focused then
+    begin
+      MemoSubtitleText.SetFocus;
+    end;
+    if ShowingVideo and (not WAVDisplayer.IsPlaying) and (not IsDynamic) then
+    begin
+      ActionShowStartFrameExecute(nil);
+    end;
   end;
 end;
 
@@ -1008,8 +1155,10 @@ begin
   begin
     SubRange := TSubtitleRange(WAVDisplayer.SelectedRange);
     vtvSubsList.RepaintNode(SubRange.Node);
+    DisableVideoUpdatePreview := True;
     CurrentProject.IsDirty := True;
     UpdateLinesCounter;
+    DisableVideoUpdatePreview := False;
   end;
 end;
 
@@ -1120,17 +1269,17 @@ end;
 
 //------------------------------------------------------------------------------
 
-// TODO : unicode filename
-
-procedure TMainForm.LoadSubtitles(Filename: string; var IsUTF8 : Boolean);
-var Ext : string;
+procedure TMainForm.LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
+var Ext : WideString;
     StyleColumn : TVirtualTreeColumn;
+    EnableStyle : Boolean;
 begin
+  EnableStyle := False;
   StyleColumn := vtvSubsList.Header.Columns.Items[3];
   g_WebRWSynchro.BeginWrite;
   try
     vtvSubsList.BeginUpdate;
-    Ext := LowerCase(ExtractFileExt(Filename));
+    Ext := WideLowerCase(WideExtractFileExt(Filename));
     if (Ext = '.srt') then
     begin
       LoadSRT(Filename, IsUTF8);
@@ -1138,13 +1287,17 @@ begin
     end
     else if (Ext = '.ass') then
     begin
+      EnableStyle := True;
       LoadASS(Filename, IsUTF8, False);
       StyleColumn.Options := StyleColumn.Options + [coVisible];
+      StyleForm.ConfigureMode(sfmASS);
     end
     else if (Ext = '.ssa') then
     begin
+      EnableStyle := True;
       LoadASS(Filename, IsUTF8, True);
       StyleColumn.Options := StyleColumn.Options + [coVisible];
+      StyleForm.ConfigureMode(sfmSSA);
     end;
   finally
     g_WebRWSynchro.EndWrite;
@@ -1153,27 +1306,30 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Header.AutoFitColumns(False);
   vtvSubsList.Repaint;
+  
+  UpdateStylesComboBox;
+
+  EnableStyleControls(EnableStyle);
 end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.LoadSRT(Filename: string; var IsUTF8 : Boolean) : Boolean;
+function TMainForm.LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
 var
-  S: string;
-  BOM : array[0..3] of BYTE;
-  i : integer;
+  S: WideString;
+  i, lineIndex : integer;
   Start, Stop : Integer;
   NextStart, NextStop : Integer;
-  Text : string;
+  Text : WideString;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
-  FS : TFileStream;
   EndOfFile : Boolean;
   AutoCorrectedFile : Boolean;
+  Source : TTntStringList;
 begin
   Result := False;
-  if not FileExists(Filename) then
+  if not WideFileExists(Filename) then
   begin
     WAVDisplayer.RangeList.Clear;
     vtvSubsList.Clear;
@@ -1181,36 +1337,35 @@ begin
   end;
 
   SubtitleFileHeader := '';
+  SubtitleFileFooter := '';
 
   WAVDisplayer.RangeList.Clear;
-  FS := TFileStream.Create(Filename,fmOpenRead or fmShareDenyWrite);
-  ZeroMemory(@BOM[0],Length(BOM));
-  FS.Read(BOM,4);
-  if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
-  begin
-    // UTF8
-    IsUTF8 := True;
-    FS.Seek(3,soFromBeginning);
-  end
-  else
-  begin
-    IsUTF8 := False;  
-    FS.Seek(0,soFromBeginning);
-  end;
+
+  Source := TTntStringList.Create;
+  Source.LoadFromFile(Filename);
+  IsUTF8 := (Source.LastFileCharSet <> csAnsi);
 
   AutoCorrectedFile := False;
+  lineIndex := 0;
+
   // Skip lines until a timestamps line
-  repeat
-    EndOfFile := ReadLineStream(FS, S);
-  until IsTimeStampsLine(S, Start, Stop) or EndOfFile;
-  while not EndOfFile do
+  while (lineIndex < Source.Count) do
+  begin
+    S := Source[lineIndex];
+    Inc(lineIndex);
+    if IsTimeStampsLine(S, Start, Stop) then
+      Break;
+  end;
+
+  while (lineIndex < Source.Count) do
   begin
     // Copy text until a timestamps line
     Text := '';
     while True do
     begin
-      EndOfFile := ReadLineStream(FS, S);
-      if EndOfFile or IsTimeStampsLine(S, NextStart, NextStop) then
+      S := Source[lineIndex];
+      Inc(lineIndex);
+      if (lineIndex >= Source.Count) or IsTimeStampsLine(S, NextStart, NextStop) then
         Break;
       S := Trim(S);
       Text := Text + S + #13#10;
@@ -1220,21 +1375,18 @@ begin
     begin
       // Remove the index line if any
       i := RPos(#13#10, Text);
-      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (not EndOfFile)) then
+      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (lineIndex < Source.Count)) then
       begin
         Delete(Text, i, MaxInt);
       end;
       Text := Trim(Text);      
-      if (not EndOfFile) and (Stop = NextStart) then
+      if (lineIndex < Source.Count) and (Stop = NextStart) then
       begin
         AutoCorrectedFile := True;
         Dec(Stop);
       end;
       NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-      if IsUTF8 then
-        TSubtitleRange(NewRange).Text := UTF8Decode(Text)
-      else
-        TSubtitleRange(NewRange).Text := Text;
+      TSubtitleRange(NewRange).Text := Text;
 
       if (EnableExperimentalKaraoke = True) then
         NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
@@ -1244,7 +1396,7 @@ begin
     Start := NextStart;
     Stop := NextStop;
   end;
-  FS.Free;
+  Source.Free;
   WAVDisplayer.RangeList.FullSort;
 
   vtvSubsList.Clear;
@@ -1263,20 +1415,24 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.LoadASS(Filename: string; var IsUTF8 : Boolean; isSSA : Boolean) : Boolean;
+function TMainForm.LoadASS(Filename: WideString; var IsUTF8 : Boolean; isSSA : Boolean) : Boolean;
 var
   i, Start, Stop : Integer;
-  Text : string;
+  Text : WideString;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
   ssaParser : TSSAParser;
 begin
   Result := False;
-  if not FileExists(Filename) then
+  if not WideFileExists(Filename) then
   begin
+    SubtitleFileHeader := '';
+    SubtitleFileFooter := '';
     WAVDisplayer.RangeList.Clear;
     vtvSubsList.Clear;
+    StyleForm.ClearAll;
+    StyleForm.AddDefaultStyle;
     Exit;
   end;
 
@@ -1285,10 +1441,10 @@ begin
   ssaParser := TSSAParser.Create;
   ssaParser.Parse(Filename);
   IsUTF8 := ssaParser.GetIsUTF8;
-  SubtitleFileHeader := ssaParser.GetHeader;
+  SubtitleFileHeader := ssaParser.GetHeaderLines;
+  SubtitleFileFooter := ssaParser.GetFooterLines;
 
   StyleForm.LoadStylesFromParser(ssaParser);
-  UpdateStylesComboBox;
 
   for i := 0 to ssaParser.GetDialoguesCount-1 do
   begin
@@ -1298,15 +1454,11 @@ begin
     begin
       NewRange := SubRangeFactory.CreateRangeSS(Start, Stop);
       Text := ssaParser.GetDialogueValueAsString(i, 'Text');
-      // TODO : ssaParser.isASS / isSSA
-      if IsUTF8 then
-        TSubtitleRange(NewRange).Text := UTF8Decode(Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]))
+      TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]);
+      if ssaParser.GetIsASS then
+        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Layer')
       else
-        TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]);
-      if IsSSA then
-        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Marked')
-      else
-        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Layer');
+        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Marked');
       TSubtitleRange(NewRange).Effect := ssaParser.GetDialogueValueAsString(i, 'Effect');
       TSubtitleRange(NewRange).RightMarg := ssaParser.GetDialogueValueAsString(i, 'MarginR');
       TSubtitleRange(NewRange).LeftMarg := ssaParser.GetDialogueValueAsString(i, 'MarginL');
@@ -1464,7 +1616,6 @@ begin
 
     if (EnableExperimentalKaraoke = True) then
       TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
-
   end;
   UpdateLinesCounter;
 end;
@@ -1583,6 +1734,10 @@ begin
     WAVDisplayer.ZoomAndSelectRange(NodeData.Range);
     if WAVDisplayer.IsPlaying then
       WAVDisplayer.AutoScrolling := False;
+    if ShowingVideo and Assigned(Sender) and (not WAVDisplayer.IsPlaying) then
+    begin
+      ActionShowStartFrameExecute(nil);
+    end;
   end;
 end;
 
@@ -1590,20 +1745,19 @@ end;
 
 procedure TMainForm.UpdateVideoRendererWindow;
 begin
-  if not MenuItemDetachVideoWindow.Checked then
+  if (CurrentProject.VideoPanelWidth > 0) then
   begin
-    if (CurrentProject.VideoPanelWidth > 0) then
-    begin
-      PanelVideo.Width := CurrentProject.VideoPanelWidth;
-    end
-    else if (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
-    begin
-      PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
-    end;
-    VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
+    PanelVideo.Width := CurrentProject.VideoPanelWidth;
   end
+  else if (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+  begin
+    PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
+  end;
+  
+  if MenuItemDetachVideoWindow.Checked then
+    VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle)
   else
-    VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle);
+    VideoRenderer.SetDisplayWindow(PanelVideo.Handle);
 end;
 
 //------------------------------------------------------------------------------
@@ -1632,7 +1786,7 @@ begin
     if CurrentProject.WAVMode = pwmPeakOnly then
     begin
       if WideFileExists(CurrentProject.PeakFile) then
-        LoadWAVOK := WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile,'.wav'))
+        LoadWAVOK := WAVDisplayer.LoadWAV(WideChangeFileExt(CurrentProject.PeakFile,'.wav'))
       else
       begin
         if WideFileExists(CurrentProject.WAVFile) then
@@ -1694,15 +1848,20 @@ begin
     if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
     begin
       if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
+      begin
         AudioOnlyRenderer.KillVideo;
+      end;
     end;
 
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
+      if CurrentProject.DetachedVideo <> MenuItemDetachVideoWindow.Checked then
+        ActionDetachVideoExecute(nil);
       if CurrentProject.ShowVideo <> ShowingVideo then
         ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
+      VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
     end;
 
     if ShowingVideo then
@@ -1721,6 +1880,7 @@ begin
       Perform(EM_SCROLLCARET, 0, 0);
     end;
 
+    UpdateVolume;
     EnableControl(True);
 
     CurrentProjectOnDirtyChange(nil);
@@ -1736,11 +1896,21 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveProject(Project : TVSSProject);
+procedure TMainForm.SaveProject(Project : TVSSProject; SilentSave : Boolean);
 var
-  ProjectFileIni : TIniFile;
+  ProjectFileIni : TTntIniFile;
 begin
-  ProjectFileIni := TIniFile.Create(Project.Filename);
+  if WideFileIsReadOnly(Project.Filename) then
+  begin
+    if not SilentSave then
+    begin
+      MessageBoxW(Handle, PWideChar(WideFormat('The project file %s can''t be saved because it''s in read only mode.', [Project.Filename])),
+        PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+    end;
+    Exit;
+  end;
+
+  ProjectFileIni := TTntIniFile.Create(Project.Filename);
   ProjectFileIni.WriteString('VisualSubsync','VideoSource',
     WideMakeRelativePath(Project.Filename, Project.VideoSource));
   ProjectFileIni.WriteString('VisualSubsync','WAVFile',
@@ -1765,6 +1935,7 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelWidth', Project.VideoPanelWidth);
   ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelHeight', Project.VideoPanelHeight);
   ProjectFileIni.WriteBool('VisualSubsync','ShowVideo', Project.ShowVideo);
+  ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo', Project.DetachedVideo);
 
   ProjectFileIni.Free;
 end;
@@ -1801,7 +1972,10 @@ end;
 
 procedure TMainForm.ActionPlayExecute(Sender: TObject);
 begin
+  if (bttWorkingMode.Tag = 1) then
+    PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
+  UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
   if WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtAll;
@@ -1825,7 +1999,10 @@ end;
 
 procedure TMainForm.ActionLoopExecute(Sender: TObject);
 begin
+  if (bttWorkingMode.Tag = 1) then
+    PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
+  UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
   if WAVDisplayer.SelectionIsEmpty then
   begin
     PlayingMode := pmtAll;
@@ -1853,13 +2030,13 @@ end;
 
 procedure TMainForm.ActionNewProjectExecute(Sender: TObject);
 var
-  ProjectFileIni : TIniFile;
+  ProjectFileIni : TTntIniFile;
 begin
   ProjectForm.ConfigureInNewProjectMode;
   if (ProjectForm.ShowModal = mrOK) then
   begin
     // Create the project file
-    ProjectFileIni := TIniFile.Create(ProjectForm.EditProjectFilename.Text);
+    ProjectFileIni := TTntIniFile.Create(ProjectForm.EditProjectFilename.Text);
     ProjectFileIni.WriteString('VisualSubsync','VideoSource',ProjectForm.EditVideoFilename.Text);
     ProjectFileIni.WriteString('VisualSubsync','WAVFile',ProjectForm.EditWAVFilename.Text);
     ProjectFileIni.WriteString('VisualSubsync','PeakFile',ProjectForm.EditPeakFilename.Text);
@@ -1877,8 +2054,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
-var IsPlaying : Boolean;
-    PlayingPos : Integer;
 begin
   if (not VideoRenderer.IsOpen) then
   begin
@@ -1888,13 +2063,10 @@ begin
 
   ShowingVideo := not ShowingVideo;
 
-  PlayingPos := 0;
-  IsPlaying := WAVDisplayer.IsPlaying;
-  if IsPlaying then
-    PlayingPos := WAVDisplayer.GetPlayCursorPos;
-
   if MenuItemDetachVideoWindow.Checked then
   begin
+    if ShowingVideo then
+      ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
     DetachedVideoForm.Visible := ShowingVideo;
   end
   else
@@ -1904,22 +2076,21 @@ begin
   end;
 
   if ShowingVideo then
-    WAVDisplayer.SetRenderer(VideoRenderer)
-  else
-    WAVDisplayer.SetRenderer(AudioOnlyRenderer);
-  WAVDisplayer.UpdateView([uvfPageSize]);
-  if IsPlaying then
   begin
-    WAVDisplayer.SetCursorPos(PlayingPos);
-    ActionPlay.Execute;
+    UpdateSubtitleForPreview(False);
+    WAVDisplayer.SetRenderer(VideoRenderer);
+  end
+  else
+  begin
+    WAVDisplayer.SetRenderer(AudioOnlyRenderer);
   end;
+  WAVDisplayer.UpdateView([uvfPageSize]);
 
   if Assigned(CurrentProject) and (ShowingVideo <> CurrentProject.ShowVideo) then
   begin
     CurrentProject.ShowVideo := ShowingVideo;
-    SaveProject(CurrentProject);
+    SaveProject(CurrentProject, True);
   end;
-
 end;
 
 //------------------------------------------------------------------------------
@@ -1953,8 +2124,19 @@ procedure TMainForm.ActionSaveExecute(Sender: TObject);
 begin
   // Save subtitles
   if Trim(CurrentProject.SubtitlesFile) <> '' then
+  begin
+    if (not CurrentProject.IsUTF8) and DetectCharsetDataLoss then
+    begin
+      MessageBoxW(Handle, PWideChar(WideString(
+        'Subtitles contain some characters that may not be saved correctly,' +
+        ' the file will be saved in Unicode UTF-8 starting from now.')),
+        PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
+      CurrentProject.IsUTF8 := True;
+    end;
     SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
-  SaveProject(CurrentProject);
+    VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+  end;
+  SaveProject(CurrentProject, False);
 end;
 
 //------------------------------------------------------------------------------
@@ -1992,10 +2174,26 @@ end;
 
 //------------------------------------------------------------------------------
 
+function HasExtensionChanged(OldFilename, NewFilename : WideString) : Boolean;
+var OldExt, NewExt : WideString;
+    OldWithDummyExt, NewWithDummyExt : WideString;
+begin
+  Result := False;
+  OldExt := WideLowerCase(WideExtractFileExt(OldFilename));
+  NewExt := WideLowerCase(WideExtractFileExt(NewFilename));
+  if (OldExt = NewExt) then
+    Exit;
+
+  OldWithDummyExt := WideChangeFileExt(OldFilename, '.dummy');
+  NewWithDummyExt := WideChangeFileExt(NewFilename, '.dummy');
+  Result := (OldWithDummyExt = NewWithDummyExt);
+end;
+
 procedure TMainForm.ActionProjectPropertiesExecute(Sender: TObject);
-var ProjectHasChanged : Boolean;
+var ProjectHasChanged, VideoHasChanged, SubtitleFileHasChanged : Boolean;
 begin
   // TODO : test this more
+
   ProjectForm.ConfigureInModifyProjectMode(CurrentProject);
   if (ProjectForm.ShowModal = mrOK) then
   begin
@@ -2003,15 +2201,29 @@ begin
 
     try
       // Check the thing that have changed and update
+      VideoHasChanged := False;
       ProjectHasChanged := False;
+      SubtitleFileHasChanged := False;
+
 
       if (CurrentProject.SubtitlesFile <> ProjectForm.EditSubtitleFilename.Text) then
       begin
         CheckSubtitlesAreSaved;
+
+        // Check if it's a file format change
+        if HasExtensionChanged(CurrentProject.SubtitlesFile, ProjectForm.EditSubtitleFilename.Text) then
+        begin
+          CurrentProject.SubtitlesFile := ProjectForm.EditSubtitleFilename.Text;
+          if not WideFileExists(CurrentProject.SubtitlesFile) then
+            ActionSaveExecute(nil);
+        end;
+
         CurrentProject.SubtitlesFile := ProjectForm.EditSubtitleFilename.Text;
         ErrorReportForm.Clear;
-        LoadSubtitles(CurrentProject.SubtitlesFile,CurrentProject.IsUTF8);
+        LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+        
         ProjectHasChanged := True;
+        SubtitleFileHasChanged := True;
       end;
 
       if (CurrentProject.VideoSource <> ProjectForm.EditVideoFilename.Text) then
@@ -2022,6 +2234,7 @@ begin
         CurrentProject.VideoPanelHeight := 0;
         UpdateVideoRendererWindow;
         ProjectHasChanged := True;
+        VideoHasChanged := True;
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -2071,12 +2284,19 @@ begin
 
       if (ProjectHasChanged) then
       begin
-        SaveProject(CurrentProject);
+        SaveProject(CurrentProject, False);
+      end;
+
+      if (VideoHasChanged or SubtitleFileHasChanged) then
+      begin
+        VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
       end;
 
       // Hide the video
       if (not VideoRenderer.IsOpen) and ShowingVideo then
+      begin
           ActionShowHideVideo.Execute;
+      end;
       g_GlobalContext.WavAverageBytePerSecond := WAVDisplayer.GetWAVAverageBytePerSecond;
     finally
       g_WebRWSynchro.EndWrite;
@@ -2421,7 +2641,7 @@ begin
     if (res = IDYES) then
     begin
       SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
-      SaveProject(CurrentProject);
+      SaveProject(CurrentProject, False);
     end
     else if(res = IDCANCEL) then
       Result := False
@@ -2470,7 +2690,7 @@ begin
   vtvSubsList.ClearSelection;
   vtvSubsList.Selected[Node] := True;
   vtvSubsList.ScrollIntoView(Node,True);
-  vtvSubsListDblClick(Self);
+  vtvSubsListDblClick(nil);
   vtvSubsList.Repaint;
 end;
 
@@ -2866,6 +3086,8 @@ begin
     MemoSubtitleText.Text := '';
 
     EnableControl(False);
+    cbStyles.Clear;
+    EnableStyleControls(False);
 
     AudioOnlyRenderer.Close;
     VideoRenderer.Close;
@@ -3047,28 +3269,7 @@ end;
 
 procedure TMainForm.bttWorkingModeClick(Sender: TObject);
 begin
-  if (bttWorkingMode.Tag = 0) then
-  begin
-    bttWorkingMode.Caption := 'Timing';
-    bttWorkingMode.Font.Color := clRed;
-    bttWorkingMode.Tag := 1;
-    if ConfigObject.MouseEnableSSATimingMode then
-      WAVDisplayer.SelMode := smSSA
-    else
-      WAVDisplayer.SelMode := smCoolEdit;
-  end
-  else
-  begin
-    bttWorkingMode.Caption := 'Normal';
-    bttWorkingMode.Tag := 0;
-    bttWorkingMode.Font.Color := clWindowText;
-    WAVDisplayer.SelMode := smCoolEdit;
-  end;
-  KeyPreview := (bttWorkingMode.Tag = 1);
-  PreferencesForm.SetMode(bttWorkingMode.Tag = 1);
-  SetShortcut(PreferencesForm.GetMode);
-  MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
-    ((not ConfigObject.DisableSubtitleEdition) or (bttWorkingMode.Tag = 0));
+  ActionToggleTimingMode.Execute;
 end;
 
 //------------------------------------------------------------------------------
@@ -3093,6 +3294,9 @@ procedure TMainForm.ActionLoopSelStartExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
+    if (bttWorkingMode.Tag = 1) then
+      PanelWAVDisplay.SetFocus;
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionStart;
     WAVDisplayer.PlayRange(WAVDisplayer.Selection.StartTime,
       Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration, WAVDisplayer.Selection.StopTime),
@@ -3106,6 +3310,9 @@ procedure TMainForm.ActionLoopSelEndExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
+    if (bttWorkingMode.Tag = 1) then
+      PanelWAVDisplay.SetFocus;
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionEnd;
     WAVDisplayer.PlayRange(
       Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
@@ -3168,7 +3375,8 @@ procedure TMainForm.ActionAddSubtitleExecute(Sender: TObject);
 begin
   AddSubtitle(WAVDisplayer.Selection.StartTime,
     WAVDisplayer.Selection.StopTime, True);
-  MemoSubtitleText.SetFocus;
+  if bttWorkingMode.Tag = 0 then
+    MemoSubtitleText.SetFocus;
 end;
 
 //------------------------------------------------------------------------------
@@ -3176,7 +3384,13 @@ end;
 procedure TMainForm.ActionSetSubtitleTimeExecute(Sender: TObject);
 var NodeData : PTreeData;
     NextNodeToFocus : PVirtualNode;
+    SelDuration : Integer;
 begin
+  if WAVDisplayer.SelectionIsEmpty then
+    Exit;
+  SelDuration := WAVDisplayer.Selection.StopTime - WAVDisplayer.Selection.StartTime;
+  if (SelDuration < 100) then
+    Exit;
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
@@ -3203,6 +3417,22 @@ begin
     WAVDisplayer.UpdateView([uvfRange]);
     vtvSubsList.Repaint;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetPlaybackRate70Execute(Sender: TObject);
+begin
+  VideoRenderer.SetRate(70);
+  AudioOnlyRenderer.SetRate(70);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetPlaybackRate60Execute(Sender: TObject);
+begin
+  VideoRenderer.SetRate(60);
+  AudioOnlyRenderer.SetRate(60);
 end;
 
 //------------------------------------------------------------------------------
@@ -3595,10 +3825,16 @@ begin
     if ShowingVideo then
       ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
     DetachedVideoForm.Visible := ShowingVideo;
-    // workaround to resize buf ??? force repaint
+    // Workaround to missing resize event bug => force repaint
     WAVDisplayer.UpdateView([uvfPageSize]);
   end;
   MenuItemDetachVideoWindow.Checked := not MenuItemDetachVideoWindow.Checked;
+
+  if Assigned(CurrentProject) and (MenuItemDetachVideoWindow.Checked <> CurrentProject.DetachedVideo) then
+  begin
+    CurrentProject.DetachedVideo := MenuItemDetachVideoWindow.Checked;
+    SaveProject(CurrentProject, True);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -3680,7 +3916,6 @@ begin
   else
     Msg := 'No error found.';
   Msg := Msg + Format(' (in %d ms)',[ExecTime]);
-  ShowStatusBarMessage(Msg);
   ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
   LogForm.SilentLogMsg(Msg);
 end;
@@ -3689,7 +3924,7 @@ end;
 
 procedure TMainForm.ActionShowHideLogsExecute(Sender: TObject);
 begin
-  LogForm.Visible := not LogForm.Visible; 
+  LogForm.Visible := not LogForm.Visible;
 end;
 
 //------------------------------------------------------------------------------
@@ -3795,6 +4030,7 @@ begin
       TagHighlight(MemoSubtitleText, -1);
     // Update styles combobox
     UpdateStylesComboboxFromSelection;
+    CallJSOnSelectedSubtitle;
   end
   else
   begin
@@ -3942,7 +4178,9 @@ begin
     begin
       ToggleStartSubtitleTime := WAVDisplayer.GetPlayCursorPos;
       if ConfigObject.SpaceKeyModifyTiming then
-        ActionSetSubtitleStartTime.Execute;
+      begin
+        SetSubtitleStartTime(True);
+      end;
     end;
     Key := 0;
   end;
@@ -3958,11 +4196,11 @@ begin
     (ConfigObject.EnableToggleCreation = True) and
     (WAVDisplayer.IsPlaying = True) then
   begin
-      if ToggleStartSubtitleTime <> -1 then
-      begin
+    if (ToggleStartSubtitleTime <> -1) then
+    begin
       if ConfigObject.SpaceKeyModifyTiming then
       begin
-        SetFocusedSubtitleStopTime(True);
+        SetFocusedSubtitleStopTime(True, True);
       end
       else
       begin
@@ -4173,12 +4411,34 @@ end;
 
 procedure TMainForm.ActionShowStartFrameExecute(Sender: TObject);
 var NodeData: PTreeData;
+    Fps : Double;
+    FrameNumber : Double;
+    FrameLen : Double;
+    StartTimeFrame : Integer;
 begin
   if Assigned(VideoRenderer) and Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    // +50 to make sure we are inside the subtitle (duration of 1 frame) 
-    VideoRenderer.ShowImageAt(NodeData.Range.StartTime + 50);
+
+    StartTimeFrame := NodeData.Range.StartTime;
+
+    // Get the video fps from VSFilter
+    Fps := VideoRenderer.GetVSFilterFPS;
+    if (FPS > 0) then
+    begin
+      // Calculate the frame duration in s
+      FrameLen := (1000.0 / Fps);
+      // Calculate the fame number
+      FrameNumber := Ceil(StartTimeFrame / FrameLen);
+      // DirectShow add a 1 frame delay ???
+      FrameNumber := FrameNumber + 1;
+      // Convert framenumber back in ms
+      StartTimeFrame := Ceil(FrameNumber * FrameLen);
+    end;
+
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
+    // Finally show the image
+    VideoRenderer.ShowImageAt(StartTimeFrame);
   end;
 end;
 
@@ -4186,11 +4446,34 @@ end;
 
 procedure TMainForm.ActionShowStopFrameExecute(Sender: TObject);
 var NodeData: PTreeData;
+    Fps : Double;
+    FrameNumber : Double;
+    FrameLen : Double;
+    StopTimeFrame : Integer;
 begin
   if Assigned(VideoRenderer) and Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    VideoRenderer.ShowImageAt(NodeData.Range.StopTime);
+
+    StopTimeFrame := NodeData.Range.StopTime;
+
+    // Get the video fps from VSFilter
+    Fps := VideoRenderer.GetVSFilterFPS;
+    if (FPS > 0) then
+    begin
+      // Calculate the frame duration in s
+      FrameLen := (1000.0 / Fps);
+      // Calculate the fame number
+      FrameNumber := Ceil(StopTimeFrame / FrameLen);
+      // Don't add the one frame delay we want to see the last frame with subtitle
+      // FrameNumber := FrameNumber + 1;
+      // Convert framenumber back in ms
+      StopTimeFrame := Ceil(FrameNumber * FrameLen);
+    end;
+    
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
+    // Finally show the image
+    VideoRenderer.ShowImageAt(StopTimeFrame);
   end;
 end;
 
@@ -4200,7 +4483,28 @@ procedure TMainForm.ActionShowFrameAtCursorExecute(Sender: TObject);
 begin
   if Assigned(VideoRenderer) then
   begin
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     VideoRenderer.ShowImageAt(WAVDisplayer.GetCursorPos);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.DetectCharsetDataLoss : Boolean;
+var i : integer;
+    Subrange : TSubtitleRange;
+    ansiCharString : string;
+begin
+  Result := False;
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    ansiCharString := SubRange.Text;
+    if (ansiCharString <> SubRange.Text) then
+    begin
+      Result := True;
+      Break;
+    end;
   end;
 end;
 
@@ -4209,7 +4513,9 @@ end;
 procedure TMainForm.SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
-    FS : TFileStream;
+    FS : TTntFileStream;
+    charString : string;
+    dataLoss : Boolean;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4217,8 +4523,7 @@ var i : integer;
       Stream.Write(s[1],Length(s));
     end;
 begin
-  // TODO : FIX unicode Filename
-  FS := TFileStream.Create(Filename, fmCreate);
+  FS := TTntFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
@@ -4244,7 +4549,7 @@ end;
 procedure TMainForm.SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
-    FS : TFileStream;
+    FS : TTntFileStream;
     s : WideString;
     style : TSSAStyle;
     
@@ -4255,37 +4560,43 @@ var i : integer;
     end;
 begin
   // Write BOM if any
-  FS := TFileStream.Create(Filename, fmCreate);
+  FS := TTntFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
 
   // Write Header
+  WriteStringLnStream('[Script Info]', FS);
+  WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
   if (SubtitleFileHeader = '') then
   begin
-    WriteStringLnStream('[Script Info]', FS);
-    WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00', FS);
-    WriteStringLnStream('', FS);
-    WriteStringLnStream('[V4 Styles]', FS);
-    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
-    WriteStringLnStream('Style: Default,Arial,28,65535,255,16744448,-2147483640,-1,0,1,3,0,2,30,30,30,0,128', FS);
+    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin
+      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
+    end;
+    WriteStringLnStream('PlayDepth: 0', FS);
+    WriteStringLnStream('Timer: 100.0', FS);    
   end
   else
   begin
     WriteStringLnStream(Trim(SubtitleFileHeader), FS);
-    WriteStringLnStream('', FS);    
-    WriteStringLnStream('[V4 Styles]', FS);  
-    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
-    for i:=0 to StyleForm.GetCount-1 do
-    begin
-      style := StyleForm.GetStyleAt(i);
-      WriteStringLnStream(style.getAsSSA, FS);
-    end;
   end;
+
+  // Write Styles
+  WriteStringLnStream('', FS);
+  WriteStringLnStream('[v4 Styles]', FS);
+  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
+  for i:=0 to StyleForm.GetCount-1 do
+  begin
+    style := StyleForm.GetStyleAt(i);
+    WriteStringLnStream(style.getAsSSA, FS);
+  end;
+
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
   WriteStringLnStream('Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
@@ -4305,6 +4616,13 @@ begin
       s := s + Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
     WriteStringLnStream(s, FS);
   end;
+
+  if (SubtitleFileFooter <> '') then
+  begin
+    WriteStringLnStream('', FS);
+    WriteStringLnStream(Trim(SubtitleFileFooter), FS);
+  end;
+  
   FS.Free;
 end;
 
@@ -4313,7 +4631,7 @@ end;
 procedure TMainForm.SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
-    FS : TFileStream;
+    FS : TTntFileStream;
     s : WideString;
     style : TSSAStyle;
 
@@ -4324,37 +4642,44 @@ var i : integer;
     end;
 begin
   // Write BOM if any
-  FS := TFileStream.Create(Filename, fmCreate);
+  FS := TTntFileStream.Create(Filename, fmCreate);
   if InUTF8 then
   begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
 
   // Write Header
+  WriteStringLnStream('[Script Info]', FS);
+  WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
   if (SubtitleFileHeader = '') then
   begin
-    WriteStringLnStream('[Script Info]', FS);
-    WriteStringLnStream('; Written by VisualSubSync ' + g_ApplicationVersion.VersionString, FS);
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00+', FS);
-    WriteStringLnStream('', FS);
-    WriteStringLnStream('[V4+ Styles]', FS);
-    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
-    WriteStringLnStream('Style: *Default,Arial,28,&H00FFFFFF,&H00400040,&H00C0C0C0,&H82C0C0C0,0,0,0,0,100,100,0,0,0,0,0,5,15,15,15,0', FS);
+    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin
+      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
+    end;
+    WriteStringLnStream('PlayDepth: 0', FS);
+    WriteStringLnStream('Timer: 100.0', FS);
+    WriteStringLnStream('WrapStyle: 0', FS);
   end
   else
   begin
     WriteStringLnStream(Trim(SubtitleFileHeader), FS);
-    WriteStringLnStream('', FS);
-    WriteStringLnStream('[V4+ Styles]', FS);
-    WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
-    for i:=0 to StyleForm.GetCount-1 do
-    begin
-      style := StyleForm.GetStyleAt(i);
-      WriteStringLnStream(style.getAsASS, FS);
-    end;
   end;
+
+  // Write Styles
+  WriteStringLnStream('', FS);
+  WriteStringLnStream('[v4+ Styles]', FS);
+  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
+  for i:=0 to StyleForm.GetCount-1 do
+  begin
+    style := StyleForm.GetStyleAt(i);
+    WriteStringLnStream(style.getAsASS, FS);
+  end;
+
   WriteStringLnStream('', FS);
   WriteStringLnStream('[Events]', FS);
   WriteStringLnStream('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', FS);
@@ -4372,6 +4697,13 @@ begin
       s := s + Tnt_WideStringReplace(Subrange.Text,CRLF,'\N',[rfReplaceAll]);
     WriteStringLnStream(s, FS);
   end;
+  
+  if (SubtitleFileFooter <> '') then
+  begin
+    WriteStringLnStream('', FS);
+    WriteStringLnStream(Trim(SubtitleFileFooter), FS);
+  end;
+
   FS.Free;
 end;
 
@@ -4452,6 +4784,7 @@ procedure TMainForm.ActionPlaySelStartExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionStart;
     WAVDisplayer.PlayRange(WAVDisplayer.Selection.StartTime,
       Min(WAVDisplayer.Selection.StartTime + StartEndPlayingDuration, WAVDisplayer.Selection.StopTime));
@@ -4464,6 +4797,7 @@ procedure TMainForm.ActionPlaySelEndExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
+    UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionEnd;
     WAVDisplayer.PlayRange(
       Max(WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime - StartEndPlayingDuration),
@@ -4502,6 +4836,8 @@ end;
 
 procedure TMainForm.ActionPlayToEndExecute(Sender: TObject);
 begin
+  if (bttWorkingMode.Tag = 1) then
+    PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
   if WAVDisplayer.SelectionIsEmpty then
   begin
@@ -4607,85 +4943,148 @@ end;
 procedure TMainForm.PanelVideoResize(Sender: TObject);
 begin
   if Assigned(CurrentProject) and PanelVideo.Enabled and
-    ((CurrentProject.VideoPanelWidth <> PanelVideo.Width) or
-     (CurrentProject.VideoPanelHeight <> PanelVideo.Height))
+    (CurrentProject.VideoPanelWidth <> PanelVideo.Width)
     then
   begin
     CurrentProject.VideoPanelWidth := PanelVideo.Width;
-    // todo : change height ???
-    //CurrentProject.VideoPanelHeight := PanelVideo.Height;
-    SaveProject(CurrentProject);
+    CurrentProject.VideoPanelHeight := PanelVideo.Height;
+    SaveProject(CurrentProject, True);
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SetSubtitleStartTime(SetStopTime : Boolean);
+var NodeData : PTreeData;
+    NewStartTime : Integer;
+    DurationTarget : Integer;
+    PreviousNode : PVirtualNode;
+    PreviousNodeData : PTreeData;
+    AutofixOverlapping : Boolean;
+    MinDurationBetweenSub : Integer;
+begin
+  if not Assigned(vtvSubsList.FocusedNode) then
+    Exit;
+
+  try
+    g_WebRWSynchro.BeginWrite;
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    if WAVDisplayer.IsPlaying then
+      NewStartTime := WAVDisplayer.GetPlayCursorPos
+    else
+      NewStartTime := WAVDisplayer.GetCursorPos;
+
+    // Autofix overlapping and ensure blank between subtitles
+    PreviousNode := vtvSubsList.GetPrevious(vtvSubsList.FocusedNode);
+    AutofixOverlapping := (ConfigObject.SpaceKeyBlankBetweenSubtitles > 0);
+    if AutofixOverlapping and Assigned(PreviousNode) then
+    begin
+      PreviousNodeData := vtvSubsList.GetNodeData(PreviousNode);
+      if (PreviousNodeData.Range.StopTime >= NewStartTime) or
+         ((NewStartTime - PreviousNodeData.Range.StopTime) < ConfigObject.SpaceKeyBlankBetweenSubtitles) then
+      begin
+        if (PreviousNodeData.Range.StopTime >= NewStartTime) then
+        begin
+          MinDurationBetweenSub := ConfigObject.SpaceKeyBlankBetweenSubtitles;
+          PreviousNodeData.Range.StopTime := NewStartTime - (MinDurationBetweenSub div 2);
+          NewStartTime := PreviousNodeData.Range.StopTime + MinDurationBetweenSub;
+        end
+        else
+        begin
+          MinDurationBetweenSub := ConfigObject.SpaceKeyBlankBetweenSubtitles -
+            (NewStartTime - PreviousNodeData.Range.StopTime);
+          PreviousNodeData.Range.StopTime := PreviousNodeData.Range.StopTime - (MinDurationBetweenSub div 2);
+          NewStartTime := PreviousNodeData.Range.StopTime + ConfigObject.SpaceKeyBlankBetweenSubtitles;
+        end;
+      end;
+    end;
+
+    NodeData.Range.StartTime := NewStartTime;
+    // Fix stop time to be superior to start time
+    if (NewStartTime > NodeData.Range.StopTime) then
+    begin
+      NodeData.Range.StopTime := NewStartTime + 100;
+    end;
+
+    if (SetStopTime) then
+    begin
+      // Set stop time based on CPS target
+      DurationTarget := Round((Length(StripTags(NodeData.Range.Text)) / ConfigObject.SpaceKeyCPSTarget) * 1000);
+      NodeData.Range.StopTime := NewStartTime + Max(DurationTarget,
+        ConfigObject.SpaceKeyMinimalDuration);
+    end;
+    FullSortTreeAndSubList; // lazy me :) but well it's fast enough
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionSetSubtitleStartTimeExecute(Sender: TObject);
-var NodeData : PTreeData;
-    NewStartTime : Cardinal;
 begin
-  if Assigned(vtvSubsList.FocusedNode) then
-  begin
-    try
-      g_WebRWSynchro.BeginWrite;
-      NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-      if WAVDisplayer.IsPlaying then
-        NewStartTime := WAVDisplayer.GetPlayCursorPos
-      else
-        NewStartTime := WAVDisplayer.GetCursorPos;
-      NodeData.Range.StartTime := NewStartTime;
-      if (NewStartTime > NodeData.Range.StopTime) then
-      begin
-        NodeData.Range.StopTime := NewStartTime + 100;
-      end;
-      FullSortTreeAndSubList; // lazy me :) but well it's fast enough
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
-
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.Repaint;
-  end;
+  SetSubtitleStartTime(False);
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SetFocusedSubtitleStopTime(Advance: Boolean);
+procedure TMainForm.SetFocusedSubtitleStopTime(Advance: Boolean; KeepStopIfSuperiorToCPSTarget : Boolean);
 var NodeData : PTreeData;
-    NewStopTime : Cardinal;
+    NewStopTime, NewStopCPS, NewDuration : Integer;
+    UpdateStop : Boolean;
 begin
-  if Assigned(vtvSubsList.FocusedNode) then
+  if not Assigned(vtvSubsList.FocusedNode) then
+    Exit;
+
+  if WAVDisplayer.IsPlaying then
+    NewStopTime := WAVDisplayer.GetPlayCursorPos
+  else
+    NewStopTime := WAVDisplayer.GetCursorPos;
+
+  NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+  NewDuration := NewStopTime - NodeData.Range.StartTime;
+
+  if (NewDuration <= 0) then
+    Exit;
+
+  UpdateStop := True;
+  if KeepStopIfSuperiorToCPSTarget then
   begin
-    if WAVDisplayer.IsPlaying then
-      NewStopTime := WAVDisplayer.GetPlayCursorPos
-    else
-      NewStopTime := WAVDisplayer.GetCursorPos;
-    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    if (NewStopTime > NodeData.Range.StartTime) then
+    NewStopCPS := Round(Length(StripTags(NodeData.Range.Text)) / NewDuration * 1000.0);
+    if (NewStopCPS > ConfigObject.SpaceKeyCPSTarget) or
+      (NewDuration <= ConfigObject.SpaceKeyMinimalDuration) then
     begin
-      try
-        g_WebRWSynchro.BeginWrite;
-        NodeData.Range.StopTime := NewStopTime;
-        CurrentProject.IsDirty := True;
-      finally
-        g_WebRWSynchro.EndWrite;
-      end;
-
-      if Advance then
-        AdvanceToNextSubtitleAfterFocus;
-
-      WAVDisplayer.UpdateView([uvfRange]);
-      vtvSubsList.Repaint;
+      UpdateStop := False;
     end;
   end;
+
+  if UpdateStop then
+  begin
+    try
+      g_WebRWSynchro.BeginWrite;
+      NodeData.Range.StopTime := NewStopTime;
+      CurrentProject.IsDirty := True;
+    finally
+      g_WebRWSynchro.EndWrite;
+    end;
+  end;
+
+  if Advance then
+    AdvanceToNextSubtitleAfterFocus;
+
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionSetSubtitleStopTimeExecute(Sender: TObject);
 begin
-  SetFocusedSubtitleStopTime(False);
+  SetFocusedSubtitleStopTime(False, False);
 end;
 
 //------------------------------------------------------------------------------
@@ -4710,7 +5109,7 @@ end;
 
 procedure TMainForm.ActionSetSubtitleStopTimeAndGoToNextExecute(Sender: TObject);
 begin
-  SetFocusedSubtitleStopTime(True);
+  SetFocusedSubtitleStopTime(True, False);
 end;
 
 //------------------------------------------------------------------------------
@@ -4723,6 +5122,7 @@ var
 begin
   if cbStyles.ItemIndex = -1 then
     Exit;
+  SubChanged := False;
   try
     g_WebRWSynchro.BeginWrite;
     NewStyle := cbStyles.Items.Strings[cbStyles.ItemIndex];
@@ -4753,7 +5153,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.UpdateStylesComboBox;
-var i : Cardinal;
+var i : Integer;
     style : TSSAStyle;
 begin
   cbStyles.Clear;
@@ -4769,18 +5169,13 @@ end;
 
 procedure TMainForm.ActionStylesExecute(Sender: TObject);
 begin
-  // Try to pres select current subtitle style
+  // Try to pre sselect current subtitle style
   StyleForm.PreSelect(cbStyles.Text);
   StyleForm.ShowModal;
   if StyleForm.HaveStylesChanged then
   begin
     UpdateStylesComboBox;
-    g_WebRWSynchro.BeginWrite;
-    try
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
+    CurrentProjectSetDirty;
   end;
 end;
 
@@ -4826,6 +5221,7 @@ var Node : PVirtualNode;
     NodeData : PTreeData;
     SubChanged : Boolean;
 begin
+  SubChanged := False;
   g_WebRWSynchro.BeginWrite;
   try
     Node := vtvSubsList.GetFirst;
@@ -4850,6 +5246,236 @@ begin
   begin
     vtvSubsList.Repaint;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPauseExecute(Sender: TObject);
+begin
+  if WAVDisplayer.IsPlaying then
+  begin
+    WAVDisplayer.Pause;
+  end
+  else
+  begin
+    ActionPlay.Execute;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionToggleTimingModeExecute(Sender: TObject);
+begin
+  if (bttWorkingMode.Tag = 0) then
+  begin
+    bttWorkingMode.Caption := 'Timing';
+    bttWorkingMode.Font.Color := clRed;
+    bttWorkingMode.Tag := 1;
+    if ConfigObject.MouseEnableSSATimingMode then
+      WAVDisplayer.SelMode := smSSA
+    else
+      WAVDisplayer.SelMode := smCoolEdit;
+  end
+  else
+  begin
+    bttWorkingMode.Caption := 'Normal';
+    bttWorkingMode.Tag := 0;
+    bttWorkingMode.Font.Color := clWindowText;
+    WAVDisplayer.SelMode := smCoolEdit;
+  end;
+  KeyPreview := (bttWorkingMode.Tag = 1);
+  PreferencesForm.SetMode(bttWorkingMode.Tag = 1);
+  SetShortcut(PreferencesForm.GetMode);
+  MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
+    ((not ConfigObject.DisableSubtitleEdition) or (bttWorkingMode.Tag = 0));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateVolume;
+begin
+  AudioOnlyRenderer.SetVolume(tbVolume.Position);
+  VideoRenderer.SetVolume(tbVolume.Position);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.tbVolumeChange(Sender: TObject);
+begin
+  UpdateVolume;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetEditorFocusExecute(Sender: TObject);
+begin
+  MemoSubtitleText.SetFocus;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSetEditorFocusAndSelectExecute(Sender: TObject);
+begin
+  MemoSubtitleText.SetFocus;
+  MemoSubtitleText.SelectAll;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateSubtitleForPreview(ForceUpdate : Boolean);
+var TmpDstFilename : WideString;
+    StartTime : Cardinal;
+begin
+  // TODO : Clean old files in temp directory
+  
+  if DisableVideoUpdatePreview or (Trim(CurrentProject.SubtitlesFile) = '') then
+    Exit;
+
+  // Save current file as tmp file, reload subtitle if loaded
+  StartTime := GetTickCount;
+  TmpDstFilename := GetTemporaryFolder;
+  if (Length(TmpDstFilename) > 0) then
+  begin
+    TmpDstFilename := TmpDstFilename + 'VisualSubSync\';
+    // Create directory
+    if not WideDirectoryExists(TmpDstFilename) then
+      WideCreateDir(TmpDstFilename);
+    TmpDstFilename := TmpDstFilename + WideExtractFileName(CurrentProject.SubtitlesFile);
+  end
+  else
+  begin
+    TmpDstFilename := WideExtractFilePath(CurrentProject.SubtitlesFile) + '~' +
+      WideExtractFileName(CurrentProject.SubtitlesFile);
+  end;
+  if ShowingVideo then
+  begin
+    if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused or ForceUpdate) then
+    begin
+      SaveSubtitles(TmpDstFilename, CurrentProject.IsUTF8, True);
+      VideoRenderer.SetSubtitleFilename(TmpDstFilename);
+      if VideoRenderer.IsPaused then
+      begin
+        VideoRenderer.UpdateImage;
+      end;
+      VideoPreviewNeedSubtitleUpdate := False;
+      LogForm.SilentLogMsg('Save took ' + IntToStr(GetTickCount - StartTime) +' ms');
+    end
+  end
+  else
+  begin
+    VideoPreviewNeedSubtitleUpdate := True;
+  end
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CurrentProjectOnDirtySet(Sender: TObject);
+begin
+  UpdateSubtitleForPreview(False);
+  VideoPreviewNeedSubtitleUpdate := True;
+  CallJSOnSubtitleModification;  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CurrentProjectSetDirty;
+
+begin
+  g_WebRWSynchro.BeginWrite;
+  try
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionNextErrorExecute(Sender: TObject);
+begin
+  ErrorReportForm.GoToNextError;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.GetVideoRendererFiltersList(list : TStrings) : Boolean;
+begin
+  Result := VideoRenderer.GetFilters(list);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.GetCurrentPreviousNextSubtitles(var CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange);
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  CurrentSub := nil;
+  PreviousSub := nil;
+  NextSub := nil;
+
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    CurrentSub := NodeData.Range;
+
+    Node := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
+    if Assigned(Node) then
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      NextSub := NodeData.Range;
+    end;
+
+    Node := vtvSubsList.GetPrevious(vtvSubsList.FocusedNode);
+    if Assigned(Node) then
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      PreviousSub := NodeData.Range;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CallJSOnSubtitleModification;
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    GetCurrentPreviousNextSubtitles(CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifySubtitleModification(CurrentSub, PreviousSub, NextSub);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CallJSOnSelectedSubtitle;
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    GetCurrentPreviousNextSubtitles(CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifySelectionModification(CurrentSub, PreviousSub, NextSub);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnJsSetStatusBarText(const Msg : WideString);
+begin
+  SetStatusBarPrimaryText(Msg);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TntStatusBar1DrawPanel(StatusBar: TStatusBar;
+  Panel: TStatusPanel; const Rect: TRect);
+var TntPanel : TTntStatusPanel;
+begin
+  // Use an owner drawn panel to avoid the 127 bytes text limit in
+  // Windows version inferior to Windows Vista
+  TntPanel := Panel as TTntStatusPanel;
+  WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
 end;
 
 //------------------------------------------------------------------------------
