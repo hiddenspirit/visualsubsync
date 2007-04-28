@@ -34,13 +34,32 @@ uses
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
-  DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit;
+  DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit;
 
 type
   TTreeData = record
     Range: TSubtitleRange;
   end;
   PTreeData = ^TTreeData;
+
+  // -----
+  TUndoableTask = class
+  public
+    procedure UndoTask; virtual; abstract;
+    procedure DoTask; virtual; abstract;
+  end;
+
+  TUndoableDelayTask = class(TUndoableTask)
+  private
+    FDelayInMs : Integer;
+    FDelayShiftType : TDelayShiftType;
+    FDelayApplyToType : TDelayApplyToType;
+  public
+    constructor Create;
+    procedure UndoTask; override;
+    procedure DoTask; override;
+  end;
+  // -----
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
 
@@ -482,6 +501,8 @@ type
 
     GeneralJSPlugin : TSimpleJavascriptWrapper;
 
+    UndoStack : TObjectStack;
+
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
     procedure EnableStyleControls(Enable : Boolean);
@@ -517,6 +538,7 @@ type
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsCUE(Filename: WideString);
+    procedure SaveSubtitlesAsTXT(Filename: WideString; InUTF8 : Boolean);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
     function LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
@@ -570,7 +592,7 @@ var
 implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
-  ErrorReportFormUnit, DelayFormUnit, SuggestionFormUnit, GotoFormUnit,
+  ErrorReportFormUnit, SuggestionFormUnit, GotoFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
@@ -596,6 +618,25 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Rework project handling which is a bit messy ATM
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
 
+
+//------------------------------------------------------------------------------
+
+// TODO : auto clear karaoke timing that are out of subtitle bound ???
+// TODO : update documentation (timing button)
+
+{
+
+TUndoStack
+
+TUndoTasks (list of TUndoBasic)
+
+TUndoBasicDelete (list of subtitle)
+TUndoBasicAdd (list of index)
+TUndoBasicModify (list of subtitle with index)
+TUndoBasicDelay (delay, type, list of index)
+
+}
+
 //==============================================================================
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -608,6 +649,8 @@ begin
 
   plCursorPos.DoubleBuffered := True;
   LogForm := TLogForm.Create(nil);
+
+  UndoStack := TObjectStack.Create;
 
   MRUList := TMRUList.Create(MenuItemOpenRecentRoot);
   MRUList.OnRecentMenuItemClick := OnRecentMenuItemClick;
@@ -713,6 +756,7 @@ begin
   FreeAndNil(MRUList);
   FreeAndNil(ConfigObject);
   FreeAndNil(CurrentProject);
+  FreeAndNil(UndoStack);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
 end;
@@ -1385,7 +1429,7 @@ begin
       end;
       // Remove the index line if any
       i := RPos(CRLF, Text);
-      if((i > 0) and (StrToIntDef(Copy(Text,i+2,MaxInt),-1) <> -1) and (lineIndex < Source.Count)) then
+      if ((i > 0) and (StrToIntDef(Copy(Text, i+2, MaxInt), -1) <> -1) and (lineIndex < Source.Count)) then
       begin
         Delete(Text, i, MaxInt);
       end;
@@ -1665,11 +1709,11 @@ begin
   begin
     CharCount := MyLineLength(MemoSubtitleText.Lines.Strings[i]);
     Inc(TotalCharCount, CharCount);
-    s := s + IntToStr(CharCount) + #13#10;
+    s := s + IntToStr(CharCount) + CRLF;
   end;
   for i := MemoSubtitleText.Lines.Count to MemoSubtitleText.Perform(EM_GETLINECOUNT,0,0)-1 do
   begin
-    s := s + '0' + #13#10;
+    s := s + '0' + CRLF;
   end;
   MemoLinesCounter.Text := Trim(s);
 
@@ -1718,7 +1762,9 @@ begin
   else if (Ext = '.ssa') then
     SaveSubtitlesAsSSA(Filename, InUTF8)
   else if (Ext = '.cue') then
-    SaveSubtitlesAsCUE(Filename);
+    SaveSubtitlesAsCUE(Filename)
+  else if (Ext = '.txt') then
+    SaveSubtitlesAsTXT(Filename, InUTF8);
 
   if (not BackupOnly) then
   begin
@@ -2152,6 +2198,8 @@ begin
   TntSaveDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
     'SSA files (*.ssa)|*.SSA' + '|' +
     'ASS files (*.ass)|*.ASS' + '|' +
+    'CUE files (*.cue)|*.CUE' + '|' +
+    'TXT files (*.txt)|*.TXT' + '|' +
     'All files (*.*)|*.*';
   TntSaveDialog1.FileName := CurrentProject.SubtitlesFile;
   // Preselect format
@@ -2163,7 +2211,7 @@ begin
   else if (InputExt = '.ass') then
     TntSaveDialog1.FilterIndex := 3
   else
-    TntSaveDialog1.FilterIndex := 4;
+    TntSaveDialog1.FilterIndex := 6;
 
   if TntSaveDialog1.Execute then
   begin
@@ -2172,6 +2220,8 @@ begin
       1 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.srt');
       2 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ssa');
       3 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ass');
+      4 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.cue');
+      5 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.txt');
     end;
     SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.IsUTF8, False);
   end;
@@ -2371,6 +2421,22 @@ end;
 
 //------------------------------------------------------------------------------
 
+constructor TUndoableDelayTask.Create;
+begin
+
+end;
+
+procedure TUndoableDelayTask.UndoTask;
+begin
+
+end;
+
+procedure TUndoableDelayTask.DoTask;
+begin
+
+end;
+
+
 procedure TMainForm.ActionDelayExecute(Sender: TObject);
 var DelayInMs : Integer;
     Node : PVirtualNode;
@@ -2378,21 +2444,21 @@ var DelayInMs : Integer;
     DelaySelectedRange : Boolean;
 
     procedure DelaySub(Range : TRange; DelayInMs : Integer;
-      ShiftType : Integer);
+      ShiftType : TDelayShiftType);
     var i : Integer;
     begin
       // ShiftType : 0 -> start & end
       //             1 -> start only
       //             2 -> end only
-      if (ShiftType = 0) or (ShiftType = 1) then
+      if (ShiftType = dstBothTime) or (ShiftType = dstStartTimeOnly) then
       begin
         Range.StartTime := Range.StartTime + DelayInMs;
       end;
-      if (ShiftType = 0) or (ShiftType = 2) then
+      if (ShiftType = dstBothTime) or (ShiftType = dstStopTimeOnly) then
       begin
         Range.StopTime := Range.StopTime + DelayInMs;
       end;
-      if (ShiftType = 0) then
+      if (ShiftType = dstBothTime) then
       begin
         for i:=0 to Length(Range.SubTime)-1 do
         begin
@@ -2408,12 +2474,12 @@ begin
   // Prefill the dialog
   if (vtvSubsList.SelectedCount > 1) then
   begin
-    DelayForm.rgApplyTo.ItemIndex := 1;
+    DelayForm.SetDelayApplyToType(dattSelected);
   end;
   if not WAVDisplayer.SelectionIsEmpty then
   begin
-    DelayForm.meDelay.Text := TimeMsToString(WAVDisplayer.Selection.StopTime -
-      WAVDisplayer.Selection.StartTime)
+    DelayForm.SetDelayInMS(WAVDisplayer.Selection.StopTime -
+      WAVDisplayer.Selection.StartTime);
   end;
 
   if DelayForm.ShowModal = mrOk then
@@ -2421,17 +2487,16 @@ begin
     g_WebRWSynchro.BeginWrite;
 
     try
-      DelayInMs := TimeStringToMs(DelayForm.meDelay.EditText);
-      if DelayForm.rgType.ItemIndex = 1 then
-        DelayInMs := -DelayInMs;
-      case DelayForm.rgApplyTo.ItemIndex of
-        0: // All subtitles
+      DelayInMs := DelayForm.GetDelayInMs;
+
+      case DelayForm.GetDelayApplyToType of
+        dattAll: // All subtitles
           begin
             Node := vtvSubsList.GetFirst;
             while Assigned(Node) do
             begin
               NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
               if (NodeData.Range = WAVDisplayer.SelectedRange) then
               begin
                 DelaySelectedRange := True;
@@ -2439,13 +2504,13 @@ begin
               Node := vtvSubsList.GetNext(Node);
             end;
           end;
-        1: // Selected subs
+        dattSelected: // Selected subs
           begin
             Node := vtvSubsList.GetFirstSelected;
             while Assigned(Node) do
             begin
               NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
               if (NodeData.Range = WAVDisplayer.SelectedRange) then
               begin
                 DelaySelectedRange := True;
@@ -2454,13 +2519,13 @@ begin
             end;
             FullSortTreeAndSubList;
           end;
-        2: // From focused subs to end
+        dattFromCursor: // From focused subs to end
           begin
             Node := vtvSubsList.FocusedNode;
             while Assigned(Node) do
             begin
               NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.rgShift.ItemIndex);
+              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
               if (NodeData.Range = WAVDisplayer.SelectedRange) then
               begin
                 DelaySelectedRange := True;
@@ -2472,7 +2537,7 @@ begin
       end;
       if (DelaySelectedRange = True) and Assigned(WAVDisplayer.SelectedRange) then
       begin
-        DelaySub(WAVDisplayer.Selection, DelayInMs, DelayForm.rgShift.ItemIndex);
+        DelaySub(WAVDisplayer.Selection, DelayInMs, DelayForm.GetDelayShiftType);
       end;
       CurrentProject.IsDirty := True;
     finally
@@ -2561,7 +2626,7 @@ begin
       LastStopTime := Max(LastStopTime, NodeData.Range.StopTime);
       if (i > 0) then
         DeleteList.Add(Node);
-      AccuText := AccuText + #13#10 + NodeData.Range.Text;
+      AccuText := AccuText + CRLF + NodeData.Range.Text;
       Node := vtvSubsList.GetNextSelected(Node);
       Inc(i);
     end;
@@ -4521,12 +4586,10 @@ procedure TMainForm.SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
     FS : TTntFileStream;
-    charString : string;
-    dataLoss : Boolean;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + #13#10;
+      s := s + CRLF;
       Stream.Write(s[1],Length(s));
     end;
 begin
@@ -4562,7 +4625,7 @@ var i : integer;
     
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + #13#10;
+      s := s + CRLF;
       Stream.Write(s[1],Length(s));
     end;
 begin
@@ -4860,24 +4923,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-// TODO : auto clear karaoke timing that are out of subtitle bound ???
-// TODO : update documentation (timing button)
-
-{
-
-TUndoStack
-
-TUndoTasks (list of TUndoBasic)
-
-TUndoBasicDelete (list of subtitle)
-TUndoBasicAdd (list of index)
-TUndoBasicModify (list of subtitle with index)
-TUndoBasicDelay (delay, type, list of index)
-
-}
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.ActionPlay1sBeforeExecute(Sender: TObject);
 var NodeData: PTreeData;
 begin
@@ -4917,7 +4962,8 @@ end;
 procedure TMainForm.SaveSubtitlesAsCUE(Filename: WideString);
 var i : integer;
     SubRange : TSubtitleRange;
-    FS : TFileStream;
+    FS : TTntFileStream;
+    Text : WideString;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
@@ -4925,7 +4971,7 @@ var i : integer;
       Stream.Write(s[1],Length(s));
     end;
 begin
-  FS := TFileStream.Create(Filename, fmCreate);
+  FS := TTntFileStream.Create(Filename, fmCreate);
 
   WriteStringLnStream('FILE "YourFileHere.wav" WAVE', FS);
   WriteStringLnStream('  PERFORMER "Performer Here"',FS);
@@ -4935,9 +4981,16 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    Text := Subrange.Text;
+    // Remove line breaks
+    Text := Tnt_WideStringReplace(Text, ' ' + CRLF + ' ', ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, ' ' + CRLF, ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, CRLF + ' ', ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, CRLF, ' ', [rfReplaceAll]);
+
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+2]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StartTime)]), FS);
-    WriteStringLnStream(Format('    TITLE "%s"', [SubRange.Text]), FS);
+    WriteStringLnStream(Format('    TITLE "%s"', [Text]), FS);
     
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+3]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StopTime)]), FS);
@@ -5120,6 +5173,7 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
 procedure TMainForm.cbStylesSelect(Sender: TObject);
 var
   Node : PVirtualNode;
@@ -5493,6 +5547,43 @@ begin
   begin
     MainForm.LoadProject(WideParamStr(1));
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SaveSubtitlesAsTXT(Filename: WideString; InUTF8 : Boolean);
+var i : integer;
+    Subrange : TSubtitleRange;
+    FS : TTntFileStream;
+    Text : WideString;
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + CRLF;
+      Stream.Write(s[1],Length(s));
+    end;
+begin
+  FS := TTntFileStream.Create(Filename, fmCreate);
+  if InUTF8 then
+  begin
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
+  end;
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    Text := Subrange.Text;
+    // Remove line breaks
+    Text := Tnt_WideStringReplace(Text, ' ' + CRLF + ' ', ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, ' ' + CRLF, ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, CRLF + ' ', ' ', [rfReplaceAll]);
+    Text := Tnt_WideStringReplace(Text, CRLF, ' ', [rfReplaceAll]);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(Text), FS)
+    else
+      WriteStringLnStream(Text, FS);
+  end;
+  FS.Free;
 end;
 
 //------------------------------------------------------------------------------
