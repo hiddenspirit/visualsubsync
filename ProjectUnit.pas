@@ -33,6 +33,7 @@ type
   private
     FIsDirty : Boolean;
     FOnDirtyChange : TNotifyEvent;
+    FOnDirtySet : TNotifyEvent;
 
     procedure SetIsDirty(Value : Boolean);
   public
@@ -48,11 +49,14 @@ type
     ShowVideo : Boolean;
     VideoPanelWidth : Integer;
     VideoPanelHeight : Integer;
+    DetachedVideo : Boolean;
 
     procedure LoadFromINIFile(ProjectFilename : WideString);
+    constructor Create;
   published
     property IsDirty : Boolean read FIsDirty write SetIsDirty;
     property OnDirtyChange : TNotifyEvent read FOnDirtyChange write FOnDirtyChange;
+    property OnDirtySet : TNotifyEvent read FOnDirtySet write FOnDirtySet;
   end;
 
   TProjectForm = class(TForm)
@@ -79,6 +83,7 @@ type
     bttBrowsePeakFile: TSpeedButton;
     EditPeakFilename: TTntEdit;
     chkSaveAsUTF8: TTntCheckBox;
+    cbSubtitleFormat: TTntComboBox;
     procedure bttCreateNewProjectClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure bttBrowseVideoFileClick(Sender: TObject);
@@ -89,15 +94,17 @@ type
     procedure bttOkClick(Sender: TObject);
     procedure rbInternalWAVClick(Sender: TObject);
     procedure bttBrowsePeakFileClick(Sender: TObject);
+    procedure cbSubtitleFormatChange(Sender: TObject);
   private
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
+    procedure UpdateFormatCombobox;    
   public
     { Public declarations }
     procedure Clear;
     procedure ConfigureInNewProjectMode;
     procedure ConfigureInModifyProjectMode(Project : TVSSProject);
-    function GetWAVMode : TProjectWAVMode;    
+    function GetWAVMode : TProjectWAVMode;
   end;
 
 var
@@ -107,9 +114,17 @@ implementation
 
 {$R *.dfm}
 
-uses WAVExtractFormUnit, TntSysUtils, IniFiles, MiscToolsUnit;
+uses WAVExtractFormUnit, TntSysUtils, MiscToolsUnit, TntIniFiles;
 
 //==============================================================================
+
+constructor TVSSProject.Create;
+begin
+  inherited;
+  FOnDirtyChange := nil;
+  FOnDirtySet := nil;
+  FIsDirty := False;
+end;
 
 procedure TVSSProject.SetIsDirty(Value : Boolean);
 begin
@@ -121,15 +136,19 @@ begin
       FOnDirtyChange(Self);
     end;
   end;
+  if Value and Assigned(FOnDirtySet) then
+  begin
+    FOnDirtySet(Self);
+  end;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TVSSProject.LoadFromINIFile(ProjectFilename : WideString);
 var
-  ProjectFileIni : TIniFile;
+  ProjectFileIni : TTntIniFile;
 begin
-    ProjectFileIni := TIniFile.Create(ProjectFilename);
+    ProjectFileIni := TTntIniFile.Create(ProjectFilename);
     Filename := ProjectFilename;
     VideoSource := ProjectFileIni.ReadString('VisualSubsync','VideoSource','');
     WAVFile := ProjectFileIni.ReadString('VisualSubsync','WAVFile','');
@@ -142,6 +161,7 @@ begin
     VideoPanelWidth := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelWidth', 0);
     VideoPanelHeight := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelHeight', 0);
     ShowVideo := ProjectFileIni.ReadBool('VisualSubsync','ShowVideo', False);
+    DetachedVideo := ProjectFileIni.ReadBool('VisualSubsync','DetachedVideo', False);
 
     ProjectFileIni.Free;
 
@@ -158,7 +178,7 @@ end;
 procedure TProjectForm.bttCreateNewProjectClick(Sender: TObject);
 var res : Integer;
 begin
-  if (Trim(EditVideoFilename.Text) <> '') and (not FileExists(EditVideoFilename.Text)) then
+  if (Trim(EditVideoFilename.Text) <> '') and (not WideFileExists(EditVideoFilename.Text)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The video file "' + EditVideoFilename.Text +
       '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -167,7 +187,7 @@ begin
   end;
 
   if ((Trim(EditWAVFilename.Text) <> '') or rbExternal.Checked) and
-     (not FileExists(EditWAVFilename.Text)) then
+     (not WideFileExists(EditWAVFilename.Text)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The WAV file "' + EditWAVFilename.Text +
       '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -184,7 +204,7 @@ begin
   end;
 
   if ((Trim(EditPeakFilename.Text) <> '') or rbPeakOnly.Checked) and
-     (not FileExists(EditPeakFilename.Text)) then
+     (not WideFileExists(EditPeakFilename.Text)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
       '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -194,11 +214,12 @@ begin
 
   if Trim(EditSubtitleFilename.Text) = '' then
   begin
-    EditSubtitleFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.srt');
+    EditSubtitleFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.srt');
+    UpdateFormatCombobox;
   end;
   if Trim(EditProjectFilename.Text) = '' then
   begin
-    EditProjectFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.vssprj');
+    EditProjectFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.vssprj');
   end;
 
   if rbInternalWAV.Checked then
@@ -214,7 +235,7 @@ begin
     end;
   end;
 
-  if FileExists(EditProjectFilename.Text) then
+  if WideFileExists(EditProjectFilename.Text) then
   begin
     // ask for replacement or cancel
     res := MessageBoxW(Handle,
@@ -248,18 +269,19 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditVideoFilename.Text := TntOpenDialog1.FileName;
-    if (Trim(EditWAVFilename.Text) = '') and FileExists(ChangeFileExt(EditVideoFilename.Text,'.wav')) then
+    if (Trim(EditWAVFilename.Text) = '') and WideFileExists(WideChangeFileExt(EditVideoFilename.Text,'.wav')) then
     begin
       WAVSelectMode(pwmExternal);
-      EditWAVFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.wav');
+      EditWAVFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.wav');
     end;
     if Trim(EditSubtitleFilename.Text) = '' then
     begin
-      EditSubtitleFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.srt');
+      EditSubtitleFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.srt');
+      UpdateFormatCombobox;
     end;
     if Trim(EditProjectFilename.Text) = '' then
     begin
-      EditProjectFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.vssprj');
+      EditProjectFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.vssprj');
     end;
   end;
 end;
@@ -298,6 +320,7 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditSubtitleFilename.Text := TntOpenDialog1.FileName;
+    UpdateFormatCombobox;
   end;
 end;
 
@@ -320,7 +343,7 @@ procedure TProjectForm.bttExtractWAVFromVideoClick(Sender: TObject);
 var
   ExtractWAVForm: TExtractWAVForm;
 begin
-  if (Trim(EditVideoFilename.Text) = '') or (not FileExists(EditVideoFilename.Text)) then
+  if (Trim(EditVideoFilename.Text) = '') or (not WideFileExists(EditVideoFilename.Text)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The video file "' + EditVideoFilename.Text +
       '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -329,12 +352,12 @@ begin
   end;
   ExtractWAVForm := TExtractWAVForm.Create(nil);
   ExtractWAVForm.VideoFilename := EditVideoFilename.Text;
-  ExtractWAVForm.DestinationFilename := ChangeFileExt(EditVideoFilename.Text,'.wav');
+  ExtractWAVForm.DestinationFilename := WideChangeFileExt(EditVideoFilename.Text,'.wav');
   if ExtractWAVForm.ShowModal = mrOk then
   begin
     if ExtractWAVForm.rbOnlyPeak.Checked then
     begin
-      EditPeakFilename.Text := ChangeFileExt(EditVideoFilename.Text,'.peak');
+      EditPeakFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.peak');
       WAVSelectMode(pwmPeakOnly);
     end
     else
@@ -356,6 +379,7 @@ begin
   EditProjectFilename.Text := '';
   EditPeakFilename.Text := '';
   chkSaveAsUTF8.Checked := False;
+  cbSubtitleFormat.ItemIndex := 0;
 end;
 
 //------------------------------------------------------------------------------
@@ -383,6 +407,7 @@ begin
   EditPeakFilename.Text := Project.PeakFile;
   WAVSelectMode(Project.WAVMode);
   chkSaveAsUTF8.Checked := Project.IsUTF8;
+  UpdateFormatCombobox;
 end;
 
 //------------------------------------------------------------------------------
@@ -439,6 +464,35 @@ begin
     Result := pwmExternal
   else
     Result := pwmPeakOnly
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.cbSubtitleFormatChange(Sender: TObject);
+begin
+  if Length(EditSubtitleFilename.Text) <= 0 then
+    Exit;
+    
+  // Change subtitle format
+  case cbSubtitleFormat.ItemIndex of
+  0: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.srt');
+  1: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ssa');
+  2: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ass');
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.UpdateFormatCombobox;
+var Ext : WideString;
+begin
+  Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
+  if (Ext = '.srt') then
+    cbSubtitleFormat.ItemIndex := 0
+  else if (Ext = '.ssa') then
+    cbSubtitleFormat.ItemIndex := 1
+  else if (Ext = '.ass') then
+    cbSubtitleFormat.ItemIndex := 2;
 end;
 
 //------------------------------------------------------------------------------

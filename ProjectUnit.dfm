@@ -1,10 +1,10 @@
 object ProjectForm: TProjectForm
   Left = 226
-  Top = 175
+  Top = 176
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'New Project'
-  ClientHeight = 332
+  ClientHeight = 331
   ClientWidth = 550
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -151,9 +151,28 @@ object ProjectForm: TProjectForm
     object EditSubtitleFilename: TTntEdit
       Left = 8
       Top = 17
-      Width = 489
+      Width = 409
       Height = 21
       TabOrder = 0
+    end
+    object cbSubtitleFormat: TTntComboBox
+      Left = 424
+      Top = 16
+      Width = 73
+      Height = 21
+      Hint = 'Subtitle file format'
+      Style = csDropDownList
+      ItemHeight = 13
+      ItemIndex = 0
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 1
+      Text = 'SRT'
+      OnChange = cbSubtitleFormatChange
+      Items.Strings = (
+        'SRT'
+        'SSA'
+        'ASS')
     end
   end
   object gbProjectFile: TTntGroupBox
