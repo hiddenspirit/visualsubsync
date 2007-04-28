@@ -50,6 +50,7 @@ var
   g_WebRWSynchro : TMultiReadExclusiveWriteSynchronizer;
   g_BackupDirectory : WideString;
   g_PluginPath : WideString;
+  g_ApplicationPath : WideString;
 
 implementation
 
@@ -76,11 +77,10 @@ initialization
   g_ApplicationVersion := TFileVersion.Create(Application.ExeName);
   g_GlobalContext := TGlobalContext.Create;
   g_WebRWSynchro := TMultiReadExclusiveWriteSynchronizer.Create;
-  g_BackupDirectory := WideExtractFilePath(TntApplication.ExeName);
-  g_BackupDirectory := WideIncludeTrailingBackslash(g_BackupDirectory) + 'Backup\';
+  g_ApplicationPath := WideIncludeTrailingBackslash(WideExtractFilePath(TntApplication.ExeName));
+  g_BackupDirectory := g_ApplicationPath + 'Backup\';
   CheckBackupDirectory;
-  g_PluginPath := WideExtractFilePath(TntApplication.ExeName);
-  g_PluginPath := WideIncludeTrailingBackslash(g_PluginPath) + 'jsplugin\';
+  g_PluginPath := g_ApplicationPath + 'jsplugin\';
   
 finalization
   g_WebRWSynchro.Free;
