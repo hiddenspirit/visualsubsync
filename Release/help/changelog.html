@@ -19,13 +19,37 @@
 
 <br>
 
-<div class="Title">Version 0.9.X (XXXXXXXX)</div>
+<div class="Title">Version 0.9.9 (2007-01-XX)</div>
+This is a kind of release contest version before 1.0, so don't forget to report any bugs, thanks.<br/>
+There is two big improvements in this version: the subtitles video preview and the SSA/ASS style editor.<br>
+With SSA/ASS support getting more complete, it's important to know that you can directly create your project
+in SSA/ASS format by setting the extension accordingly in the project creation window.<br>
+There is also improvements in the timing mode with the space bar, now you can time an existing
+transcript and VSS will try to ensure a characters per seconds target, a minimal subtitle
+duration and a minimal blank duration between subtitles.<br>
+Also good to remember, if you experience a crash, don't forget to check the backup directories (<i>Preferences... &gt; General &gt; Backup</i>)<br>
+Here is a more complete changelog :
 <ul>
+	<li>Improved subtitles video preview by using a custom VSFilter version.
+		Saving subtitles is not needed anymore to have an updated preview. If playing is stopped
+		you will need to play the subtitle again.	If you pause the video, you can see modifications in real time.</li> 
   <li>Added SSA/ASS style editor</li>
-  <li>Added new configurable shortcuts to set subtitle start/stop time during "live" timing</li>
-  <li>Added new options to "live" timing with space bar to modify existing subtitles instead of creating new one.</li>
-  <li>Improved screen font size handling.</li>
+  <li>Added new configurable shortcuts to set subtitle start/stop time during "live timing" :
+  	<i>Set subtitle start time</i>, <i>Set subtitle stop time</i>, <i>Set subtitle stop time / go to next</i></li>
+  <li>Improved timing mode with space bar, there is now a set of options to modify existing
+    subtitles instead of creating new one.</li>
+  <li>Added pause button</li>
+  <li>Added volume trackbar</li>
+  <li>Added configurable shortcut to toggle between normal and timing mode : <i>Toggle between normal and timing mode</i></li>
+  <li>Application settings are now saved in user application data directory if in read only mode</li>
+  <li>Improved screen font size handling</li>
+  <li>Detached video window state is now saved per project</li>
+  <li>Added support for reading UTF-16 Unicode files</li>
+  <li>Added configurable shortcut ("next error") to go to next error.</li>
+  <li>Added a "general" JavaScript plugin with 2 functions (OnSubtitleModification and OnSubtitleSelection). It can be used to show statistics for example.</li>
 </ul>
+Thanks to Guilamu, Sixe and Stef for suggestions and testing.
+<br>
 <br>
 
 <div class="Title">Version 0.9.4 (2006-05-21)</div>
@@ -68,7 +92,7 @@ Bug fix and small changes list:
 <ul>
 	<li>Added optionnal mouse anti-overlapping feature</li>
 	<li>The "Find" shortcut (F3) is now configurable</li>
-  <li>Fix shifting of karaoke second syllable start time.</li>
+  <li>Fix shifting of karaoke second syllable start time</li>
   <li>Fix for small "false" selection (<80ms)</li>
   <li>Fix some typo (Ok -&gt OK)</li>
   <li>Fix Undo/Redo in subtitle text edition field</li>

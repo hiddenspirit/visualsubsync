@@ -29,7 +29,7 @@ form and allowing the WORLD to see the subtitle timestamp breakdowns via a webpa
 submit corrections.
 </p>
 
-<div class="Title">Download (Version 0.9.4)</div>
+<div class="Title">Download (Version 0.9.9)</div>
 <p>
 <a href="http://corecodec.org/frs/?group_id=13">Click here</a><br>
 <a href="changelog.html">Changelog</a>
@@ -54,24 +54,44 @@ submit corrections.
 
 <div class="Title">FAQ</div>
 <ul>
-	<li><b>How do I see subtitles in the video preview window ?</b><br>
-		For that you need to have vobsub installed. In the vobsub <i>Misc</i> properties page check
-		<i>Auto-reload subtitle file after detecting modification</i>. Also you need to name your
-		subtitles file the same way as the video, for example : myvideo.avi and myvideo.srt or myvideo.ENG.srt.
-		And don't forget to save your file to see the last modifications.
+	<li><b>What VSS means?</b><br>
+	It's the short for <b>V</b>isual<b>S</b>ub<b>S</b>ync.</li>
+	<li><b>What is this normal and timing mode?</b><br>
+	In VSS, there is two mode available: the normal mode and the timing mode.
+	Both mode have a different configurable (<i>Edit &gt; Preferences &gt; HotKeys</i>) set of hotkeys.
+	In timing mode you can change (<i>Edit &gt; Preferences &gt; Mouse</i>) the behavior of the mouse
+	to use a SubStation Alpha like mouse mode: Left/right mouse button set start/stop time.
+	You can also use the space key to create or modify
+	(<i>Edit &gt; Preferences &gt; General &gt; Misc</i>) subtitles with just
+	one key by pressing it when subtitle start,	then releasing it when subtitle stop.
 	</li>
+	<li><b>What is VSFilter?</b><br>
+		It's a DirectShow filter (a sort of plugin) that allows to add subtitles at playback time to a video file in
+		any compatible player including Windows Media Player and a lot of other players.
+		You can download VSFilter <a href="http://sf.net/guliverkli">here</a>.</li>
+	<li><b>How do I create a karaoke?</b><br>
+		The easiest way is to first do the timing for the lyrics, sentence by sentence.
+		Then you separate each syllable by the slash character: '/'. Then select the subtitle,
+		right click on it and choose <i>Create Karaoke</i>. Finally adjust the timing for
+		each syllable starting from the first to the last one. See the links below for a
+		tutorial on karaoke creation.</li>
+	<li><b>My karaoke doesn't move in VSFilter, the sentence is just half filled, why?</b><br>
+		You need to modify VSFilter configuration, double click on the arrow in the taskbar,
+	go to the <i>Misc</i> tab and uncheck <i>Pre-buffer subpicture</i>.</li>
+	<li><b>What is the Text Pipe?</b><br>
+		See <a href="tutorial2.html">this</a> tutorial for more information.</li>
 </ul>
 
 <div class="Title">Known issues</div>
 <ul>
-	<li>Internet Explorer report wrongly that it support deflate html page compression, so disable it if you use IE and the network mode.</li>
+	<li>Some version of Internet Explorer wrongly report support for deflate html page compression, so disable it if you use IE and the network mode.</li>
 	<li>When extracting WAV make sure you have enough disk space because there is no checking yet.</li>
 </ul>
 
 <div class="Title">Links</div>
 <p>
-<a href="http://perso.wanadoo.fr/sweetkaraoke/">SweetKaraok&eacute;</a> : A great french site with tutorials on karaoke.<br>
-You can also find there an amazing <a href="http://perso.wanadoo.fr/sweetkaraoke/Outils_english/Editeur_de_scripts/Editeur_de_scripts.html">script</a> to create karaoke effects automatically.
+<a href="http://perso.orange.fr/sweetkaraoke/">SweetKaraok&eacute;</a> : A great french site with tutorials on karaoke.<br>
+You can also find there an amazing <a href="http://perso.orange.fr/sweetkaraoke/Outils_english/Editeur_de_scripts/Editeur_de_scripts.html">script</a> to create karaoke effects automatically.
 &nbsp;<span class="new">(New)</span>
 </p>
 
