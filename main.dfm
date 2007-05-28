@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 302
-  Top = 117
+  Left = 220
+  Top = 89
   Width = 780
   Height = 581
   Caption = 'VisualSubSync'
@@ -25,7 +25,7 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 446
+    Top = 438
     Width = 772
     Height = 5
     Cursor = crVSplit
@@ -88,6 +88,7 @@ object MainForm: TMainForm
       ParentBackground = False
       TabOrder = 0
       Visible = False
+      OnDblClick = PanelVideoDblClick
       OnResize = PanelVideoResize
     end
     object PanelWAVDisplay: TPanel
@@ -121,7 +122,7 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 451
+    Top = 443
     Width = 772
     Height = 65
     Align = alBottom
@@ -164,7 +165,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 772
-    Height = 217
+    Height = 209
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -173,7 +174,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 772
-      Height = 147
+      Height = 139
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -1207,7 +1208,7 @@ object MainForm: TMainForm
   end
   object TntStatusBar1: TTntStatusBar
     Left = 0
-    Top = 516
+    Top = 508
     Width = 772
     Height = 19
     Panels = <
@@ -1271,6 +1272,15 @@ object MainForm: TMainForm
     object MenuItemEdit: TTntMenuItem
       Caption = 'Edit'
       SubMenuImages = ImageList1
+      object Undo2: TTntMenuItem
+        Action = ActionUndo
+      end
+      object Redo1: TTntMenuItem
+        Action = ActionRedo
+      end
+      object N17: TTntMenuItem
+        Caption = '-'
+      end
       object MenuItemFind: TTntMenuItem
         Action = ActionFind
         Caption = 'Find...'
@@ -2010,6 +2020,18 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Next error'
       OnExecute = ActionNextErrorExecute
+    end
+    object ActionUndo: TTntAction
+      Tag = 1
+      Caption = 'Undo'
+      ShortCut = 16474
+      OnExecute = ActionUndoExecute
+    end
+    object ActionRedo: TTntAction
+      Tag = 1
+      Caption = 'Redo'
+      ShortCut = 16473
+      OnExecute = ActionRedoExecute
     end
   end
   object ImageList1: TImageList
