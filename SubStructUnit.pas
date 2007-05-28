@@ -36,8 +36,10 @@ type
     LeftMarg : WideString;
     VertMarg : WideString;
     Style: WideString;
-    
+
     Node : PVirtualNode; // TSubtitleRange and tree node are linked both way
+
+    procedure Assign(const Range : TRange); override;
   end;
 
   TSubtitleRangeFactory = class(TRangeFactory)
@@ -56,6 +58,21 @@ uses MiscToolsUnit, SysUtils;
 
 //==============================================================================
 
+procedure TSubtitleRange.Assign(const Range : TRange);
+var SubRange : TSubtitleRange;
+begin
+  inherited Assign(Range);
+  SubRange := TSubtitleRange(Range);
+  Self.Text := SubRange.Text;
+  Self.Effect := SubRange.Effect;
+  Self.Layer := SubRange.Layer;
+  Self.Actor := SubRange.Actor;
+  Self.RightMarg := SubRange.RightMarg;
+  Self.LeftMarg := SubRange.LeftMarg;
+  Self.VertMarg := SubRange.VertMarg;
+  Self.Style := SubRange.Style;
+end;
+
 function TSubtitleRangeFactory.CreateRange : TRange;
 begin
   Result := TSubtitleRange.Create;
@@ -70,6 +87,7 @@ begin
   TSubtitleRange(Result).LeftMarg := '0000';
   TSubtitleRange(Result).VertMarg := '0000';
   TSubtitleRange(Result).Style := 'Default';
+  TSubtitleRange(Result).Node := nil;
 end;
 
 //------------------------------------------------------------------------------
