@@ -18,7 +18,7 @@ VSSPlugin = {
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
     if (NextSub == null) {
-    	return '';
+      return '';
     }
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
     if ((OverlapInMs > 0) && (OverlapInMs >= this.ParamMinBlank.Value)) {
@@ -33,11 +33,11 @@ VSSPlugin = {
   FixError : function(CurrentSub, PreviousSub, NextSub) {
     if (NextSub == null) {
       return '';
-    	}
+    }
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
     if (OverlapInMs > 0 && OverlapInMs > this.ParamMinBlank.Value) {
       return '';
-    }  	
+    }
     // Fix the overlap by dividing it by 2
     var MiddlePoint = (CurrentSub.Stop + (OverlapInMs / 2))
     var HalfOffset = (this.ParamMinBlank.Value / 2);
