@@ -52,7 +52,8 @@ type
     StartTime : Integer;
     StopTime : Integer;
     SubTime : array of Integer;
-    
+
+    procedure Assign(const Range : TRange); virtual;
     procedure AddSubTime(const NewTime : Integer);
     procedure ClearSubTimes;
     procedure DelSubTimeAt(const Idx : Integer);
@@ -121,8 +122,8 @@ type
 
   TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
-  TSubtitleChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
+  TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer) of object;
 
   TWAVDisplayer = class(TCustomPanel)
   private
@@ -162,7 +163,7 @@ type
     FOnViewChange : TNotifyEvent;
     FOnSelectedRange : TSelectedRangeEvent;
     FOnSelectedRangeChange : TNotifyEvent;
-    FOnSelectedRangeChanged : TNotifyEvent;
+    FOnSelectedRangeChanged : TSubtitleChangedEvent;
     FOnPeakFileCreation : TPeakFileCreationEvent;
     FOnAutoScrollChange : TNotifyEvent;
     FOnStartPlaying : TNotifyEvent;
@@ -195,6 +196,8 @@ type
     FEnableMouseAntiOverlapping : Boolean;
     FMinSelTime : Integer;
     FMaxSelTime : Integer;
+
+    FRangeOldStart, FRangeOldStop : Integer; // Range time before dynamic modificaion
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -288,6 +291,7 @@ type
     property OnViewChange : TNotifyEvent read FOnViewChange write FOnViewChange;
     property OnSelectedRange : TSelectedRangeEvent read FOnSelectedRange write FOnSelectedRange;
     property OnSelectedRangeChange : TNotifyEvent read FOnSelectedRangeChange write FOnSelectedRangeChange;
+    property OnSelectedRangeChanged : TSubtitleChangedEvent read FOnSelectedRangeChanged write FOnSelectedRangeChanged;
     property OnPeakFileCreation : TPeakFileCreationEvent read FOnPeakFileCreation write FOnPeakFileCreation;
     property OnAutoScrollChange : TNotifyEvent read FOnAutoScrollChange write FOnAutoScrollChange;
     property OnStartPlaying : TNotifyEvent read FOnStartPlaying write FOnStartPlaying;
@@ -432,6 +436,20 @@ end;
 
 // =============================================================================
 
+procedure TRange.Assign(const Range : TRange);
+var i : integer;
+begin
+  Self.StartTime := Range.StartTime;
+  Self.StopTime := Range.StopTime;
+  SetLength(Self.SubTime, Length(Range.SubTime));
+  for i := Low(Range.SubTime) to High(Range.SubTime) do
+  begin
+    Self.SubTime[i] := Range.SubTime[i];
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+
 procedure TRange.AddSubTime(const NewTime : Integer);
 var i, InsertIdx : integer;
 begin
@@ -483,7 +501,7 @@ begin
   Result := -1;
   if(Length(SubTime) <= 0) or (PosMS < StartTime) or (PosMS > StopTime) then
     Exit;
-    
+
   KStart := -1;
   KStop := -1;
   for i:=0 to Length(SubTime)-1 do
@@ -543,6 +561,8 @@ begin
 end;
 
 // -----------------------------------------------------------------------------
+
+// TODO : move this in another class
 
 function TRange.UpdateSubTimeFromText(const Text : WideString) : Boolean;
 var
@@ -1073,7 +1093,7 @@ var x : Integer;
     x1, x2, y1, y2 : Integer;
     i, j : Integer;
     r : TRange;
-    SelRect : TRect;
+    SelRect, TxtRect : TRect;
     CanvasHeight : Integer;
 begin
   CanvasHeight := GetWavCanvasHeight;
@@ -1103,6 +1123,7 @@ begin
       x2 := TimeToPixel(r.StopTime - FPositionMs);
     end;
 
+    // Paint start time
     if (x1 <> -1) then
     begin
       if (FDynamicEditMode = demStart) and (FDynamicSelRange = r) then
@@ -1113,6 +1134,7 @@ begin
       ACanvas.LineTo(x1, CanvasHeight);
     end;
 
+    // Paint stop time
     if (x2 <> -1) and (x2 <> x1) then
     begin
       if (FDynamicEditMode = demStop) and (FDynamicSelRange = r) then
@@ -1123,6 +1145,7 @@ begin
       ACanvas.LineTo(x2, CanvasHeight);
     end;
 
+    // Draw the top and bottom horizontal lines
     if (r.StartTime < FPositionMs) and (r.StopTime > FPositionMs + FPageSizeMs) then
     begin
       x1 := 0;
@@ -1142,6 +1165,20 @@ begin
       ACanvas.LineTo(x2, y2);
       ACanvas.Pen.Width := 1;
 
+      // TODO : Draw text
+      {
+      if ((x2 - x1) > 15) then
+      begin
+        TxtRect.Top := y1 + 5;
+        TxtRect.Left := x1 + 5;
+        TxtRect.Right := x2 - 5;
+        TxtRect.Bottom := y2 - 5;
+        ACanvas.Font.Color := ACanvas.Pen.Color;
+        ACanvas.Font.Name := 'Arial Unicode MS';
+        ACanvas.TextRect(TxtRect, TxtRect.Left, TxtRect.Top, 'toto');
+      end;
+      }
+      
       // Karaoke
       if (System.Length(r.SubTime) > 0) then
       begin
@@ -1168,7 +1205,7 @@ begin
           end;
         end;
       end;
-      
+
     end;
   end;
 
@@ -1459,6 +1496,8 @@ begin
       if Assigned(FSelectedRange) then
       begin
         FNeedToSortSelectedSub := True;
+        FRangeOldStart := FSelectedRange.StartTime;
+        FRangeOldStop := FSelectedRange.StopTime;
         FSelectedRange.StartTime := FSelection.StartTime;
         FSelectedRange.StopTime := FSelection.StopTime;
         Include(UpdateFlags, uvfRange);
@@ -1645,6 +1684,8 @@ begin
     if Assigned(FSelectedRange) then
     begin
       FNeedToSortSelectedSub := True;
+      FRangeOldStart := FSelectedRange.StartTime;
+      FRangeOldStop := FSelectedRange.StopTime;
       FSelectedRange.StartTime := FSelection.StartTime;
       FSelectedRange.StopTime := FSelection.StopTime;
       Include(UpdateFlags, uvfRange);
@@ -1981,12 +2022,12 @@ begin
   // The selected sub has changed, we need to keep range list sorted
   if FNeedToSortSelectedSub then
   begin
-    FRangeList.FullSort; // TODO : re-sort only selected sub
+    FRangeList.FullSort; // TODO improvement : re-sort only selected sub
     FNeedToSortSelectedSub := False;
     if Assigned(FOnSelectedRangeChanged) and
        Assigned(FSelectedRange) then
     begin
-      FOnSelectedRangeChanged(Self);
+      FOnSelectedRangeChanged(Self, FRangeOldStart, FRangeOldStop);
     end;
     if Assigned(FOnKaraokeChanged) and
        Assigned(FSelectedRange) and
@@ -2005,6 +2046,7 @@ begin
     FOnKaraokeChanged(Self, FDynamicSelRange);
   end;
 
+  {
   if ((FDynamicEditMode = demStart) or
       (FDynamicEditMode = demStop)) and
      Assigned(FDynamicSelRange) and
@@ -2012,10 +2054,12 @@ begin
   begin
     FOnSelectedRangeChanged(Self);
   end;
-
+  }
 
   FSelectionOrigin := -1;
   FScrollOrigin := -1;
+  FRangeOldStart := -1;
+  FRangeOldStop := -1;
   Cursor := crIBeam;
   MouseCapture := False;
   FMouseIsDown := False;
