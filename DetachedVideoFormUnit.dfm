@@ -14,6 +14,7 @@ object DetachedVideoForm: TDetachedVideoForm
   FormStyle = fsStayOnTop
   OldCreateOrder = False
   Position = poDefaultPosOnly
+  OnDblClick = FormDblClick
   OnMouseDown = FormMouseDown
   PixelsPerInch = 96
   TextHeight = 13
