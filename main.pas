@@ -45,19 +45,103 @@ type
   // -----
   TUndoableTask = class
   public
-    procedure UndoTask; virtual; abstract;
     procedure DoTask; virtual; abstract;
+    function GetName : WideString; virtual; abstract;
+    procedure UndoTask; virtual; abstract;
   end;
 
-  TUndoableDelayTask = class(TUndoableTask)
+  TUndoableTaskIndexed = class(TUndoableTask)
+  private
+    FIndexes : array of Integer; // Indexes of subtitles in FWavDisplayer
+    FCount : Integer; // Number of indexes
+  public
+    destructor Destroy; override;
+    procedure AddSubtitleIndex(Index : Integer);
+    procedure SetCapacity(Capacity : Integer);
+  end;
+
+  TUndoableDelayTask = class(TUndoableTaskIndexed)
   private
     FDelayInMs : Integer;
     FDelayShiftType : TDelayShiftType;
-    FDelayApplyToType : TDelayApplyToType;
+
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetDelayInMs(DelayInMs : Integer);
+    procedure SetDelayShiftType(DelayShiftType : TDelayShiftType);
+  end;
+
+  TUndoableAddTask = class(TUndoableTask)
+  private
+    FStartTime, FStopTime : Integer;
+    FText : WideString;
+    FAutoSelect : Boolean;
+    FIndex : Integer;
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetTime(StartTime, StopTime : Integer);
+    procedure SetText(Text : WideString);
+    procedure SetAutoSelect(AutoSelect : Boolean);
+  end;
+
+  TUndoableDeleteTask = class(TUndoableTaskIndexed)
+  private
+    FDeletedSubs : TObjectList;
   public
     constructor Create;
-    procedure UndoTask; override;
+    destructor Destroy; override;
+
     procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+  end;
+
+  TUndoableSetTimeTask = class(TUndoableTask)
+  private
+    FNewStartTime, FNewStopTime : Integer;
+    FOldStartTime, FOldStopTime : Integer;
+    FIndex : Integer;
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(Index, OldStartTime, OldStopTime,
+      NewStartTime, NewStopTime : Integer);
+  end;
+
+  TUndoableSplitTask = class(TUndoableTask)
+  private
+    FIndex : Integer;
+    FStartTime, FStopTime, FSplitTime : Integer;
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(Index, StartTime, StopTime, SpliTime : Integer);
+  end;
+
+  TUndoableMergeTask = class(TUndoableTaskIndexed)
+  private
+    FDeletedSubs : TObjectList;
+    FStartTime, FStopTime : Integer;
+    FText : WideString;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(StartTime, StopTime : Integer; Text : WideString);
   end;
   // -----
 
@@ -323,6 +407,11 @@ type
     MenuItemShowStopFrame: TTntMenuItem;
     ActionNextError: TTntAction;
     TntStatusBar1: TTntStatusBar;
+    ActionUndo: TTntAction;
+    ActionRedo: TTntAction;
+    Undo2: TTntMenuItem;
+    Redo1: TTntMenuItem;
+    N17: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -331,6 +420,8 @@ type
     procedure WAVDisplayer1ViewChange(Sender: TObject);
     procedure WAVDisplayer1SelectedRange(Sender: TObject; SelectedRange : TRange; IsDynamic : Boolean);
     procedure WAVDisplayer1SelectedRangeChange(Sender: TObject);
+    procedure WAVDisplayer1SelectedRangeChanged(Sender: TObject;
+      OldStart, OldStop : Integer);
     procedure WAVDisplayer1AutoScrollChange(Sender: TObject);
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
     procedure WAVDisplayer1StartPlaying(Sender: TObject);
@@ -465,6 +556,9 @@ type
     procedure ActionNextErrorExecute(Sender: TObject);
     procedure TntStatusBar1DrawPanel(StatusBar: TStatusBar;
       Panel: TStatusPanel; const Rect: TRect);
+    procedure ActionUndoExecute(Sender: TObject);
+    procedure ActionRedoExecute(Sender: TObject);
+    procedure PanelVideoDblClick(Sender: TObject);
    
   private
     { Private declarations }
@@ -502,6 +596,7 @@ type
     GeneralJSPlugin : TSimpleJavascriptWrapper;
 
     UndoStack : TObjectStack;
+    RedoStack : TObjectStack;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -532,8 +627,14 @@ type
     procedure ApplyFontSettings;
     procedure OnSubtitleRangeJSWrapperChange;
 
-    procedure AddSubtitle(StartTime, StopTime : Integer;
-      AutoSelect : Boolean);
+    function AddSubtitle(StartTime, StopTime : Integer) : PVirtualNode; overload;
+    function AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode; overload;
+    function AddSubtitle(StartTime, StopTime : Integer;
+      Text : WideString) : PVirtualNode; overload;
+    function AddSubtitle(StartTime, StopTime : Integer;
+      AutoSelect : Boolean) : PVirtualNode; overload;
+    procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean);
+    procedure ClearWAVSelection;
     procedure SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
@@ -560,9 +661,22 @@ type
     procedure UpdateStatusBar;
     procedure OnJsSetStatusBarText(const Msg : WideString);
 
+    // Undo/Redo stuff
+    procedure PushUndoableTask(UndoableTask : TUndoableTask);
+    procedure ClearStack(Stack : TObjectStack);
+
+    procedure ApplyDelay(var Indexes : array of Integer;
+      DelayInMs : Integer; DelayShiftType : TDelayShiftType);
+    procedure DeleteSubtitle(Index : Integer);
+    procedure DeleteSubtitles(var Indexes : array of Integer);
+    procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
+    procedure RestoreSubtitles(List : TList);
+    function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
+    procedure SplitSubtitle(Index, SplitTime : Integer);
+    function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
   public
     { Public declarations }
-    procedure ShowStatusBarMessage(const Text : WideString);
+    procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
     procedure SelectNode(Node : PVirtualNode);
     procedure SelectNodeFromTimestamps(Start, Stop : Integer);
     procedure StartStopServer(Stop : Boolean = False);
@@ -625,16 +739,17 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : update documentation (timing button)
 
 {
-
-TUndoStack
-
-TUndoTasks (list of TUndoBasic)
-
-TUndoBasicDelete (list of subtitle)
-TUndoBasicAdd (list of index)
-TUndoBasicModify (list of subtitle with index)
-TUndoBasicDelay (delay, type, list of index)
-
+lovechange:
+> 1er: Pour le "log text pipe", afin de charger un transcript, il prend
+> pas par défaut le srt, on peut le faire en affichant tout les
+> fichiers, tu pourrait peut-etre le rajouter comme extension par
+> défauts.
+-
+> 2eme: Ce serait sympa que tu puisse rajouter des boutons dans
+> l'interface principale pour les balise "italique", "placement de
+> texte" (8 balise en faites puisque en bas centré est déja par défaut.
+> Je pense qu'il y a la place juste en dessus du graph audio et
+> pré-visualisation vidéo.
 }
 
 //==============================================================================
@@ -651,6 +766,9 @@ begin
   LogForm := TLogForm.Create(nil);
 
   UndoStack := TObjectStack.Create;
+  RedoStack := TObjectStack.Create;
+  ActionUndo.Enabled := False;
+  ActionRedo.Enabled := False;
 
   MRUList := TMRUList.Create(MenuItemOpenRecentRoot);
   MRUList.OnRecentMenuItemClick := OnRecentMenuItemClick;
@@ -689,6 +807,7 @@ begin
   WAVDisplayer.OnSelectedRange := WAVDisplayer1SelectedRange;
   WAVDisplayer.OnPeakFileCreation := WAVDisplayer1OnPeakFileCreation;
   WAVDisplayer.OnSelectedRangeChange := WAVDisplayer1SelectedRangeChange;
+  WAVDisplayer.OnSelectedRangeChanged := WAVDisplayer1SelectedRangeChanged;
   WAVDisplayer.OnAutoScrollChange := WAVDisplayer1AutoScrollChange;
   WAVDisplayer.OnStartPlaying := WAVDisplayer1StartPlaying;
   WAVDisplayer.OnKaraokeChanged := WAVDisplayer1KaraokeChanged;
@@ -756,6 +875,9 @@ begin
   FreeAndNil(MRUList);
   FreeAndNil(ConfigObject);
   FreeAndNil(CurrentProject);
+  ClearStack(RedoStack);
+  FreeAndNil(RedoStack);
+  ClearStack(UndoStack);
   FreeAndNil(UndoStack);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
@@ -1015,14 +1137,15 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ShowStatusBarMessage(const Text : WideString);
+procedure TMainForm.ShowStatusBarMessage(const Text : WideString;
+  const Duration : Integer);
 begin
   if (Text <> StatusBarSecondaryText) then
   begin
     StatusBarSecondaryText := Text;
     UpdateStatusBar;
   end;
-  TimerStatusBarMsg.Interval := 4000;
+  TimerStatusBarMsg.Interval := Duration;
   TimerStatusBarMsg.Enabled := True;
 end;
 
@@ -1209,6 +1332,24 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.WAVDisplayer1SelectedRangeChanged(
+  Sender: TObject; OldStart, OldStop : Integer);
+var SubRange : TSubtitleRange;
+    UndoableSetTimeTask : TUndoableSetTimeTask;
+begin
+  if Assigned(WAVDisplayer.SelectedRange) then
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.SelectedRange);
+    UndoableSetTimeTask := TUndoableSetTimeTask.Create;
+    UndoableSetTimeTask.SetData(SubRange.Node.Index, OldStart, OldStop,
+      SubRange.StartTime, SubRange.StopTime);
+    UndoableSetTimeTask.DoTask;
+    PushUndoableTask(UndoableSetTimeTask);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.WAVDisplayer1OnPeakFileCreation(Sender: TObject;
   EventType : TPeakFileCreationEventType; Param : Integer);
 begin
@@ -1263,21 +1404,16 @@ end;
 
 procedure TMainForm.WAVDisplayPopup_DeleteRange(Sender: TObject);
 var DeleteIdx : Integer;
-    DeleteNode : PVirtualNode;
+    UndoableDeleteTask : TUndoableDeleteTask;
 begin
   DeleteIdx := WAVDisplayer.RangeList.GetRangeIdxAt(WAVDisplayer.GetCursorPos);
-  if DeleteIdx <> -1 then
+  if (DeleteIdx <> -1) then
   begin
-    DeleteNode := TSubtitleRange(WAVDisplayer.RangeList[DeleteIdx]).Node;
-    ErrorReportForm.DeleteError(TSubtitleRange(WAVDisplayer.RangeList[DeleteIdx]));
-    vtvSubsList.DeleteNode(DeleteNode);
-    try
-      g_WebRWSynchro.BeginWrite;
-      WAVDisplayer.DeleteRangeAt(WAVDisplayer.GetCursorPos);
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
+    UndoableDeleteTask := TUndoableDeleteTask.Create;
+    UndoableDeleteTask.SetCapacity(1);
+    UndoableDeleteTask.AddSubtitleIndex(DeleteIdx);
+    UndoableDeleteTask.DoTask;
+    PushUndoableTask(UndoableDeleteTask);
   end;
 end;
 
@@ -1285,30 +1421,18 @@ end;
 
 procedure TMainForm.WAVDisplayPopup_SplitAtCursor(Sender: TObject);
 var Idx : Integer;
-    SubRange, NewSubRange : TSubtitleRange;
-    NodeData : PTreeData;
-    NewNode : PVirtualNode;
+    Range : TRange;
+    UndoableSplitTask : TUndoableSplitTask;
 begin
   Idx := WAVDisplayer.RangeList.GetRangeIdxAt(WAVDisplayer.GetCursorPos);
-  if Idx <> -1 then
+  if (Idx <> -1) then
   begin
-    SubRange := TSubtitleRange(WAVDisplayer.RangeList[Idx]);
-    NewSubRange := TSubtitleRange(SubRangeFactory.CreateRangeSS(
-      WAVDisplayer.GetCursorPos, SubRange.StopTime));
-    SubRange.StopTime := WAVDisplayer.GetCursorPos - 1;
-    NewSubRange.Text := SubRange.Text;
-    NewNode := vtvSubsList.InsertNode(SubRange.Node, amInsertAfter);
-    NodeData := vtvSubsList.GetNodeData(NewNode);
-    NodeData.Range := NewSubRange;
-    NewSubRange.Node := NewNode;
-    g_WebRWSynchro.BeginWrite;    
-    try
-      WAVDisplayer.AddRange(NewSubRange);
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
-    vtvSubsList.Repaint;    
+    UndoableSplitTask := TUndoableSplitTask.Create;
+    Range := WAVDisplayer.RangeList[Idx];
+    UndoableSplitTask.SetData(Idx, Range.StartTime, Range.StopTime,
+      WAVDisplayer.GetCursorPos);
+    UndoableSplitTask.DoTask;
+    PushUndoableTask(UndoableSplitTask);
   end;
 end;
 
@@ -1585,13 +1709,15 @@ var savSelStart, savSelLength : Integer;
     i, j : Integer;
     WordArray : WideStringArray2;
     TxtDocI : ITextDocument;
+    TxtRangeI : ITextRange;
+    TxtFontI : ITextFont;
     RichEditOle: IUnknown;
+    eventMask : Integer;
 const
   tomSuspend	= -9999995;
 	tomResume	= -9999994;
 begin
   RichEdit.Tag := 0;
-  RichEdit.Lines.BeginUpdate;
   savSelStart := RichEdit.SelStart;
   savSelLength := RichEdit.SelLength;
 
@@ -1599,12 +1725,15 @@ begin
   begin
     if RichEditOle.QueryInterface(IID_ITextDocument, TxtDocI) = S_OK then
     begin
+      TxtDocI.Freeze;
       TxtDocI.Undo(tomSuspend);
     end;
   end;
 
   TagSplit(RichEdit.Text, WordArray);
 
+  {
+  RichEdit.Lines.BeginUpdate;
   j := 0;
   for i:=0 to Length(WordArray)-1 do
   begin
@@ -1618,18 +1747,38 @@ begin
       RichEdit.SelAttributes.Color := clGrayText;
     Inc(j, Length(WordArray[i]));
   end;
+  RichEdit.SelStart := savSelStart;
+  RichEdit.SelLength := savSelLength;
+  RichEdit.Lines.EndUpdate;
+  }
 
+  j := 0;
+  for i:=0 to Length(WordArray)-1 do
+  begin
+    TxtRangeI := TxtDocI.Range(j, j + Length(WordArray[i]));
+    TxtFontI := TxtRangeI.Font;
+
+    if (i = (TagIndex*2)+1) then
+      TxtFontI.ForeColor := RGB(255, 0, 0)
+    else if (i mod 2) = 0 then
+      TxtFontI.ForeColor := RGB(0, 0, 0)
+    else
+      TxtFontI.ForeColor := RGB(127, 127, 127);
+
+    TxtFontI := nil;
+    TxtRangeI := nil;
+    Inc(j, Length(WordArray[i]));
+  end;
   RichEdit.SelStart := savSelStart;
   RichEdit.SelLength := savSelLength;
 
   if Assigned(TxtDocI) then
   begin
     TxtDocI.Undo(tomResume);
+    TxtDocI.Unfreeze;
   end;
   TxtDocI := nil;
   RichEditOle := nil;
-
-  RichEdit.Lines.EndUpdate;
   RichEdit.Tag := 1;
 end;
 
@@ -1943,6 +2092,7 @@ begin
         ActionShowHideVideo.Execute;
   end;
   MRUList.AddFile(CurrentProject.Filename);
+  ShowStatusBarMessage('Project loaded.');
 end;
 
 //------------------------------------------------------------------------------
@@ -2421,55 +2571,13 @@ end;
 
 //------------------------------------------------------------------------------
 
-constructor TUndoableDelayTask.Create;
-begin
-
-end;
-
-procedure TUndoableDelayTask.UndoTask;
-begin
-
-end;
-
-procedure TUndoableDelayTask.DoTask;
-begin
-
-end;
-
-
 procedure TMainForm.ActionDelayExecute(Sender: TObject);
 var DelayInMs : Integer;
+    DelayShiftType : TDelayShiftType;
     Node : PVirtualNode;
-    NodeData : PTreeData;
-    DelaySelectedRange : Boolean;
-
-    procedure DelaySub(Range : TRange; DelayInMs : Integer;
-      ShiftType : TDelayShiftType);
-    var i : Integer;
-    begin
-      // ShiftType : 0 -> start & end
-      //             1 -> start only
-      //             2 -> end only
-      if (ShiftType = dstBothTime) or (ShiftType = dstStartTimeOnly) then
-      begin
-        Range.StartTime := Range.StartTime + DelayInMs;
-      end;
-      if (ShiftType = dstBothTime) or (ShiftType = dstStopTimeOnly) then
-      begin
-        Range.StopTime := Range.StopTime + DelayInMs;
-      end;
-      if (ShiftType = dstBothTime) then
-      begin
-        for i:=0 to Length(Range.SubTime)-1 do
-        begin
-          Range.SubTime[i] := Range.SubTime[i] + DelayInMs;
-        end;
-      end;
-    end;
-
+    UndoableDelayTask : TUndoableDelayTask;
 begin
   DelayForm := TDelayForm.Create(nil);
-  DelaySelectedRange := False;
 
   // Prefill the dialog
   if (vtvSubsList.SelectedCount > 1) then
@@ -2484,68 +2592,51 @@ begin
 
   if DelayForm.ShowModal = mrOk then
   begin
-    g_WebRWSynchro.BeginWrite;
+    DelayInMs := DelayForm.GetDelayInMs;
+    DelayShiftType := DelayForm.GetDelayShiftType;
+    
+    UndoableDelayTask := TUndoableDelayTask.Create;
+    UndoableDelayTask.SetDelayInMs(DelayInMs);
+    UndoableDelayTask.SetDelayShiftType(DelayShiftType);
 
-    try
-      DelayInMs := DelayForm.GetDelayInMs;
-
-      case DelayForm.GetDelayApplyToType of
-        dattAll: // All subtitles
+    case DelayForm.GetDelayApplyToType of
+      dattAll: // All subtitles
+        begin
+          UndoableDelayTask.SetCapacity(vtvSubsList.RootNodeCount);
+          Node := vtvSubsList.GetFirst;
+          while Assigned(Node) do
           begin
-            Node := vtvSubsList.GetFirst;
-            while Assigned(Node) do
-            begin
-              NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
-              if (NodeData.Range = WAVDisplayer.SelectedRange) then
-              begin
-                DelaySelectedRange := True;
-              end;
-              Node := vtvSubsList.GetNext(Node);
-            end;
+            UndoableDelayTask.AddSubtitleIndex(Node.Index);
+            Node := vtvSubsList.GetNext(Node);
           end;
-        dattSelected: // Selected subs
+        end;
+      dattSelected: // Selected subs
+        begin
+          UndoableDelayTask.SetCapacity(vtvSubsList.SelectedCount);
+          Node := vtvSubsList.GetFirstSelected;
+          while Assigned(Node) do
           begin
-            Node := vtvSubsList.GetFirstSelected;
-            while Assigned(Node) do
-            begin
-              NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
-              if (NodeData.Range = WAVDisplayer.SelectedRange) then
-              begin
-                DelaySelectedRange := True;
-              end;
-              Node := vtvSubsList.GetNextSelected(Node);
-            end;
-            FullSortTreeAndSubList;
+            UndoableDelayTask.AddSubtitleIndex(Node.Index);
+            Node := vtvSubsList.GetNextSelected(Node);
           end;
-        dattFromCursor: // From focused subs to end
+        end;
+      dattFromCursor: // From focused subs to end
+        begin
+          Node := vtvSubsList.FocusedNode;
+          if Assigned(Node) then
           begin
-            Node := vtvSubsList.FocusedNode;
-            while Assigned(Node) do
-            begin
-              NodeData := vtvSubsList.GetNodeData(Node);
-              DelaySub(NodeData.Range, DelayInMs, DelayForm.GetDelayShiftType);
-              if (NodeData.Range = WAVDisplayer.SelectedRange) then
-              begin
-                DelaySelectedRange := True;
-              end;
-              Node := vtvSubsList.GetNext(Node);
-            end;
-            FullSortTreeAndSubList;
+            UndoableDelayTask.SetCapacity(vtvSubsList.RootNodeCount - Node.Index);
           end;
-      end;
-      if (DelaySelectedRange = True) and Assigned(WAVDisplayer.SelectedRange) then
-      begin
-        DelaySub(WAVDisplayer.Selection, DelayInMs, DelayForm.GetDelayShiftType);
-      end;
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
+          while Assigned(Node) do
+          begin
+            UndoableDelayTask.AddSubtitleIndex(Node.Index);
+            Node := vtvSubsList.GetNext(Node);
+          end;
+        end;
     end;
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.InvalidateColumn(1);
-    vtvSubsList.InvalidateColumn(2);
+
+    UndoableDelayTask.DoTask;
+    PushUndoableTask(UndoableDelayTask);
   end;
   DelayForm.Free;
   DelayForm := nil;
@@ -2554,45 +2645,19 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.pmiSubListDeleteClick(Sender: TObject);
-var Idx : integer;
-    Node : PVirtualNode;
-    NodeData: PTreeData;
-    NodeBeforeNodeToSelect, NodeToSelect : PVirtualNode;
+var Node : PVirtualNode;
+    UndoableDeleteTask : TUndoableDeleteTask;
 begin
-  g_WebRWSynchro.BeginWrite;
-  try
+  UndoableDeleteTask := TUndoableDeleteTask.Create;
+  UndoableDeleteTask.SetCapacity(vtvSubsList.SelectedCount);
     Node := vtvSubsList.GetFirstSelected;
-    NodeBeforeNodeToSelect := vtvSubsList.GetPrevious(Node);
     while Assigned(Node) do
     begin
-      NodeData := vtvSubsList.GetNodeData(Node);
-      ErrorReportForm.DeleteError(NodeData.Range);
-      Idx := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
-      WAVDisplayer.DeleteRangeAtIdx(Idx,False);
+    UndoableDeleteTask.AddSubtitleIndex(Node.Index);
       Node := vtvSubsList.GetNextSelected(Node);
     end;
-    vtvSubsList.DeleteSelectedNodes;
-    CurrentProject.IsDirty := True;
-    WAVDisplayer.UpdateView([uvfRange]);
-  finally
-    g_WebRWSynchro.EndWrite;
-  end;
-
-  // Position on next subtitle
-  if Assigned(NodeBeforeNodeToSelect) then
-  begin
-    NodeToSelect := vtvSubsList.GetNext(NodeBeforeNodeToSelect);
-    if not Assigned(NodeToSelect) then
-      NodeToSelect := NodeBeforeNodeToSelect;
-  end
-  else
-    NodeToSelect := vtvSubsList.GetFirst;
-  if Assigned(NodeToSelect) then
-  begin
-    vtvSubsList.FocusedNode := NodeToSelect;
-    vtvSubsList.ClearSelection;
-    vtvSubsList.Selected[NodeToSelect] := True;
-  end;
+  UndoableDeleteTask.DoTask;
+  PushUndoableTask(UndoableDeleteTask);
 end;
 
 //------------------------------------------------------------------------------
@@ -2604,7 +2669,24 @@ var i, Idx : integer;
     AccuText : WideString;
     LastStopTime : Integer;
     DeleteList : TList;
+
+    UndoableMergeTask : TUndoableMergeTask;
 begin
+  UndoableMergeTask := TUndoableMergeTask.Create;
+  UndoableMergeTask.SetCapacity(vtvSubsList.SelectedCount);
+  Node := vtvSubsList.GetFirstSelected;
+  while Assigned(Node) do
+  begin
+    UndoableMergeTask.AddSubtitleIndex(Node.Index);
+    Node := vtvSubsList.GetNextSelected(Node);
+  end;
+
+  UndoableMergeTask.DoTask;
+  PushUndoableTask(UndoableMergeTask);
+
+  {
+
+
   AccuText := '';
   LastStopTime := 0;
 
@@ -2663,6 +2745,16 @@ begin
   WAVDisplayer.ClearSelection;
   WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
   vtvSubsList.Repaint;  
+  }
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ClearWAVSelection;
+begin
+  if Assigned(WAVDisplayer.SelectedRange) then
+    WAVDisplayer.SelectedRange := nil;
+  WAVDisplayer.ClearSelection;
 end;
 
 //------------------------------------------------------------------------------
@@ -3161,6 +3253,11 @@ begin
 
     AudioOnlyRenderer.Close;
     VideoRenderer.Close;
+
+    ClearStack(RedoStack);
+    ClearStack(UndoStack);    
+    ActionUndo.Enabled := False;
+    ActionRedo.Enabled := False;
   end;
 end;
 
@@ -3393,60 +3490,113 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.AddSubtitle(StartTime, StopTime : Integer;
-  AutoSelect : Boolean);
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer) : PVirtualNode;
 var NewRange, SiblingRange : TRange;
     NewNode, SiblingNode: PVirtualNode;
     NodeData: PTreeData;
     InsertPos : Integer;
 begin
+  NewRange := SubRangeFactory.CreateRangeSS(StartTime, StopTime);
+  InsertPos := WAVDisplayer.RangeList.FindInsertPos(NewRange);
+  if (InsertPos >= WAVDisplayer.RangeList.Count) then
+  begin
+    NewNode := vtvSubsList.AddChild(nil);
+  end
+  else
+  begin
+    SiblingRange := WAVDisplayer.RangeList[InsertPos];
+    SiblingNode := TSubtitleRange(SiblingRange).Node;
+    NewNode := vtvSubsList.InsertNode(SiblingNode, amInsertBefore);
+  end;
+  NodeData := vtvSubsList.GetNodeData(NewNode);
+  NodeData.Range := TSubtitleRange(NewRange);
+  TSubtitleRange(NewRange).Node := NewNode;
+  // TODO improvement : use the previously calculated InsertPos
+  WAVDisplayer.AddRange(NewRange);
+  Result := NewNode;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode;
+var NewRange : TSubtitleRange;
+    NewNode: PVirtualNode;
+    NodeData: PTreeData;
+begin
+  NewNode := AddSubtitle(SubRange.StartTime, SubRange.StopTime);
+  NodeData := vtvSubsList.GetNodeData(NewNode);
+  NewRange := TSubtitleRange(NodeData.Range);
+  NewRange.Assign(SubRange);
+  Result := NewNode;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer;
+  Text : WideString) : PVirtualNode;
+var NewRange : TRange;
+    NewNode: PVirtualNode;
+    NodeData : PTreeData;
+begin
+  NewNode := AddSubtitle(StartTime, StopTime);
+  NodeData := vtvSubsList.GetNodeData(NewNode);
+  NewRange := TSubtitleRange(NodeData.Range);
+  TSubtitleRange(NewRange).Text := Text;
+  Result := NewNode;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean);
+var NewNode : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  vtvSubsList.ScrollIntoView(Node, True);
+  vtvSubsList.FocusedNode := Node;
+  vtvSubsList.ClearSelection;
+  vtvSubsList.Selected[Node] := True;
+  vtvSubsList.Repaint;
+
+  if WAVDisplaySelect and (WAVDisplayer.SelMode = smCoolEdit) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    WAVDisplayer.SelectedRange := NodeData.Range;
+  end;
+
+  UpdateStylesComboboxFromSelection;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer;
+  AutoSelect : Boolean) : PVirtualNode;
+var NewNode : PVirtualNode;
+begin
   g_WebRWSynchro.BeginWrite;
-
   try
-    NewRange := SubRangeFactory.CreateRangeSS(StartTime, StopTime);
-    InsertPos := WAVDisplayer.RangeList.FindInsertPos(NewRange);
-    if (InsertPos >= WAVDisplayer.RangeList.Count) then
-      NewNode := vtvSubsList.AddChild(nil)
-    else
-    begin
-      SiblingRange := WAVDisplayer.RangeList[InsertPos];
-      SiblingNode := TSubtitleRange(SiblingRange).Node;
-      NewNode := vtvSubsList.InsertNode(SiblingNode, amInsertBefore);
-    end;
-    NodeData := vtvSubsList.GetNodeData(NewNode);
-    NodeData.Range := TSubtitleRange(NewRange);
-    TSubtitleRange(NewRange).Node := NewNode;
-    WAVDisplayer.AddRange(NewRange);
-
-    vtvSubsList.ScrollIntoView(NewNode,True);
-    vtvSubsList.FocusedNode := NewNode;
-    vtvSubsList.ClearSelection;
-    vtvSubsList.Selected[NewNode] := True;
-    vtvSubsList.Repaint;
-
-    if AutoSelect and (WAVDisplayer.SelMode = smCoolEdit) then
-      WAVDisplayer.SelectedRange := NewRange;
-
-    UpdateStylesComboboxFromSelection;
-
+    NewNode := AddSubtitle(StartTime, StopTime);
     CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
   end;
 
-//  if (vtvSubsList.ChildCount[nil] = 1) then
-//  begin
-//    vtvSubsList.Header.AutoFitColumns(False);
-//    vtvSubsList.Repaint;
-//  end;
+  FocusNode(NewNode, AutoSelect);
+
+  Result := NewNode;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionAddSubtitleExecute(Sender: TObject);
+var UndoableAddTask : TUndoableAddTask;
 begin
-  AddSubtitle(WAVDisplayer.Selection.StartTime,
-    WAVDisplayer.Selection.StopTime, True);
+  UndoableAddTask := TUndoableAddTask.Create;
+  UndoableAddTask.SetTime(WAVDisplayer.Selection.StartTime,
+    WAVDisplayer.Selection.StopTime);
+  UndoableAddTask.SetAutoSelect(True);
+  UndoableAddTask.DoTask;
+  PushUndoableTask(UndoableAddTask);
+  
   if bttWorkingMode.Tag = 0 then
     MemoSubtitleText.SetFocus;
 end;
@@ -3455,16 +3605,28 @@ end;
 
 procedure TMainForm.ActionSetSubtitleTimeExecute(Sender: TObject);
 var NodeData : PTreeData;
-    NextNodeToFocus : PVirtualNode;
+    NextNodeToFocus, FocusedNode : PVirtualNode;
     SelDuration : Integer;
+    UndoableSetTimeTask : TUndoableSetTimeTask;
 begin
   if WAVDisplayer.SelectionIsEmpty then
     Exit;
   SelDuration := WAVDisplayer.Selection.StopTime - WAVDisplayer.Selection.StartTime;
   if (SelDuration < 100) then
     Exit;
-  if Assigned(vtvSubsList.FocusedNode) then
+  FocusedNode := vtvSubsList.FocusedNode;
+  if Assigned(FocusedNode) then
   begin
+    NodeData := vtvSubsList.GetNodeData(FocusedNode);
+    UndoableSetTimeTask := TUndoableSetTimeTask.Create;
+    UndoableSetTimeTask.SetData(FocusedNode.Index,
+      NodeData.Range.StartTime, NodeData.Range.StopTime,
+      WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime);
+    UndoableSetTimeTask.DoTask;
+    PushUndoableTask(UndoableSetTimeTask);
+
+
+    {
     NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
     try
       g_WebRWSynchro.BeginWrite;
@@ -3488,6 +3650,7 @@ begin
 
     WAVDisplayer.UpdateView([uvfRange]);
     vtvSubsList.Repaint;
+    }
   end;
 end;
 
@@ -5014,6 +5177,13 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.PanelVideoDblClick(Sender: TObject);
+begin
+  ActionDetachVideo.Execute;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.SetSubtitleStartTime(SetStopTime : Boolean);
 var NodeData : PTreeData;
     NewStartTime : Integer;
@@ -5587,6 +5757,524 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.ApplyDelay(var Indexes : array of Integer;
+  DelayInMs : Integer; DelayShiftType : TDelayShiftType);
+var i, Idx : Integer;
+    DelaySelectedRange : Boolean;
+    Range : TRange;
+    SubtitleRange : TSubtitleRange;
+    DelayedRangeList : TList;
+
+    procedure DelaySub(Range : TRange; DelayInMs : Integer;
+      DelayShiftType : TDelayShiftType);
+    var i : Integer;
+    begin
+      if (DelayShiftType = dstBothTime) or (DelayShiftType = dstStartTimeOnly) then
+      begin
+        Range.StartTime := Range.StartTime + DelayInMs;
+      end;
+      if (DelayShiftType = dstBothTime) or (DelayShiftType = dstStopTimeOnly) then
+      begin
+        Range.StopTime := Range.StopTime + DelayInMs;
+      end;
+      if (DelayShiftType = dstBothTime) then
+      begin
+        // Shift karaoke subtime
+        for i:=0 to Length(Range.SubTime)-1 do
+        begin
+          Range.SubTime[i] := Range.SubTime[i] + DelayInMs;
+        end;
+      end;
+    end;
+
+begin
+  DelayedRangeList := TList.Create;
+  DelaySelectedRange := False;
+  g_WebRWSynchro.BeginWrite;
+  try
+    // Apply the delay on each subtitle based on their current index
+    for i := Low(Indexes) to High(Indexes) do
+    begin
+      Idx := Indexes[i];
+      Range := WavDisplayer.RangeList[Idx];
+      DelayedRangeList.Add(Range);
+      DelaySub(Range, DelayInMs, DelayShiftType);
+      if (Range = WavDisplayer.SelectedRange) then
+      begin
+        DelaySelectedRange := True;
+      end;
+    end;
+    // Delay the selected range if necessary 
+    if (DelaySelectedRange = True) and Assigned(WavDisplayer.SelectedRange) then
+    begin
+      DelaySub(WavDisplayer.Selection, DelayInMs, DelayShiftType);
+    end;
+    // Sort subtitles
+    FullSortTreeAndSubList;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  // Update indexes which have been changed during sorting
+  for i := 0 to DelayedRangeList.Count-1 do
+  begin
+    SubtitleRange := TSubtitleRange(DelayedRangeList[i]);
+    Indexes[i] := SubtitleRange.Node.Index;
+  end;
+  DelayedRangeList.Free;  
+
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.InvalidateColumn(1);
+  vtvSubsList.InvalidateColumn(2);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.DeleteSubtitles(var Indexes : array of Integer);
+var I, Idx : Integer;
+    SubtitleRange : TSubtitleRange;
+    NodeToFocus : PVirtualNode;
+begin
+  g_WebRWSynchro.BeginWrite;
+  try
+    for I := High(Indexes) downto Low(Indexes) do
+    begin
+      Idx := Indexes[I];
+      SubtitleRange := TSubtitleRange(WAVDisplayer.RangeList[Idx]);
+      ErrorReportForm.DeleteError(SubtitleRange);
+      vtvSubsList.DeleteNode(SubtitleRange.Node);
+      WAVDisplayer.DeleteRangeAtIdx(Idx, False);
+    end;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  WAVDisplayer.UpdateView([uvfRange]);
+
+  // Set focus
+  Idx := Indexes[0];
+  if (Idx > 0) then
+  begin
+    // Get the subtitle range just before the first deleted one
+    SubtitleRange := TSubtitleRange(WAVDisplayer.RangeList[Idx - 1]);
+    // The node to focus is the node just after it
+    NodeToFocus := vtvSubsList.GetNext(SubtitleRange.Node);
+  end
+  else
+  begin
+    NodeToFocus := vtvSubsList.GetFirst;
+  end;
+
+  if Assigned(NodeToFocus) then
+  begin
+    FocusNode(NodeToFocus, False);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.DeleteSubtitle(Index : Integer);
+var ParamArray : array[0..0] of Integer;
+begin
+  ParamArray[0] := Index;
+  DeleteSubtitles(ParamArray);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CloneSubtitles(var Indexes : array of Integer; List : TList);
+var i, idx : integer;
+    Range, RangeClone : TRange;
+begin
+  List.Clear;
+  for i := Low(Indexes) to High(Indexes) do
+  begin
+    idx := Indexes[i];
+    Range := WAVDisplayer.RangeList[Idx];
+    RangeClone := SubRangeFactory.CreateRange;
+    RangeClone.Assign(Range);
+    List.Add(RangeClone);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.RestoreSubtitles(List : TList);
+var i, idx : integer;
+    Range : TSubtitleRange;
+begin
+  for i := List.Count-1 downto 0 do
+  begin
+    Range := List[i];
+    AddSubtitle(Range);
+  end;
+  vtvSubsList.Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SplitSubtitle(Index, SplitTime : Integer);
+var SubRange, NewSubRange : TSubtitleRange;
+    NewNode : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+  NewSubRange := TSubtitleRange(SubRangeFactory.CreateRange);
+  NewSubRange.Assign(SubRange);
+  SubRange.StopTime := SplitTime - 1;
+  NewSubRange.StartTime := SplitTime;
+  NewNode := vtvSubsList.InsertNode(SubRange.Node, amInsertAfter);
+  NodeData := vtvSubsList.GetNodeData(NewNode);
+  NodeData.Range := NewSubRange;
+  NewSubRange.Node := NewNode;
+  g_WebRWSynchro.BeginWrite;
+  try
+    WAVDisplayer.AddRange(NewSubRange);
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  vtvSubsList.Repaint;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMainForm.SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
+var Range : TRange;
+begin
+  try
+    Range := WAVDisplayer.RangeList[Index];
+    Range.StartTime := NewStartTime;
+    Range.StopTime := NewStopTime;
+    FullSortTreeAndSubList;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  if WAVDisplayer.SelectedRange = Range then
+  begin
+    WAVDisplayer.Selection.StartTime := NewStartTime;
+    WAVDisplayer.Selection.StopTime := NewStopTime;
+  end;
+
+  WAVDisplayer.UpdateView([uvfRange]);
+  vtvSubsList.Repaint;
+
+  Result := TSubtitleRange(Range).Node.Index;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMainForm.MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
+var i, idx : integer;
+    AccuText : WideString;
+    LastStopTime : Integer;
+    FirstRange, SubRange : TSubtitleRange;
+begin
+  idx := FIndexes[Low(FIndexes)];
+  FirstRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
+  AccuText := FirstRange.Text;
+  LastStopTime := FirstRange.StopTime;
+  for i := Low(FIndexes) + 1 to High(FIndexes) do
+  begin
+    idx := FIndexes[i];
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
+    AccuText := AccuText + CRLF + SubRange.Text;
+    LastStopTime := Max(LastStopTime, SubRange.StopTime);
+  end;
+  Result := TSubtitleRange(SubRangeFactory.CreateRange);
+  Result.Assign(FirstRange);
+  Result.StopTime := LastStopTime;
+  Result.Text := AccuText;
+end;
+
+//==============================================================================
+
+destructor TUndoableTaskIndexed.Destroy;
+begin
+  SetLength(FIndexes, 0);
+  FIndexes := nil;
+  inherited;
+end;
+
+procedure TUndoableTaskIndexed.AddSubtitleIndex(Index : Integer);
+begin
+  FIndexes[FCount] := Index;
+  Inc(FCount);
+end;
+
+procedure TUndoableTaskIndexed.SetCapacity(Capacity : Integer);
+begin
+  SetLength(FIndexes, Capacity);
+end;
+
+//-------------------------------------------------------------------------------
+
+procedure TUndoableDelayTask.UndoTask;
+begin
+  MainForm.ApplyDelay(FIndexes, -FDelayInMs, FDelayShiftType);
+end;
+
+procedure TUndoableDelayTask.DoTask;
+begin
+  MainForm.ApplyDelay(FIndexes, FDelayInMs, FDelayShiftType);
+end;
+
+function TUndoableDelayTask.GetName : WideString;
+begin
+  Result := 'Delay ' + TimeMsToString(FDelayInMs);
+end;
+
+procedure TUndoableDelayTask.SetDelayInMs(DelayInMs : Integer);
+begin
+  FDelayInMs := DelayInMs;
+end;
+
+procedure TUndoableDelayTask.SetDelayShiftType(DelayShiftType : TDelayShiftType);
+begin
+  FDelayShiftType := DelayShiftType;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TUndoableAddTask.DoTask;
+var NewNode : PVirtualNode;
+begin
+  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FAutoSelect);
+  FIndex := NewNode.Index;
+end;
+
+function TUndoableAddTask.GetName : WideString;
+begin
+  Result := 'Add subtitle';
+end;
+
+procedure TUndoableAddTask.UndoTask;
+begin
+  MainForm.DeleteSubtitle(FIndex);
+end;
+
+procedure TUndoableAddTask.SetTime(StartTime, StopTime : Integer);
+begin
+  FStartTime := StartTime;
+  FStopTime := StopTime;
+end;
+
+procedure TUndoableAddTask.SetText(Text : WideString);
+begin
+  FText := Text;
+end;
+
+procedure TUndoableAddTask.SetAutoSelect(AutoSelect : Boolean);
+begin
+  FAutoSelect := AutoSelect;
+end;
+
+//------------------------------------------------------------------------------
+
+constructor TUndoableDeleteTask.Create;
+begin
+  inherited;
+  FDeletedSubs := TObjectList.Create;
+end;
+
+destructor TUndoableDeleteTask.Destroy;
+begin
+  FDeletedSubs.Free;
+  inherited;
+end;
+
+procedure TUndoableDeleteTask.DoTask;
+begin
+  // First clone subtitles
+  MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
+  // Now delete them
+  MainForm.DeleteSubtitles(FIndexes);
+end;
+
+function TUndoableDeleteTask.GetName : WideString;
+begin
+  Result := 'Delete';
+end;
+
+procedure TUndoableDeleteTask.UndoTask;
+begin
+  MainForm.RestoreSubtitles(FDeletedSubs);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TUndoableSetTimeTask.DoTask;
+begin
+  FIndex := MainForm.SetSubtitleTime(FIndex, FNewStartTime, FNewStopTime);
+end;
+
+function TUndoableSetTimeTask.GetName : WideString;
+begin
+  Result := 'Set time';
+end;
+
+procedure TUndoableSetTimeTask.UndoTask;
+begin
+  FIndex := MainForm.SetSubtitleTime(FIndex, FOldStartTime, FOldStopTime);
+end;
+
+procedure TUndoableSetTimeTask.SetData(Index, OldStartTime, OldStopTime,
+  NewStartTime, NewStopTime : Integer);
+begin
+  FIndex := Index;
+  FOldStartTime := OldStartTime;
+  FOldStopTime := OldStopTime;
+  FNewStartTime := NewStartTime;
+  FNewStopTime := NewStopTime;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TUndoableSplitTask.DoTask;
+begin
+  MainForm.SplitSubtitle(FIndex, FSplitTime);
+end;
+
+function TUndoableSplitTask.GetName : WideString;
+begin
+  Result := 'Split';
+end;
+
+procedure TUndoableSplitTask.UndoTask;
+begin
+  MainForm.DeleteSubtitle(FIndex + 1);
+  MainForm.SetSubtitleTime(FIndex, FStartTime, FStopTime);
+end;
+
+procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SpliTime : Integer);
+begin
+  FIndex := Index;
+  FStartTime := StartTime;
+  FStopTime := StopTime;
+  FSplitTime := SpliTime;
+end;
+
+//------------------------------------------------------------------------------
+
+constructor TUndoableMergeTask.Create;
+begin
+  inherited;
+  FDeletedSubs := TObjectList.Create;
+end;
+
+destructor TUndoableMergeTask.Destroy;
+begin
+  FDeletedSubs.Free;
+  inherited;
+end;
+
+procedure TUndoableMergeTask.DoTask;
+var SubRange : TSubtitleRange;
+    Node : PVirtualNode;
+begin
+  // Calculate the merged subtitle
+  SubRange := MainForm.MergeSubtitles(FIndexes);
+  // Clone subtitles
+  MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
+  // Now delete them
+  MainForm.DeleteSubtitles(FIndexes);
+  // Add back the merged subtitle
+  Node := MainForm.AddSubtitle(SubRange);
+  // Focus the merged node
+  MainForm.FocusNode(Node, False);
+  MainForm.ClearWAVSelection;
+  // Free temporarily created merged sub
+  SubRange.Free;
+end;
+
+function TUndoableMergeTask.GetName : WideString;
+begin
+  Result := 'Merge';
+end;
+
+procedure TUndoableMergeTask.UndoTask;
+begin
+  MainForm.DeleteSubtitle(FIndexes[0]);
+  MainForm.RestoreSubtitles(FDeletedSubs);
+end;
+
+procedure TUndoableMergeTask.SetData(StartTime, StopTime : Integer;
+  Text : WideString);
+begin
+  FStartTime := StartTime;
+  FStopTime := StopTime;
+  FText := Text;
+end;
+
+//==============================================================================
+
+procedure TMainForm.ClearStack(Stack : TObjectStack);
+begin
+  while (Stack.Count > 0) do
+  begin
+    Stack.Pop.Free;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.PushUndoableTask(UndoableTask : TUndoableTask);
+begin
+  ClearStack(RedoStack);
+  ActionRedo.Enabled := False;
+  UndoStack.Push(UndoableTask);
+  ActionUndo.Enabled := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionUndoExecute(Sender: TObject);
+var UndoableTask : TUndoableTask;
+begin
+  if (UndoStack.Count > 0) then
+  begin
+    UndoableTask := TUndoableTask(UndoStack.Pop);
+    UndoableTask.UndoTask;
+    RedoStack.Push(UndoableTask);
+    ActionUndo.Enabled := (UndoStack.Count > 0);
+    ActionRedo.Enabled := (RedoStack.Count > 0);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionRedoExecute(Sender: TObject);
+var UndoableTask : TUndoableTask;
+begin
+  if (RedoStack.Count > 0) then
+  begin
+    UndoableTask := TUndoableTask(RedoStack.Pop);
+    UndoableTask.DoTask;
+    UndoStack.Push(UndoableTask);
+    ActionUndo.Enabled := (UndoStack.Count > 0);
+    ActionRedo.Enabled := (RedoStack.Count > 0);
+  end;
+end;
+
+
+{
+
+procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
+const
+  SB_SIMPLEID = Integer($FF);
+var
+  iPart: Integer;
+  szText: PAnsiChar;
+  WideText: WideString;
+begin
+  if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
+
+}
+
 end.
 //------------------------------------------------------------------------------
 
