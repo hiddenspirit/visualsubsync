@@ -87,6 +87,8 @@ type
   function GetUserApplicationDataFolder : WideString;
   function GetTemporaryFolder : WideString;
 
+  function TColor2RGB(Input: TColor): Cardinal;
+
 type
   TExplodeArray = array of String;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
@@ -932,6 +934,20 @@ begin
   else
     Result := '';
 end;
+
+// -----------------------------------------------------------------------------
+
+function TColor2RGB(Input: TColor): Cardinal;
+var
+  R,G,B,A : Byte;
+begin
+  R := (Input and $000000FF);
+  G := (Input and $0000FF00) shr 8;
+  B := (Input and $00FF0000) shr 16;
+  A := (Input and $FF000000) shr 24;
+  Result := RGB(R,G,B);
+end;
+
 // -----------------------------------------------------------------------------
 end.
 // -----------------------------------------------------------------------------
