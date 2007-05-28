@@ -10,6 +10,7 @@ type
   TDetachedVideoForm = class(TForm)
     procedure FormMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+    procedure FormDblClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -23,6 +24,8 @@ var
 implementation
 
 {$R *.dfm}
+
+uses Main;
 
 procedure TDetachedVideoForm.CreateParams(var Params: TCreateParams);
 begin
@@ -40,6 +43,11 @@ begin
     ReleaseCapture;
     (Self as TControl).Perform(WM_SYSCOMMAND, SC_DRAGMOVE, 0);
   end;
+end;
+
+procedure TDetachedVideoForm.FormDblClick(Sender: TObject);
+begin
+  MainForm.ActionDetachVideo.Execute;
 end;
 
 end.
