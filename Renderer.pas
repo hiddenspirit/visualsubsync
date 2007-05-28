@@ -585,11 +585,16 @@ end;
 function TDShowRenderer.PlayRange(Start, Stop : Cardinal; Loop : Boolean) : Boolean;
 var StopDummy : Int64;
 begin
+  // First stop the graph in case it's running
+  FMediaControl.Stop;
+  if Assigned(FWaitThread) then
+  begin
+    FWaitThread.SignalTermination;
+    FWaitThread.WaitFor;
+    FWaitThread.Free;
+  end;
   Result := False;
   FLoop := Loop;
-  FLastResult := FMediaControl.Stop;
-  if (FLastResult <> S_OK) then
-    Exit;
   FStart := Int64(Start) * 10000;
   FStop := Int64(Stop) * 10000;
   StopDummy := 0;
@@ -598,19 +603,11 @@ begin
   // it cause problems with AVI (stop before the stop point :p),
   // and matroska splitter doesn't support stop
 
-  //FLastResult := FMediaSeeking.SetPositions(FStart,
-  //  AM_SEEKING_AbsolutePositioning, FStop, AM_SEEKING_AbsolutePositioning);
   FLastResult := FMediaSeeking.SetPositions(FStart,
     AM_SEEKING_AbsolutePositioning, StopDummy, AM_SEEKING_NoPositioning);
   if (FLastResult <> S_OK) then
     Exit;
 
-  if Assigned(FWaitThread) then
-  begin
-    FWaitThread.SignalTermination;
-    FWaitThread.WaitFor;
-    FWaitThread.Free;
-  end;
   FWaitThread := TWaitCompletionThread.Create(Self);
   FLastResult := FMediaControl.Run;
   Result := (FLastResult = S_OK);
@@ -674,7 +671,6 @@ end;
 
 procedure TDShowRenderer.Stop(CallOnStopPlaying : Boolean);
 begin
-  //FRenderer.FMediaControl.Pause;
   FMediaControl.Stop;
   if Assigned(FWaitThread) then
   begin
@@ -804,7 +800,7 @@ begin
       FMediaControl.Run
     else if(State = State_Paused) then
       FMediaControl.Pause;
-  end;     
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1121,7 +1117,8 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWaitCompletionThread.Execute;
-const WAIT_TIMEOUT : Integer = 2;
+const WAIT_TIMEOUT_MS : Integer = 1;
+const HALF_WAIT_TIMEOUT_100NS : Integer = 5000;
 var
   hInQueueEvent : THandle;
   evCode, param1, param2 : Integer;
@@ -1144,7 +1141,7 @@ TWaitCompletionThread_Restart:
   bDone := False;
   while (not bDone) and (not Self.Terminated) do
   begin
-    WaitResult := WaitForMultipleObjects(2, @EventsArray, False, WAIT_TIMEOUT);
+    WaitResult := WaitForMultipleObjects(2, @EventsArray, False, WAIT_TIMEOUT_MS);
     if (WaitResult = WAIT_OBJECT_0+1) then
     begin
       while (FRenderer.FMediaEventEx.GetEvent(evCode, param1, param2, 0) = S_OK) do
@@ -1155,9 +1152,8 @@ TWaitCompletionThread_Restart:
     end;
     // Check position
     FRenderer.FMediaSeeking.GetCurrentPosition(CurrentPos);
-    if (CurrentPos >= FRenderer.StopTime) or
-       (Abs(CurrentPos - FRenderer.StopTime) <= ((WAIT_TIMEOUT div 2)*10000)) or
-       ((CurrentPos + 20*10000) < FRenderer.StartTime) then
+    if (CurrentPos >= FRenderer.StopTime - HALF_WAIT_TIMEOUT_100NS) or
+       (CurrentPos < FRenderer.StartTime) then
     begin
       bDone := True;
     end;
@@ -1167,8 +1163,6 @@ TWaitCompletionThread_Restart:
   begin
     if FRenderer.FLoop then
     begin
-      //FRenderer.FMediaSeeking.SetPositions(FRenderer.FStart,
-      //  AM_SEEKING_AbsolutePositioning, FRenderer.FStop, AM_SEEKING_AbsolutePositioning);
       StartPos := FRenderer.StartTime;
       FRenderer.FMediaSeeking.SetPositions(StartPos,
         AM_SEEKING_AbsolutePositioning, StopDummy, AM_SEEKING_NoPositioning);
@@ -1176,7 +1170,6 @@ TWaitCompletionThread_Restart:
     end
     else
     begin
-      //FRenderer.FMediaControl.Pause;
       FRenderer.FMediaControl.Stop;
       if Assigned(FRenderer.FOnStopPlaying) then
         FRenderer.FOnStopPlaying(FRenderer);
