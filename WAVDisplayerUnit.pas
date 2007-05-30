@@ -2070,16 +2070,25 @@ end;
 
 //------------------------------------------------------------------------------
 
+function Single2SmallInt(Value : Single) : SmallInt;
+begin
+  Result := Round(Value * 32767);
+  if (Result > 32767) then Result := 32767;
+  if (Result < -32768) then Result := -32768;
+end;
+
 procedure TWAVDisplayer.CreatePeakTab(WAVFile : TWAVFile);
 var
     Buffer8 : array of Byte;
     Buffer16 : array of SmallInt;
-    i,j : Integer;
+    Buffer32 : array of Single;
+    i, j : Integer;
     PeakMax, PeakMin : SmallInt;
     PeakMax8, PeakMin8 : Byte;
+    PeakMax32, PeakMin32 : Single;
     PeakMaxMax, PeakMinMin : SmallInt;
     MaxAbsoluteValue : Integer; 
-    NormFactor : Single;
+    NormFactor : Double;
 begin
   if Assigned(FOnPeakFileCreation) then
     FOnPeakFileCreation(Self,pfcevtStart,0);
@@ -2097,12 +2106,13 @@ begin
 //     8-bit PCM	  255 (0xFF)       0	                128 (0x80)
 //     16-bit PCM	  32,767 (0x7FFF)  - 32,768 (0x8000)	0
 
+  PeakMaxMax := -32768;
+  PeakMinMin := 32767;
+
   if (WAVFile.BitsPerSample = 8) then
   begin
     // Allocate the small buffer
     SetLength(Buffer8, FSamplesPerPeak * WAVFile.Channels);
-    PeakMaxMax := -32768;
-    PeakMinMin := 32767;
     for i:=0 to FPeakTabSize-1 do
     begin
       ZeroMemory(Buffer8, FSamplesPerPeak * SizeOf(Shortint) * WAVFile.Channels);
@@ -2131,16 +2141,11 @@ begin
       if Assigned(FOnPeakFileCreation) then
         FOnPeakFileCreation(Self, pfcevtProgress, (i*100) div Integer(FPeakTabSize));
     end;
-    // Calc. normalize factor
-    MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 32767 / MaxAbsoluteValue;
   end
   else if (WAVFile.BitsPerSample = 16) then
   begin
     // Allocate the small buffer
     SetLength(Buffer16, FSamplesPerPeak * WAVFile.Channels);
-    PeakMaxMax := -32768;
-    PeakMinMin := 32767;
     for i:=0 to FPeakTabSize-1 do
     begin
       ZeroMemory(Buffer16, FSamplesPerPeak * SizeOf(SmallInt) * WAVFile.Channels);
@@ -2163,11 +2168,45 @@ begin
         PeakMinMin := PeakMin;
 
       if Assigned(FOnPeakFileCreation) then
-        FOnPeakFileCreation(Self,pfcevtProgress,(i*100) div Integer(FPeakTabSize));
+        FOnPeakFileCreation(Self, pfcevtProgress,(i*100) div Integer(FPeakTabSize));
     end;
+  end
+  else if (WAVFile.BitsPerSample = 32) then
+  begin
+    // Allocate the small buffer
+    SetLength(Buffer32, FSamplesPerPeak * WAVFile.Channels);
+    for i:=0 to FPeakTabSize-1 do
+    begin
+      ZeroMemory(Buffer32, FSamplesPerPeak * SizeOf(SmallInt) * WAVFile.Channels);
+      WAVFile.Read(Buffer32, FSamplesPerPeak * SizeOf(Single) * WAVFile.Channels);
+      PeakMax32 := -1.0;
+      PeakMin32 := 1.0;
+      for j:=0 to (FSamplesPerPeak * WAVFile.Channels)-1 do
+      begin
+        if Buffer32[j] > PeakMax32 then
+          PeakMax32 := Buffer32[j];
+        if Buffer32[j] < PeakMin32 then
+          PeakMin32 := Buffer32[j];
+      end;
+      // Convert 32 bits float to 16 bits integer
+      PeakMax := Single2SmallInt(PeakMax32);
+      PeakMin := Single2SmallInt(PeakMin32);
+
+      FPeakTab[i].Max := PeakMax;
+      FPeakTab[i].Min := PeakMin;
+
+      if PeakMax > PeakMaxMax then
+        PeakMaxMax := PeakMax;
+      if PeakMin < PeakMinMin then
+        PeakMinMin := PeakMin;
+
+      if Assigned(FOnPeakFileCreation) then
+        FOnPeakFileCreation(Self, pfcevtProgress,(i*100) div Integer(FPeakTabSize));
+    end;
+    
     // Calc. normalize factor
     MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 32767 / MaxAbsoluteValue;
+    NormFactor := 32768.0 / MaxAbsoluteValue;
   end;
   // Normalize peak tab
   for i:=0 to FPeakTabSize-1 do
