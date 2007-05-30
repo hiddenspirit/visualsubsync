@@ -40,7 +40,7 @@ int CWin32File::Open(TCHAR* Filename, CWin32FileOpenMode OpenMode)
 		return 0;
 	}
 	
-	// Get filesize
+	// Get file size
 	DWORD dwSizeLow, dwSizeHigh, dwError;
 	dwSizeLow = GetFileSize(m_hFile, &dwSizeHigh);
 	if (dwSizeLow == 0xFFFFFFFF && (dwError = GetLastError()) != NO_ERROR )
@@ -63,7 +63,7 @@ int CWin32File::Open2(LPOLESTR Filename, CWin32FileOpenMode OpenMode)
 #if defined(WIN32) && !defined(UNICODE)
     char convert[MAX_PATH];
     
-    if(!WideCharToMultiByte(CP_ACP,0,Filename,-1,convert,MAX_PATH,0,0))
+    if(!WideCharToMultiByte(CP_ACP, 0, Filename, -1, convert, MAX_PATH, 0, 0))
         return 0;
     
     pFileName = convert;
@@ -79,7 +79,7 @@ int CWin32File::Open2(LPOLESTR Filename, CWin32FileOpenMode OpenMode)
 unsigned int CWin32File::Read(void *Buffer, unsigned int Size)
 {
 	DWORD dwNumberOfBytesRead = 0;
-	if(!ReadFile(m_hFile,Buffer,Size,&dwNumberOfBytesRead, NULL))
+	if(!ReadFile(m_hFile, Buffer, Size, &dwNumberOfBytesRead, NULL))
 	{
 		return 0;
 	}
@@ -91,7 +91,7 @@ unsigned int CWin32File::Read(void *Buffer, unsigned int Size)
 unsigned int CWin32File::Write(void *Buffer, unsigned int Size)
 {
 	DWORD dwNumberOfBytesWritten = 0;		
-	if (!WriteFile(m_hFile, Buffer, Size,&dwNumberOfBytesWritten, NULL)) 
+	if (!WriteFile(m_hFile, Buffer, Size, &dwNumberOfBytesWritten, NULL)) 
 	{
 		return 0;
 	}	
