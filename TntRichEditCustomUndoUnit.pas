@@ -75,7 +75,7 @@ type
     procedure Change; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
   public
-    constructor Create(AOwner: TComponent);
+    constructor Create(AOwner: TComponent); override;
   published
     property UndoDisabled: Boolean read FUndoDisabled write FUndoDisabled;
     property OnUndo : TNotifyUndo read FOnUndo write FOnUndo;
@@ -89,11 +89,9 @@ uses SysUtils;
 
 procedure TUndoableTextTask.DoTask;
 var TxtStart, TxtEnd, NewText : WideString;
-    lenOText, lenRText : Integer;
-    savOnChange : TNotifyEvent;
+    lenOText : Integer;
 begin
   lenOText := Length(FOriginalText);
-  lenRText := Length(FReplaceByText);
   // Get the new text start
   TxtStart := Copy(FRichEdit.Text, 1, FReplaceStart - 1);
   // Get the new text end
@@ -124,10 +122,8 @@ end;
 
 procedure TUndoableTextTask.UndoTask;
 var TxtStart, TxtEnd, OriginalText : WideString;
-    lenOText, lenRText : Integer;
-    savOnChange : TNotifyEvent;
+    lenRText : Integer;
 begin
-  lenOText := Length(FOriginalText);
   lenRText := Length(FReplaceByText);
   // Get the old text start
   TxtStart := Copy(FRichEdit.Text, 1, FReplaceStart - 1);
@@ -200,9 +196,9 @@ end;
 function TRichEditOleCallback.QueryAcceptData(dataobj: IDataObject;
   var cfFormat: TClipFormat; reco: DWORD; fReally: BOOL;
   hMetaPict: HGLOBAL): HRESULT;
-var stgmed : STGMEDIUM;
+{var stgmed : STGMEDIUM;
     format : FORMATETC;
-    pastedData : PWideChar;
+    pastedData : PWideChar;}
 begin
   // Force plain text when pasting
   cfFormat := CF_UNICODETEXT;
