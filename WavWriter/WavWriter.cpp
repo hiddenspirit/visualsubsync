@@ -23,6 +23,7 @@
 #include <commdlg.h>
 #include <streams.h>
 #include <initguid.h>
+#include <mmreg.h>
 
 #include <stdio.h>
 
@@ -76,12 +77,12 @@ int g_cTemplates = 1;
 void DebugLog(TCHAR *pFormat,...)
 {
     TCHAR szMsg[2000];
-    va_list va;		
+    va_list va;     
     va_start(va, pFormat);
     wvsprintf(szMsg, pFormat, va);
     lstrcat(szMsg, TEXT("\r\n"));
-	OutputDebugString(szMsg);
-	va_end(va);
+    OutputDebugString(szMsg);
+    va_end(va);
 }
 #else
 #define DebugLog
@@ -98,53 +99,62 @@ CUnknown * WINAPI CWavWriterFilter::CreateInstance(LPUNKNOWN punk, HRESULT *phr)
         if (phr)
             *phr = E_OUTOFMEMORY;
     }
-	
-    return pNewObject;	
+    
+    return pNewObject;  
 }
 
 //-----------------------------------------------------------------------------
 
 CWavWriterFilter::CWavWriterFilter(LPUNKNOWN pUnk, HRESULT *phr) :
     CBaseFilter(NAME("CWavWriterFilter"), pUnk, &m_Lock, CLSID_WavWriter),
-	m_pPin(NULL),
-	m_pFileName(0),
-	m_Writting(false),
-	m_dwSeekingCaps(AM_SEEKING_CanGetDuration | AM_SEEKING_CanGetCurrentPos),
-	m_rtDuration(0),
-	m_cbWavData(0),
-	m_WavFile(NULL),
-	m_bFastConvertMode(false),
-	m_OutBuffSize(0),
-	m_OutBuff(NULL),
-	m_bWritePeakFile(false),
-	m_pPeakFileName(0),
-	m_PeakFile(NULL),
-	m_PeakCircBuffer(NULL),
-	m_PeakCalcBuffer(NULL),
-	m_InputAllocatorBuffSize(0),
-	m_bWriteWavFile(true),
-	m_ConvCircBuffer(NULL),
-	m_ConvBuffSize(0),
-	m_ConvBuff(NULL)
+    m_pPin(NULL),
+    m_pFileName(0),
+    m_Writting(false),
+    m_dwSeekingCaps(AM_SEEKING_CanGetDuration | AM_SEEKING_CanGetCurrentPos),
+    m_rtDuration(0),
+    m_cbWavData(0),
+    m_WavFile(NULL),
+    m_bFastConvertMode(false),
+    m_OutBuffSize(0),
+    m_OutBuff(NULL),
+    m_bWritePeakFile(false),
+    m_pPeakFileName(0),
+    m_PeakFile(NULL),
+    m_PeakCircBuffer(NULL),
+    m_PeakCalcBuffer(NULL),
+    m_InputAllocatorBuffSize(0),
+    m_bWriteWavFile(true),
+    m_ConvCircBuffer(NULL),
+    m_ConvBuffSize(0),
+    m_ConvBuff(NULL),
+	m_InputBitsPerSample(0),
+	m_InputSampleRate(0),
+	m_InputChannels(0)
 {
-	m_pPin = new CWavWriterInputPin(this, &m_Lock, &m_ReceiveLock, phr);
-	if (m_pPin == NULL) {
-		if (phr)
-			*phr = E_OUTOFMEMORY;
-		return;
-	}
+    m_pPin = new CWavWriterInputPin(this, &m_Lock, &m_ReceiveLock, phr);
+    if (m_pPin == NULL) {
+        if (phr)
+            *phr = E_OUTOFMEMORY;
+        return;
+    }
 }
 
 //-----------------------------------------------------------------------------
 
 CWavWriterFilter::~CWavWriterFilter()
 {
-	delete m_pPin;
+    delete m_pPin;
+	m_pPin = NULL;
     delete m_pFileName;
-	delete m_pPeakFileName;
-	delete[] m_OutBuff;
-	delete[] m_ConvBuff;
-	delete m_ConvCircBuffer;
+	m_pFileName = NULL;
+    delete m_pPeakFileName;
+	m_pPeakFileName = NULL;
+    delete[] m_OutBuff;
+	m_OutBuff = NULL;
+    delete[] m_ConvBuff;
+	m_ConvBuff = NULL;
+    delete m_ConvCircBuffer;
+	m_ConvCircBuffer = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -153,21 +163,21 @@ STDMETHODIMP CWavWriterFilter::NonDelegatingQueryInterface(REFIID riid, void ** 
 {
     CheckPointer(ppv,E_POINTER);
     CAutoLock lock(&m_Lock);
-	
+    
     // Do we have this interface
     if (riid == IID_IFileSinkFilter)
-	{
+    {
         return GetInterface((IFileSinkFilter *) this, ppv);
     }
-	else if (riid == IID_IMediaSeeking)
-	{
-		return GetInterface((IMediaSeeking *) this, ppv);
-	}
-	else if (riid == IID_IWavWriter)
-	{
-		return GetInterface((IWavWriter *)this, ppv);
-	}
-	
+    else if (riid == IID_IMediaSeeking)
+    {
+        return GetInterface((IMediaSeeking *) this, ppv);
+    }
+    else if (riid == IID_IWavWriter)
+    {
+        return GetInterface((IWavWriter *)this, ppv);
+    }
+    
     return CBaseFilter::NonDelegatingQueryInterface(riid, ppv);
 }
 
@@ -193,86 +203,86 @@ int CWavWriterFilter::GetPinCount()
 
 HRESULT CWavWriterFilter::StartWriting()
 {
-	if(!m_Writting)
-	{
-		// Get allocator size
-		ALLOCATOR_PROPERTIES InProps;
-		IMemAllocator * pInAlloc = NULL;		
-		HRESULT hr;
-		
-		hr = m_pPin->GetAllocator(&pInAlloc);
-		if(SUCCEEDED(hr))
-		{
-			hr = pInAlloc->GetProperties(&InProps);
-			m_InputAllocatorBuffSize = InProps.cbBuffer;
-			pInAlloc->Release();
+    if(!m_Writting)
+    {
+        // Get allocator size
+        ALLOCATOR_PROPERTIES InProps;
+        IMemAllocator * pInAlloc = NULL;        
+        HRESULT hr;
+        
+        hr = m_pPin->GetAllocator(&pInAlloc);
+        if(SUCCEEDED(hr))
+        {
+            hr = pInAlloc->GetProperties(&InProps);
+            m_InputAllocatorBuffSize = InProps.cbBuffer;
+            pInAlloc->Release();
             DebugLog(TEXT("CWavWriterFilter::StartWriting m_InputAllocatorBuffSize=%d"),
                 m_InputAllocatorBuffSize);
-		}		
+        }       
 
-		if(m_bWriteWavFile)
-		{	
-			m_WavFile = new CWAVFileWriter();
-			if(!m_WavFile->Init(m_pFileName, m_wf))
-			{
-				delete m_WavFile;
-				m_WavFile = NULL;
-				return S_FALSE;
-			}
+        if(m_bWriteWavFile)
+        {   
+            m_WavFile = new CWAVFileWriter();
+            if(!m_WavFile->Init(m_pFileName, m_OutputWF))
+            {
+                delete m_WavFile;
+                m_WavFile = NULL;
+                return S_FALSE;
+            }
 
-			m_ConvBuffSize = 512 * (m_InputChannels * (m_wf->wBitsPerSample / 8)) * 2 * 2;
-			if(m_ConvBuff)
-				delete[] m_ConvBuff;
-			m_ConvBuff = new char[m_ConvBuffSize];
+            m_ConvBuffSize = 512 * (m_InputChannels * (m_InputBitsPerSample / 8)) * 2 * 2;
+            if(m_ConvBuff)
+                delete[] m_ConvBuff;
+            m_ConvBuff = new char[m_ConvBuffSize];
             DebugLog(TEXT("CWavWriterFilter::StartWriting m_ConvBuffSize=%d"), m_ConvBuffSize);
-			
-			m_OutBuffSize = max((m_InputAllocatorBuffSize * 2), m_ConvBuffSize);
-			if(m_OutBuff)
-				delete[] m_OutBuff;
-			m_OutBuff = new char[m_OutBuffSize];
+            
+            m_OutBuffSize = max((m_InputAllocatorBuffSize * 2), m_ConvBuffSize);
+            if(m_OutBuff)
+                delete[] m_OutBuff;
+            m_OutBuff = new char[m_OutBuffSize];
             DebugLog(TEXT("CWavWriterFilter::StartWriting m_OutBuffSize=%d"), m_OutBuffSize);
-			
-			if(m_bFastConvertMode)		
-			{			
-				if(m_ConvCircBuffer)
-					delete m_ConvCircBuffer;
-				m_ConvCircBuffer = new CircBuffer(max(m_InputAllocatorBuffSize * 2, m_ConvBuffSize * 2));
-			}
-		}
+            
+            if(m_bFastConvertMode)      
+            {           
+                if(m_ConvCircBuffer)
+                    delete m_ConvCircBuffer;
+                m_ConvCircBuffer = new CircBuffer(max(m_InputAllocatorBuffSize * 2, m_ConvBuffSize * 2));
+            }
+        }
 
-		InitPeakData();
-		m_Writting = true;
+        InitPeakData();
+        m_Writting = true;
         dataTotalOut = 0;
-	}
-	return S_OK;
+    }
+    return S_OK;
 }
 
 //-----------------------------------------------------------------------------
 
 HRESULT CWavWriterFilter::StopWriting()
 {
-	if(m_Writting)
-	{
-		if(m_WavFile)
-		{
-			if(m_bFastConvertMode)
-			{			
-				LONG lOutLength = 0;
-				Convert(NULL, 0, m_OutBuff, &lOutLength, true);
-				PeakProcessing((PBYTE)m_OutBuff, lOutLength, true);
+    if(m_Writting)
+    {
+        if(m_WavFile)
+        {
+            if(m_bFastConvertMode)
+            {           
+                LONG lOutLength = 0;
+                Convert(NULL, 0, m_OutBuff, &lOutLength, true);
+                PeakProcessing((PBYTE)m_OutBuff, lOutLength, true);
                 dataTotalOut += lOutLength;
-				m_WavFile->WritePCMData(m_OutBuff, lOutLength);
-			}
-			delete m_WavFile;
-			m_WavFile = NULL;
-		}
-		CleanPeakData();
-		m_Writting = false;
-	}
+                m_WavFile->WritePCMData(m_OutBuff, lOutLength);
+            }
+            delete m_WavFile;
+            m_WavFile = NULL;
+        }
+        CleanPeakData();
+        m_Writting = false;
+    }
     DebugLog(TEXT("CWavWriterFilter::StopWriting m_cbWavData=%d, dataTotalOut=%d"),
         m_cbWavData, dataTotalOut);
-	m_cbWavData = 0;
-	return S_OK;
+    m_cbWavData = 0;
+    return S_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -280,7 +290,7 @@ HRESULT CWavWriterFilter::StopWriting()
 STDMETHODIMP CWavWriterFilter::Stop()
 {
     CAutoLock cObjectLock(m_pLock);
-	StopWriting();
+    StopWriting();
     return CBaseFilter::Stop();
 }
 
@@ -289,7 +299,7 @@ STDMETHODIMP CWavWriterFilter::Stop()
 STDMETHODIMP CWavWriterFilter::Pause()
 {
     CAutoLock cObjectLock(m_pLock);
-	StartWriting();
+    StartWriting();
     return CBaseFilter::Pause();
 }
 
@@ -298,7 +308,7 @@ STDMETHODIMP CWavWriterFilter::Pause()
 STDMETHODIMP CWavWriterFilter::Run(REFERENCE_TIME tStart)
 {
     CAutoLock cObjectLock(m_pLock);
-	StartWriting();
+    StartWriting();
     return CBaseFilter::Run(tStart);
 }
 
@@ -308,128 +318,159 @@ HRESULT CWavWriterFilter::Write(PBYTE pbData, LONG lDataLength)
 {
     CAutoLock cObjectLock(m_pLock);
 
-	if(!m_Writting)
-		return S_FALSE;
+    if(!m_Writting)
+        return S_FALSE;
 
-	m_cbWavData += lDataLength;
+    m_cbWavData += lDataLength;
 
-	if(!m_bFastConvertMode)
-		PeakProcessing(pbData, lDataLength, false);
+    if(!m_bFastConvertMode)
+        PeakProcessing(pbData, lDataLength, false);
 
-	if(m_WavFile)
-	{
-		LONG lOutLength = m_OutBuffSize;
-		Convert((char*)pbData, lDataLength, m_OutBuff, &lOutLength, false);
-		if(m_bFastConvertMode)
-			PeakProcessing((PBYTE)m_OutBuff, lOutLength, false);
+    if(m_WavFile)
+    {
+        LONG lOutLength = m_OutBuffSize;
+        Convert((char*)pbData, lDataLength, m_OutBuff, &lOutLength, false);
+        if(m_bFastConvertMode)
+            PeakProcessing((PBYTE)m_OutBuff, lOutLength, false);
         dataTotalOut += lOutLength;
-		if(!m_WavFile->WritePCMData(m_OutBuff, lOutLength))
-		{
-			return S_FALSE;
-		}
-	}
-	return S_OK;
+        if(!m_WavFile->WritePCMData(m_OutBuff, lOutLength))
+        {
+            return S_FALSE;
+        }
+    }
+    return S_OK;
 }
 
 //-----------------------------------------------------------------------------
 
-HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData, long *lOutLength, bool finalize)
+static short float2short(float value) {
+    int valueI = (int)(value * 32767);
+    if (valueI > 32767) {
+        valueI = 32767; 
+    } else if(valueI < -32768) {
+        valueI = -32768;
+    }
+    return (short) valueI;
+}
+
+HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength,
+                                  char* pOutData, long *lOutLength,
+                                  bool finalize)
 {
-	if(m_bFastConvertMode)
-	{
-		*lOutLength = 0;
-		
+    if(m_bFastConvertMode)
+    {
+        *lOutLength = 0;
+        
         DebugLog(TEXT("CWavWriterFilter::Convert lInLength=%d"),lInLength);
 
-		if(pInData)
+        if(pInData)
         {
-			m_ConvCircBuffer->Write(pInData, lInLength);
+            m_ConvCircBuffer->Write(pInData, lInLength);
         }
-		
-		int BytesToRead = 0, BytesAvailable = 0;
+        
+        int BytesToRead = 0, BytesAvailable = 0;
 
-		while( ((BytesAvailable = m_ConvCircBuffer->Size()) >= m_ConvBuffSize) || finalize)
-		{
-			if(finalize && (BytesAvailable < m_ConvBuffSize))
-			{
-				ZeroMemory(m_ConvBuff, m_ConvBuffSize);
-				BytesToRead = BytesAvailable;
-				finalize = false;
-			} else {
-				BytesToRead = m_ConvBuffSize;
-			}
-			
-			m_ConvCircBuffer->Read(m_ConvBuff, BytesToRead);
+        while( ((BytesAvailable = m_ConvCircBuffer->Size()) >= m_ConvBuffSize) || finalize)
+        {
+            if(finalize && (BytesAvailable < m_ConvBuffSize))
+            {
+                ZeroMemory(m_ConvBuff, m_ConvBuffSize);
+                BytesToRead = BytesAvailable;
+                finalize = false;
+            } else {
+                BytesToRead = m_ConvBuffSize;
+            }
+            
+            m_ConvCircBuffer->Read(m_ConvBuff, BytesToRead);
 
-			switch(m_wf->wBitsPerSample)
-			{
-			case 8:
-				{
-					char* src = (char*)m_ConvBuff;
-					char* dst = (char*)pOutData;
-					int i, j;
-					int sample;
-
-					i = 0;
-					int loop = BytesToRead / sizeof(char) / m_InputChannels / 2;
-					while(i < loop)
-					{
-						// Read and convert one sample to mono
-						sample = 0;
-						for(j=0; j < m_InputChannels; j++)
-							sample += *src++;
-						sample /= m_InputChannels;
-						// Write the sample
-						*dst++ = (char)sample;
-						// Skip next sample
-						src += m_InputChannels;
-						i++;
-					}
-					*lOutLength += i * sizeof(char);
+            switch(m_InputBitsPerSample)
+            {
+            case 8:
+                {
+                    char* src = (char*) m_ConvBuff;
+                    char* dst = (char*) pOutData;
+                    int sample;
+                    int i = 0, j = 0;
+                    int loop = BytesToRead / sizeof(char) / m_InputChannels / 2;
+                    while (i < loop)
+                    {
+                        // Read and convert one sample to mono
+                        sample = 0;
+                        for (j = 0; j < m_InputChannels; ++j) {
+                            sample += *src++;
+                        }
+                        sample /= m_InputChannels;
+                        // Write the sample
+                        *dst++ = (char) sample;
+                        // Skip next sample
+                        src += m_InputChannels;
+                        i++;
+                    }
+                    *lOutLength += i * sizeof(char);
                     pOutData += i * sizeof(char);
-				}
-				break;
-				
-			case 16:
-				{
-					short* src = (short*)m_ConvBuff;
-					short* dst = (short*)pOutData;
-					int i, j;
-					int sample1;
-
-					if ((((BytesToRead / m_InputChannels) / 2) % 2) != 0) {
-						i = 0;
-					}
-					
-					i = 0;
-					int loop = BytesToRead / sizeof(short) / m_InputChannels / 2;
-					while(i < loop)
-					{
-						// Read and convert one sample to mono
-						sample1 = 0;
-						for(j=0; j < m_InputChannels; j++)
-							sample1 += *src++;
-						sample1 /= m_InputChannels;
-
-						// Skip next sample
-						src += m_InputChannels;
-						// Write the sample
-						*dst++ = (short)sample1;
-
-						i++;
-					}
-					*lOutLength += i * sizeof(short);
+                }
+                break;
+                
+            case 16:
+                {
+                    short* src = (short*) m_ConvBuff;
+                    short* dst = (short*) pOutData;
+                    int sample;
+                    int i = 0, j = 0;
+                    int loop = BytesToRead / sizeof(short) / m_InputChannels / 2;
+                    while (i < loop)
+                    {
+                        // Read and convert one sample to mono
+                        sample = 0;
+                        for (j = 0; j < m_InputChannels; ++j) {
+                            sample += *src++;
+                        }
+                        sample /= m_InputChannels;
+                        // Skip next sample
+                        src += m_InputChannels;
+                        // Write the sample
+                        *dst++ = (short) sample;
+                        i++;
+                    }
+                    *lOutLength += i * sizeof(short);
                     pOutData += i * sizeof(short);
-				}
-				break;
-			}
-		}
-	} else {
-		CopyMemory((PVOID) pOutData,(PVOID) pInData, lInLength);		
-		*lOutLength = lInLength;
-	}
+                }
+                break;
+
+            case 32:
+                {
+                    // Convert from 32 bits float to 16 bits integer
+                    float* src = (float*)m_ConvBuff;
+                    short* dst = (short*)pOutData;
+                    float sample;
+                    int i = 0, j = 0;
+                    int loop = BytesToRead / sizeof(float) / m_InputChannels / 2;
+                    while (i < loop)
+                    {
+                        // Read and convert one sample to mono
+                        sample = 0;
+                        for (j = 0; j < m_InputChannels; ++j) {
+                            sample += *src++;
+                        }
+                        sample /= m_InputChannels;
+                        // Skip next sample
+                        src += m_InputChannels;
+                        // Write the sample
+                        *dst++ = float2short(sample);
+                        i++;
+                    }
+                    *lOutLength += i * sizeof(short);
+                    pOutData += i * sizeof(short);
+                }
+                break;
+            }
+        }
+    } else {
+        CopyMemory((PVOID) pOutData,(PVOID) pInData, lInLength);        
+        *lOutLength = lInLength;
+    }
     DebugLog(TEXT("CWavWriterFilter::Convert lOutLength=%d"),*lOutLength);
-	return S_OK;
+    return S_OK;
 }
 
 
@@ -437,127 +478,147 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength, char* pOutData,
 
 HRESULT CWavWriterFilter::InitPeakData()
 {
-	if(m_bWritePeakFile)
-	{	
-		m_SamplePerPeak = m_InputSampleRate / m_SamplePerPeakRatio;
-		if(m_bFastConvertMode)
-			m_SamplePerPeak /= 2;
-		
-		ZeroMemory(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
-		strncpy(m_PeakFileHeader.ID, PeakFileID,8);
-		m_PeakFileHeader.SamplePerSec = m_wf->nSamplesPerSec;
-		m_PeakFileHeader.Channels = m_wf->nChannels;
-		m_PeakFileHeader.BitsPerSample = m_wf->wBitsPerSample;
-		m_PeakFileHeader.Version = PeakFileVer;
-		m_PeakFileHeader.SamplePerPeak = m_SamplePerPeak;        
+    if(m_bWritePeakFile)
+    {   
+        m_SamplePerPeak = m_InputSampleRate / m_SamplePerPeakRatio;
+        if(m_bFastConvertMode)
+            m_SamplePerPeak /= 2;
+        
+        ZeroMemory(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
+        strncpy(m_PeakFileHeader.ID, PeakFileID,8);
+        m_PeakFileHeader.SamplePerSec = m_OutputWF->nSamplesPerSec;
+        m_PeakFileHeader.Channels = m_OutputWF->nChannels;
+        m_PeakFileHeader.BitsPerSample = m_OutputWF->wBitsPerSample;
+        m_PeakFileHeader.Version = PeakFileVer;
+        m_PeakFileHeader.SamplePerPeak = m_SamplePerPeak;        
         m_PeakFile = new CWin32File();
-		if(!m_PeakFile->Open2(m_pPeakFileName, CWin32File_WRITE_MODE))
-		{
+        if(!m_PeakFile->Open2(m_pPeakFileName, CWin32File_WRITE_MODE))
+        {
             delete m_PeakFile;
-			m_PeakFile = NULL;
-			m_bWritePeakFile = false;
-		} else {
+            m_PeakFile = NULL;
+            m_bWritePeakFile = false;
+        } else {
             m_PeakFile->Write(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
-			
-			if(m_PeakCalcBuffer)
-				delete[] m_PeakCalcBuffer;
-			m_PeakCalcBufferSize = (m_SamplePerPeak * (m_wf->wBitsPerSample / 8) * m_wf->nChannels);
-			m_PeakCalcBuffer = new char[m_PeakCalcBufferSize];
+            
+            if(m_PeakCalcBuffer)
+                delete[] m_PeakCalcBuffer;
+            m_PeakCalcBufferSize = (m_SamplePerPeak * (m_OutputWF->wBitsPerSample / 8) * m_OutputWF->nChannels);
+            m_PeakCalcBuffer = new char[m_PeakCalcBufferSize];
             DebugLog(TEXT("CWavWriterFilter::InitPeakData m_PeakCalcBufferSize=%d"), m_PeakCalcBufferSize);
-			
-			if(m_PeakCircBuffer)
-				delete m_PeakCircBuffer;
-			m_PeakCircBuffer = new CircBuffer( max(m_InputAllocatorBuffSize * 2, m_PeakCalcBufferSize * 2) );
-		}
-	}
-	return S_OK;
+            
+            if(m_PeakCircBuffer)
+                delete m_PeakCircBuffer;
+            m_PeakCircBuffer = new CircBuffer( max(m_InputAllocatorBuffSize * 2, m_PeakCalcBufferSize * 2) );
+        }
+    }
+    return S_OK;
 }
 
 //----------------------------------------------------------------------------
 
 void CWavWriterFilter::PeakProcessing(BYTE* pInData, LONG lInLength, bool finalize)
 {
-	int BytesToRead = 0, BytesAvailable = 0;
-	
-	if(!m_bWritePeakFile || m_PeakFile == NULL)
-		return;
-	
-	if(pInData != NULL)
-		m_PeakCircBuffer->Write(pInData, lInLength);
-	
-	while( ((BytesAvailable = m_PeakCircBuffer->Size()) >= m_PeakCalcBufferSize) || finalize)
-	{
-		if(finalize && (BytesAvailable < m_PeakCalcBufferSize))
-		{
-			ZeroMemory(m_PeakCalcBuffer, m_PeakCalcBufferSize);
-			BytesToRead = BytesAvailable;
-			finalize = false;
-		} else {
-			BytesToRead = m_PeakCalcBufferSize;
-		}
-		
-		m_PeakCircBuffer->Read(m_PeakCalcBuffer, BytesToRead);
-		
-		switch(m_wf->wBitsPerSample)
-		{
-		case 8:
-			{			
-				char *src = (char*)m_PeakCalcBuffer;
-				m_Peak.Max = -128;
-				m_Peak.Min = 127;
-				for(unsigned int i = 0; i < BytesToRead / sizeof(char) ; i++)
-				{
-					if(src[i] > m_Peak.Max)
-						m_Peak.Max = src[i];
-					if(src[i] < m_Peak.Min)
-						m_Peak.Min = src[i];
-				}
-				m_Peak.Max <<= 16;
-				m_Peak.Min <<= 16;
+    int BytesToRead = 0, BytesAvailable = 0;
+    
+    if(!m_bWritePeakFile || m_PeakFile == NULL)
+        return;
+    
+    if(pInData != NULL)
+        m_PeakCircBuffer->Write(pInData, lInLength);
+    
+    while( ((BytesAvailable = m_PeakCircBuffer->Size()) >= m_PeakCalcBufferSize) || finalize)
+    {
+        if(finalize && (BytesAvailable < m_PeakCalcBufferSize))
+        {
+            ZeroMemory(m_PeakCalcBuffer, m_PeakCalcBufferSize);
+            BytesToRead = BytesAvailable;
+            finalize = false;
+        } else {
+            BytesToRead = m_PeakCalcBufferSize;
+        }
+        
+        m_PeakCircBuffer->Read(m_PeakCalcBuffer, BytesToRead);
+        
+        switch(m_OutputWF->wBitsPerSample)
+        {
+        case 8:
+            {           
+                unsigned char *src = (unsigned char*) m_PeakCalcBuffer;
+                unsigned char maxValue = 0;
+                unsigned char minValue = 255;
+                for(unsigned int i = 0; i < BytesToRead / sizeof(char); ++i)
+                {
+                    if(src[i] > maxValue)
+                        maxValue = src[i];
+                    if(src[i] < minValue)
+                        minValue = src[i];
+                }
+                m_Peak.Max = (short)((maxValue - 128) << 8);
+                m_Peak.Min = (short)((minValue - 128) << 8);
                 m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
-				m_PeakFileHeader.PeakTabLen++;
-			}
-			break;
-		case 16:
-			{			
-				short *src = (short*)m_PeakCalcBuffer;
-				m_Peak.Max = -32768;
-				m_Peak.Min = 32767;
-				for(unsigned int i = 0; i < BytesToRead / sizeof(short) ; i++)
-				{
-					if(src[i] > m_Peak.Max)
-						m_Peak.Max = src[i];
-					if(src[i] < m_Peak.Min)
-						m_Peak.Min = src[i];
-				}
+                m_PeakFileHeader.PeakTabLen++;
+            }
+            break;
+        case 16:
+            {           
+                short *src = (short*) m_PeakCalcBuffer;
+                short maxValue = -32768;
+                short minValue = 32767;
+                for(unsigned int i = 0; i < BytesToRead / sizeof(short) ; ++i)
+                {
+                    if(src[i] > maxValue)
+                        maxValue = src[i];
+                    if(src[i] < minValue)
+                        minValue = src[i];
+                }
+                m_Peak.Max = maxValue;
+                m_Peak.Min = minValue;
                 m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
-				m_PeakFileHeader.PeakTabLen++;
-			}
-			break;
-		}
-	}
+                m_PeakFileHeader.PeakTabLen++;
+            }
+            break;
+        case 32:
+            {
+                float *src = (float*) m_PeakCalcBuffer;
+                float maxValue = -1.0;
+                float minValue = 1.0;
+                for (unsigned int i = 0; i < BytesToRead / sizeof(float) ; ++i)
+                {
+                    if(src[i] > maxValue)
+                        maxValue = src[i];
+                    if(src[i] < minValue)
+                        minValue = src[i];
+                }
+                m_Peak.Max = float2short(maxValue);
+                m_Peak.Min = float2short(minValue);
+                m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
+                m_PeakFileHeader.PeakTabLen++;
+            }
+            break;
+        }
+    }
 }
 
 //----------------------------------------------------------------------------
 
 void CWavWriterFilter::CleanPeakData()
 {
-	if(m_PeakFile)
-	{
-		// Process data left in m_DataBuffer
-		PeakProcessing(NULL,0,true);
-		// Update length in ms
-		double LengthMs = (double)(m_cbWavData / m_InputChannels / (m_wf->wBitsPerSample / 8)) / m_InputSampleRate;
-		m_PeakFileHeader.LengthMs = (int)(LengthMs * 1000 + 0.5);
+    if(m_PeakFile)
+    {
+        // Process data left in m_DataBuffer
+        PeakProcessing(NULL,0,true);
+        // Update length in ms
+        double LengthMs = (double)(m_cbWavData / m_InputChannels / (m_InputBitsPerSample / 8)) / m_InputSampleRate;
+        m_PeakFileHeader.LengthMs = (int)(LengthMs * 1000 + 0.5);
         m_PeakFile->Seek(0, FILE_BEGIN);
         m_PeakFile->Write(&m_PeakFileHeader, sizeof(m_PeakFileHeader));
         delete m_PeakFile;
-		m_PeakFile = NULL;
-		delete[] m_PeakCalcBuffer;
-		m_PeakCalcBuffer = NULL;
-		delete m_PeakCircBuffer;
-		m_PeakCircBuffer = NULL;
-	}
+        m_PeakFile = NULL;
+        delete[] m_PeakCalcBuffer;
+        m_PeakCalcBuffer = NULL;
+        delete m_PeakCircBuffer;
+        m_PeakCircBuffer = NULL;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -567,21 +628,21 @@ void CWavWriterFilter::CleanPeakData()
 STDMETHODIMP CWavWriterFilter::SetFileName(LPCOLESTR pszFileName,const AM_MEDIA_TYPE *pmt)
 {
     // Is this a valid filename supplied
-	
-    CheckPointer(pszFileName,E_POINTER);
+    
+    CheckPointer(pszFileName, E_POINTER);
     if(wcslen(pszFileName) > MAX_PATH)
         return ERROR_FILENAME_EXCED_RANGE;
-	
+    
     // Take a copy of the filename
-	
-    m_pFileName = new WCHAR[1+lstrlenW(pszFileName)];
+    
+    m_pFileName = new WCHAR[1 + lstrlenW(pszFileName)];
     if (m_pFileName == 0)
         return E_OUTOFMEMORY;
-	
+    
     lstrcpyW(m_pFileName, pszFileName);
-		
+        
     return S_OK;
-	
+    
 } // SetFileName
 
 //-----------------------------------------------------------------------------
@@ -590,27 +651,27 @@ STDMETHODIMP CWavWriterFilter::GetCurFile(LPOLESTR * ppszFileName, AM_MEDIA_TYPE
 {
     CheckPointer(ppszFileName, E_POINTER);
     *ppszFileName = NULL;
-	
+    
     if (m_pFileName != NULL) 
     {
         *ppszFileName = (LPOLESTR)
-			QzTaskMemAlloc(sizeof(WCHAR) * (1+lstrlenW(m_pFileName)));
-		
+            QzTaskMemAlloc(sizeof(WCHAR) * (1+lstrlenW(m_pFileName)));
+        
         if (*ppszFileName != NULL) 
         {
             lstrcpyW(*ppszFileName, m_pFileName);
         }
     }
-	
-    if(pmt) 
+    
+    if (pmt) 
     {
-        ZeroMemory(pmt, sizeof(*pmt));		
+        ZeroMemory(pmt, sizeof(*pmt));      
         pmt->majortype = MEDIATYPE_Audio;
         pmt->subtype = MEDIASUBTYPE_PCM;
     }
 
     return S_OK;
-	
+    
 } // GetCurFile
 
 // ----------------------------------------------------------------------------
@@ -676,24 +737,24 @@ STDMETHODIMP CWavWriterFilter::GetCurrentPosition(LONGLONG *pCurrent)
 {
     CheckPointer(pCurrent, E_POINTER);
 
-	CMediaType mt;
-	m_pPin->ConnectionMediaType(&mt);
+    CMediaType mt;
+    m_pPin->ConnectionMediaType(&mt);
 
-	WAVEFORMATEX *wf = NULL;
-	if(mt.FormatLength() == sizeof(WAVEFORMATEX))
-	{
-		wf = (WAVEFORMATEX *)mt.Format();
-	} else if(mt.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
-		wf = &((WAVEFORMATEXTENSIBLE*)mt.Format())->Format;
-	}
-	
-	if(wf)
-	{		
-		*pCurrent = (((LONGLONG)m_cbWavData / wf->nBlockAlign) / wf->nSamplesPerSec) * 10000000;
-	} else {
-		*pCurrent = 0;
-	}
-	
+    WAVEFORMATEX *wf = NULL;
+    if(mt.FormatLength() == sizeof(WAVEFORMATEX))
+    {
+        wf = (WAVEFORMATEX *)mt.Format();
+    } else if(mt.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
+        wf = &((WAVEFORMATEXTENSIBLE*)mt.Format())->Format;
+    }
+    
+    if(wf)
+    {       
+        *pCurrent = (((LONGLONG)m_cbWavData / wf->nBlockAlign) / wf->nSamplesPerSec) * 10000000;
+    } else {
+        *pCurrent = 0;
+    }
+    
     return S_OK;
 }
 
@@ -712,48 +773,48 @@ STDMETHODIMP CWavWriterFilter::GetPreroll(LONGLONG* pllPreroll) { return E_NOTIM
 
 STDMETHODIMP CWavWriterFilter::SetFastConversionMode(DWORD FastConvertMode)
 {
-	m_bFastConvertMode = FastConvertMode ? true : false;
-	return S_OK;
+    m_bFastConvertMode = FastConvertMode ? true : false;
+    return S_OK;
 }
 
 STDMETHODIMP CWavWriterFilter::GetFastConversionMode(DWORD *FastConvertMode)
-{	
-	CheckPointer(FastConvertMode, E_POINTER);
-	*FastConvertMode = m_bFastConvertMode ? 1 : 0;
-	return S_OK;
+{   
+    CheckPointer(FastConvertMode, E_POINTER);
+    *FastConvertMode = m_bFastConvertMode ? 1 : 0;
+    return S_OK;
 }
 
 STDMETHODIMP CWavWriterFilter::SetSamplesPerPeakRatio(DWORD SamplePerPeakRatio)
 {
-	m_SamplePerPeakRatio = SamplePerPeakRatio;
-	return S_OK;
+    m_SamplePerPeakRatio = SamplePerPeakRatio;
+    return S_OK;
 }
 
 STDMETHODIMP CWavWriterFilter::SetWritePeakFile(DWORD WritePeakFile)
 {
-	m_bWritePeakFile = WritePeakFile ? true : false;
-	return S_OK;
+    m_bWritePeakFile = WritePeakFile ? true : false;
+    return S_OK;
 }
 
 STDMETHODIMP CWavWriterFilter::SetWriteWavFile(DWORD WriteWavFile)
 {
-	m_bWriteWavFile = WriteWavFile ? true : false;
-	return S_OK;
+    m_bWriteWavFile = WriteWavFile ? true : false;
+    return S_OK;
 }
 
 STDMETHODIMP CWavWriterFilter::SetPeakFileName(LPCOLESTR pszFileName)
-{	
-    CheckPointer(pszFileName,E_POINTER);
+{   
+    CheckPointer(pszFileName, E_POINTER);
     if(wcslen(pszFileName) > MAX_PATH)
         return ERROR_FILENAME_EXCED_RANGE;
     
     // Take a copy of the filename
     
-    m_pPeakFileName = new WCHAR[1+lstrlenW(pszFileName)];
+    m_pPeakFileName = new WCHAR[1 + lstrlenW(pszFileName)];
     if (m_pPeakFileName == 0)
         return E_OUTOFMEMORY;
     
-    lstrcpyW(m_pPeakFileName,pszFileName);
+    lstrcpyW(m_pPeakFileName, pszFileName);
     
     return S_OK;
 }
@@ -761,7 +822,7 @@ STDMETHODIMP CWavWriterFilter::SetPeakFileName(LPCOLESTR pszFileName)
 //=============================================================================
 
 CWavWriterInputPin::CWavWriterInputPin(CWavWriterFilter *pFilter,
-							 CCritSec *pLock,
+                             CCritSec *pLock,
                              CCritSec *pReceiveLock,
                              HRESULT *phr) :
 
@@ -771,7 +832,7 @@ CWavWriterInputPin::CWavWriterInputPin(CWavWriterFilter *pFilter,
                   phr,                       // Return code
                   L"Input"),                 // Pin name
     m_pReceiveLock(pReceiveLock),
-	m_pFilter(pFilter)
+    m_pFilter(pFilter)
 {
 
 }
@@ -786,18 +847,21 @@ HRESULT CWavWriterInputPin::CheckMediaType(const CMediaType *mtIn)
 {
     if(mtIn->formattype == FORMAT_WaveFormatEx)
     {
-		WAVEFORMATEX *wf = NULL;
-		if(mtIn->FormatLength() == sizeof(WAVEFORMATEX))
-		{
-			wf = (WAVEFORMATEX *)mtIn->Format();
-		} else if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
-			wf = &((WAVEFORMATEXTENSIBLE*)mtIn->Format())->Format;
-		} else {
-			return S_FALSE;
+        WAVEFORMATEX *wf = NULL;
+        if(mtIn->FormatLength() == sizeof(WAVEFORMATEX))
+        {
+            wf = (WAVEFORMATEX *) mtIn->Format();
+        } else if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
+            wf = &((WAVEFORMATEXTENSIBLE*) mtIn->Format())->Format;
+        } else {
+            return S_FALSE;
+        }
+
+		if (wf->wFormatTag == WAVE_FORMAT_PCM &&
+			(wf->wBitsPerSample == 8 || wf->wBitsPerSample == 16)) {
+			return S_OK;
 		}
-		
-		if(wf->wBitsPerSample == 16 || wf->wBitsPerSample == 8)
-		{
+		if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT && wf->wBitsPerSample == 32) {
 			return S_OK;
 		}
     }
@@ -808,41 +872,47 @@ HRESULT CWavWriterInputPin::CheckMediaType(const CMediaType *mtIn)
 
 HRESULT CWavWriterInputPin::CompleteConnect(IPin *pReceivePin)
 {
-	IMediaSeeking *pIMediaSeeking = NULL;
-	HRESULT hr;
-	
-	// Get duration
-	m_pFilter->m_rtDuration = 0;
-	hr = pReceivePin->QueryInterface(IID_IMediaSeeking, (void **)&pIMediaSeeking);		
-	if(SUCCEEDED(hr))
-	{			
-		pIMediaSeeking->GetDuration(&m_pFilter->m_rtDuration);
-	}
-	
-	// Keep info on input media type, and set info for output
-	pReceivePin->ConnectionMediaType(&m_pFilter->m_OutType);
-	
-	if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEX))
-	{
-		m_pFilter->m_wf = (WAVEFORMATEX *)m_pFilter->m_OutType.Format();
-	} else if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
-		m_pFilter->m_wf = &((WAVEFORMATEXTENSIBLE*)m_pFilter->m_OutType.Format())->Format;
-	} else {
-		m_pFilter->m_wf = NULL; // not good :>
-	}
-	
-	m_pFilter->m_InputSampleRate = m_pFilter->m_wf->nSamplesPerSec;
-	m_pFilter->m_InputChannels = m_pFilter->m_wf->nChannels;
+    IMediaSeeking *pIMediaSeeking = NULL;
+    HRESULT hr;
+    
+    // Get duration
+    m_pFilter->m_rtDuration = 0;
+    hr = pReceivePin->QueryInterface(IID_IMediaSeeking, (void **)&pIMediaSeeking);      
+    if(SUCCEEDED(hr))
+    {           
+        pIMediaSeeking->GetDuration(&m_pFilter->m_rtDuration);
+		pIMediaSeeking->Release();
+    }
+    
+    // Keep info on input media type, and set info for output
+    pReceivePin->ConnectionMediaType(&m_pFilter->m_OutType);
+    
+    if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEX))
+    {
+        m_pFilter->m_OutputWF = (WAVEFORMATEX *) m_pFilter->m_OutType.Format();
+    } else if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
+        m_pFilter->m_OutputWF = &((WAVEFORMATEXTENSIBLE*) m_pFilter->m_OutType.Format())->Format;
+    } else {
+        m_pFilter->m_OutputWF = NULL; // not good :>
+    }
+    
+    m_pFilter->m_InputSampleRate = m_pFilter->m_OutputWF->nSamplesPerSec;
+    m_pFilter->m_InputChannels = m_pFilter->m_OutputWF->nChannels;
+	m_pFilter->m_InputBitsPerSample = m_pFilter->m_OutputWF->wBitsPerSample;
 
-	if(m_pFilter->m_bFastConvertMode)
-	{
-		m_pFilter->m_wf->nSamplesPerSec /= 2;
-		m_pFilter->m_wf->nChannels = 1;
-		m_pFilter->m_wf->nBlockAlign = (WORD)((m_pFilter->m_wf->wBitsPerSample / 8) * m_pFilter->m_wf->nChannels);
-		m_pFilter->m_wf->nAvgBytesPerSec = m_pFilter->m_wf->nBlockAlign * m_pFilter->m_wf->nSamplesPerSec;
-	}
+    if(m_pFilter->m_bFastConvertMode)
+    {
+        m_pFilter->m_OutputWF->nSamplesPerSec /= 2;
+        m_pFilter->m_OutputWF->nChannels = 1;
+		if (m_pFilter->m_OutputWF->wBitsPerSample == 32) {
+			m_pFilter->m_OutputWF->wBitsPerSample = 16;
+			m_pFilter->m_OutputWF->wFormatTag = WAVE_FORMAT_PCM;
+		}
+        m_pFilter->m_OutputWF->nBlockAlign = (WORD)((m_pFilter->m_OutputWF->wBitsPerSample / 8) * m_pFilter->m_OutputWF->nChannels);
+        m_pFilter->m_OutputWF->nAvgBytesPerSec = m_pFilter->m_OutputWF->nBlockAlign * m_pFilter->m_OutputWF->nSamplesPerSec;
+    }
 
-	return CRenderedInputPin::CompleteConnect(pReceivePin);
+    return CRenderedInputPin::CompleteConnect(pReceivePin);
 }
 
 //-----------------------------------------------------------------------------
@@ -869,40 +939,41 @@ STDMETHODIMP CWavWriterInputPin::Receive(IMediaSample *pSample)
     CAutoLock lock(m_pReceiveLock);
     PBYTE pbData;
 
-	REFERENCE_TIME rtStart = 0, rtStop = 0;
-	pSample->GetTime(&rtStart,&rtStop);
+    REFERENCE_TIME rtStart = 0, rtStop = 0;
+    pSample->GetTime(&rtStart,&rtStop);
 
-	if((rtStart != m_tPrevStop) &&
-		((m_tPrevStart != rtStart) && (m_tPrevStop != rtStop)) &&
-		(m_tPrevStop == 0))
-	{
-		// Hole in timestamps, pad with silent
-		double NbSilentSamples = (double)(((rtStart - m_tPrevStop) * m_pFilter->m_InputSampleRate *
-			m_pFilter->m_InputChannels) / 10000000);
-		int SilentSamplesLen = (int)(NbSilentSamples * (m_pFilter->m_wf->wBitsPerSample / 8));
-		SilentSamplesLen += (SilentSamplesLen % (m_pFilter->m_InputChannels * m_pFilter->m_wf->wBitsPerSample / 8));
+	// TODO : support dynamic media type change at start
 
-		PBYTE DummyBuffer = new BYTE[m_pFilter->m_InputAllocatorBuffSize];
-		ZeroMemory(DummyBuffer,m_pFilter->m_InputAllocatorBuffSize);
-		int toWriteNow = 0;
-		while(SilentSamplesLen > 0)
-		{
-			toWriteNow = min(m_pFilter->m_InputAllocatorBuffSize, SilentSamplesLen);
-			m_pFilter->Write(DummyBuffer, toWriteNow);
-			SilentSamplesLen -= toWriteNow;
-		}
-		delete[] DummyBuffer;
-	}
+    if((rtStart != m_tPrevStop) &&
+        ((m_tPrevStart != rtStart) && (m_tPrevStop != rtStop)) &&
+        (m_tPrevStop == 0))
+    {
+        // Hole in timestamps, pad with silence
+        double NbSilentSamples = (double)(((rtStart - m_tPrevStop) * m_pFilter->m_InputSampleRate *
+            m_pFilter->m_InputChannels) / 10000000);
+        int SilentSamplesLen = (int)(NbSilentSamples * (m_pFilter->m_OutputWF->wBitsPerSample / 8));
+        SilentSamplesLen += (SilentSamplesLen % (m_pFilter->m_InputChannels * m_pFilter->m_OutputWF->wBitsPerSample / 8));
 
-	m_tPrevStart = rtStart;
-	m_tPrevStop = rtStop;
+        PBYTE DummyBuffer = new BYTE[m_pFilter->m_InputAllocatorBuffSize];
+        ZeroMemory(DummyBuffer, m_pFilter->m_InputAllocatorBuffSize);
+        int toWriteNow = 0;
+        while(SilentSamplesLen > 0)
+        {
+            toWriteNow = min(m_pFilter->m_InputAllocatorBuffSize, SilentSamplesLen);
+            m_pFilter->Write(DummyBuffer, toWriteNow);
+            SilentSamplesLen -= toWriteNow;
+        }
+        delete[] DummyBuffer;
+    }
+
+    m_tPrevStart = rtStart;
+    m_tPrevStop = rtStop;
 
     // Copy the data to the file
     HRESULT hr = pSample->GetPointer(&pbData);
     if (FAILED(hr)) {
         return hr;
     }
-	
 
     return m_pFilter->Write(pbData, pSample->GetActualDataLength());
 }
@@ -914,9 +985,9 @@ STDMETHODIMP CWavWriterInputPin::NewSegment(REFERENCE_TIME tStart,
                                        double dRate)
 {
     m_tPrevStart = 0;
-	m_tPrevStop = 0;
+    m_tPrevStop = 0;
     return S_OK;
-	
+    
 } // NewSegment
 
 //-----------------------------------------------------------------------------
@@ -932,7 +1003,7 @@ STDMETHODIMP CWavWriterInputPin::EndOfStream(void)
 
 ////////////////////////////////////////////////////////////////////////
 //
-// Exported entry points for registration and unregistration 
+// Exported entry points for registration and un-registration 
 // (in this case they only call through to default implementations).
 //
 ////////////////////////////////////////////////////////////////////////
@@ -968,6 +1039,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,
                       DWORD  dwReason, 
                       LPVOID lpReserved)
 {
-	return DllEntryPoint((HINSTANCE)(hModule), dwReason, lpReserved);
+    return DllEntryPoint((HINSTANCE)(hModule), dwReason, lpReserved);
 }
 
