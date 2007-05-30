@@ -34,7 +34,8 @@ uses
   Buttons, TntActnList, ImgList, ActnList, TntDialogs, TntComCtrls,
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
-  DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit;
+  DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
+  UndoableTaskUnit;
 
 type
   TTreeData = record
@@ -43,12 +44,6 @@ type
   PTreeData = ^TTreeData;
 
   // -----
-  TUndoableTask = class
-  public
-    procedure DoTask; virtual; abstract;
-    function GetName : WideString; virtual; abstract;
-    procedure UndoTask; virtual; abstract;
-  end;
 
   TUndoableTaskIndexed = class(TUndoableTask)
   private
@@ -143,6 +138,22 @@ type
 
     procedure SetData(StartTime, StopTime : Integer; Text : WideString);
   end;
+
+  TUndoableSubTextTask = class(TUndoableTask)
+  private
+    FUndoableTextTask : TUndoableTask;
+    FIndex : Integer;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(Index : Integer; UndoableTextTask : TUndoableTask);
+  end;
+  
   // -----
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
@@ -429,6 +440,7 @@ type
         Range : TRange);
     procedure WAVDisplayer1SelectedKaraokeRange(Sender: TObject;
         Range : TRange);
+    procedure WAVDisplayer1CustomDrawRange(Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect);
     procedure vtvSubsListGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
       var CellText: WideString);
@@ -633,7 +645,8 @@ type
       Text : WideString) : PVirtualNode; overload;
     function AddSubtitle(StartTime, StopTime : Integer;
       AutoSelect : Boolean) : PVirtualNode; overload;
-    procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean);
+    procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
+    procedure FocusNodeAt(Index : Integer); overload;
     procedure ClearWAVSelection;
     procedure SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
@@ -674,6 +687,7 @@ type
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
     procedure SplitSubtitle(Index, SplitTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
+    procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -710,7 +724,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
-  TntIniFiles, TntGraphics, TntSystem;
+  TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit;
 
 {$R *.dfm}
 
@@ -757,7 +771,26 @@ lovechange:
 procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
     GeneralJSFilename : WideString;
+    CustomMemo : TTntRichEditCustomUndo;
 begin
+  CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
+  CustomMemo.Parent := MemoSubtitleText.Parent;
+  CustomMemo.Font.Assign(MemoSubtitleText.Font);
+  CustomMemo.OnChange := MemoSubtitleText.OnChange;
+  CustomMemo.OnMouseDown := MemoSubtitleText.OnMouseDown;
+  CustomMemo.OnSelectionChange := MemoSubtitleText.OnSelectionChange;
+  CustomMemo.PopupMenu := MemoSubtitleText.PopupMenu;
+  CustomMemo.ScrollBars := MemoSubtitleText.ScrollBars;
+  CustomMemo.Width := MemoSubtitleText.Width;
+  CustomMemo.Height := MemoSubtitleText.Height;
+  CustomMemo.Top := MemoSubtitleText.Top;
+  CustomMemo.Left := MemoSubtitleText.Left;
+  CustomMemo.Align := MemoSubtitleText.Align;
+  MemoSubtitleText.Free;
+  MemoSubtitleText := CustomMemo;
+  CustomMemo.OnUndo := OnUndo;
+  
+
   // Enable/disable experimental karaoke stuff
   pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
   pmiClearKaraoke.Visible := EnableExperimentalKaraoke;
@@ -812,6 +845,7 @@ begin
   WAVDisplayer.OnStartPlaying := WAVDisplayer1StartPlaying;
   WAVDisplayer.OnKaraokeChanged := WAVDisplayer1KaraokeChanged;
   WAVDisplayer.OnSelectedKaraokeRange := WAVDisplayer1SelectedKaraokeRange;
+  WAVDisplayer.OnCustomDrawRange := WAVDisplayer1CustomDrawRange;
   WAVDisplayer.Enabled := False;
   WAVDisplayer.PopupMenu := WAVDisplayPopupMenu;
 
@@ -1712,7 +1746,6 @@ var savSelStart, savSelLength : Integer;
     TxtRangeI : ITextRange;
     TxtFontI : ITextFont;
     RichEditOle: IUnknown;
-    eventMask : Integer;
 const
   tomSuspend	= -9999995;
 	tomResume	= -9999994;
@@ -2992,7 +3025,9 @@ begin
     else
     begin
       MemoSubtitleText.Tag := 0;
+      TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
       MemoSubtitleText.Text := '';
+      TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
     end;
     OldAutoScrollIdx := Idx;
   end;
@@ -3245,7 +3280,9 @@ begin
     Self.Caption := ApplicationName;
     MemoLinesCounter.Text := '';
     TntStatusBar1.Panels[0].Text := '';
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := '';
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
 
     EnableControl(False);
     cbStyles.Clear;
@@ -3543,6 +3580,17 @@ begin
   NewRange := TSubtitleRange(NodeData.Range);
   TSubtitleRange(NewRange).Text := Text;
   Result := NewNode;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.FocusNodeAt(Index : Integer);
+var SubRange : TSubtitleRange;
+    Node : PVirtualNode;
+begin
+  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+  Node := SubRange.Node;
+  FocusNode(Node, False);
 end;
 
 //------------------------------------------------------------------------------
@@ -3898,7 +3946,9 @@ begin
   TntOpenDialog1.Filter :=
     'Text files (*.txt)|*.TXT' + '|' +
     'RTF files (*.rtf)|*.RTF' + '|' +
+    'Subtitle files (*.srt)|*.SRT' + '|' +
     'All files (*.*)|*.*';
+  // TODO : option to strip timestamps
   if TntOpenDialog1.Execute then
   begin
     MemoTextPipe.Clear;
@@ -3941,7 +3991,9 @@ begin
   if (MemoTextPipe.SelLength > 0) and (not WAVDisplayer.SelectionIsEmpty) then
   begin
     ActionAddSubtitle.Execute;
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
     ColorizeOrDeleteTextPipe;
 //    // If this is the first subtitle, readjust columns
 //    if (vtvSubsList.ChildCount[nil] = 1) then
@@ -3998,7 +4050,9 @@ var NextNode : PVirtualNode;
 begin
   if (MemoTextPipe.SelLength > 0) and (vtvSubsList.FocusedNode <> nil) then
   begin
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
     ColorizeOrDeleteTextPipe;
     // Go to next subtitle
     NextNode := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
@@ -4257,7 +4311,9 @@ begin
   begin
     NodeData := Sender.GetNodeData(Node);
     MemoSubtitleText.Tag := 0;
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := NodeData.Range.Text;
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
     MemoSubtitleText.Tag := 1;
     if (WAVDisplayer.KaraokeSelectedRange = NodeData.Range) then
       TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex)
@@ -4270,7 +4326,9 @@ begin
   else
   begin
     MemoSubtitleText.Tag := 0;
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := '';
+    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
   end;
 end;
 
@@ -4955,6 +5013,37 @@ begin
     vtvSubsList.Selected[Node] := True;
   end;
   TagHighlight(MemoSubtitleText,WAVDisplayer.KaraokeSelectedIndex);  
+end;
+
+//------------------------------------------------------------------------------
+
+type
+  TAccessCanvas = class(TCanvas);
+
+procedure WideCanvasDrawText(Canvas: TCanvas; Rect: TRect; const Text: WideString);
+var
+  Options: Cardinal;
+begin
+  with TAccessCanvas(Canvas) do begin
+    Changing;
+    RequiredState([csHandleValid, csFontValid, csBrushValid]);
+    Options := DT_END_ELLIPSIS or DT_NOPREFIX or DT_WORDBREAK;
+    Windows.DrawTextW(Handle, PWideChar(Text), Length(Text), Rect, Options);
+    Changed;
+  end;
+end;
+
+procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
+  ACanvas: TCanvas; Range : TRange; Rect : TRect);
+begin
+  InflateRect(Rect, -5, -5);
+  if (Rect.Right - Rect.Left) > 25 then
+  begin
+    ACanvas.Font.Color := ACanvas.Pen.Color;
+    ACanvas.Font.Name := 'Arial Unicode MS';
+    //ACanvas.Font.Style := ACanvas.Font.Style + [fsBold];
+    WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -6208,6 +6297,55 @@ begin
   FStartTime := StartTime;
   FStopTime := StopTime;
   FText := Text;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TMainForm.OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
+var UndoableSubTextTask : TUndoableSubTextTask;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    UndoableSubTextTask := TUndoableSubTextTask.Create;
+    UndoableSubTextTask.SetData(vtvSubsList.FocusedNode.Index, UndoTask);
+    PushUndoableTask(UndoableSubTextTask);
+  end
+  else
+    PushUndoableTask(UndoTask);
+end;
+
+constructor TUndoableSubTextTask.Create;
+begin
+  FUndoableTextTask := nil;
+end;
+
+destructor TUndoableSubTextTask.Destroy;
+begin
+  if Assigned(FUndoableTextTask) then
+    FUndoableTextTask.Free;
+end;
+
+procedure TUndoableSubTextTask.DoTask;
+begin
+  MainForm.FocusNodeAt(FIndex);
+  FUndoableTextTask.DoTask;
+end;
+
+function TUndoableSubTextTask.GetName : WideString;
+begin
+  FUndoableTextTask.GetName;
+end;
+
+procedure TUndoableSubTextTask.UndoTask;
+begin
+  MainForm.FocusNodeAt(FIndex);
+  FUndoableTextTask.UndoTask;
+end;
+
+procedure TUndoableSubTextTask.SetData(Index : Integer; UndoableTextTask : TUndoableTask);
+begin
+  FIndex := Index;
+  FUndoableTextTask := UndoableTextTask;
 end;
 
 //==============================================================================

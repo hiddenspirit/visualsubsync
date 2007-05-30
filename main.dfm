@@ -3845,7 +3845,7 @@ object MainForm: TMainForm
     Left = 48
     Top = 467
     object Undo1: TTntMenuItem
-      Action = EditUndo1
+      Action = ActionUndo
     end
     object N9: TTntMenuItem
       Caption = '-'
