@@ -2071,10 +2071,12 @@ end;
 //------------------------------------------------------------------------------
 
 function Single2SmallInt(Value : Single) : SmallInt;
+var i : Integer;
 begin
-  Result := Round(Value * 32767);
-  if (Result > 32767) then Result := 32767;
-  if (Result < -32768) then Result := -32768;
+  i := Round(Value * 32767);
+  if (i > 32767) then i := 32767;
+  if (i < -32768) then i := -32768;
+  Result := i;
 end;
 
 procedure TWAVDisplayer.CreatePeakTab(WAVFile : TWAVFile);
