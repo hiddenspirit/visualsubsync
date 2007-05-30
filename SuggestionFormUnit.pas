@@ -171,8 +171,8 @@ begin
 
   x := NodeLeftMargin;
   y := NodeTopMargin;
-
-  if (vtvSuggestionsLst.Selected[PaintInfo.Node]) then
+  
+  if (vtvSuggestionsLst.Focused) and (vtvSuggestionsLst.Selected[PaintInfo.Node]) then
     SetTextColor(DC, ColorToRGB(clHighlightText))
   else
     SetTextColor(DC, ColorToRGB(clWindowText));

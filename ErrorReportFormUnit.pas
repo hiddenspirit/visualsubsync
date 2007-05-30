@@ -203,7 +203,7 @@ begin
   x := NodeLeftMargin;
   y := NodeTopMargin;
 
-  if (vtvErrorList.Selected[PaintInfo.Node]) then
+  if (vtvErrorList.Focused) and (vtvErrorList.Selected[PaintInfo.Node]) then
     SetTextColor(DC, ColorToRGB(clHighlightText))
   else
     SetTextColor(DC, ColorToRGB(clWindowText));
