@@ -58,7 +58,7 @@ class CWavWriterFilter : public CBaseFilter
 	friend class CWavWriterInputPin;
 	
     CWavWriterInputPin *m_pPin;          // A simple rendered input pin
-	CCritSec m_ReceiveLock;              // Sublock for received samples
+	CCritSec m_ReceiveLock;              // Lock for received samples
 	CCritSec m_Lock;					 // Main renderer critical section
 
 	bool m_Writting;
@@ -70,10 +70,11 @@ class CWavWriterFilter : public CBaseFilter
 	DWORD m_dwSeekingCaps;
 
 	ULONG m_cbWavData;
-	WAVEFORMATEX* m_wf;
+	WAVEFORMATEX* m_OutputWF;
 	CMediaType m_OutType;
 	int m_InputSampleRate;
 	int m_InputChannels;
+	int m_InputBitsPerSample;
 
 	bool m_bFastConvertMode;
 	DWORD m_SamplePerPeakRatio;
