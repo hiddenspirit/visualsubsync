@@ -1348,16 +1348,19 @@ var
   EnumMT : IEnumMediaTypes;
   pMT : PAMMediaType;
   ul: ULONG;
+const WAVE_FORMAT_IEEE_FLOAT : Integer = 3;
 begin
   Result := False;
   Pin.EnumMediaTypes(EnumMT);
-  while (EnumMT.Next(1,pMT,@ul) = S_OK) do
+  while (EnumMT.Next(1, pMT, @ul) = S_OK) do
   begin
     // TODO support IEEE float output
     if IsEqualGUID(pMT.majortype, MEDIATYPE_Audio) and
-      IsEqualGUID(pMT.subtype, MEDIASUBTYPE_PCM) and
+      (IsEqualGUID(pMT.subtype, MEDIASUBTYPE_PCM) or
+      IsEqualGUID(pMT.subtype, MEDIASUBTYPE_IEEE_FLOAT)) and
       IsEqualGUID(pMT.formattype, FORMAT_WaveFormatEx) and
       ((PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_PCM) or
+       (PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_IEEE_FLOAT) or
        (PWaveFormatEx(pMT.pbFormat).wFormatTag = WAVE_FORMAT_EXTENSIBLE))
        then
     begin
@@ -1419,7 +1422,7 @@ begin
   Filter := nil;
   assert(PCMPin <> nil);
   // TODO : better error handling here
-  NukeDownstream(FGraphBuilder,PCMPin);
+  NukeDownstream(FGraphBuilder, PCMPin);
 
   // We are ready to connect, the WAV writer filter and the File Writer
   FLastResult := CreateFilterFromFile(FHWavWriterInst,CLSID_WavWriter, WavWriterFilter);
