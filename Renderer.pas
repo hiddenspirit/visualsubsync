@@ -522,6 +522,8 @@ begin
   if Assigned(FGraphBuilder) then
     Close;
   Result := False;
+  if filename = '' then
+    Exit;
   FLastResult := CoCreateInstance(TGUID(CLSID_FilterGraph), nil, CLSCTX_INPROC,
     TGUID(IID_IGraphBuilder), FGraphBuilder);
   GetLastErrorString;
@@ -1351,6 +1353,7 @@ begin
   Pin.EnumMediaTypes(EnumMT);
   while (EnumMT.Next(1,pMT,@ul) = S_OK) do
   begin
+    // TODO support IEEE float output
     if IsEqualGUID(pMT.majortype, MEDIATYPE_Audio) and
       IsEqualGUID(pMT.subtype, MEDIASUBTYPE_PCM) and
       IsEqualGUID(pMT.formattype, FORMAT_WaveFormatEx) and
