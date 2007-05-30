@@ -124,6 +124,7 @@ type
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
   TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer) of object;
+  TCustomDrawRange = procedure (Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect) of object;
 
   TWAVDisplayer = class(TCustomPanel)
   private
@@ -171,7 +172,7 @@ type
     FOnKaraokeChange : TNotifyEvent;
     FOnKaraokeChanged : TKaraokeTimeChangedEvent;
     FOnSelectedKaraokeRange : TSelectedKaraokeRangeEvent;
-
+    FOnCustomDrawRange: TCustomDrawRange;
 
     FRenderer : TRenderer;
     FUpdateCursorTimer : TTimer;
@@ -299,6 +300,7 @@ type
     property OnKaraokeChange : TNotifyEvent read FOnKaraokeChange write FOnKaraokeChange;
     property OnKaraokeChanged : TKaraokeTimeChangedEvent read FOnKaraokeChanged write FOnKaraokeChanged;
     property OnSelectedKaraokeRange : TSelectedKaraokeRangeEvent read FOnSelectedKaraokeRange write FOnSelectedKaraokeRange;
+    property OnCustomDrawRange : TCustomDrawRange read FOnCustomDrawRange write FOnCustomDrawRange;
 
     property Align;
     property Anchors;
@@ -1093,7 +1095,7 @@ var x : Integer;
     x1, x2, y1, y2 : Integer;
     i, j : Integer;
     r : TRange;
-    SelRect, TxtRect : TRect;
+    SelRect, CustomDrawRect : TRect;
     CanvasHeight : Integer;
 begin
   CanvasHeight := GetWavCanvasHeight;
@@ -1165,19 +1167,15 @@ begin
       ACanvas.LineTo(x2, y2);
       ACanvas.Pen.Width := 1;
 
-      // TODO : Draw text
-      {
-      if ((x2 - x1) > 15) then
+      // Cusom draw
+      if Assigned(FOnCustomDrawRange) and ((x2 - x1) > 10) then
       begin
-        TxtRect.Top := y1 + 5;
-        TxtRect.Left := x1 + 5;
-        TxtRect.Right := x2 - 5;
-        TxtRect.Bottom := y2 - 5;
-        ACanvas.Font.Color := ACanvas.Pen.Color;
-        ACanvas.Font.Name := 'Arial Unicode MS';
-        ACanvas.TextRect(TxtRect, TxtRect.Left, TxtRect.Top, 'toto');
+        CustomDrawRect.Top := y1;
+        CustomDrawRect.Left := x1;
+        CustomDrawRect.Right := x2;
+        CustomDrawRect.Bottom := y2;
+        FOnCustomDrawRange(Self, ACanvas, r, CustomDrawRect);
       end;
-      }
       
       // Karaoke
       if (System.Length(r.SubTime) > 0) then
@@ -1326,7 +1324,7 @@ begin
       x1 := x - (ACanvas.TextWidth(PosString) div 2);
       // Draw text shadow
       ACanvas.Font.Color := RULER_TEXT_SHADOW_COLOR;
-      ACanvas.TextOut(x1+2, PosRect.Top + 4 + 2, PosString);
+      ACanvas.TextOut(x1 + 2, PosRect.Top + 4 + 2, PosString);
       // Draw text
       ACanvas.Font.Color := RULER_TEXT_COLOR;
       ACanvas.TextOut(x1, PosRect.Top + 4, PosString);
@@ -1350,7 +1348,7 @@ begin
   FOffscreenWAV.Height := Height - FScrollBar.Height;
   FOffscreen.Width := FOffscreenWAV.Width;
   FOffscreen.Height := FOffscreenWAV.Height;
-  
+
   if (not FPeakDataLoaded) then
   begin
     FOffscreen.Canvas.Brush.Color := DISABLED_BACK_COLOR;
