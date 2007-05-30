@@ -484,6 +484,7 @@ type
     function Call(var bool: Boolean): Boolean; overload;
   end;
 
+{ Unused code
   TJSClass = class(TJSBase)
   private
     FArgCount: Integer;
@@ -498,6 +499,7 @@ type
     constructor Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass; ArgCount: Integer; ParamTypes: Array of TNativeParam); overload;
     destructor Destroy; override;
   end;
+}
 
   TJSScript = class
   private
@@ -3127,6 +3129,7 @@ end;
 
 { TJSClass }
 
+{ Unused code
 constructor TJSClass.Create(AEngine: TJSEngine; const AName: TBridgeString; AClass: TClass);
 begin
 
@@ -3153,6 +3156,7 @@ begin
   inherited;
 
 end;
+}
 
 end.
 
