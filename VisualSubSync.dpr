@@ -3,7 +3,6 @@ program VisualSubSync;
 {%File 'GlobalUnit.pas'}
 
 uses
-  //FastMM4,
   Forms,
   main in 'main.pas' {MainForm},
   WAVDisplayerUnit in 'WAVDisplayerUnit.pas',
@@ -35,7 +34,9 @@ uses
   StyleFormUnit in 'StyleFormUnit.pas' {StyleForm},
   SSAParserUnit in 'SSAParserUnit.pas',
   DirectVobsubInterface in 'DirectVobsubInterface.pas',
-  RGBHSLColorUnit in 'RGBHSLColorUnit.pas';
+  RGBHSLColorUnit in 'RGBHSLColorUnit.pas',
+  TntRichEditCustomUndoUnit in 'TntRichEditCustomUndoUnit.pas',
+  UndoableTaskUnit in 'UndoableTaskUnit.pas';
 
 {$R *.res}
 
