@@ -108,7 +108,7 @@ private:
 
 	void PatchHeaders()
 	{
-		// Get filesize (we are already at the end :))
+		// Get file size (we are already at the end :))
 		unsigned int Filesize = (unsigned int)m_File->Position();
 		m_File->Seek(0,FILE_BEGIN);
 
