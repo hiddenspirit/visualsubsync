@@ -12,3 +12,4 @@
 
 {$DEFINE JSUnicode}
 {.$DEFINE JSDebug}
+{.$DEFINE JSDEBUGGER}
