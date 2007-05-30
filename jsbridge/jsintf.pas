@@ -109,7 +109,7 @@ interface
 
 uses
   Classes, ComCtrls, ptrarray, namedarray, jsintf_bridge, TypInfo, js15decl,
-  SysUtils{$IFNDEF LINUX}, Windows{$ENDIF}, jsdebugger_win;
+  SysUtils{$IFNDEF LINUX}, Windows{$ENDIF}{$IFDEF JSDEBUGGER}, jsdebugger_win{$ENDIF};
 
 const
   global_class: JSClass = (name: 'global'; flags: JSCLASS_HAS_PRIVATE; addProperty: JS_PropertyStub;
@@ -155,7 +155,9 @@ type
   TJSBoolean = class;
   TJSObject = class;
   TJSFunction = class;
+{$IFDEF JSDEBUGGER}
   TJSDebugger = class;
+{$ENDIF}
 
   TStringArray = Array of TBridgeString;
   TJSValArray = Array of jsval;
@@ -172,8 +174,10 @@ type
     FClasses: Array of JSClass;
     fcx: PJSContext;
     FDateClass: PJSClass;
+{$IFDEF JSDEBUGGER}
     FDebugger: TJSDebugger;
     FDebugging: Boolean;
+{$ENDIF}
     FGlobal: PJSObject;
     FNativeGlobal: TJSObject;
     FNatives: TPtrArray;
@@ -211,7 +215,9 @@ type
     property BooleanClass: PJSClass read FBooleanClass;
     property Context: PJSContext read fcx;
     property DateClass: PJSClass read FDateClass;
+{$IFDEF JSDEBUGGER}
     property Debugger: TJSDebugger read FDebugger;
+{$ENDIF}
     property Global: TJSObject read FNativeGlobal;
     property NumberClass: PJSClass read FNumberClass;
     property Runtime: PJSRuntime read frt;
@@ -240,8 +246,10 @@ type
     function NewJSObject: TJSObject; overload;
     function NewJSObject(const name: TBridgeString): TJSObject; overload;
     function NewJSObject(const name: TBridgeString; parent: TJSObject): TJSObject; overload;
+{$IFDEF JSDEBUGGER}
     procedure SetDebugger(dbg: TJSDebugger);
     procedure StartDebugger;
+{$ENDIF}
   end;
 
   (*
@@ -526,6 +534,7 @@ type
     procedure SaveRaw(const AFile: TBridgeString);
   end;
 
+{$IFDEF JSDEBUGGER}
   TJSDebugger = class
   private
     FCode: String;
@@ -565,12 +574,14 @@ type
     procedure StartStepping;
     procedure StopStepping;
   end;
+{$ENDIF}
 
 var
   __JSEngines: Integer;
 
 implementation
 
+{$IFDEF JSDEBUGGER}
 (* TJSDebugger hooks *)
 function CallHook(cx: PJSContext; fp: PJSStackFrame; before: JSBool; ok: PJSBool; closure: Pointer): Pointer; cdecl;
 var
@@ -590,6 +601,7 @@ begin
   eng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
   Result := eng.Debugger.OnError(cx, message, report);
 end;
+{$ENDIF} // JSDEBUGGER
 
 procedure ErrorTrap(cx: PJSContext; message: PChar; report: PJSErrorReport); cdecl;
 var
@@ -598,11 +610,15 @@ var
 begin
   peng := JS_GetContextPrivate(cx);
   eng := TJSEngine(peng^);
+{$IFDEF JSDEBUGGER}
   if (eng.Debugger <> nil) then
     eng.Debugger.OnError(cx, message, report);
+{$ENDIF}
   if Assigned(eng.FOnJSError) then
     eng.FOnJSError(eng, cx, message, report);
 end;
+
+{$IFDEF JSDEBUGGER}
 
 function ExecHook(cx: PJSContext; fp: PJSStackFrame; before: JSBool; ok: PJSBool; closure: Pointer): Pointer; cdecl;
 var
@@ -638,6 +654,7 @@ begin
   dbg := closure;
   Result := dbg.OnTrapHandler(cx, script, pc, rval);
 end;
+{$ENDIF} // JSDEBUGGER
 
 { TJSEngine }
 
@@ -757,8 +774,10 @@ end;
 
 destructor TJSEngine.Destroy;
 begin
+{$IFDEF JSDEBUGGER}
   if (FDebugging) then    // Must occur first
     FDebugger.Free;
+{$ENDIF}
 
   JS_DestroyContext(fcx);
   JS_Finish(frt);
@@ -1039,6 +1058,7 @@ begin
   ScanMethods(AClass.ClassParent, AParent, AList, Container);
 end;
 
+{$IFDEF JSDEBUGGER}
 procedure TJSEngine.SetDebugger(dbg: TJSDebugger);
 begin
   FDebugger := dbg;
@@ -1046,16 +1066,19 @@ begin
   if (FDebugging) then
     FDebugger.Enable;
 end;
+{$ENDIF}
 
 procedure TJSEngine.SetErrorReporter(proc: JSErrorReporter);
 begin
   JS_SetErrorReporter(fcx, proc);
 end;
 
+{$IFDEF JSDEBUGGER}
 procedure TJSEngine.StartDebugger;
 begin
   SetDebugger(TJSDebugger.Create(self));
 end;
+{$ENDIF}
 
 { TJSBase }
 
@@ -2748,6 +2771,8 @@ begin
   end;
 end;
 
+{$IFDEF JSDEBUGGER}
+
 { TJSDebugger }
 
 procedure TJSDebugger.Connect(Engine: TJSEngine);
@@ -3126,6 +3151,8 @@ procedure TJSDebugger.StopStepping;
 begin
   FStep := false;
 end;
+
+{$ENDIF} // JSDEBUGGER
 
 { TJSClass }
 
