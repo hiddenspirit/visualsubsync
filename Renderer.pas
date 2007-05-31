@@ -1354,7 +1354,6 @@ begin
   Pin.EnumMediaTypes(EnumMT);
   while (EnumMT.Next(1, pMT, @ul) = S_OK) do
   begin
-    // TODO support IEEE float output
     if IsEqualGUID(pMT.majortype, MEDIATYPE_Audio) and
       (IsEqualGUID(pMT.subtype, MEDIASUBTYPE_PCM) or
       IsEqualGUID(pMT.subtype, MEDIASUBTYPE_IEEE_FLOAT)) and
