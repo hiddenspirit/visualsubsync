@@ -5,14 +5,24 @@ interface
 uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics;
 
 type
-  TSubtitleRangeJSWrapperChangeEvent = procedure () of object;
-
 {$TYPEINFO ON}
+  TSubtitleRangeJSWrapper = class; // Forward declaration
+
+  TSubtitleRangeJSWrapperChangeStartEvent = procedure (Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : Integer) of object;
+  TSubtitleRangeJSWrapperChangeStopEvent = procedure (Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : Integer) of object;
+  TSubtitleRangeJSWrapperChangeTextEvent = procedure (Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : WideString) of object;
+
+
   TSubtitleRangeJSWrapper = class(TObject)
   private
     FStrippedText : WideString;
     FStrippedTextProcessed : Boolean;
-    FOnChange : TSubtitleRangeJSWrapperChangeEvent;
+    FOnChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
+    FOnChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
+    FOnChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
     FSubtitleRange : TSubtitleRange;
     function GetStart : Integer;
     function GetStop : Integer;
@@ -23,7 +33,9 @@ type
     procedure SetText(Value : WideString);
     procedure SetSubtitle(Value : TSubtitleRange);
   public
-    property OnChange : TSubtitleRangeJSWrapperChangeEvent read FOnChange write FOnChange;
+    property OnChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnChangeStart write FOnChangeStart;
+    property OnChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnChangeStop write FOnChangeStop;
+    property OnChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnChangeText write FOnChangeText;
   published
     property Start : Integer read GetStart write SetStart;
     property Stop : Integer read GetStop write SetStop;
@@ -77,7 +89,9 @@ type
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
     FCurrentSubJS, FPreviousSubJS, FNextSubJS : TJSObject;
     FParamCount : Integer;
-    FOnSubtitleChange : TSubtitleRangeJSWrapperChangeEvent;
+    FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
+    FOnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
+    FOnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
     FParamArray : array[0..2] of TJSBase; // used when calling a JS function
 
     // ----- Plugin constant -----
@@ -87,7 +101,9 @@ type
     FMessage : WideString;
 
     procedure FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
-    procedure SetOnSubtitleChangeEvent(Value : TSubtitleRangeJSWrapperChangeEvent);
+    procedure SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
+    procedure SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+    procedure SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
 
   public
     constructor Create;
@@ -109,7 +125,9 @@ type
     property Description : WideString read FDescription;
     property Color : Integer read FColor;
     property Msg : WideString read FMessage;
-    property OnSubtitleChange : TSubtitleRangeJSWrapperChangeEvent read FOnSubtitleChange write SetOnSubtitleChangeEvent;
+    property OnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnSubtitleChangeStart write SetOnSubtitleChangeStartEvent;
+    property OnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnSubtitleChangeStop write SetOnSubtitleChangeStopEvent;
+    property OnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnSubtitleChangeText write SetOnSubtitleChangeTextEvent;
   end;
 
   TSimpleJavascriptWrapper = class(TBaseJavascriptPlugin)
@@ -284,8 +302,8 @@ procedure TSubtitleRangeJSWrapper.SetStart(Value : Integer);
 begin
   if (Value <> FSubtitleRange.StartTime) then
   begin
-    if Assigned(FOnChange) then
-      FOnChange;
+    if Assigned(FOnChangeStart) then
+      FOnChangeStart(Self, FSubtitleRange, Value);
     FSubtitleRange.StartTime := Value;
   end;
 end;
@@ -294,8 +312,8 @@ procedure TSubtitleRangeJSWrapper.SetStop(Value : Integer);
 begin
   if (Value <> FSubtitleRange.StopTime) then
   begin
-    if Assigned(FOnChange) then
-      FOnChange;
+    if Assigned(FOnChangeStop) then
+      FOnChangeStop(Self, FSubtitleRange, Value);
     FSubtitleRange.StopTime := Value;
   end;
 end;
@@ -304,8 +322,8 @@ procedure TSubtitleRangeJSWrapper.SetText(Value : WideString);
 begin
   if (Value <> FSubtitleRange.Text) then
   begin
-    if Assigned(FOnChange) then
-      FOnChange;
+    if Assigned(FOnChangeText) then
+      FOnChangeText(Self, FSubtitleRange, Value);
     FSubtitleRange.Text := Value;
   end;
 end;
@@ -427,14 +445,40 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TJavaScriptPlugin.SetOnSubtitleChangeEvent(Value : TSubtitleRangeJSWrapperChangeEvent);
+procedure TJavaScriptPlugin.SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
 begin
-  if (@Value <> @FOnSubtitleChange) then
+  if (@Value <> @FOnSubtitleChangeStart) then
   begin
-    FOnSubtitleChange := Value;
-    FCurrentSub.FOnChange := Value;
-    FPreviousSub.FOnChange := Value;
-    FNextSub.FOnChange := Value;
+    FOnSubtitleChangeStart := Value;
+    FCurrentSub.FOnChangeStart := Value;
+    FPreviousSub.FOnChangeStart := Value;
+    FNextSub.FOnChangeStart := Value;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TJavaScriptPlugin.SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+begin
+  if (@Value <> @FOnSubtitleChangeStop) then
+  begin
+    FOnSubtitleChangeStop := Value;
+    FCurrentSub.FOnChangeStop := Value;
+    FPreviousSub.FOnChangeStop := Value;
+    FNextSub.FOnChangeStop := Value;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TJavaScriptPlugin.SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
+begin
+  if (@Value <> @FOnSubtitleChangeText) then
+  begin
+    FOnSubtitleChangeText := Value;
+    FCurrentSub.FOnChangeText := Value;
+    FPreviousSub.FOnChangeText := Value;
+    FNextSub.FOnChangeText := Value;
   end;
 end;
 

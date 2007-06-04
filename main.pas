@@ -153,7 +153,51 @@ type
 
     procedure SetData(Index : Integer; UndoableTextTask : TUndoableTask);
   end;
-  
+
+  TUndoableCompositeTask = class(TUndoableTask)
+  private
+    FList : TObjectList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure AddTask(UndoableTask : TUndoableTask);
+  end;
+
+  TChangeSubData = class
+    FIndex : Integer;
+    FNewStartTime, FOldStartTime : Integer;
+    FNewStopTime, FOldStopTime : Integer;
+    FNewText, FOldText : WideString;
+
+    constructor Create(Index : Integer);
+    function StartChanged : Boolean;
+    function StopChanged : Boolean;
+    function TextChanged : Boolean;
+    function GetStart(ForUndo : Boolean) : Integer;
+    function GetStop(ForUndo : Boolean) : Integer;
+    function GetText(ForUndo : Boolean) : WideString;
+  end;
+
+  TUndoableMultiChangeTask = class(TUndoableTask)
+  private
+    FList : TObjectList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure AddData(ChangeSubData : TChangeSubData);
+    function GetData(Index : Integer) : TChangeSubData;
+  end;
+
   // -----
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
@@ -609,6 +653,8 @@ type
 
     UndoStack : TObjectStack;
     RedoStack : TObjectStack;
+    // Used only during fix error
+    UndoableMultiChangeTask : TUndoableMultiChangeTask;
 
     procedure InitVTV;
     procedure EnableControl(Enable : Boolean);
@@ -637,13 +683,17 @@ type
     procedure ApplyAutoBackupSettings;
     procedure UpdateVideoRendererWindow;
     procedure ApplyFontSettings;
-    procedure OnSubtitleRangeJSWrapperChange;
 
-    function AddSubtitle(StartTime, StopTime : Integer) : PVirtualNode; overload;
+    procedure OnSubtitleRangeJSWrapperChangeStart(Sender : TSubtitleRangeJSWrapper;
+      SubtitleRange : TSubtitleRange; NewValue : Integer);
+    procedure OnSubtitleRangeJSWrapperChangeStop(Sender : TSubtitleRangeJSWrapper;
+      SubtitleRange : TSubtitleRange;  NewValue : Integer);
+    procedure OnSubtitleRangeJSWrapperChangeText(Sender : TSubtitleRangeJSWrapper;
+      SubtitleRange : TSubtitleRange; NewValue : WideString);
+
+    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode; overload;
     function AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode; overload;
-    function AddSubtitle(StartTime, StopTime : Integer;
-      Text : WideString) : PVirtualNode; overload;
-    function AddSubtitle(StartTime, StopTime : Integer;
+    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
       AutoSelect : Boolean) : PVirtualNode; overload;
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
     procedure FocusNodeAt(Index : Integer); overload;
@@ -676,7 +726,7 @@ type
 
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
-    procedure ClearStack(Stack : TObjectStack);
+    procedure ClearStack(Stack : TObjectStack);       
 
     procedure ApplyDelay(var Indexes : array of Integer;
       DelayInMs : Integer; DelayShiftType : TDelayShiftType);
@@ -688,6 +738,10 @@ type
     procedure SplitSubtitle(Index, SplitTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
+    function SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
+    function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
+    function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : Integer;
+    procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -3527,7 +3581,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.AddSubtitle(StartTime, StopTime : Integer) : PVirtualNode;
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode;
 var NewRange, SiblingRange : TRange;
     NewNode, SiblingNode: PVirtualNode;
     NodeData: PTreeData;
@@ -3548,6 +3602,10 @@ begin
   NodeData := vtvSubsList.GetNodeData(NewNode);
   NodeData.Range := TSubtitleRange(NewRange);
   TSubtitleRange(NewRange).Node := NewNode;
+  if Length(Text) > 0 then
+  begin
+    TSubtitleRange(NewRange).Text := Text;
+  end;
   // TODO improvement : use the previously calculated InsertPos
   WAVDisplayer.AddRange(NewRange);
   Result := NewNode;
@@ -3560,25 +3618,10 @@ var NewRange : TSubtitleRange;
     NewNode: PVirtualNode;
     NodeData: PTreeData;
 begin
-  NewNode := AddSubtitle(SubRange.StartTime, SubRange.StopTime);
+  NewNode := AddSubtitle(SubRange.StartTime, SubRange.StopTime, '');
   NodeData := vtvSubsList.GetNodeData(NewNode);
   NewRange := TSubtitleRange(NodeData.Range);
   NewRange.Assign(SubRange);
-  Result := NewNode;
-end;
-
-//------------------------------------------------------------------------------
-
-function TMainForm.AddSubtitle(StartTime, StopTime : Integer;
-  Text : WideString) : PVirtualNode;
-var NewRange : TRange;
-    NewNode: PVirtualNode;
-    NodeData : PTreeData;
-begin
-  NewNode := AddSubtitle(StartTime, StopTime);
-  NodeData := vtvSubsList.GetNodeData(NewNode);
-  NewRange := TSubtitleRange(NodeData.Range);
-  TSubtitleRange(NewRange).Text := Text;
   Result := NewNode;
 end;
 
@@ -3616,13 +3659,13 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.AddSubtitle(StartTime, StopTime : Integer;
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
   AutoSelect : Boolean) : PVirtualNode;
 var NewNode : PVirtualNode;
 begin
   g_WebRWSynchro.BeginWrite;
   try
-    NewNode := AddSubtitle(StartTime, StopTime);
+    NewNode := AddSubtitle(StartTime, StopTime, Text);
     CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
@@ -3987,14 +4030,21 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionAddSubFromPipeExecute(Sender: TObject);
+var UndoableAddTask : TUndoableAddTask;
 begin
   if (MemoTextPipe.SelLength > 0) and (not WAVDisplayer.SelectionIsEmpty) then
   begin
-    ActionAddSubtitle.Execute;
-    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
-    MemoSubtitleText.Text := Trim(MemoTextPipe.SelText);
-    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+    UndoableAddTask := TUndoableAddTask.Create;
+    UndoableAddTask.SetTime(WAVDisplayer.Selection.StartTime,
+      WAVDisplayer.Selection.StopTime);
+    UndoableAddTask.SetText(Trim(MemoTextPipe.SelText));
+    UndoableAddTask.SetAutoSelect(True);
+    UndoableAddTask.DoTask;
+    PushUndoableTask(UndoableAddTask);
+    if bttWorkingMode.Tag = 0 then
+      MemoSubtitleText.SetFocus;
     ColorizeOrDeleteTextPipe;
+    
 //    // If this is the first subtitle, readjust columns
 //    if (vtvSubsList.ChildCount[nil] = 1) then
 //    begin
@@ -4230,11 +4280,13 @@ begin
   if not Assigned(vtvSubsList.FocusedNode) then
     Exit;
 
+  UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
+  JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
+  JSPEnum.OnJSPluginError := LogForm.LogMsg;
+  JSPEnum.Reset;
+
   g_WebRWSynchro.BeginWrite;
   try
-    JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
-    JSPEnum.OnJSPluginError := LogForm.LogMsg;
-    JSPEnum.Reset;
     while JSPEnum.GetNext(JPlugin) do
     begin
       JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
@@ -4245,7 +4297,9 @@ begin
       end;
 
       ConfigObject.ApplyParam(JPlugin);
-      JPlugin.OnSubtitleChange := OnSubtitleRangeJSWrapperChange;
+      JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+      JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+      JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
 
       Node := vtvSubsList.GetFirstSelected;
       while Assigned(Node) do
@@ -4274,9 +4328,20 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
-  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-  WAVDisplayer.Repaint;
+  vtvSubsList.Repaint;
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+
+  if (UndoableMultiChangeTask.FList.Count > 0) then
+  begin
+    PushUndoableTask(UndoableMultiChangeTask);
+    // Do not free the task, it's on the stack now
+    UndoableMultiChangeTask := nil;
+  end
+  else
+  begin
+    FreeAndNil(UndoableMultiChangeTask);
+  end;  
 end;
 
 //------------------------------------------------------------------------------
@@ -4334,8 +4399,67 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.OnSubtitleRangeJSWrapperChange;
+procedure TMainForm.OnSubtitleRangeJSWrapperChangeStart(Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : Integer);
+var ChangeSubData : TChangeSubData;
 begin
+  if Assigned(UndoableMultiChangeTask) then
+  begin
+    ChangeSubData := UndoableMultiChangeTask.GetData(SubtitleRange.Node.Index);
+    if not Assigned(ChangeSubData) then
+    begin
+      ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
+      UndoableMultiChangeTask.AddData(ChangeSubData);
+    end;
+    // Save old start time if it has not been set yet
+    if (not ChangeSubData.StartChanged) then
+      ChangeSubData.FOldStartTime := SubtitleRange.StartTime;
+    ChangeSubData.FNewStartTime := NewValue;
+  end;
+  CurrentProject.IsDirty := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSubtitleRangeJSWrapperChangeStop(Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : Integer);
+var ChangeSubData : TChangeSubData;
+begin
+  if Assigned(UndoableMultiChangeTask) then
+  begin
+    ChangeSubData := UndoableMultiChangeTask.GetData(SubtitleRange.Node.Index);
+    if not Assigned(ChangeSubData) then
+    begin
+      ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
+      UndoableMultiChangeTask.AddData(ChangeSubData);
+    end;
+    // Save old stop time if it has not been set yet
+    if (not ChangeSubData.StopChanged) then
+      ChangeSubData.FOldStopTime := SubtitleRange.StopTime;
+    ChangeSubData.FNewStopTime := NewValue;
+  end;
+  CurrentProject.IsDirty := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSubtitleRangeJSWrapperChangeText(Sender : TSubtitleRangeJSWrapper;
+    SubtitleRange : TSubtitleRange; NewValue : WideString);
+var ChangeSubData : TChangeSubData;
+begin
+  if Assigned(UndoableMultiChangeTask) then
+  begin
+    ChangeSubData := UndoableMultiChangeTask.GetData(SubtitleRange.Node.Index);
+    if not Assigned(ChangeSubData) then
+    begin
+      ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
+      UndoableMultiChangeTask.AddData(ChangeSubData);
+    end;
+    // Save old stop time if it has not been set yet
+    if (not ChangeSubData.TextChanged) then
+      ChangeSubData.FOldText := SubtitleRange.Text;
+    ChangeSubData.FNewText := NewValue;
+  end;
   CurrentProject.IsDirty := True;
 end;
 
@@ -4349,6 +4473,7 @@ var NodeData : PErrorTreeData;
     SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
     i,j : integer;
 begin
+  UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
   JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
   JSPEnum.OnJSPluginError := LogForm.LogMsg;
   JSPEnum.Reset;
@@ -4365,7 +4490,9 @@ begin
         if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) then
         begin
           ConfigObject.ApplyParam(JPlugin);
-          JPlugin.OnSubtitleChange := OnSubtitleRangeJSWrapperChange;
+          JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+          JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+          JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
           SubRangeCurrent := NodeData.Range;
           i := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
 
@@ -4384,13 +4511,24 @@ begin
         FreeAndNil(JPlugin);
       end;
     end;
-    JSPEnum.Free;
   finally
     g_WebRWSynchro.EndWrite;
+    JSPEnum.Free;
   end;
+  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
-  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+  if (UndoableMultiChangeTask.FList.Count > 0) then
+  begin
+    PushUndoableTask(UndoableMultiChangeTask);
+    // Do not free the task, it's on the stack now
+    UndoableMultiChangeTask := nil;
+  end
+  else
+  begin
+    FreeAndNil(UndoableMultiChangeTask);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -4436,7 +4574,7 @@ begin
   if WAVDisplayer.IsPlaying and (StartSubtitleTime <> -1) and
     (WAVDisplayer.GetPlayCursorPos > (StartSubtitleTime + 400)) then
   begin
-    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, False);
+    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
     StartSubtitleTime := -1;
   end
   else
@@ -4450,7 +4588,7 @@ begin
   if WAVDisplayer.IsPlaying and (StartSubtitleTime <> -1) and
     (WAVDisplayer.GetPlayCursorPos > (StartSubtitleTime + 400)) then
   begin
-    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, False);
+    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
     StartSubtitleTime := WAVDisplayer.GetPlayCursorPos + 1;
   end
   else
@@ -4498,7 +4636,7 @@ begin
       else
       begin
         if (WAVDisplayer.GetPlayCursorPos > (ToggleStartSubtitleTime + 400)) then
-          AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, False);
+          AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
       end;
       ToggleStartSubtitleTime := -1;
     end;
@@ -6080,6 +6218,71 @@ begin
   Result.Text := AccuText;
 end;
 
+// -----------------------------------------------------------------------------
+
+function TMainForm.SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
+begin
+  TSubtitleRange(WAVDisplayer.RangeList[Index]).StartTime := NewTime;
+end;
+
+function TMainForm.SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
+begin
+  TSubtitleRange(WAVDisplayer.RangeList[Index]).StopTime := NewTime;
+end;
+
+function TMainForm.SimpleSetSubtitleText(Index : Integer; NewText : WideString) : Integer;
+begin
+  TSubtitleRange(WAVDisplayer.RangeList[Index]).Text := NewText;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TMainForm.ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
+var i : integer;
+    ChangeSubData : TChangeSubData;
+    SubtitleRange : TSubtitleRange;
+    ModifiedRangeList : TList;
+begin
+  if (not Assigned(ChangeList)) or (ChangeList.Count = 0) then
+    Exit;
+    
+  ModifiedRangeList := TList.Create;
+  g_WebRWSynchro.BeginWrite;
+  try
+    for i := 0 to ChangeList.Count-1 do
+    begin
+      ChangeSubData := ChangeList[i];
+      SubtitleRange := TSubtitleRange(WavDisplayer.RangeList[ChangeSubData.FIndex]);
+      ModifiedRangeList.Add(SubtitleRange);
+      // Apply subtitle change
+      if (ChangeSubData.StartChanged) then
+        SubtitleRange.StartTime := ChangeSubData.GetStart(IsUndo);
+      if (ChangeSubData.StopChanged) then
+        SubtitleRange.StopTime := ChangeSubData.GetStop(IsUndo);
+      if (ChangeSubData.TextChanged) then
+        SubtitleRange.Text := ChangeSubData.GetText(IsUndo);
+    end;
+    // Sort subtitles
+    FullSortTreeAndSubList;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  // Update indexes which have been changed during sorting
+  for i := 0 to ModifiedRangeList.Count-1 do
+  begin
+    ChangeSubData := ChangeList[i];
+    SubtitleRange := ModifiedRangeList[i];
+    ChangeSubData.FIndex := SubtitleRange.Node.Index;
+  end;
+  ModifiedRangeList.Free;
+
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+  vtvSubsList.Repaint;
+end;
+
 //==============================================================================
 
 destructor TUndoableTaskIndexed.Destroy;
@@ -6132,7 +6335,7 @@ end;
 procedure TUndoableAddTask.DoTask;
 var NewNode : PVirtualNode;
 begin
-  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FAutoSelect);
+  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FText, FAutoSelect);
   FIndex := NewNode.Index;
 end;
 
@@ -6348,6 +6551,135 @@ begin
   FUndoableTextTask := UndoableTextTask;
 end;
 
+// -----------------------------------------------------------------------------
+
+constructor TUndoableCompositeTask.Create;
+begin
+  FList := TObjectList.Create;
+  FList.OwnsObjects := True;
+end;
+
+destructor TUndoableCompositeTask.Destroy;
+begin
+  FList.Free;
+end;
+
+procedure TUndoableCompositeTask.DoTask;
+var i : Integer;
+begin
+  for i := 0 to FList.Count-1 do
+  begin
+    TUndoableTask(FList[i]).DoTask;
+  end;
+end;
+
+function TUndoableCompositeTask.GetName : WideString;
+begin
+  Result := 'TUndoableCompositeTask';
+end;
+
+procedure TUndoableCompositeTask.UndoTask;
+var i : Integer;
+begin
+  for i := 0 to FList.Count-1 do
+  begin
+    TUndoableTask(FList[i]).UndoTask;
+  end;
+end;
+
+procedure TUndoableCompositeTask.AddTask(UndoableTask : TUndoableTask);
+begin
+  FList.Add(UndoableTask);
+end;
+
+// -----------------------------------------------------------------------------
+
+constructor TChangeSubData.Create(Index : Integer);
+begin
+  FIndex := Index;
+  FNewStartTime := -1; FOldStartTime := -1;
+  FNewStopTime := -1; FOldStopTime := -1;
+  FNewText := ''; FOldText := '';
+end;
+
+function TChangeSubData.StartChanged : Boolean;
+begin
+  Result := (FOldStartTime <> -1)
+end;
+
+function TChangeSubData.StopChanged : Boolean;
+begin
+  Result := (FOldStopTime <> -1)
+end;
+
+function TChangeSubData.TextChanged : Boolean;
+begin
+  Result := (FNewText <> FOldText)
+end;
+
+function TChangeSubData.GetStart(ForUndo : Boolean) : Integer;
+begin
+  if ForUndo then Result := FOldStartTime else Result := FNewStartTime;
+end;
+
+function TChangeSubData.GetStop(ForUndo : Boolean) : Integer;
+begin
+  if ForUndo then Result := FOldStopTime else Result := FNewStopTime;
+end;
+
+function TChangeSubData.GetText(ForUndo : Boolean) : WideString;
+begin
+  if ForUndo then Result := FOldText else Result := FNewText;
+end;
+
+constructor TUndoableMultiChangeTask.Create;
+begin
+  FList := TObjectList.Create;
+  FList.OwnsObjects := True;
+end;
+
+destructor TUndoableMultiChangeTask.Destroy;
+begin
+  FList.Free;
+end;
+
+procedure TUndoableMultiChangeTask.DoTask;
+begin
+  MainForm.ProcessMultiChangeSub(FList, False);
+end;
+
+function TUndoableMultiChangeTask.GetName : WideString;
+begin
+  Result := 'TUndoableMultiChangeTask';
+end;
+
+procedure TUndoableMultiChangeTask.UndoTask;
+begin
+  MainForm.ProcessMultiChangeSub(FList, True);
+end;
+
+procedure TUndoableMultiChangeTask.AddData(ChangeSubData : TChangeSubData);
+begin
+  FList.Add(ChangeSubData);
+end;
+
+function TUndoableMultiChangeTask.GetData(Index : Integer) : TChangeSubData;
+var i : Integer;
+    ChangeSubData : TChangeSubData;
+begin
+  for i:=0 to FList.Count-1 do
+  begin
+    ChangeSubData := TChangeSubData(FList[i]);
+    if (ChangeSubData.FIndex = Index) then
+    begin
+      Result := ChangeSubData;
+      Exit;
+    end;
+  end;
+  Result := nil;
+end;
+
+
 //==============================================================================
 
 procedure TMainForm.ClearStack(Stack : TObjectStack);
@@ -6397,6 +6729,8 @@ begin
     ActionRedo.Enabled := (RedoStack.Count > 0);
   end;
 end;
+
+//------------------------------------------------------------------------------
 
 
 {
