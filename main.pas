@@ -5177,9 +5177,8 @@ begin
   InflateRect(Rect, -5, -5);
   if (Rect.Right - Rect.Left) > 25 then
   begin
+    ACanvas.Font.Assign(MemoSubtitleText.Font);
     ACanvas.Font.Color := ACanvas.Pen.Color;
-    ACanvas.Font.Name := 'Arial Unicode MS';
-    //ACanvas.Font.Style := ACanvas.Font.Style + [fsBold];
     WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
   end;
 end;
