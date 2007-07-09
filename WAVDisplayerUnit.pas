@@ -1378,8 +1378,10 @@ begin
 
   // Copy Wav
   FOffscreen.Canvas.Lock;
+
   FOffscreen.Canvas.Draw(0, 0, FOffscreenWAV);
   FOffscreenWAV.Canvas.Unlock;
+
   // Add selection, range, cursor
   PaintOnCanvas(FOffscreen.Canvas);
   FOffscreen.Canvas.Unlock;
@@ -1399,7 +1401,10 @@ begin
   begin
     UpdateView([uvfPageSize]);
   end;
-  Canvas.Draw(0, 0, FOffscreen);
+  //Canvas.Draw(0, 0, FOffscreen);
+  //OutputDebugString(PChar(Format('ClipRect L T R B : %d %d %d %d',
+  //  [Canvas.ClipRect.Left, Canvas.ClipRect.Top, Canvas.ClipRect.Right, Canvas.ClipRect.Bottom])));
+  Canvas.CopyRect(Canvas.ClipRect, FOffscreen.Canvas, Canvas.ClipRect);
 end;
 
 //------------------------------------------------------------------------------
