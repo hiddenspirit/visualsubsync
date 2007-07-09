@@ -183,6 +183,7 @@ type
     function GetText(ForUndo : Boolean) : WideString;
   end;
 
+  // Used for error correction
   TUndoableMultiChangeTask = class(TUndoableTask)
   private
     FList : TObjectList;
@@ -196,6 +197,13 @@ type
 
     procedure AddData(ChangeSubData : TChangeSubData);
     function GetData(Index : Integer) : TChangeSubData;
+  end;
+
+  TUndoablePipeTask = class(TUndoableTask)
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
   end;
 
   // -----
@@ -337,7 +345,6 @@ type
     EditCopy1: TTntEditCopy;
     EditPaste1: TTntEditPaste;
     EditSelectAll1: TTntEditSelectAll;
-    EditUndo1: TTntEditUndo;
     EditDelete1: TTntEditDelete;
     Undo1: TTntMenuItem;
     N9: TTntMenuItem;
@@ -808,10 +815,10 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 
 {
 lovechange:
-> 1er: Pour le "log text pipe", afin de charger un transcript, il prend
-> pas par défaut le srt, on peut le faire en affichant tout les
-> fichiers, tu pourrait peut-etre le rajouter comme extension par
-> défauts.
+XXX> 1er: Pour le "log text pipe", afin de charger un transcript, il prend
+XXX> pas par défaut le srt, on peut le faire en affichant tout les
+XXX> fichiers, tu pourrait peut-etre le rajouter comme extension par
+XXX> défauts.
 -
 > 2eme: Ce serait sympa que tu puisse rajouter des boutons dans
 > l'interface principale pour les balise "italique", "placement de
@@ -4029,6 +4036,8 @@ end;
 
 //------------------------------------------------------------------------------
 
+
+
 procedure TMainForm.ActionAddSubFromPipeExecute(Sender: TObject);
 var UndoableAddTask : TUndoableAddTask;
 begin
@@ -5174,6 +5183,7 @@ end;
 procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
   ACanvas: TCanvas; Range : TRange; Rect : TRect);
 begin
+  // TODO : karaoke support
   InflateRect(Rect, -5, -5);
   if (Rect.Right - Rect.Left) > 25 then
   begin
@@ -6676,6 +6686,24 @@ begin
     end;
   end;
   Result := nil;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TUndoablePipeTask.DoTask;
+begin
+  // todo
+end;
+
+function TUndoablePipeTask.GetName : WideString;
+begin
+  Result := 'TUndoablePipeTask';
+end;
+
+procedure TUndoablePipeTask.UndoTask;
+begin
+  // todo
+  MainForm.MemoTextPipe.Undo;
 end;
 
 

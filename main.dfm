@@ -25,7 +25,7 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 438
+    Top = 446
     Width = 772
     Height = 5
     Cursor = crVSplit
@@ -43,6 +43,7 @@ object MainForm: TMainForm
     Align = alTop
     AutoSnap = False
     MinSize = 120
+    ResizeStyle = rsUpdate
   end
   object PanelTop: TPanel
     Left = 0
@@ -62,16 +63,18 @@ object MainForm: TMainForm
       Height = 223
       Align = alRight
       AutoSnap = False
-      Beveled = True
       MinSize = 50
+      ResizeStyle = rsUpdate
       Visible = False
     end
     object SplitterMemoTextPipe: TSplitter
       Left = 251
       Top = 1
-      Width = 5
+      Width = 4
       Height = 223
+      AutoSnap = False
       MinSize = 50
+      ResizeStyle = rsUpdate
       Visible = False
     end
     object PanelVideo: TPanel
@@ -92,9 +95,9 @@ object MainForm: TMainForm
       OnResize = PanelVideoResize
     end
     object PanelWAVDisplay: TPanel
-      Left = 256
+      Left = 255
       Top = 1
-      Width = 309
+      Width = 310
       Height = 223
       Align = alClient
       BevelOuter = bvNone
@@ -122,7 +125,7 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 443
+    Top = 451
     Width = 772
     Height = 65
     Align = alBottom
@@ -165,7 +168,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 772
-    Height = 209
+    Height = 217
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -174,7 +177,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 772
-      Height = 139
+      Height = 147
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -1208,7 +1211,7 @@ object MainForm: TMainForm
   end
   object TntStatusBar1: TTntStatusBar
     Left = 0
-    Top = 508
+    Top = 516
     Width = 772
     Height = 19
     Panels = <
@@ -1706,13 +1709,6 @@ object MainForm: TMainForm
       Hint = 'Select All|Selects the entire document'
       ShortCut = 16449
     end
-    object EditUndo1: TTntEditUndo
-      Category = 'Edit'
-      Caption = '&Undo'
-      Hint = 'Undo|Reverts the last action'
-      ImageIndex = 31
-      ShortCut = 16474
-    end
     object EditDelete1: TTntEditDelete
       Category = 'Edit'
       Caption = '&Delete'
@@ -2024,6 +2020,7 @@ object MainForm: TMainForm
     object ActionUndo: TTntAction
       Tag = 1
       Caption = 'Undo'
+      ImageIndex = 31
       ShortCut = 16474
       OnExecute = ActionUndoExecute
     end
