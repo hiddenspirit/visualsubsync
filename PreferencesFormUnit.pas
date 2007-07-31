@@ -268,11 +268,13 @@ uses MiscToolsUnit, GlobalUnit, ActnList, TntWindows, TntSysUtils,
 {$R *.dfm}
 
 const
-  DefaultTimingShortcuts : array[0..3] of TDefaultActionShortcut = (
+  DefaultTimingShortcuts : array[0..5] of TDefaultActionShortcut = (
     (ActionName: 'ActionStop'; ShortCut: 'Esc'),
     (ActionName: 'ActionPlay'; ShortCut: 'F1'),
     (ActionName: 'ActionShowHideVideo'; ShortCut: 'F4'),
-    (ActionName: 'ActionSave'; ShortCut: 'Ctrl+S')        
+    (ActionName: 'ActionSave'; ShortCut: 'Ctrl+S'),
+    (ActionName: 'ActionUndo'; ShortCut: 'Ctrl+Z'),
+    (ActionName: 'ActionRedo'; ShortCut: 'Ctrl+Y')
   );
 
 // =============================================================================
