@@ -91,12 +91,16 @@ type
     procedure WMCut(var Msg: TMessage); message WM_CUT;
     procedure WMPaste(var Msg: TMessage); message WM_PASTE;
     procedure WMUndo(var Msg: TMessage); message WM_UNDO;
+
   protected
     procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure Change; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+
   public
     constructor Create(AOwner: TComponent); override;
+    procedure DisableWindowsUndo;
+
   published
     property UndoDisabled: Boolean read FUndoDisabled write FUndoDisabled;
     property OnUndo : TNotifyUndo read FOnUndo write FOnUndo;
@@ -104,7 +108,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, tom_TLB;
 
 // =============================================================================
 
@@ -405,6 +409,24 @@ begin
   FSelStartBeforeChange := SelStart;
   FSelLengthBeforeChange := SelLength;
   inherited;
+end;
+
+procedure TTntRichEditCustomUndo.DisableWindowsUndo;
+var RichEditOle: IUnknown;
+    TxtDocI : ITextDocument;
+const
+  tomSuspend	= -9999995;
+	tomResume	= -9999994;
+begin
+  if SendMessage(Handle, EM_GETOLEINTERFACE, 0, Longint(@RichEditOle)) <> 0 then
+  begin
+    if RichEditOle.QueryInterface(IID_ITextDocument, TxtDocI) = S_OK then
+    begin
+      TxtDocI.Undo(tomSuspend);
+      TxtDocI := nil;
+    end;
+    RichEditOle := nil;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
