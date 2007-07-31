@@ -81,8 +81,8 @@ type
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
   function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
 
-  function TColor2AssColorString(Input: Cardinal): WideString;
-  function AssColorString2TColor(Color: string): TColor;
+  function ABGRColor2AssColorString(Input: Cardinal): WideString;
+  function AssColorString2ABGR(Color: string): Cardinal;
 
   function GetUserApplicationDataFolder : WideString;
   function GetTemporaryFolder : WideString;
@@ -862,7 +862,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TColor2AssColorString(Input: Cardinal): WideString;
+function ABGRColor2AssColorString(Input: Cardinal): WideString;
 var
   R,G,B,A : Byte;
 begin
@@ -875,7 +875,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function AssColorString2TColor(Color: string): TColor;
+function AssColorString2ABGR(Color: string): Cardinal;
 var ColorInt : Cardinal;
     R, G, B, A : Cardinal;
     CleanColor : string;

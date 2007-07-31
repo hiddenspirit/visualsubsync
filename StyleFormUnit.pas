@@ -270,9 +270,9 @@ begin
   // Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
   // Style: *Default,Arial,28,&H00FFFFFF,&H00400040,&H00C0C0C0,&H82C0C0C0,0,0,0,0,100,100,0,0,0,0,0,5,15,15,15,0
   Result := Format('Style: %s,%s,%d,%s,%s,%s,%s,%d,%d,%d,%d,%s,%s,%s,%s,%d,%s,%s,%d,%d,%d,%d,%d',
-    [name, fontname, Round(fontsize), TColor2AssColorString(primaryColor),
-    TColor2AssColorString(secondaryColor), TColor2AssColorString(outlineColor),
-    TColor2AssColorString(backColor), bold, italic, underline, strikeout,
+    [name, fontname, Round(fontsize), ABGRColor2AssColorString(primaryColor),
+    ABGRColor2AssColorString(secondaryColor), ABGRColor2AssColorString(outlineColor),
+    ABGRColor2AssColorString(backColor), bold, italic, underline, strikeout,
     FloatToStr(scaleX, ssaFormat), FloatToStr(scaleY, ssaFormat),
     FloatToStr(spacing, ssaFormat), FloatToStr(angle, ssaFormat),
     borderStyle,
@@ -700,13 +700,13 @@ begin
     newStyle.name := ssaParser.GetStyleValueAsString(i, 'Name');
     newStyle.fontname := ssaParser.GetStyleValueAsString(i, 'Fontname');
     newStyle.fontsize := ssaParser.GetStyleValueAsDouble(i, 'Fontsize');
-    newStyle.primaryColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'PrimaryColour'));
-    newStyle.secondaryColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'SecondaryColour'));
+    newStyle.primaryColor := AssColorString2ABGR(ssaParser.GetStyleValueAsString(i, 'PrimaryColour'));
+    newStyle.secondaryColor := AssColorString2ABGR(ssaParser.GetStyleValueAsString(i, 'SecondaryColour'));
     if ssaParser.StyleKeyExists('TertiaryColour') then
-      newStyle.outlineColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'TertiaryColour'))
+      newStyle.outlineColor := AssColorString2ABGR(ssaParser.GetStyleValueAsString(i, 'TertiaryColour'))
     else
-      newStyle.outlineColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'OutlineColour'));
-    newStyle.backColor := AssColorString2TColor(ssaParser.GetStyleValueAsString(i, 'BackColour'));
+      newStyle.outlineColor := AssColorString2ABGR(ssaParser.GetStyleValueAsString(i, 'OutlineColour'));
+    newStyle.backColor := AssColorString2ABGR(ssaParser.GetStyleValueAsString(i, 'BackColour'));
     newStyle.bold := ssaParser.GetStyleValueAsInteger(i, 'Bold');
     newStyle.italic := ssaParser.GetStyleValueAsInteger(i, 'Italic');
     newStyle.underline := ssaParser.GetStyleValueAsInteger(i, 'Underline');
