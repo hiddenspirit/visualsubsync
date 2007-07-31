@@ -747,7 +747,7 @@ type
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
     function SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
-    function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : Integer;
+    function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
     procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
   public
     { Public declarations }
@@ -847,6 +847,7 @@ begin
   CustomMemo.Top := MemoSubtitleText.Top;
   CustomMemo.Left := MemoSubtitleText.Left;
   CustomMemo.Align := MemoSubtitleText.Align;
+  CustomMemo.DisableWindowsUndo;
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
@@ -1803,30 +1804,13 @@ procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
     i, j : Integer;
     WordArray : WideStringArray2;
-    TxtDocI : ITextDocument;
-    TxtRangeI : ITextRange;
-    TxtFontI : ITextFont;
-    RichEditOle: IUnknown;
-const
-  tomSuspend	= -9999995;
-	tomResume	= -9999994;
 begin
   RichEdit.Tag := 0;
   savSelStart := RichEdit.SelStart;
   savSelLength := RichEdit.SelLength;
 
-  if SendMessage(RichEdit.Handle, EM_GETOLEINTERFACE, 0, Longint(@RichEditOle)) <> 0 then
-  begin
-    if RichEditOle.QueryInterface(IID_ITextDocument, TxtDocI) = S_OK then
-    begin
-      TxtDocI.Freeze;
-      TxtDocI.Undo(tomSuspend);
-    end;
-  end;
-
   TagSplit(RichEdit.Text, WordArray);
 
-  {
   RichEdit.Lines.BeginUpdate;
   j := 0;
   for i:=0 to Length(WordArray)-1 do
@@ -1844,35 +1828,7 @@ begin
   RichEdit.SelStart := savSelStart;
   RichEdit.SelLength := savSelLength;
   RichEdit.Lines.EndUpdate;
-  }
 
-  j := 0;
-  for i:=0 to Length(WordArray)-1 do
-  begin
-    TxtRangeI := TxtDocI.Range(j, j + Length(WordArray[i]));
-    TxtFontI := TxtRangeI.Font;
-
-    if (i = (TagIndex*2)+1) then
-      TxtFontI.ForeColor := RGB(255, 0, 0)
-    else if (i mod 2) = 0 then
-      TxtFontI.ForeColor := RGB(0, 0, 0)
-    else
-      TxtFontI.ForeColor := RGB(127, 127, 127);
-
-    TxtFontI := nil;
-    TxtRangeI := nil;
-    Inc(j, Length(WordArray[i]));
-  end;
-  RichEdit.SelStart := savSelStart;
-  RichEdit.SelLength := savSelLength;
-
-  if Assigned(TxtDocI) then
-  begin
-    TxtDocI.Undo(tomResume);
-    TxtDocI.Unfreeze;
-  end;
-  TxtDocI := nil;
-  RichEditOle := nil;
   RichEdit.Tag := 1;
 end;
 
@@ -3799,6 +3755,7 @@ var NodeData : PTreeData;
     R : TRange;
     bStart, bStop : Integer;
     Idx : Integer;
+    UndoableDelayTask : TUndoableDelayTask;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
   begin
@@ -3826,30 +3783,19 @@ begin
       Exit;
     end;
   end;
-  
+
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
     if(NodeData.Range.StartTime + Offset < NodeData.Range.StopTime) then
     begin
-      g_WebRWSynchro.BeginWrite;
-      try
-        NodeData.Range.StartTime := NodeData.Range.StartTime + Offset;
-      finally
-        g_WebRWSynchro.EndWrite;
-      end;
-      if (WAVDisplayer.SelectedRange = NodeData.Range) or
-         Assigned(WAVDisplayer.KaraokeSelectedRange) then
-      begin
-        WAVDisplayer.Selection.StartTime := NodeData.Range.StartTime;
-        WAVDisplayer1SelectionChange(WAVDisplayer);
-      end;
-      WAVDisplayer.UpdateView([uvfRange]);
-      vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
-      if (Length(NodeData.Range.SubTime) > 0) then
-      begin
-        WAVDisplayer1KaraokeChanged(WAVDisplayer, NodeData.Range);
-      end;
+      UndoableDelayTask := TUndoableDelayTask.Create;
+      UndoableDelayTask.SetDelayInMs(Offset);
+      UndoableDelayTask.SetDelayShiftType(dstStartTimeOnly);
+      UndoableDelayTask.SetCapacity(1);
+      UndoableDelayTask.AddSubtitleIndex(vtvSubsList.FocusedNode.Index);
+      UndoableDelayTask.DoTask;
+      PushUndoableTask(UndoableDelayTask);
     end;
   end;
 end;
@@ -3861,6 +3807,7 @@ var NodeData : PTreeData;
     R : TRange;
     bStart, bStop : Integer;
     Idx : Integer;
+    UndoableDelayTask : TUndoableDelayTask;
 begin
   if Assigned(WAVDisplayer.KaraokeSelectedRange) then
   begin
@@ -3894,24 +3841,13 @@ begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
     if(NodeData.Range.StopTime + Offset > NodeData.Range.StartTime) then
     begin
-      g_WebRWSynchro.BeginWrite;
-      try
-        NodeData.Range.StopTime := NodeData.Range.StopTime + Offset;
-      finally
-        g_WebRWSynchro.EndWrite;
-      end;
-      if (WAVDisplayer.SelectedRange = NodeData.Range) or
-         Assigned(WAVDisplayer.KaraokeSelectedRange) then
-      begin
-        WAVDisplayer.Selection.StopTime := NodeData.Range.StopTime;
-        WAVDisplayer1SelectionChange(WAVDisplayer);
-      end;
-      WAVDisplayer.UpdateView([uvfRange]);
-      vtvSubsList.RepaintNode(vtvSubsList.FocusedNode);
-      if (Length(NodeData.Range.SubTime) > 0) then
-      begin
-        WAVDisplayer1KaraokeChanged(WAVDisplayer, NodeData.Range);
-      end;
+      UndoableDelayTask := TUndoableDelayTask.Create;
+      UndoableDelayTask.SetDelayInMs(Offset);
+      UndoableDelayTask.SetDelayShiftType(dstStopTimeOnly);
+      UndoableDelayTask.SetCapacity(1);
+      UndoableDelayTask.AddSubtitleIndex(vtvSubsList.FocusedNode.Index);
+      UndoableDelayTask.DoTask;
+      PushUndoableTask(UndoableDelayTask);
     end;
   end;
 end;
@@ -4306,6 +4242,7 @@ begin
       end;
 
       ConfigObject.ApplyParam(JPlugin);
+      // Install handler to fill UndoableMultiChangeTask
       JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
       JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
       JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
@@ -4499,6 +4436,7 @@ begin
         if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) then
         begin
           ConfigObject.ApplyParam(JPlugin);
+          // Install handler to fill UndoableMultiChangeTask
           JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
           JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
           JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
@@ -6045,6 +5983,11 @@ begin
     if (DelaySelectedRange = True) and Assigned(WavDisplayer.SelectedRange) then
     begin
       DelaySub(WavDisplayer.Selection, DelayInMs, DelayShiftType);
+      if (DelayShiftType in [dstStartTimeOnly, dstStopTimeOnly]) and
+         (Length(WavDisplayer.SelectedRange.SubTime) > 0) then
+      begin
+        WAVDisplayer1KaraokeChanged(WAVDisplayer, WavDisplayer.SelectedRange);
+      end;
     end;
     // Sort subtitles
     FullSortTreeAndSubList;
@@ -6230,18 +6173,27 @@ end;
 // -----------------------------------------------------------------------------
 
 function TMainForm.SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
+var SubRange : TSubtitleRange;
 begin
-  TSubtitleRange(WAVDisplayer.RangeList[Index]).StartTime := NewTime;
+  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+  Result := SubRange.StartTime;
+  SubRange.StartTime := NewTime;
 end;
 
 function TMainForm.SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
+var SubRange : TSubtitleRange;
 begin
-  TSubtitleRange(WAVDisplayer.RangeList[Index]).StopTime := NewTime;
+  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+  Result := SubRange.StopTime;
+  SubRange.StopTime := NewTime;
 end;
 
-function TMainForm.SimpleSetSubtitleText(Index : Integer; NewText : WideString) : Integer;
+function TMainForm.SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
+var SubRange : TSubtitleRange;
 begin
-  TSubtitleRange(WAVDisplayer.RangeList[Index]).Text := NewText;
+  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+  Result := SubRange.Text;
+  SubRange.Text := NewText;
 end;
 
 // -----------------------------------------------------------------------------
@@ -6761,6 +6713,10 @@ end;
 
 
 {
+TODO UNDO:
+karaoke create, clear, change timestamps (with mouse or shortcut)
+TODO : display karaoke sylables in wavdisplay
+
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
