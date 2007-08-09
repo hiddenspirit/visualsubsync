@@ -36,7 +36,8 @@ uses
   DirectVobsubInterface in 'DirectVobsubInterface.pas',
   RGBHSLColorUnit in 'RGBHSLColorUnit.pas',
   TntRichEditCustomUndoUnit in 'TntRichEditCustomUndoUnit.pas',
-  UndoableTaskUnit in 'UndoableTaskUnit.pas';
+  UndoableTaskUnit in 'UndoableTaskUnit.pas',
+  UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas';
 
 {$R *.res}
 
