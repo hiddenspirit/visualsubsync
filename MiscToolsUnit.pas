@@ -104,10 +104,13 @@ uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows;
 
 procedure Constrain(var Value : Integer; MinValue, MaxValue : Integer);
 begin
-  if Value < MinValue then
-    Value := MinValue
-  else if Value > MaxValue then
-    Value := MaxValue;
+  if (MinValue <= MaxValue) then
+  begin
+    if (Value < MinValue) then
+      Value := MinValue
+    else if (Value > MaxValue) then
+      Value := MaxValue;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
