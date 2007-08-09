@@ -311,6 +311,8 @@ type
     Undo2: TTntMenuItem;
     Redo1: TTntMenuItem;
     N17: TTntMenuItem;
+    ActionWAVDisplayScrollRight: TTntAction;
+    ActionWAVDisplayScrollLeft: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -459,6 +461,8 @@ type
     procedure ActionUndoExecute(Sender: TObject);
     procedure ActionRedoExecute(Sender: TObject);
     procedure PanelVideoDblClick(Sender: TObject);
+    procedure ActionWAVDisplayScrollRightExecute(Sender: TObject);
+    procedure ActionWAVDisplayScrollLeftExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -1236,7 +1240,11 @@ begin
   begin
     Node := TSubtitleRange(WAVDisplayer.SelectedRange).Node;
     vtvSubsList.ScrollIntoView(Node,True);
-    vtvSubsList.FocusedNode := Node;
+    if vtvSubsList.FocusedNode <> Node then
+      vtvSubsList.FocusedNode := Node
+    else
+      // special case for Autoscroll subtitles, force focus update
+      vtvSubsListFocusChanged(vtvSubsList, Node, 0);
     vtvSubsList.ClearSelection;
     vtvSubsList.Selected[Node] := True;
     if not MemoSubtitleText.Focused then
@@ -6166,12 +6174,25 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ActionWAVDisplayScrollRightExecute(Sender: TObject);
+begin
+  WAVDisplayer.Scroll(25);
+end;
+
+procedure TMainForm.ActionWAVDisplayScrollLeftExecute(Sender: TObject);
+begin
+  WAVDisplayer.Scroll(-25);
+end;
+
+//------------------------------------------------------------------------------
+
 {
 TODO UNDO:
 karaoke create, clear, change timestamps (with mouse or shortcut)
 TODO : display karaoke sylables in wavdisplay
-TODO : undo text pipe text modification
-
+TODO : undo text pipe text modification (modifiy, clear, load)
+TODO : undo for insert text file
+TODO : undo for style?
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
