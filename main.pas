@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 //  VisualSubSync
 // -----------------------------------------------------------------------------
-//  Copyright (C) 2003 Christophe Paris
+//  Copyright (C) 2003-2007 Christophe Paris
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -35,172 +35,13 @@ uses
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
   DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
-  UndoableTaskUnit;
+  UndoableTaskUnit, UndoableSubTaskUnit;
 
 type
   TTreeData = record
     Range: TSubtitleRange;
   end;
   PTreeData = ^TTreeData;
-
-  // -----
-
-  TUndoableTaskIndexed = class(TUndoableTask)
-  private
-    FIndexes : array of Integer; // Indexes of subtitles in FWavDisplayer
-    FCount : Integer; // Number of indexes
-  public
-    destructor Destroy; override;
-    procedure AddSubtitleIndex(Index : Integer);
-    procedure SetCapacity(Capacity : Integer);
-  end;
-
-  TUndoableDelayTask = class(TUndoableTaskIndexed)
-  private
-    FDelayInMs : Integer;
-    FDelayShiftType : TDelayShiftType;
-
-  public
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure SetDelayInMs(DelayInMs : Integer);
-    procedure SetDelayShiftType(DelayShiftType : TDelayShiftType);
-  end;
-
-  TUndoableAddTask = class(TUndoableTask)
-  private
-    FStartTime, FStopTime : Integer;
-    FText : WideString;
-    FAutoSelect : Boolean;
-    FIndex : Integer;
-  public
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure SetTime(StartTime, StopTime : Integer);
-    procedure SetText(Text : WideString);
-    procedure SetAutoSelect(AutoSelect : Boolean);
-  end;
-
-  TUndoableDeleteTask = class(TUndoableTaskIndexed)
-  private
-    FDeletedSubs : TObjectList;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-  end;
-
-  TUndoableSetTimeTask = class(TUndoableTask)
-  private
-    FNewStartTime, FNewStopTime : Integer;
-    FOldStartTime, FOldStopTime : Integer;
-    FIndex : Integer;
-  public
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure SetData(Index, OldStartTime, OldStopTime,
-      NewStartTime, NewStopTime : Integer);
-  end;
-
-  TUndoableSplitTask = class(TUndoableTask)
-  private
-    FIndex : Integer;
-    FStartTime, FStopTime, FSplitTime : Integer;
-  public
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure SetData(Index, StartTime, StopTime, SplitTime : Integer);
-  end;
-
-  TUndoableMergeTask = class(TUndoableTaskIndexed)
-  private
-    FDeletedSubs : TObjectList;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-  end;
-
-  TUndoableSubTextTask = class(TUndoableTask)
-  private
-    FUndoableTextTask : TUndoableTask;
-    FIndex : Integer;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure SetData(Index : Integer; UndoableTextTask : TUndoableTask);
-  end;
-
-  TUndoableCompositeTask = class(TUndoableTask)
-  private
-    FList : TObjectList;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure AddTask(UndoableTask : TUndoableTask);
-  end;
-
-  TChangeSubData = class
-    FIndex : Integer;
-    FNewStartTime, FOldStartTime : Integer;
-    FNewStopTime, FOldStopTime : Integer;
-    FNewText, FOldText : WideString;
-
-    constructor Create(Index : Integer);
-    function StartChanged : Boolean;
-    function StopChanged : Boolean;
-    function TextChanged : Boolean;
-    function GetStart(ForUndo : Boolean) : Integer;
-    function GetStop(ForUndo : Boolean) : Integer;
-    function GetText(ForUndo : Boolean) : WideString;
-  end;
-
-  // Used for error correction
-  TUndoableMultiChangeTask = class(TUndoableTask)
-  private
-    FList : TObjectList;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-
-    procedure AddData(ChangeSubData : TChangeSubData);
-    function GetData(Index : Integer) : TChangeSubData;
-  end;
-
-  TUndoablePipeTask = class(TUndoableTask)
-  public
-    procedure DoTask; override;
-    function GetName : WideString; override;
-    procedure UndoTask; override;
-  end;
 
   // -----
 
@@ -681,7 +522,7 @@ type
     procedure OffsetCurrentSubtitleStartTime(Offset : Integer);
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
 
-    procedure ColorizeOrDeleteTextPipe;
+    function ColorizeOrDeleteTextPipe : TUndoableTask;
     procedure ApplyMouseSettings;
     procedure ApplyAutoBackupSettings;
     procedure UpdateVideoRendererWindow;
@@ -694,13 +535,6 @@ type
     procedure OnSubtitleRangeJSWrapperChangeText(Sender : TSubtitleRangeJSWrapper;
       SubtitleRange : TSubtitleRange; NewValue : WideString);
 
-    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode; overload;
-    function AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode; overload;
-    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
-      AutoSelect : Boolean) : PVirtualNode; overload;
-    procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
-    procedure FocusNodeAt(Index : Integer); overload;
-    procedure ClearWAVSelection;
     procedure SaveSubtitlesAsSRT(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsSSA(Filename: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsASS(Filename: WideString; InUTF8 : Boolean);
@@ -731,20 +565,10 @@ type
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
     procedure ClearStack(Stack : TObjectStack);       
 
-    procedure ApplyDelay(var Indexes : array of Integer;
-      DelayInMs : Integer; DelayShiftType : TDelayShiftType);
-    procedure DeleteSubtitle(Index : Integer);
-    procedure DeleteSubtitles(var Indexes : array of Integer);
-    procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
-    procedure RestoreSubtitles(List : TList);
-    function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
-    procedure SplitSubtitle(Index, SplitTime : Integer);
-    function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
     function SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
-    procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -764,6 +588,25 @@ type
     function GetVideoRendererFiltersList(list : TStrings) : Boolean;
     procedure SetStatusBarPrimaryText(const Text : WideString);
     procedure ProcessParams;
+    function IsTimingMode : Boolean;
+
+    procedure ApplyDelay(var Indexes : array of Integer;
+      DelayInMs : Integer; DelayShiftType : TDelayShiftType);
+    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode; overload;
+    function AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode; overload;
+    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
+      AutoSelect : Boolean) : PVirtualNode; overload;
+    procedure DeleteSubtitle(Index : Integer);
+    procedure DeleteSubtitles(var Indexes : array of Integer);
+    procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
+    procedure RestoreSubtitles(List : TList);
+    function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
+    procedure SplitSubtitle(Index, SplitTime : Integer);
+    function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
+    procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
+    procedure FocusNodeAt(Index : Integer); overload;
+    procedure ClearWAVSelection;
+    procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);    
   end;
 
 const
@@ -3968,60 +3811,61 @@ end;
 
 //------------------------------------------------------------------------------
 
-
-
 procedure TMainForm.ActionAddSubFromPipeExecute(Sender: TObject);
 var UndoableAddTask : TUndoableAddTask;
+    UndoablePipeTask : TUndoableTask;
+    UndoableCompositeTask : TUndoableCompositeTask;
 begin
   if (MemoTextPipe.SelLength > 0) and (not WAVDisplayer.SelectionIsEmpty) then
   begin
+    UndoableCompositeTask := TUndoableCompositeTask.Create;
+
+    // Add subtitle part
     UndoableAddTask := TUndoableAddTask.Create;
     UndoableAddTask.SetTime(WAVDisplayer.Selection.StartTime,
       WAVDisplayer.Selection.StopTime);
     UndoableAddTask.SetText(Trim(MemoTextPipe.SelText));
     UndoableAddTask.SetAutoSelect(True);
-    UndoableAddTask.DoTask;
-    PushUndoableTask(UndoableAddTask);
+
+    // Pipe part
+    UndoablePipeTask := ColorizeOrDeleteTextPipe;
+
+    UndoableCompositeTask.AddTask(UndoableAddTask);
+    UndoableCompositeTask.AddTask(UndoablePipeTask);
+
+    UndoableCompositeTask.DoTask;
+    PushUndoableTask(UndoableCompositeTask);
     if bttWorkingMode.Tag = 0 then
       MemoSubtitleText.SetFocus;
-    ColorizeOrDeleteTextPipe;
-    
-//    // If this is the first subtitle, readjust columns
-//    if (vtvSubsList.ChildCount[nil] = 1) then
-//    begin
-//      vtvSubsList.Header.AutoFitColumns(False);
-//      vtvSubsList.Repaint;
-//    end;
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ColorizeOrDeleteTextPipe;
-var NewSelLen : Integer;
+function TMainForm.ColorizeOrDeleteTextPipe : TUndoableTask;
+var ActionType : Integer;
     NewColor : TColor;
+    UndoablePipeTask : TUndoablePipeTask;
 begin
+  NewColor := $003333FF;
+  UndoablePipeTask := TUndoablePipeTask.Create;
   if pmiAutoColorizeText.Checked then
   begin
-    NewColor := clRed;
-    if Assigned(vtvSubsList.FocusedNode) then
-    begin
-      if (vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) = 0 then
-        NewColor := $003333FF
-      else
-        NewColor := $00FF8000;
-    end;
-    MemoTextPipe.SelAttributes.Color := NewColor;
+    ActionType := 0;
+    if (Assigned(vtvSubsList.FocusedNode)) and
+       ((vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) <> 0) then
+      NewColor := $00FF8000;
   end
   else if pmiAutoDeleteText.Checked then
-    MemoTextPipe.ClearSelection
+  begin
+    ActionType := 1;
+  end
   else if pmiAutoDeleteAllTextBefore.Checked then
   begin
-    NewSelLen := MemoTextPipe.SelLength + MemoTextPipe.SelStart;
-    MemoTextPipe.SelStart := 0;
-    MemoTextPipe.SelLength := NewSelLen;
-    MemoTextPipe.ClearSelection;
+    ActionType := 2;
   end;
+  UndoablePipeTask.SetData(ActionType, MemoTextPipe, NewColor);
+  Result := UndoablePipeTask;
 end;
 
 //------------------------------------------------------------------------------
@@ -4274,7 +4118,7 @@ begin
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
 
-  if (UndoableMultiChangeTask.FList.Count > 0) then
+  if (UndoableMultiChangeTask.GetCount > 0) then
   begin
     PushUndoableTask(UndoableMultiChangeTask);
     // Do not free the task, it's on the stack now
@@ -4462,7 +4306,7 @@ begin
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
 
-  if (UndoableMultiChangeTask.FList.Count > 0) then
+  if (UndoableMultiChangeTask.GetCount > 0) then
   begin
     PushUndoableTask(UndoableMultiChangeTask);
     // Do not free the task, it's on the stack now
@@ -6195,6 +6039,21 @@ end;
 
 // -----------------------------------------------------------------------------
 
+procedure TMainForm.OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
+var UndoableSubTextTask : TUndoableSubTextTask;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    UndoableSubTextTask := TUndoableSubTextTask.Create;
+    UndoableSubTextTask.SetData(vtvSubsList.FocusedNode.Index, UndoTask);
+    PushUndoableTask(UndoableSubTextTask);
+  end
+  else
+    PushUndoableTask(UndoTask);
+end;
+
+// -----------------------------------------------------------------------------
+
 procedure TMainForm.ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
 var i : integer;
     ChangeSubData : TChangeSubData;
@@ -6240,421 +6099,6 @@ begin
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
 end;
-
-//==============================================================================
-
-destructor TUndoableTaskIndexed.Destroy;
-begin
-  SetLength(FIndexes, 0);
-  FIndexes := nil;
-  inherited;
-end;
-
-procedure TUndoableTaskIndexed.AddSubtitleIndex(Index : Integer);
-begin
-  FIndexes[FCount] := Index;
-  Inc(FCount);
-end;
-
-procedure TUndoableTaskIndexed.SetCapacity(Capacity : Integer);
-begin
-  SetLength(FIndexes, Capacity);
-end;
-
-//-------------------------------------------------------------------------------
-
-procedure TUndoableDelayTask.UndoTask;
-begin
-  MainForm.ApplyDelay(FIndexes, -FDelayInMs, FDelayShiftType);
-end;
-
-procedure TUndoableDelayTask.DoTask;
-begin
-  MainForm.ApplyDelay(FIndexes, FDelayInMs, FDelayShiftType);
-end;
-
-function TUndoableDelayTask.GetName : WideString;
-begin
-  Result := 'Delay ' + TimeMsToString(FDelayInMs);
-end;
-
-procedure TUndoableDelayTask.SetDelayInMs(DelayInMs : Integer);
-begin
-  FDelayInMs := DelayInMs;
-end;
-
-procedure TUndoableDelayTask.SetDelayShiftType(DelayShiftType : TDelayShiftType);
-begin
-  FDelayShiftType := DelayShiftType;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TUndoableAddTask.DoTask;
-var NewNode : PVirtualNode;
-begin
-  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FText, FAutoSelect);
-  FIndex := NewNode.Index;
-end;
-
-function TUndoableAddTask.GetName : WideString;
-begin
-  Result := 'Add subtitle';
-end;
-
-procedure TUndoableAddTask.UndoTask;
-begin
-  MainForm.DeleteSubtitle(FIndex);
-end;
-
-procedure TUndoableAddTask.SetTime(StartTime, StopTime : Integer);
-begin
-  FStartTime := StartTime;
-  FStopTime := StopTime;
-end;
-
-procedure TUndoableAddTask.SetText(Text : WideString);
-begin
-  FText := Text;
-end;
-
-procedure TUndoableAddTask.SetAutoSelect(AutoSelect : Boolean);
-begin
-  FAutoSelect := AutoSelect;
-end;
-
-//------------------------------------------------------------------------------
-
-constructor TUndoableDeleteTask.Create;
-begin
-  inherited;
-  FDeletedSubs := TObjectList.Create;
-  FDeletedSubs.OwnsObjects := True;
-end;
-
-destructor TUndoableDeleteTask.Destroy;
-begin
-  FDeletedSubs.Free;
-  inherited;
-end;
-
-procedure TUndoableDeleteTask.DoTask;
-begin
-  // First clone subtitles
-  MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
-  // Now delete them
-  MainForm.DeleteSubtitles(FIndexes);
-end;
-
-function TUndoableDeleteTask.GetName : WideString;
-begin
-  Result := 'Delete';
-end;
-
-procedure TUndoableDeleteTask.UndoTask;
-begin
-  MainForm.RestoreSubtitles(FDeletedSubs);
-  FDeletedSubs.Clear;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TUndoableSetTimeTask.DoTask;
-begin
-  FIndex := MainForm.SetSubtitleTime(FIndex, FNewStartTime, FNewStopTime);
-end;
-
-function TUndoableSetTimeTask.GetName : WideString;
-begin
-  Result := 'Set time';
-end;
-
-procedure TUndoableSetTimeTask.UndoTask;
-begin
-  FIndex := MainForm.SetSubtitleTime(FIndex, FOldStartTime, FOldStopTime);
-end;
-
-procedure TUndoableSetTimeTask.SetData(Index, OldStartTime, OldStopTime,
-  NewStartTime, NewStopTime : Integer);
-begin
-  FIndex := Index;
-  FOldStartTime := OldStartTime;
-  FOldStopTime := OldStopTime;
-  FNewStartTime := NewStartTime;
-  FNewStopTime := NewStopTime;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TUndoableSplitTask.DoTask;
-begin
-  MainForm.SplitSubtitle(FIndex, FSplitTime);
-end;
-
-function TUndoableSplitTask.GetName : WideString;
-begin
-  Result := 'Split';
-end;
-
-procedure TUndoableSplitTask.UndoTask;
-begin
-  MainForm.DeleteSubtitle(FIndex + 1);
-  MainForm.SetSubtitleTime(FIndex, FStartTime, FStopTime);
-end;
-
-procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime : Integer);
-begin
-  FIndex := Index;
-  FStartTime := StartTime;
-  FStopTime := StopTime;
-  FSplitTime := SplitTime;
-end;
-
-//------------------------------------------------------------------------------
-
-constructor TUndoableMergeTask.Create;
-begin
-  inherited;
-  FDeletedSubs := TObjectList.Create;
-  FDeletedSubs.OwnsObjects := True;
-end;
-
-destructor TUndoableMergeTask.Destroy;
-begin
-  FDeletedSubs.Free;
-  inherited;
-end;
-
-procedure TUndoableMergeTask.DoTask;
-var SubRange : TSubtitleRange;
-    Node : PVirtualNode;
-begin
-  // Calculate the merged subtitle
-  SubRange := MainForm.MergeSubtitles(FIndexes);
-  // Clone subtitles
-  MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
-  // Now delete them
-  MainForm.DeleteSubtitles(FIndexes);
-  // Add back the merged subtitle
-  Node := MainForm.AddSubtitle(SubRange);
-  // Focus the merged node
-  MainForm.FocusNode(Node, False);
-  MainForm.ClearWAVSelection;
-  // Free temporarily created merged sub
-  SubRange.Free;
-end;
-
-function TUndoableMergeTask.GetName : WideString;
-begin
-  Result := 'Merge';
-end;
-
-procedure TUndoableMergeTask.UndoTask;
-begin
-  // Delete the merged subtitle
-  MainForm.DeleteSubtitle(FIndexes[0]);
-  // Restaure deleted subtitles
-  MainForm.RestoreSubtitles(FDeletedSubs);
-  FDeletedSubs.Clear;
-end;
-
-// -----------------------------------------------------------------------------
-
-procedure TMainForm.OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
-var UndoableSubTextTask : TUndoableSubTextTask;
-begin
-  if Assigned(vtvSubsList.FocusedNode) then
-  begin
-    UndoableSubTextTask := TUndoableSubTextTask.Create;
-    UndoableSubTextTask.SetData(vtvSubsList.FocusedNode.Index, UndoTask);
-    PushUndoableTask(UndoableSubTextTask);
-  end
-  else
-    PushUndoableTask(UndoTask);
-end;
-
-constructor TUndoableSubTextTask.Create;
-begin
-  FUndoableTextTask := nil;
-end;
-
-destructor TUndoableSubTextTask.Destroy;
-begin
-  if Assigned(FUndoableTextTask) then
-  begin
-    FUndoableTextTask.Free;
-  end
-end;
-
-procedure TUndoableSubTextTask.DoTask;
-begin
-  MainForm.FocusNodeAt(FIndex);
-  FUndoableTextTask.DoTask;
-end;
-
-function TUndoableSubTextTask.GetName : WideString;
-begin
-  FUndoableTextTask.GetName;
-end;
-
-procedure TUndoableSubTextTask.UndoTask;
-begin
-  MainForm.FocusNodeAt(FIndex);
-  FUndoableTextTask.UndoTask;
-end;
-
-procedure TUndoableSubTextTask.SetData(Index : Integer; UndoableTextTask : TUndoableTask);
-begin
-  FIndex := Index;
-  FUndoableTextTask := UndoableTextTask;
-end;
-
-// -----------------------------------------------------------------------------
-
-constructor TUndoableCompositeTask.Create;
-begin
-  FList := TObjectList.Create;
-  FList.OwnsObjects := True;
-end;
-
-destructor TUndoableCompositeTask.Destroy;
-begin
-  FList.Free;
-end;
-
-procedure TUndoableCompositeTask.DoTask;
-var i : Integer;
-begin
-  for i := 0 to FList.Count-1 do
-  begin
-    TUndoableTask(FList[i]).DoTask;
-  end;
-end;
-
-function TUndoableCompositeTask.GetName : WideString;
-begin
-  Result := 'TUndoableCompositeTask';
-end;
-
-procedure TUndoableCompositeTask.UndoTask;
-var i : Integer;
-begin
-  for i := 0 to FList.Count-1 do
-  begin
-    TUndoableTask(FList[i]).UndoTask;
-  end;
-end;
-
-procedure TUndoableCompositeTask.AddTask(UndoableTask : TUndoableTask);
-begin
-  FList.Add(UndoableTask);
-end;
-
-// -----------------------------------------------------------------------------
-
-constructor TChangeSubData.Create(Index : Integer);
-begin
-  FIndex := Index;
-  FNewStartTime := -1; FOldStartTime := -1;
-  FNewStopTime := -1; FOldStopTime := -1;
-  FNewText := ''; FOldText := '';
-end;
-
-function TChangeSubData.StartChanged : Boolean;
-begin
-  Result := (FOldStartTime <> -1)
-end;
-
-function TChangeSubData.StopChanged : Boolean;
-begin
-  Result := (FOldStopTime <> -1)
-end;
-
-function TChangeSubData.TextChanged : Boolean;
-begin
-  Result := (FNewText <> FOldText)
-end;
-
-function TChangeSubData.GetStart(ForUndo : Boolean) : Integer;
-begin
-  if ForUndo then Result := FOldStartTime else Result := FNewStartTime;
-end;
-
-function TChangeSubData.GetStop(ForUndo : Boolean) : Integer;
-begin
-  if ForUndo then Result := FOldStopTime else Result := FNewStopTime;
-end;
-
-function TChangeSubData.GetText(ForUndo : Boolean) : WideString;
-begin
-  if ForUndo then Result := FOldText else Result := FNewText;
-end;
-
-constructor TUndoableMultiChangeTask.Create;
-begin
-  FList := TObjectList.Create;
-  FList.OwnsObjects := True;
-end;
-
-destructor TUndoableMultiChangeTask.Destroy;
-begin
-  FList.Free;
-end;
-
-procedure TUndoableMultiChangeTask.DoTask;
-begin
-  MainForm.ProcessMultiChangeSub(FList, False);
-end;
-
-function TUndoableMultiChangeTask.GetName : WideString;
-begin
-  Result := 'TUndoableMultiChangeTask';
-end;
-
-procedure TUndoableMultiChangeTask.UndoTask;
-begin
-  MainForm.ProcessMultiChangeSub(FList, True);
-end;
-
-procedure TUndoableMultiChangeTask.AddData(ChangeSubData : TChangeSubData);
-begin
-  FList.Add(ChangeSubData);
-end;
-
-function TUndoableMultiChangeTask.GetData(Index : Integer) : TChangeSubData;
-var i : Integer;
-    ChangeSubData : TChangeSubData;
-begin
-  for i:=0 to FList.Count-1 do
-  begin
-    ChangeSubData := TChangeSubData(FList[i]);
-    if (ChangeSubData.FIndex = Index) then
-    begin
-      Result := ChangeSubData;
-      Exit;
-    end;
-  end;
-  Result := nil;
-end;
-
-// -----------------------------------------------------------------------------
-
-procedure TUndoablePipeTask.DoTask;
-begin
-  // todo
-end;
-
-function TUndoablePipeTask.GetName : WideString;
-begin
-  Result := 'TUndoablePipeTask';
-end;
-
-procedure TUndoablePipeTask.UndoTask;
-begin
-  // todo
-  MainForm.MemoTextPipe.Undo;
-end;
-
 
 //==============================================================================
 
@@ -6708,11 +6152,18 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TMainForm.IsTimingMode : Boolean;
+begin
+  Result := (bttWorkingMode.Tag = 1)
+end;
+
+//------------------------------------------------------------------------------
 
 {
 TODO UNDO:
 karaoke create, clear, change timestamps (with mouse or shortcut)
 TODO : display karaoke sylables in wavdisplay
+TODO : undo text pipe text modification
 
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);

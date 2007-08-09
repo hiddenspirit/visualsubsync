@@ -25,12 +25,9 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, Mask;
+  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, Mask, SubStructUnit;
 
 type
-  TDelayShiftType = (dstBothTime, dstStartTimeOnly, dstStopTimeOnly);
-  TDelayApplyToType = (dattAll, dattSelected, dattFromCursor);
-
   TDelayForm = class(TForm)
     meDelay: TMaskEdit;
     rgApplyTo: TTntRadioGroup;
