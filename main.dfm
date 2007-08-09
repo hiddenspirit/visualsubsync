@@ -2034,6 +2034,16 @@ object MainForm: TMainForm
       ShortCut = 16473
       OnExecute = ActionRedoExecute
     end
+    object ActionWAVDisplayScrollRight: TTntAction
+      Tag = 1
+      Caption = 'WAVDisplay scroll right'
+      OnExecute = ActionWAVDisplayScrollRightExecute
+    end
+    object ActionWAVDisplayScrollLeft: TTntAction
+      Tag = 1
+      Caption = 'WAVDisplay scroll left'
+      OnExecute = ActionWAVDisplayScrollLeftExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia

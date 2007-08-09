@@ -278,6 +278,8 @@ type
     procedure SelectPreviousKaraoke;
     procedure SelecteKaraoke(Range : TRange; Index : Integer);
 
+    procedure Scroll(ViewPercent : Integer);
+
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
@@ -3088,6 +3090,15 @@ begin
     FUpdateCursorTimer.Enabled := True;
     FRenderer.Resume;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.Scroll(ViewPercent : Integer);
+var ScrollOffsetMs : Integer;
+begin
+  ScrollOffsetMs := Round(FPageSizeMs / 100.0 * ViewPercent);
+  SetPositionMs(GetPositionMs + ScrollOffsetMs);
 end;
 
 //------------------------------------------------------------------------------
