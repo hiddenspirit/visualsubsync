@@ -588,7 +588,9 @@ type
     function GetVideoRendererFiltersList(list : TStrings) : Boolean;
     procedure SetStatusBarPrimaryText(const Text : WideString);
     procedure ProcessParams;
+
     function IsTimingMode : Boolean;
+    function IsNormalMode : Boolean;
 
     procedure ApplyDelay(var Indexes : array of Integer;
       DelayInMs : Integer; DelayShiftType : TDelayShiftType);
@@ -1143,7 +1145,7 @@ begin
   vtvSubsList.Enabled := Enable;
   MemoLinesCounter.Enabled := Enable;
   MemoSubtitleText.Enabled := Enable and
-    ((not ConfigObject.DisableSubtitleEdition) or (bttWorkingMode.Tag = 0));
+    ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
 
   edSelBegin.Enabled := Enable;
   edSelEnd.Enabled := Enable;
@@ -2062,7 +2064,7 @@ end;
 
 procedure TMainForm.ActionPlayExecute(Sender: TObject);
 begin
-  if (bttWorkingMode.Tag = 1) then
+  if IsTimingMode then
     PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
   UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
@@ -2089,7 +2091,7 @@ end;
 
 procedure TMainForm.ActionLoopExecute(Sender: TObject);
 begin
-  if (bttWorkingMode.Tag = 1) then
+  if IsTimingMode then
     PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
   UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
@@ -3021,7 +3023,7 @@ begin
     if(ConfigObject.SwapSubtitlesList <> OldSwapState) then
       Self.SwapSubList;
     MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
-      ((not ConfigObject.DisableSubtitleEdition) or (bttWorkingMode.Tag = 0));
+      ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
     SetShortcut(PreferencesForm.GetMode);
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
@@ -3354,7 +3356,7 @@ procedure TMainForm.ActionLoopSelStartExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
-    if (bttWorkingMode.Tag = 1) then
+    if IsTimingMode then
       PanelWAVDisplay.SetFocus;
     UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionStart;
@@ -3370,7 +3372,7 @@ procedure TMainForm.ActionLoopSelEndExecute(Sender: TObject);
 begin
   if not WAVDisplayer.SelectionIsEmpty then
   begin
-    if (bttWorkingMode.Tag = 1) then
+    if IsTimingMode then
       PanelWAVDisplay.SetFocus;
     UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     PlayingMode := pmtSelectionEnd;
@@ -3490,7 +3492,7 @@ begin
   UndoableAddTask.DoTask;
   PushUndoableTask(UndoableAddTask);
   
-  if bttWorkingMode.Tag = 0 then
+  if IsNormalMode then
     MemoSubtitleText.SetFocus;
 end;
 
@@ -3835,7 +3837,7 @@ begin
 
     UndoableCompositeTask.DoTask;
     PushUndoableTask(UndoableCompositeTask);
-    if bttWorkingMode.Tag = 0 then
+    if IsNormalMode then
       MemoSubtitleText.SetFocus;
   end;
 end;
@@ -4388,7 +4390,7 @@ procedure TMainForm.TntFormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   // subtitle dynamic creation (toggle mode) in timing mode only
-  if (bttWorkingMode.Tag = 1) and (Key = VK_SPACE) and
+  if IsTimingMode and (Key = VK_SPACE) and
     (ConfigObject.EnableToggleCreation = True) and
     (WAVDisplayer.IsPlaying = True) then
   begin
@@ -4410,7 +4412,7 @@ procedure TMainForm.TntFormKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   // subtitle dynamic creation (toggle mode) in timing mode only
-  if (bttWorkingMode.Tag = 1) and (Key = VK_SPACE) and
+  if IsTimingMode and (Key = VK_SPACE) and
     (ConfigObject.EnableToggleCreation = True) and
     (WAVDisplayer.IsPlaying = True) then
   begin
@@ -5083,7 +5085,7 @@ end;
 
 procedure TMainForm.ActionPlayToEndExecute(Sender: TObject);
 begin
-  if (bttWorkingMode.Tag = 1) then
+  if IsTimingMode then
     PanelWAVDisplay.SetFocus;
   WAVDisplayer.AutoScrolling := True;
   if WAVDisplayer.SelectionIsEmpty then
@@ -5511,7 +5513,7 @@ end;
 
 procedure TMainForm.ActionToggleTimingModeExecute(Sender: TObject);
 begin
-  if (bttWorkingMode.Tag = 0) then
+  if IsNormalMode then
   begin
     bttWorkingMode.Caption := 'Timing';
     bttWorkingMode.Font.Color := clRed;
@@ -5528,11 +5530,11 @@ begin
     bttWorkingMode.Font.Color := clWindowText;
     WAVDisplayer.SelMode := smCoolEdit;
   end;
-  KeyPreview := (bttWorkingMode.Tag = 1);
-  PreferencesForm.SetMode(bttWorkingMode.Tag = 1);
+  KeyPreview := IsTimingMode;
+  PreferencesForm.SetMode(IsTimingMode);
   SetShortcut(PreferencesForm.GetMode);
   MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
-    ((not ConfigObject.DisableSubtitleEdition) or (bttWorkingMode.Tag = 0));
+    ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
 end;
 
 //------------------------------------------------------------------------------
@@ -6155,6 +6157,11 @@ end;
 function TMainForm.IsTimingMode : Boolean;
 begin
   Result := (bttWorkingMode.Tag = 1)
+end;
+
+function TMainForm.IsNormalMode : Boolean;
+begin
+  Result := (bttWorkingMode.Tag = 0)
 end;
 
 //------------------------------------------------------------------------------

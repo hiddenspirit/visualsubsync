@@ -856,6 +856,7 @@ object MainForm: TMainForm
         Top = 0
         Width = 49
         Height = 25
+        Hint = 'Choose between "Normal" or "Timing" mode'
         AllowAllUp = True
         GroupIndex = 1
         Caption = 'Normal'
@@ -865,6 +866,8 @@ object MainForm: TMainForm
         Font.Name = 'MS Sans Serif'
         Font.Style = [fsBold]
         ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
         OnClick = bttWorkingModeClick
       end
       object bttZoomVertical: TSpeedButton
@@ -2000,6 +2003,7 @@ object MainForm: TMainForm
     object ActionToggleTimingMode: TTntAction
       Tag = 1
       Caption = 'Toggle between normal and timing mode'
+      Hint = 'Choose between "Normal" or "Timing" mode'
       OnExecute = ActionToggleTimingModeExecute
     end
     object ActionSetEditorFocus: TTntAction
