@@ -120,14 +120,12 @@ type
     function GetName : WideString; override;
     procedure UndoTask; override;
 
-    procedure SetData(Index, StartTime, StopTime, SpliTime : Integer);
+    procedure SetData(Index, StartTime, StopTime, SplitTime : Integer);
   end;
 
   TUndoableMergeTask = class(TUndoableTaskIndexed)
   private
     FDeletedSubs : TObjectList;
-    FStartTime, FStopTime : Integer;
-    FText : WideString;
   public
     constructor Create;
     destructor Destroy; override;
@@ -135,8 +133,6 @@ type
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
-
-    procedure SetData(StartTime, StopTime : Integer; Text : WideString);
   end;
 
   TUndoableSubTextTask = class(TUndoableTask)
@@ -6089,6 +6085,7 @@ begin
     Range := List[i];
     AddSubtitle(Range);
   end;
+  WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
 
@@ -6332,6 +6329,7 @@ constructor TUndoableDeleteTask.Create;
 begin
   inherited;
   FDeletedSubs := TObjectList.Create;
+  FDeletedSubs.OwnsObjects := True;
 end;
 
 destructor TUndoableDeleteTask.Destroy;
@@ -6356,6 +6354,7 @@ end;
 procedure TUndoableDeleteTask.UndoTask;
 begin
   MainForm.RestoreSubtitles(FDeletedSubs);
+  FDeletedSubs.Clear;
 end;
 
 //------------------------------------------------------------------------------
@@ -6403,12 +6402,12 @@ begin
   MainForm.SetSubtitleTime(FIndex, FStartTime, FStopTime);
 end;
 
-procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SpliTime : Integer);
+procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime : Integer);
 begin
   FIndex := Index;
   FStartTime := StartTime;
   FStopTime := StopTime;
-  FSplitTime := SpliTime;
+  FSplitTime := SplitTime;
 end;
 
 //------------------------------------------------------------------------------
@@ -6417,6 +6416,7 @@ constructor TUndoableMergeTask.Create;
 begin
   inherited;
   FDeletedSubs := TObjectList.Create;
+  FDeletedSubs.OwnsObjects := True;
 end;
 
 destructor TUndoableMergeTask.Destroy;
@@ -6451,16 +6451,11 @@ end;
 
 procedure TUndoableMergeTask.UndoTask;
 begin
+  // Delete the merged subtitle
   MainForm.DeleteSubtitle(FIndexes[0]);
+  // Restaure deleted subtitles
   MainForm.RestoreSubtitles(FDeletedSubs);
-end;
-
-procedure TUndoableMergeTask.SetData(StartTime, StopTime : Integer;
-  Text : WideString);
-begin
-  FStartTime := StartTime;
-  FStopTime := StopTime;
-  FText := Text;
+  FDeletedSubs.Clear;
 end;
 
 // -----------------------------------------------------------------------------
@@ -6486,7 +6481,9 @@ end;
 destructor TUndoableSubTextTask.Destroy;
 begin
   if Assigned(FUndoableTextTask) then
+  begin
     FUndoableTextTask.Free;
+  end
 end;
 
 procedure TUndoableSubTextTask.DoTask;
