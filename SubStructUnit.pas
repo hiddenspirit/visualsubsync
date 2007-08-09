@@ -26,6 +26,9 @@ interface
 uses WAVDisplayerUnit, VirtualTrees, GlobalUnit;
 
 type
+  TDelayShiftType = (dstBothTime, dstStartTimeOnly, dstStopTimeOnly);
+  TDelayApplyToType = (dattAll, dattSelected, dattFromCursor);
+  
   TSubtitleRange = class(TRange)
     Text : WideString;
 
