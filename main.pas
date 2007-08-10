@@ -639,7 +639,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Configurable backup directory, backup n last version
 
 // TODO : Test project properties dialog
-// TODO : When opening a project fail show the project properties page for modification
+// TODO : When opening a project fail, show the project properties page for modification
 // TODO : Add some checking in project unit ok button
 
 // TODO : Web : number of suggestion for current sub, and current suggestions
@@ -696,7 +696,7 @@ begin
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
-  
+
 
   // Enable/disable experimental karaoke stuff
   pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
@@ -2549,12 +2549,12 @@ var Node : PVirtualNode;
 begin
   UndoableDeleteTask := TUndoableDeleteTask.Create;
   UndoableDeleteTask.SetCapacity(vtvSubsList.SelectedCount);
-    Node := vtvSubsList.GetFirstSelected;
-    while Assigned(Node) do
-    begin
+  Node := vtvSubsList.GetFirstSelected;
+  while Assigned(Node) do
+  begin
     UndoableDeleteTask.AddSubtitleIndex(Node.Index);
-      Node := vtvSubsList.GetNextSelected(Node);
-    end;
+    Node := vtvSubsList.GetNextSelected(Node);
+  end;
   UndoableDeleteTask.DoTask;
   PushUndoableTask(UndoableDeleteTask);
 end;
@@ -3198,38 +3198,26 @@ end;
 
 procedure TMainForm.ActionInsertTextFileExecute(Sender: TObject);
 var
-  FS : TFileStream;
-  BOM : array[0..3] of BYTE;
-  Line: string;
+  Line: WideString;
   LastRange, NewRange : TRange;
   StartTime : Integer;
   Node: PVirtualNode;
   NodeData: PTreeData;
-  IsUTF8 : Boolean;
   HaveNewSub : Boolean;
+  Source : TTntStringList;
+  I, LineIndex, SubCountBefore : Integer;
+  UndoableMultiAddTask : TUndoableMultiAddTask;
 begin
   g_WebRWSynchro.BeginWrite;
   try
+    Source := TTntStringList.Create;
     HaveNewSub := False;
     TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
     if TntOpenDialog1.Execute then
     begin
-      FS := TFileStream.Create(TntOpenDialog1.FileName,fmOpenRead);
-      ZeroMemory(@BOM[0],Length(BOM));
-      FS.Read(BOM,4);
-      if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
-      begin
-        // UTF8
-        IsUTF8 := True;
-        FS.Seek(3,soFromBeginning);
-      end
-      else
-      begin
-        IsUTF8 := False;
-        FS.Seek(0,soFromBeginning);
-      end;
+      Source.LoadFromFile(TntOpenDialog1.FileName);
 
-      // Get start time
+      // Get start time for the first new subtitle
       if (WAVDisplayer.RangeList.Count > 0) then
       begin
         LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
@@ -3238,28 +3226,40 @@ begin
       else
         StartTime := 99 * 60 * 60 * 1000;
 
-      while (not ReadLineStream(FS,Line)) do
+      SubCountBefore := WAVDisplayer.RangeList.Count;
+      for LineIndex := 0 to Source.Count-1 do
       begin
-        if IsUTF8 then
-          Line := UTF8Decode(Text);
-        NewRange := SubRangeFactory.CreateRangeSS(StartTime,StartTime+1000);
-        Inc(StartTime,2000);
+        Line := Source[LineIndex];
+
+        NewRange := SubRangeFactory.CreateRangeSS(StartTime, StartTime+1000);
         TSubtitleRange(NewRange).Text := Line;
         WAVDisplayer.RangeList.AddAtEnd(NewRange);
-
         Node := vtvSubsList.AddChild(nil);
         NodeData := vtvSubsList.GetNodeData(Node);
         NodeData.Range := TSubtitleRange(NewRange);
         TSubtitleRange(NewRange).Node := Node;
+
+        Inc(StartTime, 2000);
         HaveNewSub := True;
       end;
-      FS.Free;
     end;
     if HaveNewSub then
+    begin
       CurrentProject.IsDirty := True;
+      UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+      UndoableMultiAddTask.SetCapacity(Source.Count);
+      for I := SubCountBefore to (SubCountBefore + Source.Count - 1) do
+      begin
+        UndoableMultiAddTask.AddSubtitleIndex(I);
+      end;
+      // this is a lazy task so don't "do" the task now
+      PushUndoableTask(UndoableMultiAddTask);
+    end;
   finally
     g_WebRWSynchro.EndWrite;
+    Source.Free;
   end;
+  WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
 
@@ -4955,14 +4955,17 @@ end;
 type
   TAccessCanvas = class(TCanvas);
 
-procedure WideCanvasDrawText(Canvas: TCanvas; Rect: TRect; const Text: WideString);
+procedure WideCanvasDrawText(Canvas: TCanvas; Rect: TRect;
+  const Text: WideString; AllowLineBreak : Boolean = False);
 var
   Options: Cardinal;
 begin
   with TAccessCanvas(Canvas) do begin
     Changing;
     RequiredState([csHandleValid, csFontValid, csBrushValid]);
-    Options := DT_END_ELLIPSIS or DT_NOPREFIX or DT_WORDBREAK;
+    Options := DT_END_ELLIPSIS or DT_NOPREFIX or DT_EDITCONTROL;
+    if AllowLineBreak then
+      Options := Options or DT_WORDBREAK;
     Windows.DrawTextW(Handle, PWideChar(Text), Length(Text), Rect, Options);
     Changed;
   end;
@@ -6191,8 +6194,9 @@ TODO UNDO:
 karaoke create, clear, change timestamps (with mouse or shortcut)
 TODO : display karaoke sylables in wavdisplay
 TODO : undo text pipe text modification (modifiy, clear, load)
-TODO : undo for insert text file
 TODO : undo for style?
+
+split at curso need to respect minimum time between sub 
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
@@ -6204,6 +6208,9 @@ var
 begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
 
+
+  
+  vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
 }
 
 end.

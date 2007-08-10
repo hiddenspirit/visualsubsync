@@ -76,6 +76,18 @@ type
     procedure UndoTask; override;
   end;
 
+  TUndoableMultiAddTask = class(TUndoableTaskIndexed)
+  private
+    FDeletedSubs : TObjectList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+  end;
+
   TUndoableSetTimeTask = class(TUndoableTask)
   private
     FNewStartTime, FNewStopTime : Integer;
@@ -272,6 +284,41 @@ end;
 procedure TUndoableAddTask.SetAutoSelect(AutoSelect : Boolean);
 begin
   FAutoSelect := AutoSelect;
+end;
+
+//------------------------------------------------------------------------------
+
+constructor TUndoableMultiAddTask.Create;
+begin
+  inherited;
+  FDeletedSubs := TObjectList.Create;
+  FDeletedSubs.OwnsObjects := True;
+end;
+
+destructor TUndoableMultiAddTask.Destroy;
+begin
+  FDeletedSubs.Free;
+  inherited;
+end;
+
+procedure TUndoableMultiAddTask.DoTask;
+begin
+  // Lazy task
+  MainForm.RestoreSubtitles(FDeletedSubs);
+  FDeletedSubs.Clear;
+end;
+
+function TUndoableMultiAddTask.GetName : WideString;
+begin
+  Result := 'MultiAdd';
+end;
+
+procedure TUndoableMultiAddTask.UndoTask;
+begin
+  // First clone subtitles
+  MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
+  // Now delete them
+  MainForm.DeleteSubtitles(FIndexes);
 end;
 
 //------------------------------------------------------------------------------
