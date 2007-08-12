@@ -140,7 +140,7 @@ type
     FCursorMs : Integer;
     FPlayCursorMs : Integer;
     FOldPlayCursorMs : Integer;
-    FAutoScrolling : Boolean;    
+    FAutoScrolling : Boolean;
     FPositionMs : Integer;
     FPageSizeMs : Integer;
     FLengthMs : Integer;
@@ -199,6 +199,10 @@ type
     FMaxSelTime : Integer;
 
     FRangeOldStart, FRangeOldStop : Integer; // Range time before dynamic modificaion
+
+    FSceneChangeList : array of Integer;
+    FSceneChangeStartOffset, FSceneChangeStopOffset : Integer;
+    FSceneChangeEnabled : Boolean;
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
@@ -279,6 +283,7 @@ type
     procedure SelecteKaraoke(Range : TRange; Index : Integer);
 
     procedure Scroll(ViewPercent : Integer);
+    procedure SetSceneChangeList(SceneChangeList : array of Integer);
 
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
@@ -320,6 +325,9 @@ type
     property WheelTimeScroll : TMouseWheelModifier read FWheelTimeScroll write FWheelTimeScroll default mwmNone;
     property WheelVZoom : TMouseWheelModifier read FWheelVZoom write FWheelVZoom default mwmShift;
     property WheelHZoom : TMouseWheelModifier read FWheelHZoom write FWheelHZoom default mwmCtrl;
+    property SceneChangeEnabled : Boolean read FSceneChangeEnabled write FSceneChangeEnabled;
+    property SceneChangeStartOffset : Integer read FSceneChangeStartOffset write FSceneChangeStartOffset;
+    property SceneChangeStopOffset : Integer read FSceneChangeStopOffset write FSceneChangeStopOffset;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -330,7 +338,7 @@ procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
 
 implementation
 
-uses SysUtils, Types, MiscToolsUnit, TntClasses, TntSysUtils;
+uses SysUtils, Types, MiscToolsUnit, TntClasses, TntSysUtils, VirtualTrees;
 
 const
   WAV_COLOR : TColor = $00A7F24A;
@@ -782,8 +790,10 @@ var r : TRange;
     i : Integer;
 begin
   Result := -1;
-  i := FindInsertPos(PosMs,-1);
-  Constrain(i,0,FList.Count-1);
+  if FList.Count = 0 then
+    Exit;
+  i := FindInsertPos(PosMs, -1);
+  Constrain(i, 0, FList.Count-1);
   while (i >= 0) do
   begin
     r := FList[i];
@@ -853,6 +863,11 @@ end;
 
 function TRangeList.FindFirstRangeAt(const PosMs : Integer; const ExpandBy : Integer) : TRange;
 begin
+  if FList.Count = 0 then
+  begin
+    Result := nil;
+    Exit;
+  end;
   FSearchStartAt := PosMs;
   FSearchExpandBy := ExpandBy;
   FSearchIdx := FindInsertPos(FSearchStartAt - FSearchExpandBy, -1);
@@ -912,14 +927,16 @@ begin
   FOffscreenWAV := TBitmap.Create;
   FOffscreenWAV.PixelFormat := pf32bit; // for faster drawing
 
-  // TODO : use 8 bits and modify palettes ?
-
   FRangeList := TRangeList.Create;
   FSelection := TRange.Create;
   FSelection.StartTime := 0;
   FSelection.StopTime := 0;
   FNeedToSortSelectedSub := False;
 
+  FSceneChangeStartOffset := 129;
+  FSceneChangeStopOffset := 129;
+  FSceneChangeEnabled := True;
+  
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
   FUpdateCursorTimer.Interval := 40;
@@ -1097,7 +1114,7 @@ var x : Integer;
     x1, x2, y1, y2 : Integer;
     i, j : Integer;
     r : TRange;
-    SelRect, CustomDrawRect : TRect;
+    SelRect, CustomDrawRect, SCRect : TRect;
     CanvasHeight : Integer;
 begin
   CanvasHeight := GetWavCanvasHeight;
@@ -1240,9 +1257,7 @@ begin
         SelRect.Bottom := SelRect.Bottom - FScrollBar.Height;
         if FDisplayRuler then
           SelRect.Bottom := SelRect.Bottom - FDisplayRulerHeight;
-        ACanvas.CopyMode := cmDstInvert;
-        ACanvas.CopyRect(SelRect, ACanvas, SelRect);
-        ACanvas.CopyMode := cmSrcCopy;
+        InvertRect(ACanvas.Handle, SelRect);
       end;
     end;
   end;
@@ -1267,6 +1282,42 @@ begin
       x := TimeToPixel(FPlayCursorMs - FPositionMs);
       ACanvas.MoveTo(x, 0);
       ACanvas.LineTo(x, CanvasHeight);
+    end;
+  end;
+
+  // Scene change
+  if FSceneChangeEnabled then
+  begin
+    ACanvas.Pen.Color := $0099FF;
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Pen.Mode := pmCopy;
+    for i := Low(FSceneChangeList) to High(FSceneChangeList) do
+    begin
+      if (FSceneChangeList[i] >= FPositionMs - FSceneChangeStopOffset) and
+         (FSceneChangeList[i] <= FPositionMs + FPageSizeMs + FSceneChangeStartOffset) then
+      begin
+        if (FSceneChangeStopOffset + FSceneChangeStartOffset) > 0 then
+        begin
+          x1 := TimeToPixel(FSceneChangeList[i] - FPositionMs - FSceneChangeStartOffset);
+          x2 := TimeToPixel(FSceneChangeList[i] - FPositionMs + FSceneChangeStopOffset);
+
+          Constrain(x1, 0, Width);
+          Constrain(x2, 0, Width);
+          SCRect := ClientRect;
+          SCRect.Left := x1;
+          SCRect.Right := x2;
+          SCRect.Bottom := SCRect.Bottom - FScrollBar.Height;
+          if FDisplayRuler then
+            SCRect.Bottom := SCRect.Bottom - FDisplayRulerHeight;
+
+          VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, SCRect,
+            Point(0,0), bmConstantAlphaAndColor, 100, clWhite);
+        end;
+
+        x := TimeToPixel(FSceneChangeList[i] - FPositionMs);
+        ACanvas.MoveTo(x, 0);
+        ACanvas.LineTo(x, CanvasHeight);
+      end;
     end;
   end;
 end;
@@ -1582,8 +1633,8 @@ begin
           end;
         end;
       end;
-      Constrain(x1,0,Width);
-      Constrain(x2,0,Width);
+      Constrain(x1, 0, Width);
+      Constrain(x2, 0, Width);
       // allow the cursor to go a bit further than allowed, we will do the real
       // clipping based on FMinSelTime and FMaxSelTime.
       ClipSubRect.Left := x1-2;
@@ -1842,11 +1893,11 @@ begin
           // Make sur to clip selection
           if(FMinSelTime <> -1) then
           begin
-            Constrain(NewCursorPos,FMinSelTime,MaxInt);
+            Constrain(NewCursorPos, FMinSelTime, MaxInt);
           end;
           if(FMaxSelTime <> -1) then
           begin
-            Constrain(NewCursorPos,0,FMaxSelTime);
+            Constrain(NewCursorPos, 0, FMaxSelTime);
           end;
 
           if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
@@ -1911,7 +1962,7 @@ begin
       begin
         if (ssLeft in Shift) or (ssRight in Shift) then
         begin
-          Constrain(X,0,Width);
+          Constrain(X, 0, Width);
           NewCursorPos := PixelToTime(X) + FPositionMs;
           if (FCursorMs <> NewCursorPos) then
           begin
@@ -2369,7 +2420,7 @@ end;
 
 procedure TWAVDisplayer.SetCursorPos(NewPos : Integer);
 begin
-  Constrain(NewPos,0,FLengthMs);
+  Constrain(NewPos, 0, FLengthMs);
   if FCursorMs <> NewPos then
   begin
     FCursorMs := NewPos;
@@ -2436,7 +2487,7 @@ end;
 
 procedure TWAVDisplayer.SetPositionMs(NewPosition : Integer);
 begin
-  Constrain(NewPosition,0,FLengthMs - FPageSizeMs);
+  Constrain(NewPosition, 0, FLengthMs - FPageSizeMs);
   if NewPosition <> FPositionMs then
   begin
     FPositionMs := NewPosition;
@@ -2451,7 +2502,7 @@ end;
 
 procedure TWAVDisplayer.SetPageSizeMs(NewPageSize : Integer);
 begin
-  Constrain(NewPageSize,0,FLengthMs);
+  Constrain(NewPageSize, 0, FLengthMs);
   if FPageSizeMs <> NewPageSize then
   begin
     FPageSizeMs := NewPageSize;
@@ -2473,7 +2524,7 @@ begin
     Exit;
 
   NewPageSize := Range.StopTime - Range.StartTime;
-  Constrain(NewPageSize,0,FLengthMs);
+  Constrain(NewPageSize, 0, FLengthMs);
   NewPosition := Range.StartTime;
   Constrain(NewPosition, 0, FLengthMs - NewPageSize);
   FScrollBar.SetPositionAndPageSize(NewPosition,NewPageSize);
@@ -2784,14 +2835,14 @@ end;
 
 procedure TWAVDisplayer.SetPlayCursorPos(NewPos : Integer);
 begin
-  Constrain(NewPos,0,FLengthMs);
+  Constrain(NewPos, 0, FLengthMs);
   if FPlayCursorMs <> NewPos then
   begin
     FOldPlayCursorMs := FPlayCursorMs;
     FPlayCursorMs := NewPos;
     if Assigned(FOnPlayCursorChange) then
       FOnPlayCursorChange(Self);
-    // TODO : maybe we could do a nice smooth scrolling :)
+    // TODO : maybe we could do a nice smooth scrolling
     if (FAutoScrolling = True) and
        (FMouseIsDown = False) and
        ((NewPos < FPositionMs) or (FPlayCursorMs > (FPositionMs + FPageSizeMs))) then
@@ -3099,6 +3150,16 @@ var ScrollOffsetMs : Integer;
 begin
   ScrollOffsetMs := Round(FPageSizeMs / 100.0 * ViewPercent);
   SetPositionMs(GetPositionMs + ScrollOffsetMs);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SetSceneChangeList(SceneChangeList : array of Integer);
+begin
+  SetLength(FSceneChangeList, System.Length(SceneChangeList));
+  if System.Length(SceneChangeList) > 0 then
+    CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
+      System.Length(SceneChangeList) * SizeOf(Integer));
 end;
 
 //------------------------------------------------------------------------------
