@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes, Graphics;
+uses Classes, Graphics, Types;
 
 type
   WideStringArray2 = array of WideString;
@@ -89,6 +89,8 @@ type
 
   function TColor2RGB(Input: TColor): Cardinal;
 
+  procedure ExtractKF(Filename : WideString; var KFArray : TIntegerDynArray);
+
 type
   TExplodeArray = array of String;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
@@ -98,7 +100,7 @@ type
 
 implementation
 
-uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows;
+uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
 
 // -----------------------------------------------------------------------------
 
@@ -949,6 +951,47 @@ begin
   B := (Input and $00FF0000) shr 16;
   A := (Input and $FF000000) shr 24;
   Result := RGB(R,G,B);
+end;
+
+procedure ExtractKF(Filename : WideString; var KFArray : TIntegerDynArray);
+var hr : HRESULT;
+    ppfile : IAVIFile;
+    pfi : TAVIFileInfo;
+    ppavi : IAVIStream;
+    FramePos : Integer;
+    FrameRate : Double;
+begin
+  AVIFileInit;
+  hr := AVIFileOpenW(ppfile, @Filename[1], OF_READ or OF_SHARE_DENY_NONE, nil);
+  if Succeeded(hr) then
+  begin
+    // Get the framerate
+    hr := AVIFileInfo(ppfile, pfi, SizeOf(TAVIFileInfo));
+    if Succeeded(hr) then
+      Framerate := (pfi.dwRate / pfi.dwScale)
+    else
+      Framerate := 25.0;
+
+    // Get the keyframes
+    hr := AVIFileGetStream(ppfile, ppavi, streamtypeVIDEO, 0);
+    if Succeeded(hr) then
+    begin
+      FramePos := 0;
+      while True do
+      begin
+        FramePos := AVIStreamFindSample(ppavi, framePos, FIND_KEY or FIND_NEXT);
+        if (FramePos = -1) then
+          Break;
+        SetLength(KFArray, Length(KFArray) + 1);
+        KFArray[Length(KFArray) - 1] := Trunc(FramePos / Framerate * 1000);
+        Inc(FramePos);
+      end;
+      //AVIStreamRelease(ppavi);
+    end;
+    //no need to release interfaces with delphi?
+    //AVIFileRelease(ppfile);
+  end;
+  AVIFileExit;
 end;
 
 // -----------------------------------------------------------------------------
