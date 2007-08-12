@@ -14,7 +14,7 @@ VSSPlugin = {
   // Each rule is defined by those field :
   //   - re : a regular expression
   //   - msg : a message to display when the text match
-  //   - replaceby (optional) : a replace expression use to fix the error
+  //   - replaceby (optional) : a replace expression used to fix the error
   //   - exception (optional) : if set to true the processing will stop on
   //     this rule and no replacement will be made (msg can be used for debugging)
 	Rules : new Array(
