@@ -91,7 +91,7 @@ type
     procedure WMCut(var Msg: TMessage); message WM_CUT;
     procedure WMPaste(var Msg: TMessage); message WM_PASTE;
     procedure WMUndo(var Msg: TMessage); message WM_UNDO;
-
+    
   protected
     procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure Change; override;
@@ -100,6 +100,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     procedure DisableWindowsUndo;
+    procedure SaveSelectionInfo;
 
   published
     property UndoDisabled: Boolean read FUndoDisabled write FUndoDisabled;
@@ -427,6 +428,13 @@ begin
     end;
     RichEditOle := nil;
   end;
+end;
+
+procedure TTntRichEditCustomUndo.SaveSelectionInfo;
+begin
+  // Save selection position
+  FSelStartBeforeChange := SelStart;
+  FSelLengthBeforeChange := SelLength;
 end;
 
 // -----------------------------------------------------------------------------
