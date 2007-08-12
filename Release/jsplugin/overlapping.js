@@ -1,4 +1,4 @@
-// Overlapping
+// Overlapping & minimum blank
 // (christophe.paris <at> free.fr)
 
 VSSPlugin = {
@@ -34,8 +34,11 @@ VSSPlugin = {
     if (NextSub == null) {
       return '';
     }
+    
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
-    if (OverlapInMs > 0 && OverlapInMs > this.ParamMinBlank.Value) {
+    	
+    if (((OverlapInMs > 0) && (OverlapInMs > this.ParamMinBlank.Value)) ||
+        (-OverlapInMs > this.ParamFixableOverlap.Value)) {
       return '';
     }
     // Fix the overlap by dividing it by 2
@@ -43,5 +46,10 @@ VSSPlugin = {
     var HalfOffset = (this.ParamMinBlank.Value / 2);
     CurrentSub.Stop = MiddlePoint - HalfOffset;
     NextSub.Start = CurrentSub.Stop + this.ParamMinBlank.Value;
+    
+    // Special case when OverlapInMs == 0
+    if (NextSub.Start == CurrentSub.Stop) {
+			NextSub.Start += 1;
+    }
   }
 }
