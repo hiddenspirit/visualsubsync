@@ -144,6 +144,7 @@ object MainForm: TMainForm
       Font.Height = -11
       Font.Name = 'MS Sans Serif'
       Font.Style = []
+      HideSelection = False
       ParentFont = False
       PopupMenu = MemoSubPopupMenu
       ScrollBars = ssVertical
@@ -1210,6 +1211,15 @@ object MainForm: TMainForm
         TabOrder = 4
         OnSelect = cbStylesSelect
       end
+      object Button1: TButton
+        Left = 336
+        Top = 24
+        Width = 27
+        Height = 25
+        Caption = 'Button1'
+        TabOrder = 6
+        OnClick = Button1Click
+      end
     end
   end
   object TntStatusBar1: TTntStatusBar
@@ -2043,6 +2053,11 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'WAVDisplay scroll left'
       OnExecute = ActionWAVDisplayScrollLeftExecute
+    end
+    object ActionShowHideSceneChange: TTntAction
+      Tag = 1
+      Caption = 'Show/Hide scene change'
+      OnExecute = ActionShowHideSceneChangeExecute
     end
   end
   object ImageList1: TImageList
