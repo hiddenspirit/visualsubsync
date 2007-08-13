@@ -78,6 +78,7 @@ type
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
+    ShowSceneChange : Boolean;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -189,6 +190,7 @@ type
     EditBlankBetweenSub: TTntEdit;
     UpDownBlankBetweenSub: TTntUpDown;
     bttOpenBackupTempDir: TButton;
+    chkSceneChange: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -423,6 +425,7 @@ begin
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
+  ShowSceneChange := False;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -540,6 +543,7 @@ begin
   IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
+  IniFile.WriteBool('Misc', 'ShowSceneChange', ShowSceneChange);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -610,6 +614,7 @@ begin
   SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
+  ShowSceneChange := IniFile.ReadBool('Misc', 'ShowSceneChange', ShowSceneChange);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -735,6 +740,7 @@ begin
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
+  chkSceneChange.Checked := Config.ShowSceneChange;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -816,7 +822,8 @@ begin
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
-
+  Config.ShowSceneChange := chkSceneChange.Checked;
+  
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;
