@@ -313,6 +313,8 @@ type
     N17: TTntMenuItem;
     ActionWAVDisplayScrollRight: TTntAction;
     ActionWAVDisplayScrollLeft: TTntAction;
+    Button1: TButton;
+    ActionShowHideSceneChange: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -463,6 +465,8 @@ type
     procedure PanelVideoDblClick(Sender: TObject);
     procedure ActionWAVDisplayScrollRightExecute(Sender: TObject);
     procedure ActionWAVDisplayScrollLeftExecute(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure ActionShowHideSceneChangeExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -527,6 +531,7 @@ type
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
 
     function ColorizeOrDeleteTextPipe : TUndoableTask;
+    procedure ApplyMiscSettings;
     procedure ApplyMouseSettings;
     procedure ApplyAutoBackupSettings;
     procedure UpdateVideoRendererWindow;
@@ -582,6 +587,7 @@ type
     procedure SaveSettings;
     procedure LoadSettings;
     procedure ShowPreferences(TabSheet : TTntTabSheet);
+    procedure ExtractVideoSceneChange;
     procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
@@ -660,10 +666,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 
 {
 lovechange:
-XXX> 1er: Pour le "log text pipe", afin de charger un transcript, il prend
-XXX> pas par défaut le srt, on peut le faire en affichant tout les
-XXX> fichiers, tu pourrait peut-etre le rajouter comme extension par
-XXX> défauts.
 -
 > 2eme: Ce serait sympa que tu puisse rajouter des boutons dans
 > l'interface principale pour les balise "italique", "placement de
@@ -692,11 +694,11 @@ begin
   CustomMemo.Top := MemoSubtitleText.Top;
   CustomMemo.Left := MemoSubtitleText.Left;
   CustomMemo.Align := MemoSubtitleText.Align;
+  CustomMemo.HideSelection := MemoSubtitleText.HideSelection;
   CustomMemo.DisableWindowsUndo;
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
-
 
   // Enable/disable experimental karaoke stuff
   pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
@@ -948,6 +950,7 @@ begin
   SetShortcut(False);
   ApplyMouseSettings;
   ApplyFontSettings;
+  ApplyMiscSettings;
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
@@ -965,6 +968,17 @@ begin
   tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
 
   IniFile.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ApplyMiscSettings;
+begin
+  if WAVDisplayer.SceneChangeEnabled <> ConfigObject.ShowSceneChange then
+  begin
+    WAVDisplayer.SceneChangeEnabled := ConfigObject.ShowSceneChange;
+    WAVDisplayer.UpdateView([uvfRange]);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1860,6 +1874,21 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ExtractVideoSceneChange;
+var
+  KFArray : TIntegerDynArray;
+begin
+  if WideLowerCase(WideExtractFileExt(CurrentProject.VideoSource)) = '.avi' then
+  begin
+    ShowStatusBarMessage('Extracting keyframes...');
+    ExtractKF(CurrentProject.VideoSource, KFArray);
+    WAVDisplayer.SetSceneChangeList(KFArray);
+    WAVDisplayer.UpdateView([uvfRange]);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.LoadProject(Filename : WideString);
 var
   CM : ICursorManager;
@@ -1961,6 +1990,7 @@ begin
         ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
       VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+      ExtractVideoSceneChange;
     end;
 
     if ShowingVideo then
@@ -2339,6 +2369,7 @@ begin
         UpdateVideoRendererWindow;
         ProjectHasChanged := True;
         VideoHasChanged := True;
+        ExtractVideoSceneChange;
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -3036,6 +3067,7 @@ begin
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
     ApplyFontSettings;
+    ApplyMiscSettings;
   end;
 end;
 
@@ -3114,6 +3146,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionCloseExecute(Sender: TObject);
+var EmptyArray : TIntegerDynArray;
 begin
   if CheckSubtitlesAreSaved then
   begin
@@ -3132,6 +3165,7 @@ begin
       WAVDisplayer.Close;
       WAVDisplayer.Repaint;
       WAVDisplayer.VerticalScaling := 100;
+      WAVDisplayer.SetSceneChangeList(EmptyArray);
 
       CurrentProject.Filename := '';
       CurrentProject.VideoSource := '';
@@ -6189,6 +6223,15 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ActionShowHideSceneChangeExecute(Sender: TObject);
+begin
+  WAVDisplayer.SceneChangeEnabled := not WAVDisplayer.SceneChangeEnabled;
+  WAVDisplayer.UpdateView([uvfRange]);
+  ConfigObject.ShowSceneChange := WAVDisplayer.SceneChangeEnabled;   
+end;
+
+//------------------------------------------------------------------------------
+
 {
 TODO UNDO:
 karaoke create, clear, change timestamps (with mouse or shortcut)
@@ -6209,9 +6252,35 @@ begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
 
 
-  
+  jsplugin get next/previous scene change
+
+
+  highlight subtitles with some criteria
+
+
   vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
 }
+
+procedure TMainForm.Button1Click(Sender: TObject);
+var SelStart, SelLength : Integer;
+    NewText : WideString;
+begin
+  // italic : <i></i> or {\i1}{\i0}
+  // bold : <b></b> or {\b1}{\b0}
+  // underline : <u></u> or {\u1}{\u0}
+  // {\a1} ...
+  // {\pos  ...
+
+  SelStart := MemoSubtitleText.SelStart;
+  SelLength := MemoSubtitleText.SelLength;
+  NewText := Copy(MemoSubtitleText.Text, 1, SelStart) +
+    '{\i1}' + Copy(MemoSubtitleText.Text, SelStart + 1, SelLength) +
+    '{\i0}' + Copy(MemoSubtitleText.Text, SelStart + SelLength + 1, MaxInt);
+  TTntRichEditCustomUndo(MemoSubtitleText).SaveSelectionInfo;
+  MemoSubtitleText.Text := NewText;
+  MemoSubtitleText.SelStart := SelStart;
+  MemoSubtitleText.SelLength := SelLength + 10;
+end;
 
 end.
 //------------------------------------------------------------------------------
