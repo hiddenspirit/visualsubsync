@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsTimingMode
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -111,6 +111,14 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
+        end
+        object chkSceneChange: TCheckBox
+          Left = 16
+          Top = 56
+          Width = 385
+          Height = 17
+          Caption = 'Show scene change'
+          TabOrder = 2
         end
       end
       object GroupBox4: TGroupBox
@@ -294,7 +302,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 154
+            Width = 150
             WideText = 'Value'
           end
           item
