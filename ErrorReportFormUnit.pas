@@ -60,6 +60,9 @@ type
     pmiFixAllYYY: TTntMenuItem;
     miClear: TTntMenuItem;
     N3: TTntMenuItem;
+    pmiSelectAllXXX: TTntMenuItem;
+    N4: TTntMenuItem;
+    pmiSelectAllYYY: TTntMenuItem;
     procedure pmiClearAllClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure vtvErrorListDrawNode(Sender: TBaseVirtualTree;
@@ -75,6 +78,8 @@ type
     procedure vtvErrorListFocusChanged(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex);
     procedure miClearClick(Sender: TObject);
+    procedure pmiSelectAllXXXClick(Sender: TObject);
+    procedure pmiSelectAllYYYClick(Sender: TObject);
   private
     { Private declarations }
     BoldFont : HFONT;
@@ -364,6 +369,9 @@ begin
     NodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
     pmiFixAllYYY.Enabled := (NodeData.ContextMsg <> '');
   end;
+
+  pmiSelectAllXXX.Enabled := (vtvErrorList.FocusedNode <> nil);
+  pmiSelectAllYYY.Enabled := (vtvErrorList.FocusedNode <> nil);
 end;
 
 //------------------------------------------------------------------------------
@@ -495,6 +503,51 @@ begin
   begin
     vtvErrorList.FocusedNode := Cursor;
     vtvErrorList.Selected[Cursor] := True;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiSelectAllXXXClick(Sender: TObject);
+var Node : PVirtualNode;
+    FocusedNodeData, NodeData : PErrorTreeData;
+begin
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    FocusedNodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    Node := vtvErrorList.GetFirst;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvErrorList.GetNodeData(Node);
+      if (NodeData.PluginName = FocusedNodeData.PluginName) then
+      begin
+        MainForm.vtvSubsList.Selected[NodeData.Range.Node] := True;
+      end;
+      Node := vtvErrorList.GetNext(Node);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiSelectAllYYYClick(Sender: TObject);
+var Node : PVirtualNode;
+    FocusedNodeData, NodeData : PErrorTreeData;
+begin
+  if Assigned(vtvErrorList.FocusedNode) then
+  begin
+    FocusedNodeData := vtvErrorList.GetNodeData(vtvErrorList.FocusedNode);
+    Node := vtvErrorList.GetFirst;
+    while Assigned(Node) do
+    begin
+      NodeData := vtvErrorList.GetNodeData(Node);
+      if (NodeData.PluginName = FocusedNodeData.PluginName) and
+         (NodeData.ContextMsg = FocusedNodeData.ContextMsg) then
+      begin
+        MainForm.vtvSubsList.Selected[NodeData.Range.Node] := True;
+      end;
+      Node := vtvErrorList.GetNext(Node);
+    end;
   end;
 end;
 

@@ -73,6 +73,17 @@ object ErrorReportForm: TErrorReportForm
     object N3: TTntMenuItem
       Caption = '-'
     end
+    object pmiSelectAllXXX: TTntMenuItem
+      Caption = 'Select all errors of same type (color)'
+      OnClick = pmiSelectAllXXXClick
+    end
+    object pmiSelectAllYYY: TTntMenuItem
+      Caption = 'Select all errors with same error msg'
+      OnClick = pmiSelectAllYYYClick
+    end
+    object N4: TTntMenuItem
+      Caption = '-'
+    end
     object miClear: TTntMenuItem
       Caption = 'Clear'
       OnClick = miClearClick
