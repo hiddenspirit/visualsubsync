@@ -175,24 +175,6 @@ type
     function GetPluginByFilename(Filename : WideString) : TJavaScriptPlugin;
   end;
 
-  TCachedJavaScriptPluginEnumerator = class(TAbstractJavaScriptPluginEnumerator)
-  private
-    FPluginPath : WideString;
-    FJSPluginList : TList;
-    FPluginIdx : Integer;
-
-    procedure ClearPluginList;
-  public
-    constructor Create(PluginPath : WideString);
-    destructor Destroy; override;
-    procedure Reset; override;
-    procedure Update;
-
-    function GetNext(var JSP : TJavaScriptPlugin) : Boolean; override;
-    function GetPluginByName(Name : WideString) : TJavaScriptPlugin;
-    function GetPluginByFilename(Filename : WideString) : TJavaScriptPlugin;
-  end;
-
   function GetParamValueAsWideString(pParam : PJSPluginParam) : WideString;
   procedure SetParamValueAsWideString(pParam : PJSPluginParam; Value : WideString);
   function JSColorToTColor(RGBColor : Integer) : TColor;
@@ -745,121 +727,14 @@ begin
   end;
 end;
 
-//==============================================================================
-// NOT TESTED
-
-constructor TCachedJavaScriptPluginEnumerator.Create(PluginPath : WideString);
-begin
-  inherited Create;
-  FJSPluginList := TList.Create;
-  FPluginIdx := 0;
-  FPluginPath := PluginPath;
-end;
-
-//------------------------------------------------------------------------------
-
-destructor TCachedJavaScriptPluginEnumerator.Destroy;
-begin
-  ClearPluginList;
-  FJSPluginList.Free;
-  inherited;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TCachedJavaScriptPluginEnumerator.ClearPluginList;
-var i : Integer;
-    JPlugin : TJavaScriptPlugin;
-begin
-  for i:=0 to FJSPluginList.Count-1 do
-  begin
-    JPlugin := FJSPluginList[i];
-    JPlugin.Free;
-  end;
-  FJSPluginList.Clear;
-  FPluginIdx := 0;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TCachedJavaScriptPluginEnumerator.Reset;
-begin
-  FPluginIdx := 0;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TCachedJavaScriptPluginEnumerator.Update;
-var JSPluginEnum : TJavaScriptPluginEnumerator;
-    JPlugin : TJavaScriptPlugin;
-begin
-  ClearPluginList;
-  JSPluginEnum := TJavaScriptPluginEnumerator.Create(FPluginPath);
-  JSPluginEnum.OnJSPluginError := FOnJSPluginError; // todo : test that
-  JSPluginEnum.Reset;
-  while JSPluginEnum.GetNext(JPlugin) do
-  begin
-    FJSPluginList.Add(JPlugin);
-  end;
-  JSPluginEnum.Free;
-end;
-
-//------------------------------------------------------------------------------
-
-function TCachedJavaScriptPluginEnumerator.GetNext(var JSP : TJavaScriptPlugin) : Boolean;
-begin
-  Result := False;
-  if (FPluginIdx >= 0) and (FPluginIdx < FJSPluginList.Count) then
-  begin
-    JSP := FJSPluginList[FPluginIdx];
-    Inc(FPluginIdx);
-    Result := True;
-  end
-end;
-
-//------------------------------------------------------------------------------
-
-function TCachedJavaScriptPluginEnumerator.GetPluginByName(Name : WideString) : TJavaScriptPlugin;
-var i : Integer;
-    JPlugin : TJavaScriptPlugin;
-begin
-  Result := nil;
-  for i:=0 to FJSPluginList.Count-1 do
-  begin
-    JPlugin := FJSPluginList[i];
-    if (JPlugin.Name = Name) then
-    begin
-      Result := JPlugin;
-      Break;
-    end;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-function TCachedJavaScriptPluginEnumerator.GetPluginByFilename(Filename : WideString) : TJavaScriptPlugin;
-var i : Integer;
-    JPlugin : TJavaScriptPlugin;
-begin
-  Result := nil;
-  for i:=0 to FJSPluginList.Count-1 do
-  begin
-    JPlugin := FJSPluginList[i];
-    if (JPlugin.Filename = Filename) then
-    begin
-      Result := JPlugin;
-      Break;
-    end;
-  end;
-end;
-
 // =============================================================================
 
 constructor TSimpleJavascriptWrapper.Create;
 begin
   inherited Create;
 
-  FSetStatusBarTextJsFunc := FEngine.Global.AddMethod('SetStatusBarText', _JS_SetStatusBarText, 1);
+  FSetStatusBarTextJsFunc := FEngine.Global.AddMethod('SetStatusBarText',
+    _JS_SetStatusBarText, 1);
 
   FCurrentSub := TSubtitleRangeJSWrapper.Create;
   FPreviousSub := TSubtitleRangeJSWrapper.Create;
@@ -897,8 +772,8 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TSimpleJavascriptWrapper.NotifySubtitleModification(CurrentSub, PreviousSub,
-  NextSub : TSubtitleRange) : WideString;
+function TSimpleJavascriptWrapper.NotifySubtitleModification(CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange) : WideString;
 begin
   if Assigned(FNotifySubtitleModificationFunc) then
   begin
@@ -909,8 +784,8 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TSimpleJavascriptWrapper.NotifySelectionModification(CurrentSub, PreviousSub,
-  NextSub : TSubtitleRange) : WideString;
+function TSimpleJavascriptWrapper.NotifySelectionModification(CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange) : WideString;
 begin
   if Assigned(FNotifySelectionModificationFunc) then
   begin
@@ -944,7 +819,8 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TSimpleJavascriptWrapper.FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+procedure TSimpleJavascriptWrapper.FillParamArray(CurrentSub, PreviousSub,
+  NextSub : TSubtitleRange);
 var i : Integer;
 begin
   for i:=0 to Length(FParamArray)-1 do
