@@ -956,7 +956,7 @@ end;
 procedure ExtractKF(Filename : WideString; var KFArray : TIntegerDynArray);
 var hr : HRESULT;
     ppfile : IAVIFile;
-    pfi : TAVIFileInfo;
+    psi : TAVIStreamInfo;
     ppavi : IAVIStream;
     FramePos : Integer;
     FrameRate : Double;
@@ -965,17 +965,11 @@ begin
   hr := AVIFileOpenW(ppfile, @Filename[1], OF_READ or OF_SHARE_DENY_NONE, nil);
   if Succeeded(hr) then
   begin
-    // Get the framerate
-    hr := AVIFileInfo(ppfile, pfi, SizeOf(TAVIFileInfo));
-    if Succeeded(hr) then
-      Framerate := (pfi.dwRate / pfi.dwScale)
-    else
-      Framerate := 25.0;
-
-    // Get the keyframes
     hr := AVIFileGetStream(ppfile, ppavi, streamtypeVIDEO, 0);
     if Succeeded(hr) then
     begin
+      AVIStreamInfo(ppavi, psi, SizeOf(TAVIStreamInfo));
+      Framerate := (psi.dwRate / psi.dwScale);
       FramePos := 0;
       while True do
       begin
