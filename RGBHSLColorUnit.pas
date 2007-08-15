@@ -40,6 +40,7 @@ procedure HLSToRGB(const H, L, S: Single; out R, G, B: Single);
 procedure HSLToRGB(const H, S, L: Single; out R, G, B : Byte);
 
 function ChangeColorHue(Color: TColor; NewHue : Single) : TColor;
+function ChangeColorHueDeg(Color: TColor; NewHueDeg : Single) : TColor;
 function ChangeColorSaturation(Color: TColor; NewSaturation : Single) : TColor;
 function ChangeColorLuminance(Color: TColor; NewLuminance : Single) : TColor;
 
@@ -147,6 +148,13 @@ begin
   RGBToHSL(R, G, B, H, S, L);
   HSLToRGB(NewHue, S, L, R, G, B);
   Result := (A shl 24) or (B shl 16) or (G shl 8) or R;
+end;
+
+function ChangeColorHueDeg(Color: TColor; NewHueDeg : Single) : TColor;
+var NewHue : Single;
+begin
+  NewHue := NewHueDeg / 360.0;
+  Result := ChangeColorHue(Color, NewHue);
 end;
 
 function ChangeColorSaturation(Color: TColor; NewSaturation : Single) : TColor;

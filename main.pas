@@ -315,6 +315,7 @@ type
     ActionWAVDisplayScrollLeft: TTntAction;
     Button1: TButton;
     ActionShowHideSceneChange: TTntAction;
+    pmiReadSpeed: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -467,6 +468,10 @@ type
     procedure ActionWAVDisplayScrollLeftExecute(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure ActionShowHideSceneChangeExecute(Sender: TObject);
+    procedure vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
+      TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      CellRect: TRect);
+    procedure pmiReadSpeedClick(Sender: TObject);
    
   private
     { Private declarations }
@@ -625,6 +630,12 @@ const
   StartEndPlayingDuration: Integer = 500;
   EnableExperimentalKaraoke: Boolean = True;
   UTF8BOM : array[0..2] of BYTE = ($EF,$BB,$BF);
+  INDEX_COL_INDEX = 0;
+  START_COL_INDEX = 1;
+  STOP_COL_INDEX = 2;
+  STYLE_COL_INDEX = 3;
+  TEXT_COL_INDEX = 4;
+  RS_COL_INDEX = 5;
 
 var
   MainForm: TMainForm;
@@ -636,7 +647,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
-  TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit;
+  TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit;
 
 {$R *.dfm}
 
@@ -1005,19 +1016,22 @@ begin
       [toFullRowSelect, toMultiSelect {,toExtendedFocus}];
     TreeOptions.PaintOptions := TreeOptions.PaintOptions -
       [toShowTreeLines,toShowRoot] +
-      [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines];
+      [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection];
     Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
+
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
     Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
+
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 100;
     Column.MinWidth := 100;
     Column.Options := Column.Options - [coAllowClick,coDraggable];
+
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 100;
@@ -1036,11 +1050,17 @@ begin
     Column.Width := 500;
     Column.MinWidth := 100;
 
+    Column := Header.Columns.Add;
+    Column.Text := 'RS';
+    Column.Width := 40;
+    Column.MinWidth := 40;
+    Column.Options := Column.Options - [coAllowClick,coDraggable,coResizable,coVisible];
+
     //FocusedColumn := 2;
 
     OnGetText := vtvSubsListGetText;
   end;
-
+  vtvSubsList.Header.AutoSizeIndex := TEXT_COL_INDEX;
 end;
 
 //------------------------------------------------------------------------------
@@ -1403,7 +1423,7 @@ var Ext : WideString;
     EnableStyle : Boolean;
 begin
   EnableStyle := False;
-  StyleColumn := vtvSubsList.Header.Columns.Items[3];
+  StyleColumn := vtvSubsList.Header.Columns.Items[STYLE_COL_INDEX];
   g_WebRWSynchro.BeginWrite;
   try
     vtvSubsList.BeginUpdate;
@@ -1619,6 +1639,16 @@ end;
 
 //------------------------------------------------------------------------------
 
+function GetReadingSpeed(SubRange : TSubtitleRange) : Double;
+var StrippedText : WideString;
+    Len, durMs : Integer;
+begin
+    StrippedText := StripTags(SubRange.Text);
+    Len := Length(StrippedText);
+    durMs := SubRange.StopTime - SubRange.StartTime;
+    Result := Len * 1000 / (durMS - 500);
+end;
+
 procedure TMainForm.vtvSubsListGetText(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: WideString);
@@ -1629,11 +1659,12 @@ begin
 
   case Column of
     -1: CellText := ''; // -1 if columns are hidden
-    0: CellText := IntToStr(Node.Index+1);
-    1: CellText := TimeMsToString(NodeData.Range.StartTime);
-    2: CellText := TimeMsToString(NodeData.Range.StopTime);
-    3: CellText := NodeData.Range.Style;
-    4: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
+    INDEX_COL_INDEX: CellText := IntToStr(Node.Index+1);
+    START_COL_INDEX: CellText := TimeMsToString(NodeData.Range.StartTime);
+    STOP_COL_INDEX: CellText := TimeMsToString(NodeData.Range.StopTime);
+    STYLE_COL_INDEX: CellText := NodeData.Range.Style;
+    TEXT_COL_INDEX: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
+    RS_COL_INDEX: CellText := Format('%3.1f', [GetReadingSpeed(NodeData.Range)]);
   end;
 end;
 
@@ -5892,8 +5923,7 @@ begin
   DelayedRangeList.Free;  
 
   WAVDisplayer.UpdateView([uvfRange]);
-  vtvSubsList.InvalidateColumn(1);
-  vtvSubsList.InvalidateColumn(2);
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
@@ -6239,7 +6269,7 @@ TODO : display karaoke sylables in wavdisplay
 TODO : undo text pipe text modification (modifiy, clear, load)
 TODO : undo for style?
 
-split at curso need to respect minimum time between sub 
+split at curso need to respect minimum time between sub
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
@@ -6282,6 +6312,49 @@ begin
   MemoSubtitleText.SelLength := SelLength + 10;
 end;
 
+procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  CellRect: TRect);
+var NodeData : PTreeData;
+    rs : Double;
+    BaseColor, NewColor : TColor;
+begin
+  if Column = RS_COL_INDEX then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    rs := GetReadingSpeed(NodeData.Range);
+
+    // Pure green hue = 120° (red = 0°, blue = 240°)
+    BaseColor := $99FF99;
+
+    if (rs < 5) then NewColor := ChangeColorHueDeg(BaseColor, 240)       // "TOO SLOW!"
+    else if (rs < 10) then NewColor := ChangeColorHueDeg(BaseColor, 210) // "Slow, acceptable.";
+    else if (rs < 13) then NewColor := ChangeColorHueDeg(BaseColor, 180) // "A bit slow.";
+    else if (rs < 15) then NewColor := ChangeColorHueDeg(BaseColor, 150) // "Good."
+    else if (rs < 23) then NewColor := BaseColor                         // "Perfect.";
+    else if (rs < 27) then NewColor := ChangeColorHueDeg(BaseColor, 90)  // "Good.";
+    else if (rs < 31) then NewColor := ChangeColorHueDeg(BaseColor, 60)  // "A bit fast.";
+    else if (rs < 35) then NewColor := ChangeColorHueDeg(BaseColor, 30)  // "Fast, acceptable.";
+    else NewColor := ChangeColorHueDeg(BaseColor, 0);                    // "TOO FAST!";
+
+    TargetCanvas.Brush.Color := NewColor;
+    TargetCanvas.FillRect(CellRect);
+  end;
+end;
+
+procedure TMainForm.pmiReadSpeedClick(Sender: TObject);
+var RSColumn : TVirtualTreeColumn;
+begin
+  // Toggle column
+  RSColumn := vtvSubsList.Header.Columns.Items[RS_COL_INDEX];
+  if pmiReadSpeed.Checked then
+    RSColumn.Options := RSColumn.Options - [coVisible]
+  else
+    RSColumn.Options := RSColumn.Options + [coVisible];
+  pmiReadSpeed.Checked := not pmiReadSpeed.Checked;
+end;
+
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
