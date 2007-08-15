@@ -1121,6 +1121,42 @@ begin
   y1 := CanvasHeight div 10;
   y2 := (CanvasHeight * 9) div 10;
 
+  // Scene change
+  if FSceneChangeEnabled then
+  begin
+    ACanvas.Pen.Color := $36C9FF;
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Pen.Mode := pmCopy;
+    for i := Low(FSceneChangeList) to High(FSceneChangeList) do
+    begin
+      if (FSceneChangeList[i] >= FPositionMs - FSceneChangeStopOffset) and
+         (FSceneChangeList[i] <= FPositionMs + FPageSizeMs + FSceneChangeStartOffset) then
+      begin
+        if (FSceneChangeStopOffset + FSceneChangeStartOffset) > 0 then
+        begin
+          x1 := TimeToPixel(FSceneChangeList[i] - FPositionMs - FSceneChangeStartOffset);
+          x2 := TimeToPixel(FSceneChangeList[i] - FPositionMs + FSceneChangeStopOffset);
+
+          Constrain(x1, 0, Width);
+          Constrain(x2, 0, Width);
+          SCRect := ClientRect;
+          SCRect.Left := x1;
+          SCRect.Right := x2;
+          SCRect.Bottom := SCRect.Bottom - FScrollBar.Height;
+          if FDisplayRuler then
+            SCRect.Bottom := SCRect.Bottom - FDisplayRulerHeight;
+
+          VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, SCRect,
+            Point(0,0), bmConstantAlphaAndColor, 100, ACanvas.Pen.Color);
+        end;
+
+        x := TimeToPixel(FSceneChangeList[i] - FPositionMs);
+        ACanvas.MoveTo(x, 0);
+        ACanvas.LineTo(x, CanvasHeight);
+      end;
+    end;
+  end;
+
   // TODO : this is very slow when lot's of range are on screen
   // We should do this in 2 pass to group ranges, and use another color
 
@@ -1282,42 +1318,6 @@ begin
       x := TimeToPixel(FPlayCursorMs - FPositionMs);
       ACanvas.MoveTo(x, 0);
       ACanvas.LineTo(x, CanvasHeight);
-    end;
-  end;
-
-  // Scene change
-  if FSceneChangeEnabled then
-  begin
-    ACanvas.Pen.Color := $0099FF;
-    ACanvas.Pen.Style := psSolid;
-    ACanvas.Pen.Mode := pmCopy;
-    for i := Low(FSceneChangeList) to High(FSceneChangeList) do
-    begin
-      if (FSceneChangeList[i] >= FPositionMs - FSceneChangeStopOffset) and
-         (FSceneChangeList[i] <= FPositionMs + FPageSizeMs + FSceneChangeStartOffset) then
-      begin
-        if (FSceneChangeStopOffset + FSceneChangeStartOffset) > 0 then
-        begin
-          x1 := TimeToPixel(FSceneChangeList[i] - FPositionMs - FSceneChangeStartOffset);
-          x2 := TimeToPixel(FSceneChangeList[i] - FPositionMs + FSceneChangeStopOffset);
-
-          Constrain(x1, 0, Width);
-          Constrain(x2, 0, Width);
-          SCRect := ClientRect;
-          SCRect.Left := x1;
-          SCRect.Right := x2;
-          SCRect.Bottom := SCRect.Bottom - FScrollBar.Height;
-          if FDisplayRuler then
-            SCRect.Bottom := SCRect.Bottom - FDisplayRulerHeight;
-
-          VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, SCRect,
-            Point(0,0), bmConstantAlphaAndColor, 100, clWhite);
-        end;
-
-        x := TimeToPixel(FSceneChangeList[i] - FPositionMs);
-        ACanvas.MoveTo(x, 0);
-        ACanvas.LineTo(x, CanvasHeight);
-      end;
     end;
   end;
 end;
