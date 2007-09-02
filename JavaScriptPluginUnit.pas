@@ -2,7 +2,7 @@ unit JavaScriptPluginUnit;
 
 interface
 
-uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics;
+uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types;
 
 type
 {$TYPEINFO ON}
@@ -42,6 +42,24 @@ type
     property Text : WideString read GetText write SetText;
     property StrippedText : WideString read GetStrippedText write SetText;
   end;
+
+  TSceneChangeWrapper = class(TObject)
+  private
+    FSceneChangeList : TIntegerDynArray;
+    FStartOffset, FStopOffset : Integer;
+  public
+    procedure RegisterSceneChange(JSObject : TJSObject);
+    procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
+    procedure SetStartAndStopOffset(StartOffset, StopOffset : Integer);
+  published
+    function Contains(Start, Stop : Integer) : Boolean;
+    function GetCount : Integer;
+    function GetAt(Index : Integer) : Integer;
+
+    property StartOffset : Integer read FStartOffset;
+    property StopOffset : Integer read FStopOffset;
+  end;
+
 {$TYPEINFO OFF}
 
   TJSPluginParamType = (jsptUnknown, jsptBoolean, jsptInteger, jsptDouble, jsptWideString);
@@ -178,7 +196,10 @@ type
   function GetParamValueAsWideString(pParam : PJSPluginParam) : WideString;
   procedure SetParamValueAsWideString(pParam : PJSPluginParam; Value : WideString);
   function JSColorToTColor(RGBColor : Integer) : TColor;
-  
+
+var
+  g_SceneChange: TSceneChangeWrapper;
+
 implementation
 
 uses SysUtils, Windows, WAVDisplayerUnit, MiscToolsUnit;
@@ -307,6 +328,7 @@ begin
     if Assigned(FOnChangeText) then
       FOnChangeText(Self, FSubtitleRange, Value);
     FSubtitleRange.Text := Value;
+    FStrippedTextProcessed := False;
   end;
 end;
 
@@ -372,7 +394,7 @@ var FScript : TJSScript;
 begin
   Result := False;
   FFilename := Filename;
-  
+
   FScript := TJSScript.Create;
   FScript.LoadRaw(Filename);
   FScript.Compile(FEngine); // try to compile the script
@@ -381,6 +403,7 @@ begin
     FScript.Free;
     Exit;
   end;
+
   Result := FScript.Execute(FEngine);
   FScript.Free;
 end;
@@ -486,6 +509,9 @@ begin
     FVSSPluginObject.GetProperty('Description', FDescription);
     FVSSPluginObject.GetProperty('Color', FColor);
     FVSSPluginObject.GetProperty('Message', FMessage);
+
+    // Scene change
+    g_SceneChange.RegisterSceneChange(FEngine.Global);
 
     // We need at least one function
     Result := (FHasErrorFunc <> nil);
@@ -811,6 +837,9 @@ begin
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
 
+    // Scene change
+    g_SceneChange.RegisterSceneChange(FEngine.Global);
+
     // We need at least one function
     Result := (FNotifySubtitleModificationFunc <> nil) or
       (FNotifySelectionModificationFunc <> nil);
@@ -842,6 +871,73 @@ begin
     FParamArray[2] := FNextSubJS;
   end;
 end;
+
+//==============================================================================
+
+function TSceneChangeWrapper.GetCount : Integer;
+begin
+  Result := Length(FSceneChangeList);
+end;
+
+function TSceneChangeWrapper.GetAt(Index : Integer) : Integer;
+begin
+  if (Index >= Low(FSceneChangeList)) and (Index <= High(FSceneChangeList)) then
+    Result := FSceneChangeList[Index]
+  else
+    Result := -1;
+end;
+
+function TSceneChangeWrapper.Contains(Start, Stop : Integer) : Boolean;
+var I : Integer;
+    OffsetedStart, OffsetedStop : Integer;
+begin
+  OffsetedStart := Start - FStartOffset;
+  OffsetedStop := Stop + FStopOffset;
+  for I := Low(FSceneChangeList) to High(FSceneChangeList) do
+  begin
+    if (FSceneChangeList[I] >= OffsetedStart) and
+       (FSceneChangeList[I] <= OffsetedStop) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
+end;
+
+procedure TSceneChangeWrapper.RegisterSceneChange(JSObject : TJSObject);
+var SceneChangeJSObj : TJSObject;
+begin
+  SceneChangeJSObj := JSObject.AddNativeObject(Self, 'SceneChange');
+  SceneChangeJSObj.SetMethodInfo('Contains', 2, rtBoolean);  
+  SceneChangeJSObj.SetMethodInfo('GetCount', 0, rtInteger);
+  SceneChangeJSObj.SetMethodInfo('GetAt', 1, rtInteger);
+end;
+
+procedure TSceneChangeWrapper.SetSceneChangeList(SceneChangeList : TIntegerDynArray);
+begin
+  SetLength(FSceneChangeList, System.Length(SceneChangeList));
+  if System.Length(SceneChangeList) > 0 then
+  begin
+    CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
+      Length(SceneChangeList) * SizeOf(Integer));
+  end;
+end;
+
+procedure TSceneChangeWrapper.SetStartAndStopOffset(StartOffset, StopOffset : Integer);
+begin
+  FStartOffset := StartOffset;
+  FStopOffset := StopOffset;
+end;
+
+//==============================================================================
+
+initialization
+  g_SceneChange := TSceneChangeWrapper.Create;
+
+finalization
+  g_SceneChange.Free;
+  g_SceneChange := nil;
 
 //------------------------------------------------------------------------------
 end.
