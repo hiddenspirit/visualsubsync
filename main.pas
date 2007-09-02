@@ -35,7 +35,7 @@ uses
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
   DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
-  UndoableTaskUnit, UndoableSubTaskUnit;
+  UndoableTaskUnit, UndoableSubTaskUnit, Types;
 
 type
   TTreeData = record
@@ -46,6 +46,7 @@ type
   // -----
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
+  TTagType = (ttItalic, ttBold, ttUnderline, ttColor, ttSize);
 
   TMainForm = class(TTntForm)
     TntMainMenu1: TTntMainMenu;
@@ -313,9 +314,23 @@ type
     N17: TTntMenuItem;
     ActionWAVDisplayScrollRight: TTntAction;
     ActionWAVDisplayScrollLeft: TTntAction;
-    Button1: TButton;
     ActionShowHideSceneChange: TTntAction;
     pmiReadSpeed: TTntMenuItem;
+    N18: TTntMenuItem;
+    ActionTextItalic: TTntAction;
+    ActionTextBold: TTntAction;
+    Italic1: TTntMenuItem;
+    ActionTextUnderline: TTntAction;
+    ActionTextColor: TTntAction;
+    ActionTextSize: TTntAction;
+    Otherstyle1: TTntMenuItem;
+    extinbold1: TTntMenuItem;
+    extinunderline1: TTntMenuItem;
+    extcolor1: TTntMenuItem;
+    extsize1: TTntMenuItem;
+    N19: TTntMenuItem;
+    ActionStripTags: TTntAction;
+    Striptags1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -466,12 +481,17 @@ type
     procedure PanelVideoDblClick(Sender: TObject);
     procedure ActionWAVDisplayScrollRightExecute(Sender: TObject);
     procedure ActionWAVDisplayScrollLeftExecute(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure ActionShowHideSceneChangeExecute(Sender: TObject);
     procedure vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
       TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       CellRect: TRect);
     procedure pmiReadSpeedClick(Sender: TObject);
+    procedure ActionTextItalicExecute(Sender: TObject);
+    procedure ActionTextBoldExecute(Sender: TObject);
+    procedure ActionTextUnderlineExecute(Sender: TObject);
+    procedure ActionTextColorExecute(Sender: TObject);
+    procedure ActionTextSizeExecute(Sender: TObject);
+    procedure ActionStripTagsExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -568,6 +588,9 @@ type
 
     function DetectCharsetDataLoss : Boolean;
 
+    procedure TagText(StartTag, StopTag : WideString); overload;
+    procedure TagText(TagType : TTagType); overload;
+
     // General JS plugins
     procedure CallJSOnSubtitleModification;
     procedure CallJSOnSelectedSubtitle;
@@ -577,12 +600,16 @@ type
 
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
-    procedure ClearStack(Stack : TObjectStack);       
+    procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
     function SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
+
+    // Scene change
+    procedure FilterSceneChange(var SCArray : TIntegerDynArray;
+      var FilteredSCArray : TIntegerDynArray);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -592,7 +619,7 @@ type
     procedure SaveSettings;
     procedure LoadSettings;
     procedure ShowPreferences(TabSheet : TTntTabSheet);
-    procedure ExtractVideoSceneChange;
+    procedure LoadVideoSceneChange;
     procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
@@ -644,10 +671,11 @@ implementation
 
 uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   ErrorReportFormUnit, SuggestionFormUnit, GotoFormUnit,
-  Types, VerticalScalingFormUnit, TntSysUtils, TntWindows,
+  VerticalScalingFormUnit, TntSysUtils, TntWindows,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
-  TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit;
+  TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
+  SceneChangeUnit;
 
 {$R *.dfm}
 
@@ -985,11 +1013,12 @@ end;
 
 procedure TMainForm.ApplyMiscSettings;
 begin
-  if WAVDisplayer.SceneChangeEnabled <> ConfigObject.ShowSceneChange then
-  begin
-    WAVDisplayer.SceneChangeEnabled := ConfigObject.ShowSceneChange;
-    WAVDisplayer.UpdateView([uvfRange]);
-  end;
+  WAVDisplayer.SceneChangeEnabled := ConfigObject.ShowSceneChange;
+  WAVDisplayer.SceneChangeStartOffset := ConfigObject.SceneChangeStartOffset;
+  WAVDisplayer.SceneChangeStopOffset := ConfigObject.SceneChangeStopOffset;
+  WAVDisplayer.UpdateView([uvfRange]);
+  g_SceneChange.SetStartAndStopOffset(ConfigObject.SceneChangeStartOffset,
+    ConfigObject.SceneChangeStopOffset);
 end;
 
 //------------------------------------------------------------------------------
@@ -1055,6 +1084,7 @@ begin
     Column.Width := 40;
     Column.MinWidth := 40;
     Column.Options := Column.Options - [coAllowClick,coDraggable,coResizable,coVisible];
+    pmiReadSpeed.Checked := (coVisible in Column.Options);
 
     //FocusedColumn := 2;
 
@@ -1697,7 +1727,7 @@ end;
 procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
     i, j : Integer;
-    WordArray : WideStringArray2;
+    WordArray : TWideStringDynArray;
 begin
   RichEdit.Tag := 0;
   savSelStart := RichEdit.SelStart;
@@ -1905,17 +1935,33 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ExtractVideoSceneChange;
-var
-  KFArray : TIntegerDynArray;
+procedure TMainForm.LoadVideoSceneChange;
+var SceneChangeFileName : WideString;
+    SCArray, FilteredSCArray : TIntegerDynArray;
+    SceneChangeSL : TTntStringList;
+    I : Integer;
+    TimeMs : Integer;
 begin
-  if WideLowerCase(WideExtractFileExt(CurrentProject.VideoSource)) = '.avi' then
+  // Check for a '.scenechange' file
+  SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
+    '.scenechange');
+  
+  if WideFileExists(SceneChangeFileName) then
   begin
+    LoadSceneChange(SceneChangeFileName, SCArray);
+  end
+  else
+  begin
+    // Extract scene change
     ShowStatusBarMessage('Extracting keyframes...');
-    ExtractKF(CurrentProject.VideoSource, KFArray);
-    WAVDisplayer.SetSceneChangeList(KFArray);
-    WAVDisplayer.UpdateView([uvfRange]);
+    ExtractSceneChange(CurrentProject.VideoSource, SCArray);
+    SaveSceneChange(SceneChangeFileName, SCArray);
   end;
+
+  //FilterSceneChange(SCArray, FilteredSCArray);
+  WAVDisplayer.SetSceneChangeList(SCArray);
+  WAVDisplayer.UpdateView([uvfRange]);
+  g_SceneChange.SetSceneChangeList(SCArray);
 end;
 
 //------------------------------------------------------------------------------
@@ -1938,6 +1984,8 @@ begin
   CM := TCursorManager.Create(crHourGlass);
   try
     CurrentProject.LoadFromINIFile(Filename);
+
+    // ----- Load WAV form
     ShowStatusBarMessage('Loading WAV form...');
     LoadWAVOK := False;
     if CurrentProject.WAVMode = pwmPeakOnly then
@@ -2000,9 +2048,11 @@ begin
     // TODO : report invalid wav file error
     WAVDisplayer.Enabled := LoadWAVOK;
 
+    // ----- Load subtitles
     ShowStatusBarMessage('Loading subtitles...');
     LoadSubtitles(CurrentProject.SubtitlesFile,CurrentProject.IsUTF8);
 
+    // ----- Load audio
     ShowStatusBarMessage('Loading audio file...');
     if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
     begin
@@ -2012,6 +2062,7 @@ begin
       end;
     end;
 
+    // ----- Load video
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
@@ -2021,7 +2072,7 @@ begin
         ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
       VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
-      ExtractVideoSceneChange;
+      LoadVideoSceneChange;
     end;
 
     if ShowingVideo then
@@ -2029,6 +2080,7 @@ begin
     else
       WAVDisplayer.SetRenderer(AudioOnlyRenderer);
 
+    // ----- Load script
     if WideFileExists(WideChangeFileExt(CurrentProject.Filename,'.vssscript')) then
     begin
       ShowStatusBarMessage('Loading script file...');
@@ -2400,7 +2452,7 @@ begin
         UpdateVideoRendererWindow;
         ProjectHasChanged := True;
         VideoHasChanged := True;
-        ExtractVideoSceneChange;
+        LoadVideoSceneChange;
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -4571,13 +4623,43 @@ end;
 
 // -----
 
+procedure CreateKaraoke(SubRange : TSubtitleRange);
+var WordArray : WideStringArray;
+    i, j, total : Integer;
+    s : WideString;
+    tpl : Double; // time per letter
+begin
+  tpl := (SubRange.StopTime - SubRange.StartTime) /
+    KaraLen(StringReplace(SubRange.Text, '/', '', [rfReplaceAll]));
+  WhiteSpaceSplit(SubRange.Text, WordArray);
+
+  SubRange.ClearSubTimes;
+
+  // Recreate string with karaoke timing
+  s :='';
+  total := 0;
+  if Length(WordArray) > 0 then
+  begin
+    for i:=0 to Length(WordArray)-1 do
+    begin
+      j := Round(tpl * KaraLen(WordArray[i]) / 10);
+      total := total + j;
+      if (i < Length(WordArray)-1) then
+        SubRange.AddSubTime(SubRange.StartTime + (total*10));
+      s := s + WideFormat('{\k%d}%s', [j, WordArray[i]]);
+    end;
+  end;
+
+  // total should match duration (but we work in ms :] ?)
+
+  SubRange.Text := s;
+end;
+
+// -----
+
 procedure TMainForm.pmiCreateKaraokeClick(Sender: TObject);
 var Node : PVirtualNode;
     NodeData: PTreeData;
-    WordArray : WideStringArray;
-    i, j, total : Integer;
-    s : WideString;
-    tpl : Single;
 begin
   g_WebRWSynchro.BeginWrite;
   try
@@ -4585,31 +4667,7 @@ begin
     while Assigned(Node) do
     begin
       NodeData := vtvSubsList.GetNodeData(Node);
-      tpl := (NodeData.Range.StopTime - NodeData.Range.StartTime) /
-        KaraLen(StringReplace(NodeData.Range.Text, '/', '', [rfReplaceAll]));
-      WhiteSpaceSplit(NodeData.Range.Text, WordArray);
-
-      NodeData.Range.ClearSubTimes;
-
-      // Recreate string with karaoke timing
-      s :='';
-      total := 0;
-      if Length(WordArray) > 0 then
-      begin
-        for i:=0 to Length(WordArray)-1 do
-        begin
-          j := Round(tpl * KaraLen(WordArray[i]) / 10);
-          total := total + j;
-          if (i < Length(WordArray)-1) then
-            NodeData.Range.AddSubTime(NodeData.Range.StartTime + (total*10));
-          s := s + WideFormat('{\k%d}%s', [j, WordArray[i]]);
-        end;
-      end;
-
-      // total should match duration (but we work in ms :] ?)
-
-      NodeData.Range.Text := s;
-
+      CreateKaraoke(NodeData.Range);
       Node := vtvSubsList.GetNextSelected(Node);
     end;
     CurrentProject.IsDirty := True;
@@ -4623,14 +4681,26 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure ClearKaraoke(SubRange : TSubtitleRange);
+var WordArray : WideStringArray;
+    TimeArray : IntegerArray;
+    CleanedText : WideString;
+    i : Integer;
+begin
+  CleanedText := '';
+  KaraSplit(SubRange.Text, WordArray, TimeArray);
+  for i:=0 to Length(WordArray)-1 do
+    CleanedText := CleanedText + WordArray[i];
+  SubRange.Text := CleanedText;
+  SubRange.ClearSubTimes;
+end;
+
+// -----
+
 procedure TMainForm.pmiClearKaraokeClick(Sender: TObject);
 var
   Node : PVirtualNode;
   NodeData: PTreeData;
-  WordArray : WideStringArray;
-  TimeArray : IntegerArray;
-  CleanedText : WideString;
-  i : Integer;
 begin
   g_WebRWSynchro.BeginWrite;
   try
@@ -4638,12 +4708,7 @@ begin
     while Assigned(Node) do
     begin
       NodeData := vtvSubsList.GetNodeData(Node);
-      CleanedText := '';
-      KaraSplit(NodeData.Range.Text, WordArray, TimeArray);
-      for i:=0 to Length(WordArray)-1 do
-        CleanedText := CleanedText + WordArray[i];
-      NodeData.Range.Text := CleanedText;
-      NodeData.Range.ClearSubTimes;
+      ClearKaraoke(NodeData.Range);
       Node := vtvSubsList.GetNextSelected(Node);
     end;
     CurrentProject.IsDirty := True;
@@ -6262,55 +6327,91 @@ end;
 
 //------------------------------------------------------------------------------
 
-{
-TODO UNDO:
-karaoke create, clear, change timestamps (with mouse or shortcut)
-TODO : display karaoke sylables in wavdisplay
-TODO : undo text pipe text modification (modifiy, clear, load)
-TODO : undo for style?
-
-split at curso need to respect minimum time between sub
-
-procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
-const
-  SB_SIMPLEID = Integer($FF);
-var
-  iPart: Integer;
-  szText: PAnsiChar;
-  WideText: WideString;
-begin
-  if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
-
-
-  jsplugin get next/previous scene change
-
-
-  highlight subtitles with some criteria
-
-
-  vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
-}
-
-procedure TMainForm.Button1Click(Sender: TObject);
+procedure TMainForm.TagText(StartTag, StopTag : WideString);
 var SelStart, SelLength : Integer;
     NewText : WideString;
 begin
-  // italic : <i></i> or {\i1}{\i0}
-  // bold : <b></b> or {\b1}{\b0}
-  // underline : <u></u> or {\u1}{\u0}
+  SelStart := MemoSubtitleText.SelStart;
+  SelLength := MemoSubtitleText.SelLength;
+  if (SelLength > 0) then
+  begin
+    // Put tag around selection
+    NewText := Copy(MemoSubtitleText.Text, 1, SelStart) +
+      StartTag + Copy(MemoSubtitleText.Text, SelStart + 1, SelLength) +
+      StopTag + Copy(MemoSubtitleText.Text, SelStart + SelLength + 1, MaxInt);
+  end
+  else if (SelStart = 0) then
+  begin
+    // Put tag around the entire text
+    NewText := StartTag + MemoSubtitleText.Text + StopTag;
+  end
+  else
+  begin
+    // Insert tag at the cursor place
+    NewText := Copy(MemoSubtitleText.Text, 1, SelStart) + StartTag + StopTag +
+      Copy(MemoSubtitleText.Text, SelStart + 1, MaxInt);
+  end;
+
+  TTntRichEditCustomUndo(MemoSubtitleText).SaveSelectionInfo;
+  MemoSubtitleText.Text := NewText;
+
+  if (SelLength > 0) then
+  begin
+    MemoSubtitleText.SelStart := SelStart;
+    MemoSubtitleText.SelLength := SelLength + Length(StartTag) + Length(StopTag);
+  end
+  else if (SelStart = 0) then
+  begin
+    // Just place the cursor at the start
+    MemoSubtitleText.SelStart := 0;
+    MemoSubtitleText.SelLength := 0;
+  end
+  else
+  begin
+    // Place the cursor after the start tag
+    MemoSubtitleText.SelStart := SelStart + Length(StartTag);
+    MemoSubtitleText.SelLength := 0;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TagText(TagType : TTagType);
+var Ext : WideString;
+begin
+
+  // italic: <i></i> or {\i1}{\i0}
+  // bold: <b></b> or {\b1}{\b0}
+  // underline: <u></u> or {\u1}{\u0}
+  // font size: <font size="10"></font> {\fs10}
+  // font color: <font color="#ff0000"></font> {\1c&H000000&}
   // {\a1} ...
   // {\pos  ...
 
-  SelStart := MemoSubtitleText.SelStart;
-  SelLength := MemoSubtitleText.SelLength;
-  NewText := Copy(MemoSubtitleText.Text, 1, SelStart) +
-    '{\i1}' + Copy(MemoSubtitleText.Text, SelStart + 1, SelLength) +
-    '{\i0}' + Copy(MemoSubtitleText.Text, SelStart + SelLength + 1, MaxInt);
-  TTntRichEditCustomUndo(MemoSubtitleText).SaveSelectionInfo;
-  MemoSubtitleText.Text := NewText;
-  MemoSubtitleText.SelStart := SelStart;
-  MemoSubtitleText.SelLength := SelLength + 10;
+  Ext := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
+  if (Ext = '.srt') then
+  begin
+    case TagType of
+    ttItalic: TagText('<i>','</i>');
+    ttBold: TagText('<b>','</b>');
+    ttUnderline: TagText('<u>','</u>');
+    ttColor: TagText('<font color="#ffffff">','</font>');
+    ttSize: TagText('<font size="14">','</font>');
+    end;
+  end
+  else if (Ext = '.ass') or (Ext = '.ssa') then
+  begin
+    case TagType of
+    ttItalic: TagText('{\i1}','{\i0}');
+    ttBold: TagText('{\b1}','{\b0}');
+    ttUnderline: TagText('{\u1}','{\u0}');
+    ttColor: TagText('{\1c&H000000&}','{\1c}');
+    ttSize: TagText('{\fs10}','{\fs}');
+    end;
+  end;
 end;
+
+//------------------------------------------------------------------------------
 
 procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
@@ -6342,19 +6443,122 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+
 procedure TMainForm.pmiReadSpeedClick(Sender: TObject);
 var RSColumn : TVirtualTreeColumn;
 begin
   // Toggle column
   RSColumn := vtvSubsList.Header.Columns.Items[RS_COL_INDEX];
-  if pmiReadSpeed.Checked then
-    RSColumn.Options := RSColumn.Options - [coVisible]
+  if (coVisible in RSColumn.Options) then
+  begin
+    RSColumn.Options := RSColumn.Options - [coVisible];
+    pmiReadSpeed.Checked := False;
+  end
   else
+  begin
     RSColumn.Options := RSColumn.Options + [coVisible];
-  pmiReadSpeed.Checked := not pmiReadSpeed.Checked;
+    pmiReadSpeed.Checked := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.FilterSceneChange(var SCArray : TIntegerDynArray;
+  var FilteredSCArray : TIntegerDynArray);
+var I, RangeIdx, SCTimeMs : Integer;
+    Filtered : Boolean;
+    SubRange : TRange;
+begin
+  SetLength(FilteredSCArray, 0);
+  for I := Low(SCArray) to High(SCArray) do
+  begin
+    Filtered := False;
+    SCTimeMs := SCArray[i];
+    RangeIdx := WAVDisplayer.RangeList.GetRangeIdxAt(SCTimeMs);
+    if (RangeIdx <> -1) then
+    begin
+      SubRange := WAVDisplayer.RangeList[RangeIdx];
+      if (SCTimeMs >= SubRange.StartTime + ConfigObject.SceneChangeStartOffset) and
+         (SCTimeMs <= SubRange.StopTime - ConfigObject.SceneChangeStopOffset) then
+      begin
+        Filtered := True;
+      end
+    end;
+    if (not Filtered) then
+    begin
+      SetLength(FilteredSCArray, Length(FilteredSCArray) + 1);
+      FilteredSCArray[Length(FilteredSCArray) - 1] := SCTimeMs;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTextItalicExecute(Sender: TObject);
+begin
+  TagText(ttItalic);
+end;
+
+procedure TMainForm.ActionTextBoldExecute(Sender: TObject);
+begin
+  TagText(ttBold);
+end;
+
+procedure TMainForm.ActionTextUnderlineExecute(Sender: TObject);
+begin
+  TagText(ttUnderline);
+end;
+
+procedure TMainForm.ActionTextColorExecute(Sender: TObject);
+begin
+  TagText(ttColor);
+end;
+
+procedure TMainForm.ActionTextSizeExecute(Sender: TObject);
+begin
+  TagText(ttSize);
+end;
+
+procedure TMainForm.ActionStripTagsExecute(Sender: TObject);
+begin
+  // todo
+end;
+
 end.
 //------------------------------------------------------------------------------
 
+{
+TODO UNDO:
+karaoke create, clear, change timestamps (with mouse or shortcut)
+TODO : display karaoke sylables in wavdisplay
+TODO : undo text pipe text modification (modifiy, clear, load)
+TODO : undo for style?
+
+Quick style color size
+
+option to hide text in wavdiplay
+
+jsplugin for columns
+
+split at curso need to respect minimum time between sub
+
+procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
+const
+  SB_SIMPLEID = Integer($FF);
+var
+  iPart: Integer;
+  szText: PAnsiChar;
+  WideText: WideString;
+begin
+  if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
+
+
+  jsplugin get next/previous scene change
+
+
+  highlight subtitles with some criteria
+
+
+  vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
+}

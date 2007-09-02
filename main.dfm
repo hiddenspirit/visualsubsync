@@ -1212,15 +1212,6 @@ object MainForm: TMainForm
         TabOrder = 4
         OnSelect = cbStylesSelect
       end
-      object Button1: TButton
-        Left = 336
-        Top = 24
-        Width = 27
-        Height = 25
-        Caption = 'Button1'
-        TabOrder = 6
-        OnClick = Button1Click
-      end
     end
   end
   object TntStatusBar1: TTntStatusBar
@@ -2059,6 +2050,35 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Show/Hide scene change'
       OnExecute = ActionShowHideSceneChangeExecute
+    end
+    object ActionTextItalic: TTntAction
+      Category = 'QuickStyle'
+      Caption = 'Text in italic'
+      OnExecute = ActionTextItalicExecute
+    end
+    object ActionTextBold: TTntAction
+      Category = 'QuickStyle'
+      Caption = 'Text in bold'
+      OnExecute = ActionTextBoldExecute
+    end
+    object ActionTextUnderline: TTntAction
+      Category = 'QuickStyle'
+      Caption = 'Text in underline'
+      OnExecute = ActionTextUnderlineExecute
+    end
+    object ActionTextColor: TTntAction
+      Category = 'QuickStyle'
+      Caption = 'Text color'
+      OnExecute = ActionTextColorExecute
+    end
+    object ActionTextSize: TTntAction
+      Category = 'QuickStyle'
+      Caption = 'Text size'
+      OnExecute = ActionTextSizeExecute
+    end
+    object ActionStripTags: TTntAction
+      Caption = 'Strip tags'
+      OnExecute = ActionStripTagsExecute
     end
   end
   object ImageList1: TImageList
@@ -3842,6 +3862,12 @@ object MainForm: TMainForm
     object pmiFixError: TTntMenuItem
       Action = ActionFixErrorMain
     end
+    object N19: TTntMenuItem
+      Caption = '-'
+    end
+    object Striptags1: TTntMenuItem
+      Action = ActionStripTags
+    end
     object N16: TTntMenuItem
       Caption = '-'
     end
@@ -3894,6 +3920,27 @@ object MainForm: TMainForm
     end
     object SelectAll1: TTntMenuItem
       Action = EditSelectAll1
+    end
+    object N18: TTntMenuItem
+      Caption = '-'
+    end
+    object Italic1: TTntMenuItem
+      Action = ActionTextItalic
+    end
+    object Otherstyle1: TTntMenuItem
+      Caption = 'Other styles'
+      object extinbold1: TTntMenuItem
+        Action = ActionTextBold
+      end
+      object extinunderline1: TTntMenuItem
+        Action = ActionTextUnderline
+      end
+      object extcolor1: TTntMenuItem
+        Action = ActionTextColor
+      end
+      object extsize1: TTntMenuItem
+        Action = ActionTextSize
+      end
     end
   end
   object MemoTextPipePopupMenu: TTntPopupMenu
