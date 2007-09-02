@@ -38,7 +38,8 @@ uses
   RGBHSLColorUnit in 'RGBHSLColorUnit.pas',
   TntRichEditCustomUndoUnit in 'TntRichEditCustomUndoUnit.pas',
   UndoableTaskUnit in 'UndoableTaskUnit.pas',
-  UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas';
+  UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas',
+  SceneChangeUnit in 'SceneChangeUnit.pas';
 
 {$R *.res}
 
