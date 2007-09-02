@@ -37,7 +37,7 @@ unit WAVDisplayerUnit;
 interface
 
 uses Windows, Messages, Classes, Controls, Graphics, WAVFileUnit,
-  Math, ExtCtrls, Renderer, MiniScrollBarUnit, MMSystem;
+  Math, ExtCtrls, Renderer, MiniScrollBarUnit, MMSystem, Types;
 
 type
   // ----------
@@ -200,7 +200,7 @@ type
 
     FRangeOldStart, FRangeOldStop : Integer; // Range time before dynamic modificaion
 
-    FSceneChangeList : array of Integer;
+    FSceneChangeList : TIntegerDynArray;
     FSceneChangeStartOffset, FSceneChangeStopOffset : Integer;
     FSceneChangeEnabled : Boolean;
 
@@ -283,7 +283,7 @@ type
     procedure SelecteKaraoke(Range : TRange; Index : Integer);
 
     procedure Scroll(ViewPercent : Integer);
-    procedure SetSceneChangeList(SceneChangeList : array of Integer);
+    procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
@@ -338,7 +338,7 @@ procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
 
 implementation
 
-uses SysUtils, Types, MiscToolsUnit, TntClasses, TntSysUtils, VirtualTrees;
+uses SysUtils, MiscToolsUnit, TntClasses, TntSysUtils, VirtualTrees;
 
 const
   WAV_COLOR : TColor = $00A7F24A;
@@ -933,8 +933,8 @@ begin
   FSelection.StopTime := 0;
   FNeedToSortSelectedSub := False;
 
-  FSceneChangeStartOffset := 129;
-  FSceneChangeStopOffset := 129;
+  FSceneChangeStartOffset := 130;
+  FSceneChangeStopOffset := 130;
   FSceneChangeEnabled := True;
   
   FUpdateCursorTimer := TTimer.Create(nil);
@@ -1147,7 +1147,7 @@ begin
             SCRect.Bottom := SCRect.Bottom - FDisplayRulerHeight;
 
           VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, SCRect,
-            Point(0,0), bmConstantAlphaAndColor, 100, ACanvas.Pen.Color);
+            Point(0,0), bmConstantAlphaAndColor, 80, ACanvas.Pen.Color);
         end;
 
         x := TimeToPixel(FSceneChangeList[i] - FPositionMs);
@@ -3123,7 +3123,7 @@ end;
 procedure TWAVDisplayer.Resize;
 begin
   inherited;
-  // Fix repaing bug
+  // Fix repaint bug
   Repaint;
 end;
 
@@ -3154,7 +3154,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TWAVDisplayer.SetSceneChangeList(SceneChangeList : array of Integer);
+procedure TWAVDisplayer.SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 begin
   SetLength(FSceneChangeList, System.Length(SceneChangeList));
   if System.Length(SceneChangeList) > 0 then
