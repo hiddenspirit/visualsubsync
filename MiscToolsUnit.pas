@@ -26,8 +26,6 @@ interface
 uses Classes, Graphics, Types;
 
 type
-  WideStringArray2 = array of WideString;
-
   TFileVersion = class
   private
     FFileParsed : Boolean;
@@ -75,7 +73,7 @@ type
   procedure String2Font(s : string; Font : TFont);
 
 
-  procedure TagSplit(const Text : WideString; var WordArray : WideStringArray2);
+  procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
   function StripTags(const Text : WideString) : WideString;
 
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
@@ -89,13 +87,9 @@ type
 
   function TColor2RGB(Input: TColor): Cardinal;
 
-  procedure ExtractKF(Filename : WideString; var KFArray : TIntegerDynArray);
-
-type
-  TExplodeArray = array of String;
-  function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
-  function Implode(const cSeparator: String; const cArray: TExplodeArray): String;
-
+  
+  function Explode(const cSeparator: String; const vString: String; var WordArray : TStringDynArray): Integer;
+  function Implode(const cSeparator: String; const cArray: TStringDynArray): String;
 
 
 implementation
@@ -644,7 +638,7 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure String2Font(s : string; Font : TFont);
-var ea : TExplodeArray;
+var ea : TStringDynArray;
 begin
   Explode(',', s, ea);
   if (Length(ea) = 5) and Assigned(Font) then
@@ -661,7 +655,7 @@ end;
 // Implode/Explode from http://www.swissdelphicenter.ch/en/showcode.php?id=1326
 // =============================================================================
 
-function Implode(const cSeparator: String; const cArray: TExplodeArray): String;
+function Implode(const cSeparator: String; const cArray: TStringDynArray): String;
 var
   i: Integer;
 begin
@@ -674,7 +668,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function Explode(const cSeparator: String; const vString: String; var WordArray : TExplodeArray): Integer;
+function Explode(const cSeparator: String; const vString: String; var WordArray : TStringDynArray): Integer;
 var
   i: Integer;
   S: String;
@@ -699,7 +693,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TagSplit(const Text : WideString; var WordArray : WideStringArray2);
+procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
 var
   i, i1 : integer;
   s : WideString;
@@ -793,7 +787,7 @@ end;
 
 function StripTags(const Text : WideString) : WideString;
 var i : Integer;
-    WordArray : WideStringArray2;
+    WordArray : TWideStringDynArray;
 begin
   TagSplit(Text, WordArray);
   Result := '';
@@ -951,41 +945,6 @@ begin
   B := (Input and $00FF0000) shr 16;
   A := (Input and $FF000000) shr 24;
   Result := RGB(R,G,B);
-end;
-
-procedure ExtractKF(Filename : WideString; var KFArray : TIntegerDynArray);
-var hr : HRESULT;
-    ppfile : IAVIFile;
-    psi : TAVIStreamInfo;
-    ppavi : IAVIStream;
-    FramePos : Integer;
-    FrameRate : Double;
-begin
-  AVIFileInit;
-  hr := AVIFileOpenW(ppfile, @Filename[1], OF_READ or OF_SHARE_DENY_NONE, nil);
-  if Succeeded(hr) then
-  begin
-    hr := AVIFileGetStream(ppfile, ppavi, streamtypeVIDEO, 0);
-    if Succeeded(hr) then
-    begin
-      AVIStreamInfo(ppavi, psi, SizeOf(TAVIStreamInfo));
-      Framerate := (psi.dwRate / psi.dwScale);
-      FramePos := 0;
-      while True do
-      begin
-        FramePos := AVIStreamFindSample(ppavi, framePos, FIND_KEY or FIND_NEXT);
-        if (FramePos = -1) then
-          Break;
-        SetLength(KFArray, Length(KFArray) + 1);
-        KFArray[Length(KFArray) - 1] := Trunc(FramePos / Framerate * 1000);
-        Inc(FramePos);
-      end;
-      //AVIStreamRelease(ppavi);
-    end;
-    //no need to release interfaces with delphi?
-    //AVIFileRelease(ppfile);
-  end;
-  AVIFileExit;
 end;
 
 // -----------------------------------------------------------------------------
