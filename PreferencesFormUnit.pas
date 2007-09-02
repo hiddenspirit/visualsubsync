@@ -79,6 +79,8 @@ type
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
     ShowSceneChange : Boolean;
+    SceneChangeStartOffset : Integer;
+    SceneChangeStopOffset : Integer;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -191,6 +193,11 @@ type
     UpDownBlankBetweenSub: TTntUpDown;
     bttOpenBackupTempDir: TButton;
     chkSceneChange: TCheckBox;
+    EditSCStartOffset: TEdit;
+    EditSCStopOffset: TEdit;
+    Label7: TLabel;
+    UpDownSCStart: TTntUpDown;
+    UpDownSCStop: TTntUpDown;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -426,6 +433,8 @@ begin
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
   ShowSceneChange := False;
+  SceneChangeStartOffset := 130;
+  SceneChangeStopOffset := 130;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -544,6 +553,8 @@ begin
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   IniFile.WriteBool('Misc', 'ShowSceneChange', ShowSceneChange);
+  IniFile.WriteInteger('Misc', 'SceneChangeStartOffset', SceneChangeStartOffset);
+  IniFile.WriteInteger('Misc', 'SceneChangeStopOffset', SceneChangeStopOffset);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -615,6 +626,8 @@ begin
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   ShowSceneChange := IniFile.ReadBool('Misc', 'ShowSceneChange', ShowSceneChange);
+  SceneChangeStartOffset := IniFile.ReadInteger('Misc','SceneChangeStartOffset',SceneChangeStartOffset);
+  SceneChangeStopOffset := IniFile.ReadInteger('Misc','SceneChangeStopOffset',SceneChangeStopOffset);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -741,6 +754,8 @@ begin
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
   chkSceneChange.Checked := Config.ShowSceneChange;
+  UpDownSCStart.Position := Config.SceneChangeStartOffset;
+  UpDownSCStop.Position := Config.SceneChangeStopOffset;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -823,7 +838,9 @@ begin
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
   Config.ShowSceneChange := chkSceneChange.Checked;
-  
+  Config.SceneChangeStartOffset := UpDownSCStart.Position;
+  Config.SceneChangeStopOffset := UpDownSCStop.Position;
+
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
   Config.EnableCompression := chkEnableCompression.Checked;

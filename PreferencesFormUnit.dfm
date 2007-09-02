@@ -90,6 +90,13 @@ object PreferencesForm: TPreferencesForm
         Align = alBottom
         Caption = ' Misc : '
         TabOrder = 1
+        object Label7: TLabel
+          Left = 204
+          Top = 58
+          Width = 34
+          Height = 13
+          Caption = 'Offset :'
+        end
         object chkAssociateExt: TCheckBox
           Left = 16
           Top = 24
@@ -115,10 +122,56 @@ object PreferencesForm: TPreferencesForm
         object chkSceneChange: TCheckBox
           Left = 16
           Top = 56
-          Width = 385
+          Width = 121
           Height = 17
           Caption = 'Show scene change'
           TabOrder = 2
+        end
+        object EditSCStartOffset: TEdit
+          Left = 244
+          Top = 54
+          Width = 56
+          Height = 21
+          Hint = 'Start offset in ms'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 3
+          Text = '130'
+        end
+        object EditSCStopOffset: TEdit
+          Left = 324
+          Top = 54
+          Width = 56
+          Height = 21
+          Hint = 'Stop offset in ms'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 4
+          Text = '130'
+        end
+        object UpDownSCStart: TTntUpDown
+          Left = 300
+          Top = 54
+          Width = 16
+          Height = 21
+          Associate = EditSCStartOffset
+          Max = 2000
+          Increment = 10
+          Position = 130
+          TabOrder = 5
+          Thousands = False
+        end
+        object UpDownSCStop: TTntUpDown
+          Left = 380
+          Top = 54
+          Width = 16
+          Height = 21
+          Associate = EditSCStopOffset
+          Max = 2000
+          Increment = 10
+          Position = 130
+          TabOrder = 6
+          Thousands = False
         end
       end
       object GroupBox4: TGroupBox
@@ -302,7 +355,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 150
+            Width = 154
             WideText = 'Value'
           end
           item
