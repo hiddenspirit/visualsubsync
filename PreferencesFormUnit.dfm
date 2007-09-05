@@ -173,6 +173,14 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 6
           Thousands = False
         end
+        object chkShowTextInWAVDisplay: TCheckBox
+          Left = 16
+          Top = 72
+          Width = 177
+          Height = 17
+          Caption = 'Show text in WAV display'
+          TabOrder = 7
+        end
       end
       object GroupBox4: TGroupBox
         Left = 0
@@ -355,7 +363,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 154
+            Width = 150
             WideText = 'Value'
           end
           item
