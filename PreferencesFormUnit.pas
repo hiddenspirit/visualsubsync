@@ -81,6 +81,7 @@ type
     ShowSceneChange : Boolean;
     SceneChangeStartOffset : Integer;
     SceneChangeStopOffset : Integer;
+    ShowTextInWAVDisplay : Boolean;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -198,6 +199,7 @@ type
     Label7: TLabel;
     UpDownSCStart: TTntUpDown;
     UpDownSCStop: TTntUpDown;
+    chkShowTextInWAVDisplay: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -435,6 +437,7 @@ begin
   ShowSceneChange := False;
   SceneChangeStartOffset := 130;
   SceneChangeStopOffset := 130;
+  ShowTextInWAVDisplay := True;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -555,6 +558,7 @@ begin
   IniFile.WriteBool('Misc', 'ShowSceneChange', ShowSceneChange);
   IniFile.WriteInteger('Misc', 'SceneChangeStartOffset', SceneChangeStartOffset);
   IniFile.WriteInteger('Misc', 'SceneChangeStopOffset', SceneChangeStopOffset);
+  IniFile.WriteBool('Misc', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -628,6 +632,7 @@ begin
   ShowSceneChange := IniFile.ReadBool('Misc', 'ShowSceneChange', ShowSceneChange);
   SceneChangeStartOffset := IniFile.ReadInteger('Misc','SceneChangeStartOffset',SceneChangeStartOffset);
   SceneChangeStopOffset := IniFile.ReadInteger('Misc','SceneChangeStopOffset',SceneChangeStopOffset);
+  ShowTextInWAVDisplay := IniFile.ReadBool('Misc', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -756,6 +761,7 @@ begin
   chkSceneChange.Checked := Config.ShowSceneChange;
   UpDownSCStart.Position := Config.SceneChangeStartOffset;
   UpDownSCStop.Position := Config.SceneChangeStopOffset;
+  chkShowTextInWAVDisplay.Checked := Config.ShowTextInWAVDisplay;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -840,6 +846,7 @@ begin
   Config.ShowSceneChange := chkSceneChange.Checked;
   Config.SceneChangeStartOffset := UpDownSCStart.Position;
   Config.SceneChangeStopOffset := UpDownSCStop.Position;
+  Config.ShowTextInWAVDisplay := chkShowTextInWAVDisplay.Checked;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
