@@ -2077,8 +2077,19 @@ object MainForm: TMainForm
       OnExecute = ActionTextSizeExecute
     end
     object ActionStripTags: TTntAction
+      Tag = 1
       Caption = 'Strip tags'
       OnExecute = ActionStripTagsExecute
+    end
+    object ActionMerge: TTntAction
+      Tag = 1
+      Caption = 'Merge'
+      OnExecute = ActionMergeExecute
+    end
+    object ActionSplitAtCursor: TTntAction
+      Tag = 1
+      Caption = 'Split at cursor'
+      OnExecute = ActionSplitAtCursorExecute
     end
   end
   object ImageList1: TImageList
@@ -3832,8 +3843,7 @@ object MainForm: TMainForm
       OnClick = WAVDisplayPopup_DeleteRange
     end
     object pmiWAVDispSplitAtCursor: TTntMenuItem
-      Caption = 'Split at cursor'
-      OnClick = WAVDisplayPopup_SplitAtCursor
+      Action = ActionSplitAtCursor
     end
     object pmiWAVDispSetSubtitleTime: TTntMenuItem
       Action = ActionSetSubtitleTime
@@ -3853,8 +3863,7 @@ object MainForm: TMainForm
       OnClick = pmiSubListDeleteClick
     end
     object pmiSubListMerge: TTntMenuItem
-      Caption = 'Merge'
-      OnClick = pmiSubListMergeClick
+      Action = ActionMerge
     end
     object pmiSubListDelay: TTntMenuItem
       Action = ActionDelay

@@ -331,6 +331,8 @@ type
     N19: TTntMenuItem;
     ActionStripTags: TTntAction;
     Striptags1: TTntMenuItem;
+    ActionMerge: TTntAction;
+    ActionSplitAtCursor: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -377,8 +379,6 @@ type
     procedure SubListPopupMenuPopup(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure WAVDisplayPopupMenuPopup(Sender: TObject);
-    procedure WAVDisplayPopup_SplitAtCursor(Sender: TObject);
-    procedure pmiSubListMergeClick(Sender: TObject);
     procedure ActionFindNextExecute(Sender: TObject);
     procedure TimerStatusBarMsgTimer(Sender: TObject);
     procedure MenuItemAboutClick(Sender: TObject);
@@ -492,6 +492,8 @@ type
     procedure ActionTextColorExecute(Sender: TObject);
     procedure ActionTextSizeExecute(Sender: TObject);
     procedure ActionStripTagsExecute(Sender: TObject);
+    procedure ActionMergeExecute(Sender: TObject);
+    procedure ActionSplitAtCursorExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -1428,7 +1430,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.WAVDisplayPopup_SplitAtCursor(Sender: TObject);
+procedure TMainForm.ActionSplitAtCursorExecute(Sender: TObject);
 var Idx : Integer;
     Range : TRange;
     UndoableSplitTask : TUndoableSplitTask;
@@ -2675,15 +2677,9 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.pmiSubListMergeClick(Sender: TObject);
-var i, Idx : integer;
+procedure TMainForm.ActionMergeExecute(Sender: TObject);
+var UndoableMergeTask : TUndoableMergeTask;
     Node : PVirtualNode;
-    NodeData: PTreeData;
-    AccuText : WideString;
-    LastStopTime : Integer;
-    DeleteList : TList;
-
-    UndoableMergeTask : TUndoableMergeTask;
 begin
   UndoableMergeTask := TUndoableMergeTask.Create;
   UndoableMergeTask.SetCapacity(vtvSubsList.SelectedCount);
@@ -2698,8 +2694,6 @@ begin
   PushUndoableTask(UndoableMergeTask);
 
   {
-
-
   AccuText := '';
   LastStopTime := 0;
 
@@ -4254,7 +4248,7 @@ begin
   else
   begin
     FreeAndNil(UndoableMultiChangeTask);
-  end;  
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -4368,7 +4362,7 @@ begin
       ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
       UndoableMultiChangeTask.AddData(ChangeSubData);
     end;
-    // Save old stop time if it has not been set yet
+    // Save old text if it has not been set yet
     if (not ChangeSubData.TextChanged) then
       ChangeSubData.FOldText := SubtitleRange.Text;
     ChangeSubData.FNewText := NewValue;
@@ -4690,7 +4684,9 @@ begin
   CleanedText := '';
   KaraSplit(SubRange.Text, WordArray, TimeArray);
   for i:=0 to Length(WordArray)-1 do
+  begin
     CleanedText := CleanedText + WordArray[i];
+  end;
   SubRange.Text := CleanedText;
   SubRange.ClearSubTimes;
 end;
@@ -5104,6 +5100,8 @@ end;
 procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
   ACanvas: TCanvas; Range : TRange; Rect : TRect);
 begin
+  if (not ConfigObject.ShowTextInWAVDisplay) then
+    Exit;
   // TODO : karaoke support
   InflateRect(Rect, -5, -5);
   if (Rect.Right - Rect.Left) > 25 then
@@ -6413,6 +6411,41 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ActionTextItalicExecute(Sender: TObject);
+begin
+  TagText(ttItalic);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTextBoldExecute(Sender: TObject);
+begin
+  TagText(ttBold);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTextUnderlineExecute(Sender: TObject);
+begin
+  TagText(ttUnderline);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTextColorExecute(Sender: TObject);
+begin
+  TagText(ttColor);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTextSizeExecute(Sender: TObject);
+begin
+  TagText(ttSize);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   CellRect: TRect);
@@ -6495,53 +6528,62 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionTextItalicExecute(Sender: TObject);
-begin
-  TagText(ttItalic);
-end;
-
-procedure TMainForm.ActionTextBoldExecute(Sender: TObject);
-begin
-  TagText(ttBold);
-end;
-
-procedure TMainForm.ActionTextUnderlineExecute(Sender: TObject);
-begin
-  TagText(ttUnderline);
-end;
-
-procedure TMainForm.ActionTextColorExecute(Sender: TObject);
-begin
-  TagText(ttColor);
-end;
-
-procedure TMainForm.ActionTextSizeExecute(Sender: TObject);
-begin
-  TagText(ttSize);
-end;
-
 procedure TMainForm.ActionStripTagsExecute(Sender: TObject);
+var Cursor : PVirtualNode;
+    NodeData : PTreeData;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+    StrippedText : WideString;
+    SubtitleRange : TSubtitleRange;
 begin
-  // todo
+  MultiChangeTask := TUndoableMultiChangeTask.Create;
+  Cursor := vtvSubsList.GetFirstSelected;
+  while (Cursor <> nil) do
+  begin
+    NodeData := vtvSubsList.GetNodeData(Cursor);
+    SubtitleRange := NodeData.Range;
+    StrippedText := StripTags(SubtitleRange.Text);
+    if (StrippedText <> SubtitleRange.Text) then
+    begin
+      ChangeSubData := TChangeSubData.Create(Cursor.Index);
+      ChangeSubData.FOldText := SubtitleRange.Text;
+      ChangeSubData.FNewText := StrippedText;
+      SubtitleRange.Text := StrippedText;
+      MultiChangeTask.AddData(ChangeSubData);
+    end;
+    Cursor := vtvSubsList.GetNextSelected(Cursor);
+  end;
+
+  if (MultiChangeTask.GetCount > 0) then
+  begin
+    PushUndoableTask(MultiChangeTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end
+  else
+  begin
+    FreeAndNil(MultiChangeTask);
+  end;
 end;
 
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
 {
 TODO UNDO:
 karaoke create, clear, change timestamps (with mouse or shortcut)
+undo text pipe text modification (modifiy, clear, load)
+undo for style?
 TODO : display karaoke sylables in wavdisplay
-TODO : undo text pipe text modification (modifiy, clear, load)
-TODO : undo for style?
 
 Quick style color size
 
-option to hide text in wavdiplay
-
 jsplugin for columns
 
-split at curso need to respect minimum time between sub
+split at cursor need to respect minimum time between sub
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
@@ -6561,4 +6603,8 @@ begin
 
 
   vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
+
+  
+XXX : Strip tags
+XXX : Split and Merge shortcut
 }
