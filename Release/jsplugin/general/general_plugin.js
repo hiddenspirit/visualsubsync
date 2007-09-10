@@ -82,11 +82,29 @@ function statusBarText(Sub) {
 VSSPlugin = {
 
   OnSubtitleModification : function(CurrentSub, PreviousSub, NextSub) {
-    SetStatusBarText( statusBarText(CurrentSub));
+    SetStatusBarText(statusBarText(CurrentSub));
   },
 
   OnSelectedSubtitle : function(CurrentSub, PreviousSub, NextSub) {
-    SetStatusBarText( statusBarText(CurrentSub));
+    SetStatusBarText(statusBarText(CurrentSub));
+  },
+
+  // ----------
+
+  ExtraColumns : {
+    Col0 : {Name : 'RS', Size : 40}
+  },
+  
+  GetExtraColumnText : function(Index, CurrentSub) {
+    switch(Index) {
+      case 0: return 'Col0';
+    }
+  },
+
+  GetExtraColumnColor : function(Index, CurrentSub) {
+    switch(Index) {
+      case 0: return 0xff0000;
+    }
   }
 
 }
