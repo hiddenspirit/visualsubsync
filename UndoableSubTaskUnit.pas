@@ -22,12 +22,12 @@ unit UndoableSubTaskUnit;
 
 interface
 
-uses UndoableTaskUnit, SubStructUnit, Contnrs, Graphics, TntComCtrls;
+uses UndoableTaskUnit, SubStructUnit, Contnrs, Graphics, TntComCtrls, Types;
 
 type
   TUndoableTaskIndexed = class(TUndoableTask)
   private
-    FIndexes : array of Integer; // Indexes of subtitles in FWavDisplayer
+    FIndexes : TIntegerDynArray; // Indexes of subtitles in FWavDisplayer
     FCount : Integer; // Number of indexes
   public
     destructor Destroy; override;
@@ -156,18 +156,41 @@ type
   end;
 
   TChangeSubData = class
+  private
     FIndex : Integer;
-    FNewStartTime, FOldStartTime : Integer;
-    FNewStopTime, FOldStopTime : Integer;
+    FNewStart, FOldStart : Integer;
+    FNewStop, FOldStop : Integer;
     FNewText, FOldText : WideString;
+    FOldSubTime, FNewSubTime : TIntegerDynArray;
+    FOldStartChanged, FOldStopChanged, FOldTextChanged, FOldSubTimeChanged : Boolean;
 
+    procedure SetOldStart(Value: Integer);
+    procedure SetOldStop(Value: Integer);
+    procedure SetOldText(Value: WideString);
+    procedure SetOldSubTime(Value: TIntegerDynArray);
+    procedure SetNewSubTime(Value: TIntegerDynArray);
+  public
     constructor Create(Index : Integer);
-    function StartChanged : Boolean;
-    function StopChanged : Boolean;
-    function TextChanged : Boolean;
     function GetStart(ForUndo : Boolean) : Integer;
     function GetStop(ForUndo : Boolean) : Integer;
     function GetText(ForUndo : Boolean) : WideString;
+    function GetSubTime(ForUndo : Boolean) : TIntegerDynArray;
+  published
+    property Index : Integer read FIndex write FIndex;  
+    property OldStart : Integer read FOldStart write SetOldStart;
+    property OldStop : Integer read FOldStop write SetOldStop;
+    property OldText : WideString read FOldText write SetOldText;
+    property OldSubTime : TIntegerDynArray read FOldSubTime write SetOldSubTime;
+
+    property NewStart : Integer read FNewStart write FNewStart;
+    property NewStop : Integer read FNewStop write FNewStop;
+    property NewText : WideString read FNewText write FNewText;
+    property NewSubTime : TIntegerDynArray read FNewSubTime write SetNewSubTime;
+
+    property StartChanged : Boolean read FOldStartChanged;
+    property StopChanged : Boolean read FOldStopChanged;
+    property TextChanged : Boolean read FOldTextChanged;
+    property SubTimeChanged : Boolean read FOldSubTimeChanged;
   end;
 
   // Used for error correction
@@ -202,7 +225,7 @@ type
 
 implementation
 
-uses Main, MiscToolsUnit, VirtualTrees;
+uses Main, MiscToolsUnit, VirtualTrees, Windows;
 
 //==============================================================================
 
@@ -540,40 +563,80 @@ end;
 constructor TChangeSubData.Create(Index : Integer);
 begin
   FIndex := Index;
-  FNewStartTime := -1; FOldStartTime := -1;
-  FNewStopTime := -1; FOldStopTime := -1;
+  FNewStart := -1; FOldStart := -1;
+  FNewStop := -1; FOldStop := -1;
   FNewText := ''; FOldText := '';
-end;
-
-function TChangeSubData.StartChanged : Boolean;
-begin
-  Result := (FOldStartTime <> -1)
-end;
-
-function TChangeSubData.StopChanged : Boolean;
-begin
-  Result := (FOldStopTime <> -1)
-end;
-
-function TChangeSubData.TextChanged : Boolean;
-begin
-  Result := (FNewText <> FOldText)
+  SetLength(FNewSubTime, 0);
+  SetLength(FOldSubTime, 0);
+  FOldStartChanged := False;
+  FOldStopChanged := False;
+  FOldTextChanged := False;
+  FOldSubTimeChanged := False;
 end;
 
 function TChangeSubData.GetStart(ForUndo : Boolean) : Integer;
 begin
-  if ForUndo then Result := FOldStartTime else Result := FNewStartTime;
+  if ForUndo then Result := FOldStart else Result := FNewStart;
 end;
 
 function TChangeSubData.GetStop(ForUndo : Boolean) : Integer;
 begin
-  if ForUndo then Result := FOldStopTime else Result := FNewStopTime;
+  if ForUndo then Result := FOldStop else Result := FNewStop;
 end;
 
 function TChangeSubData.GetText(ForUndo : Boolean) : WideString;
 begin
   if ForUndo then Result := FOldText else Result := FNewText;
 end;
+
+function TChangeSubData.GetSubTime(ForUndo : Boolean) : TIntegerDynArray;
+begin
+  if ForUndo then Result := FOldSubTime else Result := FNewSubTime;
+end;
+
+procedure TChangeSubData.SetOldStart(Value: Integer);
+begin
+  if not FOldStartChanged then
+  begin
+    FOldStart := Value;
+    FOldStartChanged := True;
+  end;
+end;
+
+procedure TChangeSubData.SetOldStop(Value: Integer);
+begin
+  if not FOldStopChanged then
+  begin
+    FOldStop := Value;
+    FOldStopChanged := True;
+  end;
+end;
+
+procedure TChangeSubData.SetOldText(Value: WideString);
+begin
+  if not FOldTextChanged then
+  begin
+    FOldText := Value;
+    FOldTextChanged := True;
+  end;
+end;
+
+procedure TChangeSubData.SetOldSubTime(Value: TIntegerDynArray);
+begin
+  if not FOldSubTimeChanged then
+  begin
+    SetLength(FOldSubTime, Length(Value));
+    CopyMemory(@FOldSubTime[0], @Value[0], Length(Value) * SizeOf(Integer));
+    FOldSubTimeChanged := True;
+  end;
+end;
+
+procedure TChangeSubData.SetNewSubTime(Value: TIntegerDynArray);
+begin
+  SetLength(FNewSubTime, Length(Value));
+  CopyMemory(@FNewSubTime[0], @Value[0], Length(Value) * SizeOf(Integer));
+end;
+
 
 constructor TUndoableMultiChangeTask.Create;
 begin
