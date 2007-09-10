@@ -40,18 +40,11 @@ uses Windows, Messages, Classes, Controls, Graphics, WAVFileUnit,
   Math, ExtCtrls, Renderer, MiniScrollBarUnit, MMSystem, Types;
 
 type
-  // ----------
-
-  WideStringArray = array of WideString;
-  IntegerArray = array of Integer;
-
-  // ----------
-
   TRange = class
   public
     StartTime : Integer;
     StopTime : Integer;
-    SubTime : array of Integer;
+    SubTime : TIntegerDynArray;
 
     procedure Assign(const Range : TRange); virtual;
     procedure AddSubTime(const NewTime : Integer);
@@ -120,7 +113,7 @@ type
 
   TDynamicEditMode = (demNone, demStart, demStop, demKaraoke);
 
-  TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange) of object;
+  TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange; SubTimeIndex, OldTime : Integer) of object;
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
   TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer) of object;
@@ -199,6 +192,7 @@ type
     FMaxSelTime : Integer;
 
     FRangeOldStart, FRangeOldStop : Integer; // Range time before dynamic modificaion
+    FOldKaraokeSubTime : Integer;
 
     FSceneChangeList : TIntegerDynArray;
     FSceneChangeStartOffset, FSceneChangeStopOffset : Integer;
@@ -331,10 +325,10 @@ type
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
-procedure KaraSplit(const Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray);
-procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray);
+procedure KaraSplit(const Text : WideString; var WordArray : TWideStringDynArray;
+  var TimeArray : TIntegerDynArray);
+procedure KaraSplit2(const Text : WideString; var WordArray : TWideStringDynArray;
+  var TimeArray : TIntegerDynArray);
 
 implementation
 
@@ -355,8 +349,8 @@ const
 
 // =============================================================================
 
-procedure KaraSplit(const Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray);
+procedure KaraSplit(const Text : WideString; var WordArray : TWideStringDynArray;
+  var TimeArray : TIntegerDynArray);
 var
   i, i1, i2 : integer;
   s : WideString;
@@ -402,8 +396,8 @@ end;
 // ------
 
 // include tag in text
-procedure KaraSplit2(const Text : WideString; var WordArray : WideStringArray;
-  var TimeArray : IntegerArray);
+procedure KaraSplit2(const Text : WideString; var WordArray : TWideStringDynArray;
+  var TimeArray : TIntegerDynArray);
 var
   i, i1, i2 : integer;
   s : WideString;
@@ -578,9 +572,9 @@ end;
 
 function TRange.UpdateSubTimeFromText(const Text : WideString) : Boolean;
 var
-  WordArray : WideStringArray;
-  KTimeArray : IntegerArray;
-  AbsTimeArray : IntegerArray;
+  WordArray : TWideStringDynArray;
+  KTimeArray : TIntegerDynArray;
+  AbsTimeArray : TIntegerDynArray;
   AccuTime : Integer;
   i : Integer;
   AreTimesDifferent : Boolean;
@@ -765,6 +759,7 @@ begin
       Break;
     Mid := (Max+Min) div 2;
   end;
+  
   Result := Min;
 end;
 
@@ -1475,6 +1470,7 @@ begin
     begin
       if (FDynamicEditTime >= 0) and (FDynamicEditTime < System.Length(FDynamicSelRange.SubTime)) then
       begin
+        FOldKaraokeSubTime := FDynamicSelRange.SubTime[FDynamicEditTime];
         // Re-adjust mouse cursor position
         X := TimeToPixel(FDynamicSelRange.SubTime[FDynamicEditTime] - FPositionMs);
         Windows.SetCursorPos(X + ClientOrigin.X, Y + ClientOrigin.Y);
@@ -2089,7 +2085,7 @@ begin
        Assigned(FSelectedRange) and
        (System.Length(FSelectedRange.SubTime) > 0) then
     begin
-      FOnKaraokeChanged(Self, FSelectedRange);
+      FOnKaraokeChanged(Self, FSelectedRange, FDynamicEditTime, FOldKaraokeSubTime);
     end;
   end;
 
@@ -2099,7 +2095,7 @@ begin
      Assigned(FDynamicSelRange) and
      Assigned(FOnKaraokeChanged) then
   begin
-    FOnKaraokeChanged(Self, FDynamicSelRange);
+    FOnKaraokeChanged(Self, FDynamicSelRange, FDynamicEditTime, FOldKaraokeSubTime);
   end;
 
   {
@@ -2116,6 +2112,7 @@ begin
   FScrollOrigin := -1;
   FRangeOldStart := -1;
   FRangeOldStop := -1;
+  FOldKaraokeSubTime := -1;
   Cursor := crIBeam;
   MouseCapture := False;
   FMouseIsDown := False;
@@ -2139,9 +2136,9 @@ end;
 
 procedure TWAVDisplayer.CreatePeakTab(WAVFile : TWAVFile);
 var
-    Buffer8 : array of Byte;
-    Buffer16 : array of SmallInt;
-    Buffer32 : array of Single;
+    Buffer8 : TByteDynArray;
+    Buffer16 : TSmallIntDynArray;
+    Buffer32 : TSingleDynArray;
     i, j : Integer;
     PeakMax, PeakMin : SmallInt;
     PeakMax8, PeakMin8 : Byte;
@@ -3157,9 +3154,8 @@ end;
 procedure TWAVDisplayer.SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 begin
   SetLength(FSceneChangeList, System.Length(SceneChangeList));
-  if System.Length(SceneChangeList) > 0 then
-    CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
-      System.Length(SceneChangeList) * SizeOf(Integer));
+  CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
+    System.Length(SceneChangeList) * SizeOf(Integer));
 end;
 
 //------------------------------------------------------------------------------
