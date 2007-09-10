@@ -1056,6 +1056,15 @@ object MainForm: TMainForm
           TabOrder = 1
           OnClick = chkAutoScrollWAVDispClick
         end
+        object Button1: TButton
+          Left = 48
+          Top = 24
+          Width = 75
+          Height = 25
+          Caption = 'Button1'
+          TabOrder = 2
+          OnClick = Button1Click
+        end
       end
       object plCursorPos: TPanel
         Left = 210
@@ -3874,7 +3883,7 @@ object MainForm: TMainForm
     object N19: TTntMenuItem
       Caption = '-'
     end
-    object Striptags1: TTntMenuItem
+    object pmiStriptags: TTntMenuItem
       Action = ActionStripTags
     end
     object N16: TTntMenuItem

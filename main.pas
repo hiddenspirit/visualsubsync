@@ -330,9 +330,10 @@ type
     extsize1: TTntMenuItem;
     N19: TTntMenuItem;
     ActionStripTags: TTntAction;
-    Striptags1: TTntMenuItem;
+    pmiStriptags: TTntMenuItem;
     ActionMerge: TTntAction;
     ActionSplitAtCursor: TTntAction;
+    Button1: TButton;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -347,7 +348,7 @@ type
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
     procedure WAVDisplayer1StartPlaying(Sender: TObject);
     procedure WAVDisplayer1KaraokeChanged(Sender: TObject;
-        Range : TRange);
+        Range : TRange; SubTimeIndex, OldTime : Integer);
     procedure WAVDisplayer1SelectedKaraokeRange(Sender: TObject;
         Range : TRange);
     procedure WAVDisplayer1CustomDrawRange(Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect);
@@ -494,6 +495,7 @@ type
     procedure ActionStripTagsExecute(Sender: TObject);
     procedure ActionMergeExecute(Sender: TObject);
     procedure ActionSplitAtCursorExecute(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
    
   private
     { Private declarations }
@@ -831,9 +833,9 @@ begin
   GeneralJSFilename := g_PluginPath + 'general\general_plugin.js';
   if WideFileExists(GeneralJSFilename) then
   begin
+    GeneralJSPlugin.OnJSPluginError := LogForm.LogMsg;
     if GeneralJSPlugin.LoadScript(GeneralJSFilename) then
     begin
-      GeneralJSPlugin.OnJSPluginError := LogForm.LogMsg;
       GeneralJSPlugin.OnJSPluginSetStatusBarText := OnJsSetStatusBarText;
     end
     else
@@ -1021,6 +1023,7 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   g_SceneChange.SetStartAndStopOffset(ConfigObject.SceneChangeStartOffset,
     ConfigObject.SceneChangeStopOffset);
+  g_SceneChange.SetVisible(ConfigObject.ShowSceneChange);
 end;
 
 //------------------------------------------------------------------------------
@@ -3713,7 +3716,7 @@ end;
 procedure TMainForm.OffsetCurrentSubtitleStartTime(Offset : Integer);
 var NodeData : PTreeData;
     R : TRange;
-    bStart, bStop : Integer;
+    bStart, bStop, OldTime : Integer;
     Idx : Integer;
     UndoableDelayTask : TUndoableDelayTask;
 begin
@@ -3734,11 +3737,12 @@ begin
       else
         bStop := R.StopTime - 10;
 
+      OldTime := R.SubTime[Idx];
       R.SubTime[Idx] := R.SubTime[Idx] + Offset;
       Constrain(R.SubTime[Idx], bStart, bStop);
       WAVDisplayer.Selection.StartTime := R.SubTime[Idx];
       WAVDisplayer.UpdateView([uvfRange]);
-      WAVDisplayer1KaraokeChanged(WAVDisplayer,R);
+      WAVDisplayer1KaraokeChanged(WAVDisplayer, R, Idx, OldTime);
       WAVDisplayer1SelectionChange(WAVDisplayer);
       Exit;
     end;
@@ -3765,7 +3769,7 @@ end;
 procedure TMainForm.OffsetCurrentSubtitleStopTime(Offset : Integer);
 var NodeData : PTreeData;
     R : TRange;
-    bStart, bStop : Integer;
+    bStart, bStop, OldTime : Integer;
     Idx : Integer;
     UndoableDelayTask : TUndoableDelayTask;
 begin
@@ -3786,11 +3790,12 @@ begin
       else
         bStop := R.StopTime - 10;
 
+      OldTime := R.SubTime[Idx];
       R.SubTime[Idx] := R.SubTime[Idx] + Offset;
       Constrain(R.SubTime[Idx], bStart, bStop);
       WAVDisplayer.Selection.StopTime := R.SubTime[Idx];
       WAVDisplayer.UpdateView([uvfRange]);
-      WAVDisplayer1KaraokeChanged(WAVDisplayer,R);
+      WAVDisplayer1KaraokeChanged(WAVDisplayer, R, Idx, OldTime);
       WAVDisplayer1SelectionChange(WAVDisplayer);
       Exit;
     end;
@@ -4318,10 +4323,8 @@ begin
       ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
       UndoableMultiChangeTask.AddData(ChangeSubData);
     end;
-    // Save old start time if it has not been set yet
-    if (not ChangeSubData.StartChanged) then
-      ChangeSubData.FOldStartTime := SubtitleRange.StartTime;
-    ChangeSubData.FNewStartTime := NewValue;
+    ChangeSubData.OldStart := SubtitleRange.StartTime;
+    ChangeSubData.NewStart := NewValue;
   end;
   CurrentProject.IsDirty := True;
 end;
@@ -4340,10 +4343,8 @@ begin
       ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
       UndoableMultiChangeTask.AddData(ChangeSubData);
     end;
-    // Save old stop time if it has not been set yet
-    if (not ChangeSubData.StopChanged) then
-      ChangeSubData.FOldStopTime := SubtitleRange.StopTime;
-    ChangeSubData.FNewStopTime := NewValue;
+    ChangeSubData.OldStop := SubtitleRange.StopTime;
+    ChangeSubData.NewStop := NewValue;
   end;
   CurrentProject.IsDirty := True;
 end;
@@ -4362,10 +4363,8 @@ begin
       ChangeSubData := TChangeSubData.Create(SubtitleRange.Node.Index);
       UndoableMultiChangeTask.AddData(ChangeSubData);
     end;
-    // Save old text if it has not been set yet
-    if (not ChangeSubData.TextChanged) then
-      ChangeSubData.FOldText := SubtitleRange.Text;
-    ChangeSubData.FNewText := NewValue;
+    ChangeSubData.OldText := SubtitleRange.Text;
+    ChangeSubData.NewText := NewValue;
   end;
   CurrentProject.IsDirty := True;
 end;
@@ -4579,7 +4578,7 @@ end;
 //------------------------------------------------------------------------------
 
 // Split on white space and on '/' that is used to separate sylables
-procedure WhiteSpaceSplit(const Text : WideString; var WordArray : WideStringArray);
+procedure WhiteSpaceSplit(const Text : WideString; var WordArray : TWideStringDynArray);
 var i, j : Integer;
 begin
   SetLength(WordArray, 0);
@@ -4618,7 +4617,7 @@ end;
 // -----
 
 procedure CreateKaraoke(SubRange : TSubtitleRange);
-var WordArray : WideStringArray;
+var WordArray : TWideStringDynArray;
     i, j, total : Integer;
     s : WideString;
     tpl : Double; // time per letter
@@ -4654,30 +4653,50 @@ end;
 procedure TMainForm.pmiCreateKaraokeClick(Sender: TObject);
 var Node : PVirtualNode;
     NodeData: PTreeData;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+    SubtitleRange : TSubtitleRange;
 begin
+  MultiChangeTask := TUndoableMultiChangeTask.Create;
   g_WebRWSynchro.BeginWrite;
   try
     Node := vtvSubsList.GetFirstSelected;
     while Assigned(Node) do
     begin
       NodeData := vtvSubsList.GetNodeData(Node);
-      CreateKaraoke(NodeData.Range);
+      SubtitleRange := NodeData.Range;
+      ChangeSubData := TChangeSubData.Create(Node.Index);
+      ChangeSubData.OldText := SubtitleRange.Text;
+      ChangeSubData.OldSubTime := SubtitleRange.SubTime;
+      CreateKaraoke(SubtitleRange);
+      ChangeSubData.NewText := SubtitleRange.Text;
+      ChangeSubData.NewSubTime := SubtitleRange.SubTime;
+      MultiChangeTask.AddData(ChangeSubData);
       Node := vtvSubsList.GetNextSelected(Node);
     end;
-    CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
   end;
-  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-  vtvSubsList.Repaint;
-  WAVDisplayer.UpdateView([uvfRange]);
+
+  if (MultiChangeTask.GetCount > 0) then
+  begin
+    PushUndoableTask(MultiChangeTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end
+  else
+  begin
+    FreeAndNil(MultiChangeTask);
+  end;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure ClearKaraoke(SubRange : TSubtitleRange);
-var WordArray : WideStringArray;
-    TimeArray : IntegerArray;
+var WordArray : TWideStringDynArray;
+    TimeArray : TIntegerDynArray;
     CleanedText : WideString;
     i : Integer;
 begin
@@ -4697,68 +4716,109 @@ procedure TMainForm.pmiClearKaraokeClick(Sender: TObject);
 var
   Node : PVirtualNode;
   NodeData: PTreeData;
+  MultiChangeTask : TUndoableMultiChangeTask;
+  ChangeSubData : TChangeSubData;
+  SubtitleRange : TSubtitleRange;
 begin
+  MultiChangeTask := TUndoableMultiChangeTask.Create;
   g_WebRWSynchro.BeginWrite;
   try
     Node := vtvSubsList.GetFirstSelected;
     while Assigned(Node) do
     begin
       NodeData := vtvSubsList.GetNodeData(Node);
+      SubtitleRange := NodeData.Range;
+      ChangeSubData := TChangeSubData.Create(Node.Index);
+      ChangeSubData.OldText := SubtitleRange.Text;
+      ChangeSubData.OldSubTime := SubtitleRange.SubTime;
       ClearKaraoke(NodeData.Range);
+      ChangeSubData.NewText := SubtitleRange.Text;
+      ChangeSubData.NewSubTime := SubtitleRange.SubTime;
+      MultiChangeTask.AddData(ChangeSubData);
       Node := vtvSubsList.GetNextSelected(Node);
     end;
-    CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
   end;
-  vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-  vtvSubsList.Repaint;
-  WAVDisplayer.UpdateView([uvfRange]);
+
+  if (MultiChangeTask.GetCount > 0) then
+  begin
+    PushUndoableTask(MultiChangeTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end
+  else
+  begin
+    FreeAndNil(MultiChangeTask);
+  end;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.WAVDisplayer1KaraokeChanged(Sender: TObject; Range : TRange);
-var Sub : TSubtitleRange;
-    WordArray : WideStringArray;
-    TimeArray : IntegerArray;
-    i : Integer;
-    AccuTime : Integer;
+function CalculateNewTextFromSubTime(SubRange : TSubtitleRange) : WideString;
+var WordArray : TWideStringDynArray;
+    TimeArray : TIntegerDynArray;
+    i, AccuTime : Integer;
+begin
+  Result := SubRange.Text;
+  if Length(SubRange.SubTime) <= 0 then
+    Exit;
+  KaraSplit2(SubRange.Text, WordArray, TimeArray);
+  if (Length(SubRange.SubTime) <> (Length(TimeArray) - 1)) then
+    Exit;
+  AccuTime := SubRange.StartTime;
+  for i := Low(SubRange.SubTime) to High(SubRange.SubTime) do
+  begin
+    TimeArray[i] := Round((SubRange.SubTime[i] - AccuTime) / 10);
+    AccuTime := AccuTime + (TimeArray[i] * 10);
+  end;
+  TimeArray[High(TimeArray)] := Round((SubRange.StopTime - AccuTime) / 10);
+
+  Result := WordArray[0];
+  for i := Low(TimeArray) to High(TimeArray) do
+  begin
+    Result := Result + IntToStr(TimeArray[i]) + WordArray[i + 1];
+  end;
+end;
+
+procedure TMainForm.WAVDisplayer1KaraokeChanged(Sender: TObject; Range : TRange;
+  SubTimeIndex, OldTime : Integer);
+var SubRange : TSubtitleRange;
     NewText : WideString;
-    savSelStart, savSelLength : Integer;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
 begin
   g_WebRWSynchro.BeginWrite;
   try
-    Sub := Range as TSubtitleRange;
-    KaraSplit2(Sub.Text, WordArray, TimeArray);
-    if (Length(Sub.SubTime) > 0) and
-       (Length(Sub.SubTime) = (Length(TimeArray) - 1)) then
+    SubRange := Range as TSubtitleRange;
+    NewText := CalculateNewTextFromSubTime(SubRange);
+    if (NewText <> SubRange.Text) then
     begin
-      AccuTime := Sub.StartTime;
-      for i:=0 to Length(Sub.SubTime)-1 do
+      if (SubTimeIndex <> -1) then
       begin
-        TimeArray[i] := Round((Sub.SubTime[i] - AccuTime) / 10);
-        AccuTime := AccuTime + (TimeArray[i] * 10);
+        MultiChangeTask := TUndoableMultiChangeTask.Create;
+        ChangeSubData := TChangeSubData.Create(SubRange.Node.Index);
+        ChangeSubData.OldSubTime := SubRange.SubTime;
+        ChangeSubData.OldSubTime[SubTimeIndex] := OldTime;
+        ChangeSubData.OldText := SubRange.Text;
+        ChangeSubData.NewSubTime := SubRange.SubTime;
+        ChangeSubData.NewText := NewText;
+        MultiChangeTask.AddData(ChangeSubData);
+        PushUndoableTask(MultiChangeTask);
       end;
-      TimeArray[Length(TimeArray)-1] := Round((Sub.StopTime - AccuTime) / 10);
 
-      NewText := WordArray[0];
-      for i:=0 to Length(TimeArray)-1 do
-      begin
-        NewText := NewText + IntToStr(TimeArray[i]) + WordArray[i+1];
-      end;
-      Sub.Text := NewText;
+      SubRange.Text := NewText;
+      CurrentProject.IsDirty := True;
     end;
-    CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
   end;
-  savSelStart := MemoSubtitleText.SelStart;
-  savSelLength := MemoSubtitleText.SelLength;
+
+  WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
-  MemoSubtitleText.SelStart := savSelStart;
-  MemoSubtitleText.SelLength := savSelLength;
 end;
 
 //------------------------------------------------------------------------------
@@ -5196,26 +5256,49 @@ end;
 
 procedure TMainForm.ActionPlaceKaraokeCursorsAtEndExecute(Sender: TObject);
 var NodeData: PTreeData;
-    i, s, t : Integer;
+    SubRange : TSubtitleRange;
+    i, CompressedStart : Integer;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+const CompressedDuration : Integer = 100;
 begin
+  // Compress karaoke cursors at end of subtitle
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-    t := 100;
-    s := NodeData.Range.StopTime - (Length(NodeData.Range.SubTime) * t);
-    if (s > NodeData.Range.StartTime) then
+    SubRange := NodeData.Range;
+    CompressedStart := SubRange.StopTime - (Length(SubRange.SubTime) * CompressedDuration);
+    if (CompressedStart > SubRange.StartTime) then
     begin
+      MultiChangeTask := TUndoableMultiChangeTask.Create;
+      ChangeSubData := TChangeSubData.Create(vtvSubsList.FocusedNode.Index);
+      MultiChangeTask.AddData(ChangeSubData);
+      ChangeSubData.OldText := SubRange.Text;
+      ChangeSubData.OldSubTime := SubRange.SubTime;
       try
         g_WebRWSynchro.BeginWrite;
-        for i:=0 to Length(NodeData.Range.SubTime)-1 do
+        for i := Low(SubRange.SubTime) to High(SubRange.SubTime) do
         begin
-          NodeData.Range.SubTime[i] := s + (t * i);
+          SubRange.SubTime[i] := CompressedStart + (CompressedDuration * i);
         end;
+        SubRange.Text := CalculateNewTextFromSubTime(SubRange);
       finally
         g_WebRWSynchro.EndWrite;
       end;
-      WAVDisplayer.UpdateView([uvfRange]);
-      WAVDisplayer1KaraokeChanged(nil, NodeData.Range);
+      if (ChangeSubData.OldText <> SubRange.Text) then
+      begin
+        ChangeSubData.NewText := SubRange.Text;
+        ChangeSubData.NewSubTime := SubRange.SubTime;
+        PushUndoableTask(MultiChangeTask);
+        CurrentProject.IsDirty := True;
+        WAVDisplayer.UpdateView([uvfRange]);
+        vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+        vtvSubsList.Repaint;
+      end
+      else
+      begin
+        FreeAndNil(MultiChangeTask);
+      end;
     end;
   end;
 end;
@@ -5967,7 +6050,8 @@ begin
       if (DelayShiftType in [dstStartTimeOnly, dstStopTimeOnly]) and
          (Length(WavDisplayer.SelectedRange.SubTime) > 0) then
       begin
-        WAVDisplayer1KaraokeChanged(WAVDisplayer, WavDisplayer.SelectedRange);
+        // TODO : check undo for this
+        WAVDisplayer1KaraokeChanged(WAVDisplayer, WavDisplayer.SelectedRange, -1, -1);
       end;
     end;
     // Sort subtitles
@@ -6209,7 +6293,7 @@ begin
     for i := 0 to ChangeList.Count-1 do
     begin
       ChangeSubData := ChangeList[i];
-      SubtitleRange := TSubtitleRange(WavDisplayer.RangeList[ChangeSubData.FIndex]);
+      SubtitleRange := TSubtitleRange(WavDisplayer.RangeList[ChangeSubData.Index]);
       ModifiedRangeList.Add(SubtitleRange);
       // Apply subtitle change
       if (ChangeSubData.StartChanged) then
@@ -6218,6 +6302,8 @@ begin
         SubtitleRange.StopTime := ChangeSubData.GetStop(IsUndo);
       if (ChangeSubData.TextChanged) then
         SubtitleRange.Text := ChangeSubData.GetText(IsUndo);
+      if (ChangeSubData.SubTimeChanged) then
+        SubtitleRange.SubTime := ChangeSubData.GetSubTime(IsUndo);
     end;
     // Sort subtitles
     FullSortTreeAndSubList;
@@ -6231,7 +6317,7 @@ begin
   begin
     ChangeSubData := ChangeList[i];
     SubtitleRange := ModifiedRangeList[i];
-    ChangeSubData.FIndex := SubtitleRange.Node.Index;
+    ChangeSubData.Index := SubtitleRange.Node.Index;
   end;
   ModifiedRangeList.Free;
 
@@ -6546,8 +6632,8 @@ begin
     if (StrippedText <> SubtitleRange.Text) then
     begin
       ChangeSubData := TChangeSubData.Create(Cursor.Index);
-      ChangeSubData.FOldText := SubtitleRange.Text;
-      ChangeSubData.FNewText := StrippedText;
+      ChangeSubData.OldText := SubtitleRange.Text;
+      ChangeSubData.NewText := StrippedText;
       SubtitleRange.Text := StrippedText;
       MultiChangeTask.AddData(ChangeSubData);
     end;
@@ -6569,14 +6655,49 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+procedure TMainForm.Button1Click(Sender: TObject);
+var SceneChangeWrapper : TSceneChangeWrapper;
+    SceneChangeList : TIntegerDynArray;
+begin
+  SceneChangeWrapper := TSceneChangeWrapper.Create;
+  SetLength(SceneChangeList, 4);
+  SceneChangeList[0] := 10;
+  SceneChangeList[1] := 20;
+  SceneChangeList[2] := 30;
+  SceneChangeList[3] := 40;
+  SceneChangeWrapper.SetSceneChangeList(SceneChangeList);
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(0)) + ' 10');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(10)) + ' 10');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(15)) + ' 20');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(45)) + ' -1');
+  LogForm.LogMsg('');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(0)) + ' -1');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(10)) + ' 10');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(15)) + ' 10');
+  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(45)) + ' 40');
+
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(0,5), True) + ' False');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(5,10), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(5,15), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(10,10), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(10,15), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(12,15), True) + ' False');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(35,40), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(35,45), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(40,45), True) + ' True');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(42,45), True) + ' False');
+  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(0,45), True) + ' True');    
+end;
+
 end.
 //------------------------------------------------------------------------------
 
 {
 TODO UNDO:
-karaoke create, clear, change timestamps (with mouse or shortcut)
 undo text pipe text modification (modifiy, clear, load)
+
 undo for style?
+
 TODO : display karaoke sylables in wavdisplay
 
 Quick style color size
@@ -6594,9 +6715,6 @@ var
   WideText: WideString;
 begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
-
-
-  jsplugin get next/previous scene change
 
 
   highlight subtitles with some criteria
