@@ -47,17 +47,24 @@ type
   private
     FSceneChangeList : TIntegerDynArray;
     FStartOffset, FStopOffset : Integer;
+    FVisible : Boolean;
+
+    function GetNextIndex(TimeMs : Integer; Backward : Boolean = False) : Integer;
   public
     procedure RegisterSceneChange(JSObject : TJSObject);
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
     procedure SetStartAndStopOffset(StartOffset, StopOffset : Integer);
+    procedure SetVisible(Value : Boolean);
   published
     function Contains(Start, Stop : Integer) : Boolean;
     function GetCount : Integer;
     function GetAt(Index : Integer) : Integer;
+    function GetNext(TimeMs : Integer) : Integer;
+    function GetPrevious(TimeMs : Integer) : Integer;
 
     property StartOffset : Integer read FStartOffset;
     property StopOffset : Integer read FStopOffset;
+    property Visible : Boolean read FVisible;
   end;
 
 {$TYPEINFO OFF}
@@ -874,11 +881,13 @@ end;
 
 //==============================================================================
 
+// SceneChange.GetCount() : Get the total number of scene change
 function TSceneChangeWrapper.GetCount : Integer;
 begin
   Result := Length(FSceneChangeList);
 end;
 
+// SceneChange.GetAt(Index) : Get the time of the scene change in ms at the specified index. index is between 0 and GetCount()-1
 function TSceneChangeWrapper.GetAt(Index : Integer) : Integer;
 begin
   if (Index >= Low(FSceneChangeList)) and (Index <= High(FSceneChangeList)) then
@@ -887,22 +896,48 @@ begin
     Result := -1;
 end;
 
+function TSceneChangeWrapper.GetNextIndex(TimeMs : Integer;
+  Backward : Boolean = False) : Integer;
+var Min, Mid, Max : Integer;
+begin
+  Min := Low(FSceneChangeList);
+  Max := High(FSceneChangeList);
+  Mid := (Max + Min) div 2;
+
+  while (Min <= Max) do
+  begin
+    if FSceneChangeList[Mid] < TimeMs then
+      Min := Mid + 1
+    else if FSceneChangeList[Mid] > TimeMs then
+      Max := Mid - 1
+    else
+      Break;
+    Mid := (Max + Min) div 2;
+  end;
+  if Backward then
+    Result := Max
+  else
+    Result := Min;
+end;
+
+// SceneChange.GetNext(TimeMs) : Get the time in ms of the next scene change >= TimeMs
+function TSceneChangeWrapper.GetNext(TimeMs : Integer) : Integer;
+begin
+  Result := GetAt(GetNextIndex(TimeMs));
+end;
+
+// SceneChange.GetPrevious(TimeMs) : Get the time in ms of the next scene change <= TimeMs
+function TSceneChangeWrapper.GetPrevious(TimeMs : Integer) : Integer;
+begin
+  Result := GetAt(GetNextIndex(TimeMs, True));
+end;
+
+// SceneChange.Contains(Start,Stop) : Check if there is a scene change between [Start,Stop]
 function TSceneChangeWrapper.Contains(Start, Stop : Integer) : Boolean;
 var I : Integer;
-    OffsetedStart, OffsetedStop : Integer;
 begin
-  OffsetedStart := Start - FStartOffset;
-  OffsetedStop := Stop + FStopOffset;
-  for I := Low(FSceneChangeList) to High(FSceneChangeList) do
-  begin
-    if (FSceneChangeList[I] >= OffsetedStart) and
-       (FSceneChangeList[I] <= OffsetedStop) then
-    begin
-      Result := True;
-      Exit;
-    end;
-  end;
-  Result := False;
+  I := GetNextIndex(Start);
+  Result := (I <= High(FSceneChangeList)) and (FSceneChangeList[I] <= Stop);
 end;
 
 procedure TSceneChangeWrapper.RegisterSceneChange(JSObject : TJSObject);
@@ -912,6 +947,8 @@ begin
   SceneChangeJSObj.SetMethodInfo('Contains', 2, rtBoolean);  
   SceneChangeJSObj.SetMethodInfo('GetCount', 0, rtInteger);
   SceneChangeJSObj.SetMethodInfo('GetAt', 1, rtInteger);
+  SceneChangeJSObj.SetMethodInfo('GetNext', 1, rtInteger);
+  SceneChangeJSObj.SetMethodInfo('GetPrevious', 1, rtInteger);
 end;
 
 procedure TSceneChangeWrapper.SetSceneChangeList(SceneChangeList : TIntegerDynArray);
@@ -928,6 +965,11 @@ procedure TSceneChangeWrapper.SetStartAndStopOffset(StartOffset, StopOffset : In
 begin
   FStartOffset := StartOffset;
   FStopOffset := StopOffset;
+end;
+
+procedure TSceneChangeWrapper.SetVisible(Value : Boolean);
+begin
+  FVisible := Visible;
 end;
 
 //==============================================================================
