@@ -2,8 +2,6 @@
 // (christophe.paris <at> free.fr)
 //
 
-var DebugMode = false;
-
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Too many lines',
@@ -21,12 +19,12 @@ VSSPlugin = {
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
   	var SubText = CurrentSub.StrippedText;
-  	var MaxLineLen = 0;
-  	var LineArray = SubText.split('\r\n');
+    var LineArray = SubText.split('\r\n');
+    var LineArrayLen = LineArray.length;
   	
-  	if(LineArray.length > this.ParamMaxLines.Value)
+  	if(LineArrayLen > this.ParamMaxLines.Value)
   	{
-  		return '' + LineArray.length + ' lines';
+  		return '' + LineArrayLen + ' lines';
   	} else {
   		return '';
   	}
