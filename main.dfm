@@ -25,13 +25,14 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 446
+    Top = 447
     Width = 772
-    Height = 5
+    Height = 4
     Cursor = crVSplit
     Align = alBottom
     AutoSnap = False
     MinSize = 40
+    ResizeStyle = rsUpdate
     OnCanResize = Splitter1CanResize
   end
   object Splitter2: TSplitter
@@ -169,7 +170,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 772
-    Height = 217
+    Height = 218
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -178,7 +179,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 772
-      Height = 147
+      Height = 148
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -1055,15 +1056,6 @@ object MainForm: TMainForm
           Caption = 'WAV display'
           TabOrder = 1
           OnClick = chkAutoScrollWAVDispClick
-        end
-        object Button1: TButton
-          Left = 48
-          Top = 24
-          Width = 75
-          Height = 25
-          Caption = 'Button1'
-          TabOrder = 2
-          OnClick = Button1Click
         end
       end
       object plCursorPos: TPanel

@@ -333,7 +333,6 @@ type
     pmiStriptags: TTntMenuItem;
     ActionMerge: TTntAction;
     ActionSplitAtCursor: TTntAction;
-    Button1: TButton;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -495,7 +494,6 @@ type
     procedure ActionStripTagsExecute(Sender: TObject);
     procedure ActionMergeExecute(Sender: TObject);
     procedure ActionSplitAtCursorExecute(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
    
   private
     { Private declarations }
@@ -611,9 +609,6 @@ type
     function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
     function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
 
-    // Scene change
-    procedure FilterSceneChange(var SCArray : TIntegerDynArray;
-      var FilteredSCArray : TIntegerDynArray);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -1020,9 +1015,11 @@ begin
   WAVDisplayer.SceneChangeEnabled := ConfigObject.ShowSceneChange;
   WAVDisplayer.SceneChangeStartOffset := ConfigObject.SceneChangeStartOffset;
   WAVDisplayer.SceneChangeStopOffset := ConfigObject.SceneChangeStopOffset;
+  WAVDisplayer.SceneChangeFilterOffset := ConfigObject.SceneChangeFilterOffset;
   WAVDisplayer.UpdateView([uvfRange]);
-  g_SceneChange.SetStartAndStopOffset(ConfigObject.SceneChangeStartOffset,
-    ConfigObject.SceneChangeStopOffset);
+  g_SceneChange.SetOffsets(ConfigObject.SceneChangeStartOffset,
+    ConfigObject.SceneChangeStopOffset,
+    ConfigObject.SceneChangeFilterOffset);
   g_SceneChange.SetVisible(ConfigObject.ShowSceneChange);
 end;
 
@@ -1963,7 +1960,6 @@ begin
     SaveSceneChange(SceneChangeFileName, SCArray);
   end;
 
-  //FilterSceneChange(SCArray, FilteredSCArray);
   WAVDisplayer.SetSceneChangeList(SCArray);
   WAVDisplayer.UpdateView([uvfRange]);
   g_SceneChange.SetSceneChangeList(SCArray);
@@ -6583,37 +6579,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.FilterSceneChange(var SCArray : TIntegerDynArray;
-  var FilteredSCArray : TIntegerDynArray);
-var I, RangeIdx, SCTimeMs : Integer;
-    Filtered : Boolean;
-    SubRange : TRange;
-begin
-  SetLength(FilteredSCArray, 0);
-  for I := Low(SCArray) to High(SCArray) do
-  begin
-    Filtered := False;
-    SCTimeMs := SCArray[i];
-    RangeIdx := WAVDisplayer.RangeList.GetRangeIdxAt(SCTimeMs);
-    if (RangeIdx <> -1) then
-    begin
-      SubRange := WAVDisplayer.RangeList[RangeIdx];
-      if (SCTimeMs >= SubRange.StartTime + ConfigObject.SceneChangeStartOffset) and
-         (SCTimeMs <= SubRange.StopTime - ConfigObject.SceneChangeStopOffset) then
-      begin
-        Filtered := True;
-      end
-    end;
-    if (not Filtered) then
-    begin
-      SetLength(FilteredSCArray, Length(FilteredSCArray) + 1);
-      FilteredSCArray[Length(FilteredSCArray) - 1] := SCTimeMs;
-    end;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.ActionStripTagsExecute(Sender: TObject);
 var Cursor : PVirtualNode;
     NodeData : PTreeData;
@@ -6655,40 +6620,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-procedure TMainForm.Button1Click(Sender: TObject);
-var SceneChangeWrapper : TSceneChangeWrapper;
-    SceneChangeList : TIntegerDynArray;
-begin
-  SceneChangeWrapper := TSceneChangeWrapper.Create;
-  SetLength(SceneChangeList, 4);
-  SceneChangeList[0] := 10;
-  SceneChangeList[1] := 20;
-  SceneChangeList[2] := 30;
-  SceneChangeList[3] := 40;
-  SceneChangeWrapper.SetSceneChangeList(SceneChangeList);
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(0)) + ' 10');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(10)) + ' 10');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(15)) + ' 20');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetNext(45)) + ' -1');
-  LogForm.LogMsg('');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(0)) + ' -1');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(10)) + ' 10');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(15)) + ' 10');
-  LogForm.LogMsg(IntToStr(SceneChangeWrapper.GetPrevious(45)) + ' 40');
-
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(0,5), True) + ' False');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(5,10), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(5,15), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(10,10), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(10,15), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(12,15), True) + ' False');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(35,40), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(35,45), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(40,45), True) + ' True');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(42,45), True) + ' False');
-  LogForm.LogMsg(BoolToStr(SceneChangeWrapper.Contains(0,45), True) + ' True');    
-end;
-
 end.
 //------------------------------------------------------------------------------
 
