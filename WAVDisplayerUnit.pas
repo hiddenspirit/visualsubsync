@@ -195,7 +195,7 @@ type
     FOldKaraokeSubTime : Integer;
 
     FSceneChangeList : TIntegerDynArray;
-    FSceneChangeStartOffset, FSceneChangeStopOffset : Integer;
+    FSceneChangeStartOffset, FSceneChangeStopOffset, FSceneChangeFilterOffset : Integer;
     FSceneChangeEnabled : Boolean;
 
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
@@ -225,6 +225,7 @@ type
       Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 
     function GetWavCanvasHeight : Integer;
+    function IsFilteredSceneChange(SceneChange : Integer) : Boolean;
         
   protected
     procedure DblClick; override;
@@ -322,6 +323,7 @@ type
     property SceneChangeEnabled : Boolean read FSceneChangeEnabled write FSceneChangeEnabled;
     property SceneChangeStartOffset : Integer read FSceneChangeStartOffset write FSceneChangeStartOffset;
     property SceneChangeStopOffset : Integer read FSceneChangeStopOffset write FSceneChangeStopOffset;
+    property SceneChangeFilterOffset : Integer read FSceneChangeFilterOffset write FSceneChangeFilterOffset;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -930,6 +932,7 @@ begin
 
   FSceneChangeStartOffset := 130;
   FSceneChangeStopOffset := 130;
+  FSceneChangeFilterOffset := 250;
   FSceneChangeEnabled := True;
   
   FUpdateCursorTimer := TTimer.Create(nil);
@@ -1104,8 +1107,24 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TWAVDisplayer.IsFilteredSceneChange(SceneChange : Integer) : Boolean;
+var pos : Integer;
+    range : TRange;
+begin
+  Result := False;
+  pos := FRangeList.GetRangeIdxAt(SceneChange);
+  if (pos >= 0) and (pos < FRangeList.GetCount) and (FSceneChangeFilterOffset > 0) then
+  begin
+    range := FRangeList[pos];
+    Result := (SceneChange > range.StartTime + FSceneChangeFilterOffset) and
+      (SceneChange < range.StopTime - FSceneChangeFilterOffset);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TWAVDisplayer.PaintOnCanvas(ACanvas : TCanvas);
-var x : Integer;
+var x, SceneChange : Integer;
     x1, x2, y1, y2 : Integer;
     i, j : Integer;
     r : TRange;
@@ -1124,13 +1143,15 @@ begin
     ACanvas.Pen.Mode := pmCopy;
     for i := Low(FSceneChangeList) to High(FSceneChangeList) do
     begin
-      if (FSceneChangeList[i] >= FPositionMs - FSceneChangeStopOffset) and
-         (FSceneChangeList[i] <= FPositionMs + FPageSizeMs + FSceneChangeStartOffset) then
+      SceneChange := FSceneChangeList[i];
+      if (SceneChange >= FPositionMs - FSceneChangeStopOffset) and
+         (SceneChange <= FPositionMs + FPageSizeMs + FSceneChangeStartOffset) then
       begin
-        if (FSceneChangeStopOffset + FSceneChangeStartOffset) > 0 then
+        if (FSceneChangeStopOffset + FSceneChangeStartOffset > 0) and
+           (not IsFilteredSceneChange(SceneChange))  then
         begin
-          x1 := TimeToPixel(FSceneChangeList[i] - FPositionMs - FSceneChangeStartOffset);
-          x2 := TimeToPixel(FSceneChangeList[i] - FPositionMs + FSceneChangeStopOffset);
+          x1 := TimeToPixel(SceneChange - FPositionMs - FSceneChangeStartOffset);
+          x2 := TimeToPixel(SceneChange - FPositionMs + FSceneChangeStopOffset);
 
           Constrain(x1, 0, Width);
           Constrain(x2, 0, Width);
@@ -1145,7 +1166,7 @@ begin
             Point(0,0), bmConstantAlphaAndColor, 80, ACanvas.Pen.Color);
         end;
 
-        x := TimeToPixel(FSceneChangeList[i] - FPositionMs);
+        x := TimeToPixel(SceneChange - FPositionMs);
         ACanvas.MoveTo(x, 0);
         ACanvas.LineTo(x, CanvasHeight);
       end;
