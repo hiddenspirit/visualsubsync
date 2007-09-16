@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsGeneral
+    ActivePage = tsWAVDisplay
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -90,13 +90,6 @@ object PreferencesForm: TPreferencesForm
         Align = alBottom
         Caption = ' Misc : '
         TabOrder = 1
-        object Label7: TLabel
-          Left = 204
-          Top = 58
-          Width = 34
-          Height = 13
-          Caption = 'Offset :'
-        end
         object chkAssociateExt: TCheckBox
           Left = 16
           Top = 24
@@ -118,68 +111,6 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
-        end
-        object chkSceneChange: TCheckBox
-          Left = 16
-          Top = 56
-          Width = 121
-          Height = 17
-          Caption = 'Show scene change'
-          TabOrder = 2
-        end
-        object EditSCStartOffset: TEdit
-          Left = 244
-          Top = 54
-          Width = 56
-          Height = 21
-          Hint = 'Start offset in ms'
-          ParentShowHint = False
-          ShowHint = True
-          TabOrder = 3
-          Text = '130'
-        end
-        object EditSCStopOffset: TEdit
-          Left = 324
-          Top = 54
-          Width = 56
-          Height = 21
-          Hint = 'Stop offset in ms'
-          ParentShowHint = False
-          ShowHint = True
-          TabOrder = 4
-          Text = '130'
-        end
-        object UpDownSCStart: TTntUpDown
-          Left = 300
-          Top = 54
-          Width = 16
-          Height = 21
-          Associate = EditSCStartOffset
-          Max = 2000
-          Increment = 10
-          Position = 130
-          TabOrder = 5
-          Thousands = False
-        end
-        object UpDownSCStop: TTntUpDown
-          Left = 380
-          Top = 54
-          Width = 16
-          Height = 21
-          Associate = EditSCStopOffset
-          Max = 2000
-          Increment = 10
-          Position = 130
-          TabOrder = 6
-          Thousands = False
-        end
-        object chkShowTextInWAVDisplay: TCheckBox
-          Left = 16
-          Top = 72
-          Width = 177
-          Height = 17
-          Caption = 'Show text in WAV display'
-          TabOrder = 7
         end
       end
       object GroupBox4: TGroupBox
@@ -376,7 +307,7 @@ object PreferencesForm: TPreferencesForm
     end
     object tsHotKeys: TTntTabSheet
       BorderWidth = 4
-      Caption = 'HotKeys'
+      Caption = 'Hot keys'
       object TntLabel5: TTntLabel
         Left = 0
         Top = 248
@@ -387,9 +318,9 @@ object PreferencesForm: TPreferencesForm
       object TntLabel6: TTntLabel
         Left = 128
         Top = 248
-        Width = 40
+        Width = 43
         Height = 13
-        Caption = 'Hotkey :'
+        Caption = 'Hot key :'
       end
       object ListHotkeys: TTntListView
         Left = 0
@@ -685,7 +616,7 @@ object PreferencesForm: TPreferencesForm
     end
     object tsTimingMode: TTntTabSheet
       BorderWidth = 4
-      Caption = 'TimingMode'
+      Caption = 'Timing mode'
       object TntGroupBox4: TTntGroupBox
         Left = 0
         Top = 0
@@ -796,6 +727,141 @@ object PreferencesForm: TPreferencesForm
           Max = 500
           Increment = 10
           TabOrder = 8
+        end
+      end
+    end
+    object tsWAVDisplay: TTntTabSheet
+      BorderWidth = 4
+      Caption = 'WAV display'
+      object TntGroupBox5: TTntGroupBox
+        Left = 0
+        Top = 0
+        Width = 418
+        Height = 121
+        Align = alTop
+        Caption = ' Scene change : '
+        TabOrder = 0
+        object TntLabel9: TTntLabel
+          Left = 16
+          Top = 54
+          Width = 105
+          Height = 13
+          Caption = 'Safety zone offsets :'
+        end
+        object TntLabel10: TTntLabel
+          Left = 24
+          Top = 76
+          Width = 22
+          Height = 13
+          Caption = 'Start'
+        end
+        object TntLabel11: TTntLabel
+          Left = 134
+          Top = 76
+          Width = 22
+          Height = 13
+          Caption = 'Stop'
+        end
+        object TntLabel12: TTntLabel
+          Left = 256
+          Top = 54
+          Width = 94
+          Height = 13
+          Caption = 'Filter inside subtitle :'
+        end
+        object chkSceneChange: TCheckBox
+          Left = 16
+          Top = 24
+          Width = 121
+          Height = 17
+          Caption = 'Show scene change'
+          TabOrder = 0
+        end
+        object EditSCStartOffset: TEdit
+          Left = 51
+          Top = 72
+          Width = 57
+          Height = 21
+          Hint = 'Start offset in ms'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 1
+          Text = '130'
+        end
+        object UpDownSCStart: TTntUpDown
+          Left = 108
+          Top = 72
+          Width = 15
+          Height = 21
+          Associate = EditSCStartOffset
+          Max = 2000
+          Increment = 10
+          Position = 130
+          TabOrder = 2
+          Thousands = False
+        end
+        object EditSCStopOffset: TEdit
+          Left = 161
+          Top = 72
+          Width = 57
+          Height = 21
+          Hint = 'Stop offset in ms'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 3
+          Text = '130'
+        end
+        object UpDownSCStop: TTntUpDown
+          Left = 218
+          Top = 72
+          Width = 15
+          Height = 21
+          Associate = EditSCStopOffset
+          Max = 2000
+          Increment = 10
+          Position = 130
+          TabOrder = 4
+          Thousands = False
+        end
+        object EditSCFilterOffset: TEdit
+          Left = 256
+          Top = 72
+          Width = 57
+          Height = 21
+          Hint = 'Offset from start and stop in ms (0 to disable)'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 5
+          Text = '250'
+        end
+        object UpDownSCFilter: TTntUpDown
+          Left = 313
+          Top = 72
+          Width = 15
+          Height = 21
+          Associate = EditSCFilterOffset
+          Max = 2000
+          Increment = 10
+          Position = 250
+          TabOrder = 6
+          Thousands = False
+        end
+      end
+      object TntGroupBox6: TTntGroupBox
+        Left = 0
+        Top = 136
+        Width = 418
+        Height = 152
+        Align = alBottom
+        Caption = ' Misc : '
+        TabOrder = 1
+        object chkShowTextInWAVDisplay: TCheckBox
+          Left = 16
+          Top = 24
+          Width = 113
+          Height = 17
+          Caption = 'Show subtitle text'
+          TabOrder = 0
         end
       end
     end

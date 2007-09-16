@@ -78,10 +78,6 @@ type
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
-    ShowSceneChange : Boolean;
-    SceneChangeStartOffset : Integer;
-    SceneChangeStopOffset : Integer;
-    ShowTextInWAVDisplay : Boolean;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -99,6 +95,12 @@ type
     // Fonts
     SubListFont : string;
     SubTextFont : string;
+    // WAV Displaye
+    ShowSceneChange : Boolean;
+    SceneChangeStartOffset : Integer;
+    SceneChangeStopOffset : Integer;
+    SceneChangeFilterOffset : Integer; 
+    ShowTextInWAVDisplay : Boolean;
 
     constructor Create;
     destructor Destroy; override;
@@ -193,13 +195,21 @@ type
     EditBlankBetweenSub: TTntEdit;
     UpDownBlankBetweenSub: TTntUpDown;
     bttOpenBackupTempDir: TButton;
+    tsWAVDisplay: TTntTabSheet;
+    TntGroupBox5: TTntGroupBox;
     chkSceneChange: TCheckBox;
     EditSCStartOffset: TEdit;
-    EditSCStopOffset: TEdit;
-    Label7: TLabel;
     UpDownSCStart: TTntUpDown;
+    EditSCStopOffset: TEdit;
     UpDownSCStop: TTntUpDown;
+    TntGroupBox6: TTntGroupBox;
     chkShowTextInWAVDisplay: TCheckBox;
+    TntLabel9: TTntLabel;
+    TntLabel10: TTntLabel;
+    TntLabel11: TTntLabel;
+    TntLabel12: TTntLabel;
+    EditSCFilterOffset: TEdit;
+    UpDownSCFilter: TTntUpDown;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -434,10 +444,6 @@ begin
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
-  ShowSceneChange := False;
-  SceneChangeStartOffset := 130;
-  SceneChangeStopOffset := 130;
-  ShowTextInWAVDisplay := True;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -455,6 +461,12 @@ begin
   // Fonts
   SubListFont := 'Arial,8,0,0,clWindowText';
   SubTextFont := 'Arial,10,1,0,clWindowText';
+  // WAV Display
+  ShowSceneChange := False;
+  SceneChangeStartOffset := 130;
+  SceneChangeStopOffset := 130;
+  ShowTextInWAVDisplay := True;
+  SceneChangeFilterOffset := 250;
 end;
 
 //------------------------------------------------------------------------------
@@ -555,10 +567,6 @@ begin
   IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
-  IniFile.WriteBool('Misc', 'ShowSceneChange', ShowSceneChange);
-  IniFile.WriteInteger('Misc', 'SceneChangeStartOffset', SceneChangeStartOffset);
-  IniFile.WriteInteger('Misc', 'SceneChangeStopOffset', SceneChangeStopOffset);
-  IniFile.WriteBool('Misc', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -610,6 +618,13 @@ begin
   // Fonts
   IniFile.WriteString('Fonts', 'SubList', SubListFont);
   IniFile.WriteString('Fonts', 'SubText', SubTextFont);
+
+  // WAV Display
+  IniFile.WriteBool('WAVDisplay', 'ShowSceneChange', ShowSceneChange);
+  IniFile.WriteInteger('WAVDisplay', 'SceneChangeStartOffset', SceneChangeStartOffset);
+  IniFile.WriteInteger('WAVDisplay', 'SceneChangeStopOffset', SceneChangeStopOffset);
+  IniFile.WriteInteger('WAVDisplay', 'SceneChangeFilterOffset', SceneChangeFilterOffset);
+  IniFile.WriteBool('WAVDisplay', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 end;
 
 //------------------------------------------------------------------------------
@@ -629,10 +644,6 @@ begin
   SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
-  ShowSceneChange := IniFile.ReadBool('Misc', 'ShowSceneChange', ShowSceneChange);
-  SceneChangeStartOffset := IniFile.ReadInteger('Misc','SceneChangeStartOffset',SceneChangeStartOffset);
-  SceneChangeStopOffset := IniFile.ReadInteger('Misc','SceneChangeStopOffset',SceneChangeStopOffset);
-  ShowTextInWAVDisplay := IniFile.ReadBool('Misc', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 
   // Web server
   ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
@@ -703,6 +714,13 @@ begin
   // Fonts
   SubListFont := IniFile.ReadString('Fonts', 'SubList', SubListFont);
   SubTextFont := IniFile.ReadString('Fonts', 'SubText', SubTextFont);
+
+  // WAV Display
+  ShowSceneChange := IniFile.ReadBool('WAVDisplay', 'ShowSceneChange', ShowSceneChange);
+  SceneChangeStartOffset := IniFile.ReadInteger('WAVDisplay','SceneChangeStartOffset',SceneChangeStartOffset);
+  SceneChangeStopOffset := IniFile.ReadInteger('WAVDisplay','SceneChangeStopOffset',SceneChangeStopOffset);
+  SceneChangeFilterOffset := IniFile.ReadInteger('WAVDisplay','SceneChangeFilterOffset',SceneChangeFilterOffset);
+  ShowTextInWAVDisplay := IniFile.ReadBool('WAVDisplay', 'ShowTextInWAVDisplay', ShowTextInWAVDisplay);
 end;
 
 // =============================================================================
@@ -758,10 +776,6 @@ begin
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
-  chkSceneChange.Checked := Config.ShowSceneChange;
-  UpDownSCStart.Position := Config.SceneChangeStartOffset;
-  UpDownSCStop.Position := Config.SceneChangeStopOffset;
-  chkShowTextInWAVDisplay.Checked := Config.ShowTextInWAVDisplay;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -825,6 +839,13 @@ begin
   String2Font(EditSubListFont.Text, EditSubListFont.Font);
   EditSubTextFont.Text := Config.SubTextFont;
   String2Font(EditSubTextFont.Text, EditSubTextFont.Font);
+
+  // WAV Display
+  chkSceneChange.Checked := Config.ShowSceneChange;
+  UpDownSCStart.Position := Config.SceneChangeStartOffset;
+  UpDownSCStop.Position := Config.SceneChangeStopOffset;
+  UpDownSCFilter.Position := Config.SceneChangeFilterOffset;
+  chkShowTextInWAVDisplay.Checked := Config.ShowTextInWAVDisplay;
 end;
 
 //------------------------------------------------------------------------------
@@ -843,10 +864,6 @@ begin
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
-  Config.ShowSceneChange := chkSceneChange.Checked;
-  Config.SceneChangeStartOffset := UpDownSCStart.Position;
-  Config.SceneChangeStopOffset := UpDownSCStop.Position;
-  Config.ShowTextInWAVDisplay := chkShowTextInWAVDisplay.Checked;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
@@ -881,6 +898,13 @@ begin
   // Fonts
   Config.SubListFont := EditSubListFont.Text;
   Config.SubTextFont := EditSubTextFont.Text;
+
+  // WAV Display
+  Config.ShowSceneChange := chkSceneChange.Checked;
+  Config.SceneChangeStartOffset := UpDownSCStart.Position;
+  Config.SceneChangeStopOffset := UpDownSCStop.Position;
+  Config.SceneChangeFilterOffset := UpDownSCFilter.Position;
+  Config.ShowTextInWAVDisplay := chkShowTextInWAVDisplay.Checked;
 end;
 
 //------------------------------------------------------------------------------
