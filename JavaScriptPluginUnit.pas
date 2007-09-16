@@ -46,14 +46,14 @@ type
   TSceneChangeWrapper = class(TObject)
   private
     FSceneChangeList : TIntegerDynArray;
-    FStartOffset, FStopOffset : Integer;
+    FStartOffset, FStopOffset, FFilterOffset : Integer;
     FVisible : Boolean;
 
     function GetNextIndex(TimeMs : Integer; Backward : Boolean = False) : Integer;
   public
     procedure RegisterSceneChange(JSObject : TJSObject);
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
-    procedure SetStartAndStopOffset(StartOffset, StopOffset : Integer);
+    procedure SetOffsets(StartOffset, StopOffset, FilterOffset : Integer);
     procedure SetVisible(Value : Boolean);
   published
     function Contains(Start, Stop : Integer) : Boolean;
@@ -64,6 +64,7 @@ type
 
     property StartOffset : Integer read FStartOffset;
     property StopOffset : Integer read FStopOffset;
+    property FilterOffset : Integer read FFilterOffset;
     property Visible : Boolean read FVisible;
   end;
 
@@ -961,15 +962,16 @@ begin
   end;
 end;
 
-procedure TSceneChangeWrapper.SetStartAndStopOffset(StartOffset, StopOffset : Integer);
+procedure TSceneChangeWrapper.SetOffsets(StartOffset, StopOffset, FilterOffset : Integer);
 begin
   FStartOffset := StartOffset;
   FStopOffset := StopOffset;
+  FFilterOffset := FilterOffset;
 end;
 
 procedure TSceneChangeWrapper.SetVisible(Value : Boolean);
 begin
-  FVisible := Visible;
+  FVisible := Value;
 end;
 
 //==============================================================================
