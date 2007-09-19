@@ -6464,7 +6464,7 @@ begin
   // bold: <b></b> or {\b1}{\b0}
   // underline: <u></u> or {\u1}{\u0}
   // font size: <font size="10"></font> {\fs10}
-  // font color: <font color="#ff0000"></font> {\1c&H000000&}
+  // font color: <font color="#FF0000"></font> {\1c&H000000&}
   // {\a1} ...
   // {\pos  ...
 
@@ -6475,8 +6475,8 @@ begin
     ttItalic: TagText('<i>','</i>');
     ttBold: TagText('<b>','</b>');
     ttUnderline: TagText('<u>','</u>');
-    ttColor: TagText('<font color="#ffffff">','</font>');
-    ttSize: TagText('<font size="14">','</font>');
+    ttColor: TagText('<font color="#FFFFFF">','</font>');
+    ttSize: TagText('<font size="16">','</font>');
     end;
   end
   else if (Ext = '.ass') or (Ext = '.ssa') then
@@ -6485,8 +6485,8 @@ begin
     ttItalic: TagText('{\i1}','{\i0}');
     ttBold: TagText('{\b1}','{\b0}');
     ttUnderline: TagText('{\u1}','{\u0}');
-    ttColor: TagText('{\1c&H000000&}','{\1c}');
-    ttSize: TagText('{\fs10}','{\fs}');
+    ttColor: TagText('{\1c&HFFFFFF&}','{\1c}');
+    ttSize: TagText('{\fs16}','{\fs}');
     end;
   end;
 end;
@@ -6637,6 +6637,11 @@ jsplugin for columns
 
 split at cursor need to respect minimum time between sub
 
+highlight subtitles with some criteria
+
+vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
+
+
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
   SB_SIMPLEID = Integer($FF);
@@ -6646,12 +6651,6 @@ var
   WideText: WideString;
 begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
-
-
-  highlight subtitles with some criteria
-
-
-  vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
 
   
 XXX : Strip tags
