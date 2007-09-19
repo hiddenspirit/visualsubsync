@@ -1939,10 +1939,7 @@ end;
 
 procedure TMainForm.LoadVideoSceneChange;
 var SceneChangeFileName : WideString;
-    SCArray, FilteredSCArray : TIntegerDynArray;
-    SceneChangeSL : TTntStringList;
-    I : Integer;
-    TimeMs : Integer;
+    SCArray :TIntegerDynArray;
 begin
   // Check for a '.scenechange' file
   SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
@@ -3229,6 +3226,7 @@ begin
     WAVDisplayer.Stop;
     chkAutoScrollSub.Checked := False;
     TimerAutoScrollSub.Enabled := False;
+    SetLength(EmptyArray, 0);    
 
     g_WebRWSynchro.BeginWrite;
     try
@@ -3318,41 +3316,43 @@ var
   I, LineIndex, SubCountBefore : Integer;
   UndoableMultiAddTask : TUndoableMultiAddTask;
 begin
+
+  TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
+  if not TntOpenDialog1.Execute then
+    Exit;
+
+  HaveNewSub := False;
+  Source := TTntStringList.Create;
+  Source.LoadFromFile(TntOpenDialog1.FileName);
+
   g_WebRWSynchro.BeginWrite;
   try
-    Source := TTntStringList.Create;
-    HaveNewSub := False;
-    TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
-    if TntOpenDialog1.Execute then
+    // Get start time for the first new subtitle
+    if (WAVDisplayer.RangeList.Count > 0) then
     begin
-      Source.LoadFromFile(TntOpenDialog1.FileName);
+      LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
+      StartTime := LastRange.StopTime + 2000;
+    end
+    else
+      StartTime := 99 * 60 * 60 * 1000;
 
-      // Get start time for the first new subtitle
-      if (WAVDisplayer.RangeList.Count > 0) then
-      begin
-        LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
-        StartTime := LastRange.StopTime + 2000;
-      end
-      else
-        StartTime := 99 * 60 * 60 * 1000;
+    SubCountBefore := WAVDisplayer.RangeList.Count;
+    for LineIndex := 0 to Source.Count-1 do
+    begin
+      Line := Source[LineIndex];
 
-      SubCountBefore := WAVDisplayer.RangeList.Count;
-      for LineIndex := 0 to Source.Count-1 do
-      begin
-        Line := Source[LineIndex];
+      NewRange := SubRangeFactory.CreateRangeSS(StartTime, StartTime+1000);
+      TSubtitleRange(NewRange).Text := Line;
+      WAVDisplayer.RangeList.AddAtEnd(NewRange);
+      Node := vtvSubsList.AddChild(nil);
+      NodeData := vtvSubsList.GetNodeData(Node);
+      NodeData.Range := TSubtitleRange(NewRange);
+      TSubtitleRange(NewRange).Node := Node;
 
-        NewRange := SubRangeFactory.CreateRangeSS(StartTime, StartTime+1000);
-        TSubtitleRange(NewRange).Text := Line;
-        WAVDisplayer.RangeList.AddAtEnd(NewRange);
-        Node := vtvSubsList.AddChild(nil);
-        NodeData := vtvSubsList.GetNodeData(Node);
-        NodeData.Range := TSubtitleRange(NewRange);
-        TSubtitleRange(NewRange).Node := Node;
-
-        Inc(StartTime, 2000);
-        HaveNewSub := True;
-      end;
+      Inc(StartTime, 2000);
+      HaveNewSub := True;
     end;
+
     if HaveNewSub then
     begin
       CurrentProject.IsDirty := True;
@@ -3561,8 +3561,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean);
-var NewNode : PVirtualNode;
-    NodeData : PTreeData;
+var NodeData : PTreeData;
 begin
   vtvSubsList.ScrollIntoView(Node, True);
   vtvSubsList.FocusedNode := Node;
@@ -3970,6 +3969,7 @@ var ActionType : Integer;
     UndoablePipeTask : TUndoablePipeTask;
 begin
   NewColor := $003333FF;
+  ActionType := 0;  
   UndoablePipeTask := TUndoablePipeTask.Create;
   if pmiAutoColorizeText.Checked then
   begin
@@ -6141,7 +6141,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.RestoreSubtitles(List : TList);
-var i, idx : integer;
+var i : integer;
     Range : TSubtitleRange;
 begin
   for i := List.Count-1 downto 0 do
