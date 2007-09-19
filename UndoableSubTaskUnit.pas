@@ -693,7 +693,6 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure TUndoablePipeTask.DoTask;
-var NewSelLen : Integer;
 begin
   if (FActionType = 0) then
   begin
