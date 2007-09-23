@@ -273,10 +273,9 @@ type
     function PrepareEdit(Tree: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex): Boolean; stdcall;
     procedure ProcessMessage(var Message: TMessage); stdcall;
     procedure SetBounds(R: TRect); stdcall;
-  end;  
+  end;
 
-var
-  PreferencesForm: TPreferencesForm;
+  function PreferencesFormInstance : TPreferencesForm;
 
 implementation
 
@@ -294,6 +293,18 @@ const
     (ActionName: 'ActionUndo'; ShortCut: 'Ctrl+Z'),
     (ActionName: 'ActionRedo'; ShortCut: 'Ctrl+Y')
   );
+
+var
+  PreferencesForm: TPreferencesForm = nil;
+
+// =============================================================================
+
+function PreferencesFormInstance : TPreferencesForm;
+begin
+  if (PreferencesForm = nil) then
+    Application.CreateForm(TPreferencesForm, PreferencesForm);
+  Result := PreferencesForm;
+end;
 
 // =============================================================================
 

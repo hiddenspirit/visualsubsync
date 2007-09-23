@@ -3301,15 +3301,13 @@ end;
 procedure TMainForm.ShowPreferences(TabSheet : TTntTabSheet);
 var OldSwapState : Boolean;
 begin
-  if (PreferencesForm = nil) then
-    Application.CreateForm(TPreferencesForm, PreferencesForm);
   OldSwapState := ConfigObject.SwapSubtitlesList;
-  PreferencesForm.LoadConfig(ConfigObject);
+  PreferencesFormInstance.LoadConfig(ConfigObject);
   if TabSheet <> nil then
-    PreferencesForm.TntPageControl1.ActivePage := TabSheet;
-  if (PreferencesForm.ShowModal = mrOk) then
+    PreferencesFormInstance.TntPageControl1.ActivePage := TabSheet;
+  if (PreferencesFormInstance.ShowModal = mrOk) then
   begin
-    PreferencesForm.SaveConfig(ConfigObject);
+    PreferencesFormInstance.SaveConfig(ConfigObject);
     if Assigned(Server) then
       Server.EnableCompression := ConfigObject.EnableCompression;
     if(ConfigObject.SwapSubtitlesList <> OldSwapState) then
@@ -3394,7 +3392,7 @@ end;
 
 procedure TMainForm.ActionErrorPreferencesExecute(Sender: TObject);
 begin
-  ShowPreferences(PreferencesForm.tsErrorChecking);
+  ShowPreferences(PreferencesFormInstance.tsErrorChecking);
 end;
 //------------------------------------------------------------------------------
 
