@@ -148,14 +148,25 @@ type
     procedure AddDefaultStyle;
   end;
 
-var
-  StyleForm: TStyleForm;
+  function StyleFormInstance : TStyleForm;
 
 implementation
 
 {$R *.dfm}
 
 uses MiscToolsUnit, Math, main, RGBHSLColorUnit;
+
+var
+  StyleForm: TStyleForm;
+
+// =============================================================================
+
+function StyleFormInstance : TStyleForm;
+begin
+  if (StyleForm = nil) then
+    Application.CreateForm(TStyleForm, StyleForm);
+  Result := StyleForm;
+end;
 
 // =============================================================================
 
