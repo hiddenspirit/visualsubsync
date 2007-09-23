@@ -1,9 +1,8 @@
 program VisualSubSync;
 
-{%File 'GlobalUnit.pas'}
-
 uses
   //FastMM4,
+  Windows,
   Forms,
   main in 'main.pas' {MainForm},
   WAVDisplayerUnit in 'WAVDisplayerUnit.pas',
@@ -51,12 +50,10 @@ begin
   Application.CreateForm(TFindForm, FindForm);
   Application.CreateForm(TErrorReportForm, ErrorReportForm);
   Application.CreateForm(TSuggestionForm, SuggestionForm);
-  Application.CreateForm(TPreferencesForm, PreferencesForm);
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
-  Application.CreateForm(TStyleForm, StyleForm);
   MainForm.LoadSettings;
-  Application.ProcessMessages;  
   MainForm.FinishLoadSettings;
+  Application.ProcessMessages;
   MainForm.ProcessParams;
   Application.Run;
 end.
