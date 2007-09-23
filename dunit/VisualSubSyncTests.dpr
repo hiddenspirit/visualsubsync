@@ -12,7 +12,9 @@ uses
   GUITestRunner {$ENDIF},
   TextTestRunner,
   JavaScriptPluginUnitTests in 'JavaScriptPluginUnitTests.pas',
-  JavaScriptPluginUnit in '..\JavaScriptPluginUnit.pas';
+  JavaScriptPluginUnit in '..\JavaScriptPluginUnit.pas',
+  MiscToolsUnitTests in 'MiscToolsUnitTests.pas',
+  MiscToolsUnit in '..\MiscToolsUnit.pas';
 
 {$R *.RES}
 
