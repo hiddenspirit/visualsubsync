@@ -239,7 +239,6 @@ type
       
   private
     { Private declarations }
-    TimingMode : Boolean;
     ListDefaultHotkeys : TList;
 
     function GetCurrentModeShortCut(HLID : THotkeyListItemData) : TShortCut;
@@ -252,8 +251,6 @@ type
     { Public declarations }
     procedure LoadConfig(Config : TConfigObject);
     procedure SaveConfig(Config : TConfigObject);
-    function GetMode : Boolean;
-    procedure SetMode(Timing : Boolean);
   end;
 
   TPropertyEditLink = class(TInterfacedObject, IVTEditLink)
@@ -727,7 +724,6 @@ end;
 
 procedure TPreferencesForm.FormCreate(Sender: TObject);
 begin
-  TimingMode := False;
   TntPageControl1.ActivePage := tsGeneral;
   ListPluginParam.NodeDataSize := SizeOf(TParamData);
 end;
@@ -1072,20 +1068,6 @@ end;
 procedure TPreferencesForm.bttClearHotkeyClick(Sender: TObject);
 begin
   SetCurrentModeShortCutFromList(0);
-end;
-
-//------------------------------------------------------------------------------
-
-function TPreferencesForm.GetMode : Boolean;
-begin
-  Result := TimingMode;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TPreferencesForm.SetMode(Timing : Boolean);
-begin
-  TimingMode := Timing;
 end;
 
 //------------------------------------------------------------------------------
