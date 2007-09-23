@@ -649,7 +649,12 @@ type
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
     procedure FocusNodeAt(Index : Integer); overload;
     procedure ClearWAVSelection;
-    procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);    
+    procedure ProcessMultiChangeSub(ChangeList : TList; IsUndo : Boolean);
+    procedure ResetFind;
+    procedure ShowMatchingSubOnly(DisplayAll : Boolean);
+    procedure ReplaceText;
+    procedure ReplaceAllText;
+    function LastFindSucceded : Boolean;
   end;
 
 const
@@ -674,7 +679,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit;
+  SceneChangeUnit, RegExpr;
 
 {$R *.dfm}
 
@@ -963,6 +968,7 @@ begin
     SaveFormPosition(IniFile,SuggestionForm);
     SaveFormPosition(IniFile,DetachedVideoForm);
     SaveFormPosition(IniFile,LogForm);
+    SaveFormPosition(IniFile,FindForm);    
 
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
     IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
@@ -994,6 +1000,7 @@ begin
   LoadFormPosition(IniFile,SuggestionForm);
   LoadFormPosition(IniFile,DetachedVideoForm);
   LoadFormPosition(IniFile,LogForm);
+  LoadFormPosition(IniFile,FindForm);
 
   Show;
 
@@ -1048,6 +1055,7 @@ begin
     TreeOptions.PaintOptions := TreeOptions.PaintOptions -
       [toShowTreeLines,toShowRoot] +
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection];
+    //SelectionBlendFactor := 50;
     Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
 
@@ -1470,14 +1478,14 @@ begin
       EnableStyle := True;
       LoadASS(Filename, IsUTF8, False);
       StyleColumn.Options := StyleColumn.Options + [coVisible];
-      StyleForm.ConfigureMode(sfmASS);
+      StyleFormInstance.ConfigureMode(sfmASS);
     end
     else if (Ext = '.ssa') then
     begin
       EnableStyle := True;
       LoadASS(Filename, IsUTF8, True);
       StyleColumn.Options := StyleColumn.Options + [coVisible];
-      StyleForm.ConfigureMode(sfmSSA);
+      StyleFormInstance.ConfigureMode(sfmSSA);
     end;
   finally
     g_WebRWSynchro.EndWrite;
@@ -1614,8 +1622,8 @@ begin
     SubtitleFileFooter := '';
     WAVDisplayer.RangeList.Clear;
     vtvSubsList.Clear;
-    StyleForm.ClearAll;
-    StyleForm.AddDefaultStyle;
+    StyleFormInstance.ClearAll;
+    StyleFormInstance.AddDefaultStyle;
     Exit;
   end;
 
@@ -1627,7 +1635,7 @@ begin
   SubtitleFileHeader := ssaParser.GetHeaderLines;
   SubtitleFileFooter := ssaParser.GetFooterLines;
 
-  StyleForm.LoadStylesFromParser(ssaParser);
+  StyleFormInstance.LoadStylesFromParser(ssaParser);
 
   for i := 0 to ssaParser.GetDialoguesCount-1 do
   begin
@@ -2319,18 +2327,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionFindExecute(Sender: TObject);
-begin
-  if (FindForm.ShowModal = mrOK) then
-  begin
-    SearchNode := nil;
-    SearchPos := 1;
-    ActionFindNext.Execute;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.ActionSaveExecute(Sender: TObject);
 begin
   // Save subtitles
@@ -2522,14 +2518,80 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ResetFind;
+begin
+  SearchNode := nil;
+  SearchPos := 1;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ShowMatchingSubOnly(DisplayAll : Boolean);
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+    Match : Boolean;
+    FindText : WideString;
+    Start : Integer;
+    RegExpr : TRegExpr;    
+begin
+  FindText := FindForm.GetFindText;
+
+  RegExpr := TRegExpr.Create;
+  RegExpr.Expression := FindText;
+  RegExpr.ModifierI := not FindForm.MatchCase;
+
+  Start := GetTickCount;
+  Node := vtvSubsList.GetFirst;
+  while (Node <> nil) do
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Match := True;
+    if (Length(FindText) > 0) and (not DisplayAll) then
+    begin
+      if FindForm.UseRegExp then
+      begin
+        Match := RegExpr.Exec(NodeData.Range.Text);
+      end
+      else
+      begin
+        Match := WideStringFind(1, NodeData.Range.Text, FindText,
+          FindForm.MatchCase, FindForm.WholeWord) > 0;
+      end;
+    end;
+    vtvSubsList.IsVisible[Node] := Match;
+    Node := vtvSubsList.GetNext(Node);
+  end;
+  RegExpr.Free;
+  //LogForm.LogMsg('done in : ' + IntToStr(GetTickCount - Start));
+  vtvSubsList.Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionFindExecute(Sender: TObject);
+begin
+  if not FindForm.Showing then
+  begin
+    ResetFind;
+    FindForm.Show;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.ActionFindNextExecute(Sender: TObject);
 var NodeData : PTreeData;
     FoundAt : Integer;
     SearchTypes : TSearchTypes;
+    FindText, FindTextUpper : WideString;
+    RegExpr : TRegExpr;
+    MatchLen : Integer;
 begin
-  if Length(FindForm.GetFindWord) = 0 then
+  FindText := FindForm.GetFindText;
+  if Length(FindText) <= 0 then
     Exit;
-  
+
+  FindTextUpper := WideUpperCase(FindText);
   if FindForm.FromCursor then
   begin
     if SearchNode <> vtvSubsList.FocusedNode then
@@ -2540,37 +2602,162 @@ begin
   begin
     SearchNode := vtvSubsList.GetFirst;
   end;
+
+  RegExpr := TRegExpr.Create;
+  RegExpr.ModifierI := not FindForm.MatchCase;
+  RegExpr.Expression := FindText;  
   while (SearchNode <> nil) do
   begin
     NodeData := vtvSubsList.GetNodeData(SearchNode);
-    if FindForm.MatchCase then
-      SearchPos := PosEx(FindForm.GetFindWord, NodeData.Range.Text,SearchPos)
+    MatchLen := Length(FindText);
+    if FindForm.UseRegExp then
+    begin
+      RegExpr.InputString := NodeData.Range.Text;
+      if RegExpr.ExecPos(SearchPos) then
+      begin
+        SearchPos := RegExpr.MatchPos[0];
+        MatchLen := RegExpr.MatchLen[0];
+      end else
+        SearchPos := 0;
+    end
     else
-      SearchPos := PosEx(WideUpperCase(FindForm.GetFindWord), WideUpperCase(NodeData.Range.Text), SearchPos);
+    begin
+      SearchPos := WideStringFind(SearchPos, NodeData.Range.Text, FindText,
+        FindForm.MatchCase, FindForm.WholeWord);
+    end;
+
     if (SearchPos > 0) then
     begin
       vtvSubsList.ScrollIntoView(SearchNode,True);
       vtvSubsList.FocusedNode := SearchNode;
       vtvSubsList.ClearSelection;
       vtvSubsList.Selected[SearchNode] := True;
-      if FindForm.MatchCase then SearchTypes := [stMatchCase] else SearchTypes := [];
-      FoundAt := MemoSubtitleText.FindText(FindForm.GetFindWord,
-        SearchPos-1,
-        Length(MemoSubtitleText.Text),
-        SearchTypes);
-      if (FoundAt <> -1) then
-      begin
-        MemoSubtitleText.SetFocus;
-        MemoSubtitleText.SelStart := FoundAt;
-        MemoSubtitleText.SelLength := Length(FindForm.GetFindWord);
-      end;
-      Inc(SearchPos, Length(FindForm.GetFindWord));
+      MemoSubtitleText.SelStart := SearchPos - 1;
+      MemoSubtitleText.SelLength := MatchLen;
+      Inc(SearchPos, MatchLen);
       Exit;
     end;
     SearchNode := vtvSubsList.GetNext(SearchNode);
     SearchPos := 1;
   end;
+  RegExpr.Free;
   ShowStatusBarMessage('No more items.');
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ReplaceAllText;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+    RegExpr : TRegExpr;
+    ReplaceFlags : TReplaceFlags;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+    NewText : WideString;
+    SubRange : TSubtitleRange;
+begin
+  if Length(FindForm.GetFindText) <= 0 then
+    Exit;
+
+  if FindForm.FromCursor then
+    Node := vtvSubsList.FocusedNode
+  else
+    Node := vtvSubsList.GetFirst;
+
+  MultiChangeTask := TUndoableMultiChangeTask.Create;    
+  RegExpr := TRegExpr.Create;
+  RegExpr.ModifierI := (not FindForm.MatchCase);
+  RegExpr.ModifierG := True;
+  RegExpr.Expression := FindForm.GetFindText;
+
+  g_WebRWSynchro.BeginWrite;
+  try
+    while (Node <> nil) do
+    begin
+      NodeData := vtvSubsList.GetNodeData(Node);
+      SubRange := NodeData.Range;
+      if FindForm.UseRegExp then
+      begin
+        NewText := RegExpr.Replace(NodeData.Range.Text, FindForm.GetReplaceText, True);
+      end
+      else
+      begin
+        ReplaceFlags := [rfReplaceAll];
+        if (not FindForm.MatchCase) then
+          Include(ReplaceFlags, rfIgnoreCase);
+        NewText := Tnt_WideStringReplace(NodeData.Range.Text, FindForm.GetFindText,
+          FindForm.GetReplaceText, ReplaceFlags);
+      end;
+      ChangeSubData := TChangeSubData.Create(Node.Index);
+      ChangeSubData.OldText := SubRange.Text;
+      ChangeSubData.NewText := NewText;
+      MultiChangeTask.AddData(ChangeSubData);
+      NodeData.Range.Text := NewText;
+      Node := vtvSubsList.GetNext(Node);
+    end;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  RegExpr.Free;
+
+  if (MultiChangeTask.GetCount > 0) then
+  begin
+    PushUndoableTask(MultiChangeTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end
+  else
+  begin
+    FreeAndNil(MultiChangeTask);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ReplaceText;
+var NodeData : PTreeData;
+    ReplaceFlags : TReplaceFlags;
+    SelStart, SelLen : Integer;
+    NewText : WideString;
+    RegExp : TRegExpr;
+begin
+  if (SearchNode = nil) then
+    Exit;
+
+  // Save selection
+  SelStart := MemoSubtitleText.SelStart;
+  SelLen := MemoSubtitleText.SelLength;
+
+  NodeData := vtvSubsList.GetNodeData(SearchNode);
+  TTntRichEditCustomUndo(MemoSubtitleText).SaveSelectionInfo;
+
+  if FindForm.UseRegExp then
+  begin
+    RegExp := TRegExpr.Create;
+    RegExp.ModifierI := (not FindForm.MatchCase);
+    RegExp.Expression := FindForm.GetFindText;
+    NewText := RegExp.Replace(MemoSubtitleText.SelText, FindForm.GetReplaceText, True);
+    RegExp.Free;
+  end
+  else
+  begin
+    NewText := FindForm.GetReplaceText;
+  end;
+
+  MemoSubtitleText.SelText := NewText;
+  
+  // Restaure selection
+  MemoSubtitleText.SelStart := SelStart;
+  MemoSubtitleText.SelLength := Length(NewText);
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.LastFindSucceded : Boolean;
+begin
+  Result := (SearchNode <> nil);
 end;
 
 //------------------------------------------------------------------------------
@@ -3123,6 +3310,8 @@ end;
 procedure TMainForm.ShowPreferences(TabSheet : TTntTabSheet);
 var OldSwapState : Boolean;
 begin
+  if (PreferencesForm = nil) then
+    Application.CreateForm(TPreferencesForm, PreferencesForm);
   OldSwapState := ConfigObject.SwapSubtitlesList;
   PreferencesForm.LoadConfig(ConfigObject);
   if TabSheet <> nil then
@@ -3136,7 +3325,7 @@ begin
       Self.SwapSubList;
     MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
       ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
-    SetShortcut(PreferencesForm.GetMode);
+    SetShortcut(IsTimingMode);
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
     ApplyFontSettings;
@@ -4025,7 +4214,7 @@ begin
   WAVDisplayer.WheelTimeScroll := ConfigObject.MouseWheelTimeScrollModifier;
   WAVDisplayer.WheelVZoom := ConfigObject.MouseWheelVZoomModifier;
   WAVDisplayer.WheelHZoom := ConfigObject.MouseWheelHZoomModifier;
-  if (PreferencesForm.GetMode = True) then
+  if IsTimingMode then
   begin
     // Timing mode
     if ConfigObject.MouseEnableSSATimingMode then
@@ -4999,9 +5188,9 @@ begin
   WriteStringLnStream('', FS);
   WriteStringLnStream('[v4 Styles]', FS);
   WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding', FS);
-  for i:=0 to StyleForm.GetCount-1 do
+  for i:=0 to StyleFormInstance.GetCount-1 do
   begin
-    style := StyleForm.GetStyleAt(i);
+    style := StyleFormInstance.GetStyleAt(i);
     WriteStringLnStream(style.getAsSSA, FS);
   end;
 
@@ -5082,9 +5271,9 @@ begin
   WriteStringLnStream('', FS);
   WriteStringLnStream('[v4+ Styles]', FS);
   WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
-  for i:=0 to StyleForm.GetCount-1 do
+  for i:=0 to StyleFormInstance.GetCount-1 do
   begin
-    style := StyleForm.GetStyleAt(i);
+    style := StyleFormInstance.GetStyleAt(i);
     WriteStringLnStream(style.getAsASS, FS);
   end;
 
@@ -5158,13 +5347,19 @@ procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
 begin
   if (not ConfigObject.ShowTextInWAVDisplay) then
     Exit;
-  // TODO : karaoke support
-  InflateRect(Rect, -5, -5);
-  if (Rect.Right - Rect.Left) > 25 then
+  if Length(Range.SubTime) > 0 then
   begin
-    ACanvas.Font.Assign(MemoSubtitleText.Font);
-    ACanvas.Font.Color := ACanvas.Pen.Color;
-    WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
+    // TODO : karaoke support
+  end
+  else
+  begin
+    InflateRect(Rect, -5, -5);
+    if (Rect.Right - Rect.Left) > 25 then
+    begin
+      ACanvas.Font.Assign(MemoSubtitleText.Font);
+      ACanvas.Font.Color := ACanvas.Pen.Color;
+      WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
+    end;
   end;
 end;
 
@@ -5622,9 +5817,9 @@ var i : Integer;
     style : TSSAStyle;
 begin
   cbStyles.Clear;
-  for i := 0 to StyleForm.GetCount-1 do
+  for i := 0 to StyleFormInstance.GetCount-1 do
   begin
-    style := StyleForm.GetStyleAt(i);
+    style := StyleFormInstance.GetStyleAt(i);
     cbStyles.AddItem(style.name, nil);
   end;
   UpdateStylesComboboxFromSelection;
@@ -5635,9 +5830,9 @@ end;
 procedure TMainForm.ActionStylesExecute(Sender: TObject);
 begin
   // Try to pre sselect current subtitle style
-  StyleForm.PreSelect(cbStyles.Text);
-  StyleForm.ShowModal;
-  if StyleForm.HaveStylesChanged then
+  StyleFormInstance.PreSelect(cbStyles.Text);
+  StyleFormInstance.ShowModal;
+  if StyleFormInstance.HaveStylesChanged then
   begin
     UpdateStylesComboBox;
     CurrentProjectSetDirty;
@@ -5749,8 +5944,7 @@ begin
     WAVDisplayer.SelMode := smCoolEdit;
   end;
   KeyPreview := IsTimingMode;
-  PreferencesForm.SetMode(IsTimingMode);
-  SetShortcut(PreferencesForm.GetMode);
+  SetShortcut(IsTimingMode);
   MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
     ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
 end;
@@ -6639,8 +6833,6 @@ split at cursor need to respect minimum time between sub
 
 highlight subtitles with some criteria
 
-vtvSubsList.FocusedNode.States := vtvSubsList.FocusedNode.States - [vsVisible];
-
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
@@ -6652,7 +6844,28 @@ var
 begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
 
-  
+
+
+
+// -----------------------------------------------------------------------------
+
+> En affichant les scenes changes comment on fait pour pouvoir se locker dessus
+> comme on ferait avec un sub ? (étirer le sub jusqu'au scene change quoi)
+>
+> Ha ok, genre en restant appuyé sur ctrl ou shift ou chépakel touche,
+> les cp sont considérés comem des subs, ça serait pratique + un mode à cocher, ou c'est locké.
+
+// -----------------------------------------------------------------------------
+
+> a un autre truc qui pourrai être sympa (je continue de tester,
+> et de n'utiliser que la new version,a ucun bug pour le moment, aucun plantage)
+> : une fonction "Split at scene change" quand 1 ou plusieurs CP traversent un
+> sub + automatiqquement faire le trou de 129 avant et 129 après (ou suivant
+> le paramètres défini dans les options).
+
+// -----------------------------------------------------------------------------
+
+
 XXX : Strip tags
 XXX : Split and Merge shortcut
 }

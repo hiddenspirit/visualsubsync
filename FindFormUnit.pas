@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 //  VisualSubSync
 // -----------------------------------------------------------------------------
-//  Copyright (C) 2003 Christophe Paris
+//  Copyright (C) 2003-2007 Christophe Paris
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -25,28 +25,50 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, TntStdCtrls;
+  Dialogs, StdCtrls, TntStdCtrls, Buttons, TntButtons, ExtCtrls;
 
 type
   TFindForm = class(TForm)
     TntLabel1: TTntLabel;
-    bttClose: TTntButton;
+    cbFind: TTntComboBox;
+    cbReplaceWith: TTntComboBox;
+    TntLabel2: TTntLabel;
+    TntGroupBox1: TTntGroupBox;
     chkMatchCase: TTntCheckBox;
-    ComboTextToFind: TTntComboBox;
-    bttOk: TTntButton;
     chkFromCursor: TCheckBox;
+    chkMatchingOnly: TTntCheckBox;
+    chkRegExp: TTntCheckBox;
+    chkWholeWord: TCheckBox;
+    Panel1: TPanel;
+    bttFind: TTntButton;
+    bttReplaceFind: TTntButton;
+    bttReplace: TTntButton;
+    bttReplaceAll: TTntButton;
+    bttClose: TTntButton;
     procedure bttCloseClick(Sender: TObject);
     procedure TntButton1Click(Sender: TObject);
-    procedure ComboTextToFindKeyDown(Sender: TObject; var Key: Word;
+    procedure cbFindKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure FormActivate(Sender: TObject);
+    procedure bttFindClick(Sender: TObject);
+    procedure cbFindChange(Sender: TObject);
+    procedure chkMatchingOnlyClick(Sender: TObject);
+    procedure chkMatchCaseClick(Sender: TObject);
+    procedure bttReplaceClick(Sender: TObject);
+    procedure bttReplaceFindClick(Sender: TObject);
+    procedure bttReplaceAllClick(Sender: TObject);
+    procedure chkRegExpClick(Sender: TObject);
   private
     { Private declarations }
+    procedure HistorizeComboBox(ComboBox : TTntComboBox);    
   public
     { Public declarations }
-    function GetFindWord : WideString;
+    function GetFindText : WideString;
+    function GetReplaceText : WideString;    
     function MatchCase : Boolean;
     function FromCursor : Boolean;
+    function UseRegExp : Boolean;
+    function WholeWord : Boolean;
   end;
 
 var
@@ -54,7 +76,7 @@ var
 
 implementation
 
-uses TntClasses;
+uses TntClasses, main;
 
 {$R *.dfm}
 
@@ -62,43 +84,28 @@ uses TntClasses;
 
 procedure TFindForm.bttCloseClick(Sender: TObject);
 begin
-  ModalResult := mrCancel;
+  MainForm.ShowMatchingSubOnly(True);
+  Close;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TFindForm.TntButton1Click(Sender: TObject);
-var i, Idx : integer;
 begin
-  // Search in historic
-  Idx := -1;
-  for i:=0 to ComboTextToFind.Items.Count-1 do
-  begin
-    if (ComboTextToFind.Text = ComboTextToFind.Items[i]) then
-    begin
-      Idx := i;
-      Break;
-    end;
-  end;
-  if (Idx = -1) then
-  begin
-    // Add it to the historic
-    ComboTextToFind.Items.Insert(0,ComboTextToFind.Text);
-  end
-  else
-  begin
-    // Move item to top og historic
-    ComboTextToFind.Items.Move(Idx,0);
-    ComboTextToFind.Text := ComboTextToFind.Items[0];
-  end;
-  ModalResult := mrOk;  
 end;
 
 //------------------------------------------------------------------------------
 
-function TFindForm.GetFindWord : WideString;
+function TFindForm.GetFindText : WideString;
 begin
-  Result := ComboTextToFind.Text;
+  Result := cbFind.Text;
+end;
+
+//------------------------------------------------------------------------------
+
+function TFindForm.GetReplaceText : WideString;
+begin
+  Result := cbReplaceWith.Text;
 end;
 
 //------------------------------------------------------------------------------
@@ -117,20 +124,129 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TFindForm.ComboTextToFindKeyDown(Sender: TObject; var Key: Word;
+function TFindForm.UseRegExp : Boolean;
+begin
+  Result := chkRegExp.Checked;
+end;
+
+//------------------------------------------------------------------------------
+
+function TFindForm.WholeWord : Boolean;
+begin
+  Result := chkWholeWord.Enabled and chkWholeWord.Checked;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.cbFindKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   if Key = VK_RETURN then
-    bttOk.Click
+    bttFind.Click
   else if Key = VK_ESCAPE then
-    ModalResult := mrCancel
+    Close
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TFindForm.FormActivate(Sender: TObject);
 begin
-  ComboTextToFind.SetFocus;
+  cbFind.SetFocus;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.HistorizeComboBox(ComboBox : TTntComboBox);
+var i, Idx : integer;
+begin
+  // Search in historic
+  Idx := -1;
+  for i:=0 to ComboBox.Items.Count-1 do
+  begin
+    if (ComboBox.Text = ComboBox.Items[i]) then
+    begin
+      Idx := i;
+      Break;
+    end;
+  end;
+  if (Idx = -1) then
+  begin
+    // Add it to the historic
+    ComboBox.Items.Insert(0, ComboBox.Text);
+  end
+  else
+  begin
+    // Move item to top of historic
+    ComboBox.Items.Move(Idx,0);
+    ComboBox.Text := ComboBox.Items[0];
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.bttFindClick(Sender: TObject);
+begin
+  HistorizeComboBox(cbFind);
+  MainForm.ActionFindNext.Execute;
+  bttReplace.Enabled := MainForm.LastFindSucceded;
+  bttReplaceFind.Enabled := MainForm.LastFindSucceded;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.cbFindChange(Sender: TObject);
+begin
+  MainForm.ResetFind;
+  if chkMatchingOnly.Checked then
+    MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
+  bttReplace.Enabled := MainForm.LastFindSucceded;
+  bttReplaceFind.Enabled := MainForm.LastFindSucceded;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.chkMatchingOnlyClick(Sender: TObject);
+begin
+  MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.chkMatchCaseClick(Sender: TObject);
+begin
+  if chkMatchingOnly.Checked then
+    MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.bttReplaceClick(Sender: TObject);
+begin
+  MainForm.ReplaceText;
+  bttReplace.Enabled := False;
+  bttReplaceFind.Enabled := False;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.bttReplaceFindClick(Sender: TObject);
+begin
+  bttReplaceClick(nil);
+  bttFindClick(nil);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.bttReplaceAllClick(Sender: TObject);
+begin
+  MainForm.ReplaceAllText;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.chkRegExpClick(Sender: TObject);
+begin
+  chkWholeWord.Enabled := not chkRegExp.Checked;
 end;
 
 //------------------------------------------------------------------------------

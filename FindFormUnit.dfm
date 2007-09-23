@@ -1,12 +1,13 @@
 object FindForm: TFindForm
-  Left = 343
-  Top = 157
+  Left = 258
+  Top = 479
+  Width = 355
+  Height = 220
   BorderIcons = [biSystemMenu, biMinimize]
-  BorderStyle = bsSingle
+  BorderWidth = 4
   Caption = 'Find'
-  ClientHeight = 72
-  ClientWidth = 360
   Color = clBtnFace
+  Constraints.MinWidth = 350
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -14,57 +15,152 @@ object FindForm: TFindForm
   Font.Style = []
   FormStyle = fsStayOnTop
   OldCreateOrder = False
+  Position = poDefault
   OnActivate = FormActivate
+  DesignSize = (
+    339
+    185)
   PixelsPerInch = 96
   TextHeight = 13
   object TntLabel1: TTntLabel
-    Left = 8
-    Top = 14
-    Width = 26
+    Left = 0
+    Top = 4
+    Width = 23
     Height = 13
-    Caption = 'Find :'
+    Caption = 'Find:'
   end
-  object bttClose: TTntButton
-    Left = 280
-    Top = 40
-    Width = 75
-    Height = 25
-    Caption = 'Close'
-    TabOrder = 3
-    OnClick = bttCloseClick
+  object TntLabel2: TTntLabel
+    Left = 0
+    Top = 28
+    Width = 65
+    Height = 13
+    Caption = 'Replace with:'
   end
-  object chkMatchCase: TTntCheckBox
-    Left = 40
-    Top = 36
-    Width = 81
-    Height = 17
-    Caption = 'Match case'
-    TabOrder = 1
-  end
-  object ComboTextToFind: TTntComboBox
-    Left = 40
-    Top = 10
-    Width = 233
+  object cbFind: TTntComboBox
+    Left = 72
+    Top = 0
+    Width = 265
     Height = 21
     ItemHeight = 13
     TabOrder = 0
-    OnKeyDown = ComboTextToFindKeyDown
+    OnChange = cbFindChange
+    OnKeyDown = cbFindKeyDown
   end
-  object bttOk: TTntButton
-    Left = 280
-    Top = 8
-    Width = 73
-    Height = 25
-    Caption = 'OK'
+  object cbReplaceWith: TTntComboBox
+    Left = 72
+    Top = 24
+    Width = 265
+    Height = 21
+    ItemHeight = 13
+    TabOrder = 1
+    OnKeyDown = cbFindKeyDown
+  end
+  object TntGroupBox1: TTntGroupBox
+    Left = 0
+    Top = 56
+    Width = 153
+    Height = 129
+    Caption = 'Options'
     TabOrder = 2
-    OnClick = TntButton1Click
+    object chkMatchCase: TTntCheckBox
+      Left = 8
+      Top = 24
+      Width = 97
+      Height = 17
+      Caption = 'Case sensitive'
+      TabOrder = 0
+      OnClick = chkMatchCaseClick
+    end
+    object chkFromCursor: TCheckBox
+      Left = 8
+      Top = 40
+      Width = 81
+      Height = 17
+      Caption = 'From cursor'
+      TabOrder = 1
+    end
+    object chkMatchingOnly: TTntCheckBox
+      Left = 8
+      Top = 104
+      Width = 137
+      Height = 17
+      Caption = 'Show matching sub only'
+      TabOrder = 4
+      OnClick = chkMatchingOnlyClick
+    end
+    object chkRegExp: TTntCheckBox
+      Left = 8
+      Top = 72
+      Width = 121
+      Height = 17
+      Caption = 'Regular Expression'
+      TabOrder = 3
+      OnClick = chkRegExpClick
+    end
+    object chkWholeWord: TCheckBox
+      Left = 8
+      Top = 56
+      Width = 97
+      Height = 17
+      Caption = 'Whole Word'
+      TabOrder = 2
+    end
   end
-  object chkFromCursor: TCheckBox
-    Left = 136
-    Top = 36
-    Width = 81
-    Height = 17
-    Caption = 'From cursor'
+  object Panel1: TPanel
+    Left = 160
+    Top = 56
+    Width = 177
+    Height = 73
+    Anchors = [akTop, akRight]
+    BevelOuter = bvNone
+    TabOrder = 3
+    object bttFind: TTntButton
+      Left = 8
+      Top = 8
+      Width = 81
+      Height = 25
+      Caption = 'Find'
+      TabOrder = 0
+      OnClick = bttFindClick
+    end
+    object bttReplaceFind: TTntButton
+      Left = 96
+      Top = 8
+      Width = 81
+      Height = 25
+      Caption = 'Replace/Find'
+      Enabled = False
+      TabOrder = 1
+      OnClick = bttReplaceFindClick
+    end
+    object bttReplace: TTntButton
+      Left = 8
+      Top = 38
+      Width = 81
+      Height = 25
+      Caption = 'Replace'
+      Enabled = False
+      TabOrder = 2
+      OnClick = bttReplaceClick
+    end
+    object bttReplaceAll: TTntButton
+      Left = 96
+      Top = 38
+      Width = 81
+      Height = 25
+      Caption = 'Replace All'
+      TabOrder = 3
+      OnClick = bttReplaceAllClick
+    end
+  end
+  object bttClose: TTntButton
+    Left = 256
+    Top = 160
+    Width = 83
+    Height = 25
+    Anchors = [akTop, akRight]
+    Caption = 'Close'
     TabOrder = 4
+    OnClick = bttCloseClick
   end
 end
