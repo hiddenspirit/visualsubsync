@@ -2531,7 +2531,6 @@ var Node : PVirtualNode;
     NodeData : PTreeData;
     Match : Boolean;
     FindText : WideString;
-    Start : Integer;
     RegExpr : TRegExpr;    
 begin
   FindText := FindForm.GetFindText;
@@ -2540,7 +2539,6 @@ begin
   RegExpr.Expression := FindText;
   RegExpr.ModifierI := not FindForm.MatchCase;
 
-  Start := GetTickCount;
   Node := vtvSubsList.GetFirst;
   while (Node <> nil) do
   begin
@@ -2562,7 +2560,6 @@ begin
     Node := vtvSubsList.GetNext(Node);
   end;
   RegExpr.Free;
-  //LogForm.LogMsg('done in : ' + IntToStr(GetTickCount - Start));
   vtvSubsList.Repaint;
 end;
 
@@ -2581,8 +2578,6 @@ end;
 
 procedure TMainForm.ActionFindNextExecute(Sender: TObject);
 var NodeData : PTreeData;
-    FoundAt : Integer;
-    SearchTypes : TSearchTypes;
     FindText, FindTextUpper : WideString;
     RegExpr : TRegExpr;
     MatchLen : Integer;
@@ -2717,20 +2712,16 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ReplaceText;
-var NodeData : PTreeData;
-    ReplaceFlags : TReplaceFlags;
-    SelStart, SelLen : Integer;
+var SelStart : Integer;
     NewText : WideString;
     RegExp : TRegExpr;
 begin
   if (SearchNode = nil) then
     Exit;
 
-  // Save selection
+  // Save selection start position
   SelStart := MemoSubtitleText.SelStart;
-  SelLen := MemoSubtitleText.SelLength;
 
-  NodeData := vtvSubsList.GetNodeData(SearchNode);
   TTntRichEditCustomUndo(MemoSubtitleText).SaveSelectionInfo;
 
   if FindForm.UseRegExp then
