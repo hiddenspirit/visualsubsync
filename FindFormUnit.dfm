@@ -1,11 +1,12 @@
 object FindForm: TFindForm
   Left = 258
   Top = 479
-  Width = 355
-  Height = 220
   BorderIcons = [biSystemMenu, biMinimize]
+  BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Find'
+  ClientHeight = 185
+  ClientWidth = 339
   Color = clBtnFace
   Constraints.MinWidth = 350
   Font.Charset = DEFAULT_CHARSET
@@ -17,9 +18,8 @@ object FindForm: TFindForm
   OldCreateOrder = False
   Position = poDefault
   OnActivate = FormActivate
-  DesignSize = (
-    339
-    185)
+  OnClose = FormClose
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object TntLabel1: TTntLabel
@@ -111,7 +111,6 @@ object FindForm: TFindForm
     Top = 56
     Width = 177
     Height = 73
-    Anchors = [akTop, akRight]
     BevelOuter = bvNone
     TabOrder = 3
     object bttFind: TTntButton
@@ -158,7 +157,6 @@ object FindForm: TFindForm
     Top = 160
     Width = 83
     Height = 25
-    Anchors = [akTop, akRight]
     Caption = 'Close'
     TabOrder = 4
     OnClick = bttCloseClick

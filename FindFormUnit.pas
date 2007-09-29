@@ -58,6 +58,8 @@ type
     procedure bttReplaceFindClick(Sender: TObject);
     procedure bttReplaceAllClick(Sender: TObject);
     procedure chkRegExpClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     { Private declarations }
     procedure HistorizeComboBox(ComboBox : TTntComboBox);    
@@ -247,6 +249,19 @@ end;
 procedure TFindForm.chkRegExpClick(Sender: TObject);
 begin
   chkWholeWord.Enabled := not chkRegExp.Checked;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.FormShow(Sender: TObject);
+begin
+  Resize;
+end;
+
+//------------------------------------------------------------------------------
+procedure TFindForm.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  MainForm.ShowMatchingSubOnly(True);
 end;
 
 //------------------------------------------------------------------------------
