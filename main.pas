@@ -844,6 +844,8 @@ begin
   else
     LogForm.SilentLogMsg('Can''t find ' + GeneralJSFilename);
 
+  Application.HintHidePause := 10000;
+
   StatusBarPrimaryText := '';
   StatusBarSecondaryText := '';
 end;
@@ -2578,15 +2580,14 @@ end;
 
 procedure TMainForm.ActionFindNextExecute(Sender: TObject);
 var NodeData : PTreeData;
-    FindText, FindTextUpper : WideString;
-    RegExpr : TRegExpr;
+    FindText : WideString;
+    RegExp : TRegExpr;
     MatchLen : Integer;
 begin
   FindText := FindForm.GetFindText;
   if Length(FindText) <= 0 then
     Exit;
 
-  FindTextUpper := WideUpperCase(FindText);
   if FindForm.FromCursor then
   begin
     if SearchNode <> vtvSubsList.FocusedNode then
@@ -2598,20 +2599,20 @@ begin
     SearchNode := vtvSubsList.GetFirst;
   end;
 
-  RegExpr := TRegExpr.Create;
-  RegExpr.ModifierI := not FindForm.MatchCase;
-  RegExpr.Expression := FindText;  
+  RegExp := TRegExpr.Create;
+  RegExp.ModifierI := not FindForm.MatchCase;
+  RegExp.Expression := FindText;  
   while (SearchNode <> nil) do
   begin
     NodeData := vtvSubsList.GetNodeData(SearchNode);
     MatchLen := Length(FindText);
     if FindForm.UseRegExp then
     begin
-      RegExpr.InputString := NodeData.Range.Text;
-      if RegExpr.ExecPos(SearchPos) then
+      RegExp.InputString := NodeData.Range.Text;
+      if RegExp.ExecPos(SearchPos) then
       begin
-        SearchPos := RegExpr.MatchPos[0];
-        MatchLen := RegExpr.MatchLen[0];
+        SearchPos := RegExp.MatchPos[0];
+        MatchLen := RegExp.MatchLen[0];
       end else
         SearchPos := 0;
     end
@@ -2630,12 +2631,13 @@ begin
       MemoSubtitleText.SelStart := SearchPos - 1;
       MemoSubtitleText.SelLength := MatchLen;
       Inc(SearchPos, MatchLen);
+      RegExp.Free;      
       Exit;
     end;
     SearchNode := vtvSubsList.GetNext(SearchNode);
     SearchPos := 1;
   end;
-  RegExpr.Free;
+  RegExp.Free;
   ShowStatusBarMessage('No more items.');
 end;
 
