@@ -81,6 +81,7 @@ type
     DoubleValue : Double;
     WideStringValue : WideString;
     UnitStr : WideString;
+    Description : WideString;
   end;
 
   TJSPluginNotifyEvent = procedure (const Msg : WideString) of object;
@@ -533,6 +534,7 @@ var ListEnum : TStringArray;
     i : Integer;
     pPluginParam : PJSPluginParam;
     ParamObject : TJSObject;
+    Desc : WideString;
 begin
   ParamList.Clear;
   FParamCount := 0;
@@ -548,6 +550,11 @@ begin
       ZeroMemory(pPluginParam, SizeOf(TJSPluginParam));
       pPluginParam.Name := ListEnum[i];
       ParamObject.GetProperty('Unit', pPluginParam.UnitStr);
+      ParamObject.GetProperty('Description', Desc);
+      if (Desc <> 'undefined') then
+      begin
+        pPluginParam.Description := Desc;
+      end;
       case ParamObject.TypeOf('Value') of
         JSTYPE_NUMBER:
           if (ParamObject.IsInteger('Value')) then

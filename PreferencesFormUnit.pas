@@ -236,7 +236,11 @@ type
     procedure bttSubListFontClick(Sender: TObject);
     procedure bttSubTextFontClick(Sender: TObject);
     procedure bttOpenBackupTempDirClick(Sender: TObject);
-      
+    procedure ListPluginParamGetHint(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex;
+      var LineBreakStyle: TVTTooltipLineBreakStyle;
+      var HintText: WideString);
+
   private
     { Private declarations }
     ListDefaultHotkeys : TList;
@@ -1400,6 +1404,20 @@ begin
   begin
     Tnt_ShellExecuteW(Handle, 'explore', PWideChar(TmpFolder), nil,
       nil, SW_SHOWNORMAL);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.ListPluginParamGetHint(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex;
+  var LineBreakStyle: TVTTooltipLineBreakStyle; var HintText: WideString);
+var
+  ParamData: PParamData;
+begin
+  ParamData := Sender.GetNodeData(Node);
+  case Column of
+    0: HintText := ParamData.Param.Description;
   end;
 end;
 

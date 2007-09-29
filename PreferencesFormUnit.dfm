@@ -24,7 +24,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 434
     Height = 324
-    ActivePage = tsWAVDisplay
+    ActivePage = tsErrorChecking
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -266,6 +266,7 @@ object PreferencesForm: TPreferencesForm
         Width = 418
         Height = 96
         Align = alBottom
+        AnimationDuration = 1
         EditDelay = 40
         Header.AutoSizeIndex = 1
         Header.Font.Charset = DEFAULT_CHARSET
@@ -276,7 +277,11 @@ object PreferencesForm: TPreferencesForm
         Header.MainColumn = 1
         Header.Options = [hoAutoResize, hoColumnResize, hoVisible, hoAutoSpring]
         Header.Style = hsPlates
+        HintMode = hmHint
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 2
+        TreeOptions.AnimationOptions = [toAnimatedToggle]
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowTreeLines, toThemeAware, toUseBlendedImages]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toCenterScrollIntoView]
@@ -284,6 +289,7 @@ object PreferencesForm: TPreferencesForm
         OnCreateEditor = ListPluginParamCreateEditor
         OnEditing = ListPluginParamEditing
         OnGetText = ListPluginParamGetText
+        OnGetHint = ListPluginParamGetHint
         Columns = <
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
@@ -744,7 +750,7 @@ object PreferencesForm: TPreferencesForm
         object TntLabel9: TTntLabel
           Left = 16
           Top = 54
-          Width = 105
+          Width = 96
           Height = 13
           Caption = 'Safety zone offsets :'
         end
