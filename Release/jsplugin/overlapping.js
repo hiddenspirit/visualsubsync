@@ -10,7 +10,7 @@ VSSPlugin = {
   
   // ----- Plugin parameters available from VSS GUI (name must start with "Param") -----
   ParamFixableOverlap : { Value : 100, Unit : 'ms' },
-  ParamMinBlank : { Value : 1, Unit : 'ms' },
+  ParamMinBlank : { Value : 1, Unit : 'ms' , Description : 'The minimum blank time \n between 2 subtitles.'},
 
   // ----- HasError method called for each subtitle during the error checking -----
   // If there is an error on CurrentSub return a string containing the error description.
@@ -22,6 +22,9 @@ VSSPlugin = {
     }
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
     if ((OverlapInMs > 0) && (OverlapInMs >= this.ParamMinBlank.Value)) {
+      if (SceneChange.Contains(CurrentSub.Start, CurrentSub.Stop)) {
+        return 'subtitle overlap on scene change';
+      }
       return '';
     }
     if (OverlapInMs < 0) {
@@ -53,3 +56,5 @@ VSSPlugin = {
     }
   }
 }
+
+
