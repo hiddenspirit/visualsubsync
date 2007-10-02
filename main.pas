@@ -315,7 +315,6 @@ type
     ActionWAVDisplayScrollRight: TTntAction;
     ActionWAVDisplayScrollLeft: TTntAction;
     ActionShowHideSceneChange: TTntAction;
-    pmiReadSpeed: TTntMenuItem;
     N18: TTntMenuItem;
     ActionTextItalic: TTntAction;
     ActionTextBold: TTntAction;
@@ -485,7 +484,6 @@ type
     procedure vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
       TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       CellRect: TRect);
-    procedure pmiReadSpeedClick(Sender: TObject);
     procedure ActionTextItalicExecute(Sender: TObject);
     procedure ActionTextBoldExecute(Sender: TObject);
     procedure ActionTextUnderlineExecute(Sender: TObject);
@@ -494,6 +492,7 @@ type
     procedure ActionStripTagsExecute(Sender: TObject);
     procedure ActionMergeExecute(Sender: TObject);
     procedure ActionSplitAtCursorExecute(Sender: TObject);
+    procedure pmiToggleColumn(Sender: TObject);
    
   private
     { Private declarations }
@@ -536,6 +535,7 @@ type
     UndoableMultiChangeTask : TUndoableMultiChangeTask;
 
     procedure InitVTV;
+    procedure InitVTVExtraColumns;    
     procedure EnableControl(Enable : Boolean);
     procedure EnableStyleControls(Enable : Boolean);
     procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
@@ -596,7 +596,8 @@ type
     // General JS plugins
     procedure CallJSOnSubtitleModification;
     procedure CallJSOnSelectedSubtitle;
-    procedure GetCurrentPreviousNextSubtitles(var CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+    procedure GetCurrentPreviousNextSubtitles(CurrentNode : PVirtualNode; var CurrentSub,
+      PreviousSub, NextSub : TSubtitleRange);
     procedure UpdateStatusBar;
     procedure OnJsSetStatusBarText(const Msg : WideString);
 
@@ -666,7 +667,7 @@ const
   STOP_COL_INDEX = 2;
   STYLE_COL_INDEX = 3;
   TEXT_COL_INDEX = 4;
-  RS_COL_INDEX = 5;
+  LAST_CORE_COL_INDEX = 4;
 
 var
   MainForm: TMainForm;
@@ -830,6 +831,7 @@ begin
   //StartStopServer;
 
   GeneralJSPlugin := TSimpleJavascriptWrapper.Create;
+  GeneralJSPlugin.CoreColumnsCount := LAST_CORE_COL_INDEX + 1;
   GeneralJSFilename := g_PluginPath + 'general\general_plugin.js';
   if WideFileExists(GeneralJSFilename) then
   begin
@@ -837,6 +839,7 @@ begin
     if GeneralJSPlugin.LoadScript(GeneralJSFilename) then
     begin
       GeneralJSPlugin.OnJSPluginSetStatusBarText := OnJsSetStatusBarText;
+      InitVTVExtraColumns;
     end
     else
       LogForm.SilentLogMsg('Can''t load ' + GeneralJSFilename);
@@ -1091,18 +1094,36 @@ begin
     Column.Width := 500;
     Column.MinWidth := 100;
 
-    Column := Header.Columns.Add;
-    Column.Text := 'RS';
-    Column.Width := 40;
-    Column.MinWidth := 40;
-    Column.Options := Column.Options - [coAllowClick,coDraggable,coResizable,coVisible];
-    pmiReadSpeed.Checked := (coVisible in Column.Options);
-
     //FocusedColumn := 2;
 
     OnGetText := vtvSubsListGetText;
   end;
   vtvSubsList.Header.AutoSizeIndex := TEXT_COL_INDEX;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.InitVTVExtraColumns;
+var Column : TVirtualTreeColumn;
+    i : Integer;
+    MenuItem : TTntMenuItem;
+begin
+  with vtvSubsList do
+  begin
+    for i := 0 to GeneralJSPlugin.ExtraColumnsCount-1 do
+    begin
+      Column := Header.Columns.Add;
+      Column.Text := GeneralJSPlugin.GetColumnTitle(LAST_CORE_COL_INDEX + 1 + i);
+      Column.Width := GeneralJSPlugin.GetColumnSize(LAST_CORE_COL_INDEX + 1 + i);;
+      Column.MinWidth := Column.Width;
+      Column.Options := Column.Options - [coAllowClick,coDraggable,coResizable,coVisible];
+      MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
+      MenuItem.Caption := Column.Text;
+      MenuItem.OnClick := pmiToggleColumn;
+      MenuItem.Checked := (coVisible in Column.Options);
+      SubListHeaderPopupMenu.Items.Add(MenuItem);
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1696,6 +1717,7 @@ procedure TMainForm.vtvSubsListGetText(Sender: TBaseVirtualTree;
   var CellText: WideString);
 var
   NodeData: PTreeData;
+  CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
   NodeData := Sender.GetNodeData(Node);
 
@@ -1706,7 +1728,12 @@ begin
     STOP_COL_INDEX: CellText := TimeMsToString(NodeData.Range.StopTime);
     STYLE_COL_INDEX: CellText := NodeData.Range.Style;
     TEXT_COL_INDEX: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
-    RS_COL_INDEX: CellText := Format('%3.1f', [GetReadingSpeed(NodeData.Range)]);
+  end;
+
+  if GeneralJSPlugin.HasColumnCustomText(Column) then
+  begin
+    GetCurrentPreviousNextSubtitles(Node, CurrentSub, PreviousSub, NextSub);
+    CellText := GeneralJSPlugin.GetColumnText(Column, CurrentSub, PreviousSub, NextSub);
   end;
 end;
 
@@ -6055,31 +6082,31 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.GetCurrentPreviousNextSubtitles(var CurrentSub,
+procedure TMainForm.GetCurrentPreviousNextSubtitles(CurrentNode : PVirtualNode; var CurrentSub,
   PreviousSub, NextSub : TSubtitleRange);
-var Node : PVirtualNode;
+var NextNode, PreviousNode : PVirtualNode;
     NodeData : PTreeData;
 begin
   CurrentSub := nil;
   PreviousSub := nil;
   NextSub := nil;
 
-  if Assigned(vtvSubsList.FocusedNode) then
+  if Assigned(CurrentNode) then
   begin
-    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    NodeData := vtvSubsList.GetNodeData(CurrentNode);
     CurrentSub := NodeData.Range;
 
-    Node := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
-    if Assigned(Node) then
+    NextNode := vtvSubsList.GetNext(CurrentNode);
+    if Assigned(NextNode) then
     begin
-      NodeData := vtvSubsList.GetNodeData(Node);
+      NodeData := vtvSubsList.GetNodeData(NextNode);
       NextSub := NodeData.Range;
     end;
 
-    Node := vtvSubsList.GetPrevious(vtvSubsList.FocusedNode);
-    if Assigned(Node) then
+    PreviousNode := vtvSubsList.GetPrevious(CurrentNode);
+    if Assigned(PreviousNode) then
     begin
-      NodeData := vtvSubsList.GetNodeData(Node);
+      NodeData := vtvSubsList.GetNodeData(PreviousNode);
       PreviousSub := NodeData.Range;
     end;
   end;
@@ -6092,7 +6119,7 @@ var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
   if Assigned(vtvSubsList.FocusedNode) then
   begin
-    GetCurrentPreviousNextSubtitles(CurrentSub, PreviousSub, NextSub);
+    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
     GeneralJSPlugin.NotifySubtitleModification(CurrentSub, PreviousSub, NextSub);
   end;
 end;
@@ -6104,7 +6131,7 @@ var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
   if Assigned(vtvSubsList.FocusedNode) then
   begin
-    GetCurrentPreviousNextSubtitles(CurrentSub, PreviousSub, NextSub);
+    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
     GeneralJSPlugin.NotifySelectionModification(CurrentSub, PreviousSub, NextSub);
   end;
 end;
@@ -6717,48 +6744,16 @@ procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   CellRect: TRect);
 var NodeData : PTreeData;
-    rs : Double;
-    BaseColor, NewColor : TColor;
+    CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+    NewColor : TColor;
 begin
-  if Column = RS_COL_INDEX then
+  if GeneralJSPlugin.IsColumnBGColorized(Column) then
   begin
     NodeData := vtvSubsList.GetNodeData(Node);
-    rs := GetReadingSpeed(NodeData.Range);
-
-    // Pure green hue = 120° (red = 0°, blue = 240°)
-    BaseColor := $99FF99;
-
-    if (rs < 5) then NewColor := ChangeColorHueDeg(BaseColor, 240)       // "TOO SLOW!"
-    else if (rs < 10) then NewColor := ChangeColorHueDeg(BaseColor, 210) // "Slow, acceptable.";
-    else if (rs < 13) then NewColor := ChangeColorHueDeg(BaseColor, 180) // "A bit slow.";
-    else if (rs < 15) then NewColor := ChangeColorHueDeg(BaseColor, 150) // "Good."
-    else if (rs < 23) then NewColor := BaseColor                         // "Perfect.";
-    else if (rs < 27) then NewColor := ChangeColorHueDeg(BaseColor, 90)  // "Good.";
-    else if (rs < 31) then NewColor := ChangeColorHueDeg(BaseColor, 60)  // "A bit fast.";
-    else if (rs < 35) then NewColor := ChangeColorHueDeg(BaseColor, 30)  // "Fast, acceptable.";
-    else NewColor := ChangeColorHueDeg(BaseColor, 0);                    // "TOO FAST!";
-
+    GetCurrentPreviousNextSubtitles(Node, CurrentSub, PreviousSub, NextSub);
+    NewColor := GeneralJSPlugin.GetColumnBgColor(Column, CurrentSub, PreviousSub, NextSub);
     TargetCanvas.Brush.Color := NewColor;
     TargetCanvas.FillRect(CellRect);
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.pmiReadSpeedClick(Sender: TObject);
-var RSColumn : TVirtualTreeColumn;
-begin
-  // Toggle column
-  RSColumn := vtvSubsList.Header.Columns.Items[RS_COL_INDEX];
-  if (coVisible in RSColumn.Options) then
-  begin
-    RSColumn.Options := RSColumn.Options - [coVisible];
-    pmiReadSpeed.Checked := False;
-  end
-  else
-  begin
-    RSColumn.Options := RSColumn.Options + [coVisible];
-    pmiReadSpeed.Checked := True;
   end;
 end;
 
@@ -6801,6 +6796,38 @@ begin
   else
   begin
     FreeAndNil(MultiChangeTask);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.pmiToggleColumn(Sender: TObject);
+var Column : TVirtualTreeColumn;
+    i : integer;
+    SelectedMenuItem : TTntMenuItem;
+    SelectedMenuText : WideString;
+begin
+  if (Sender is TTntMenuItem) then
+  begin
+    SelectedMenuItem := (Sender as TTntMenuItem);
+    SelectedMenuText := Tnt_WideStringReplace(SelectedMenuItem.Caption, '&', '', [rfReplaceAll]);
+    for i := 0 to vtvSubsList.Header.Columns.Count - 1 do
+    begin
+      Column := vtvSubsList.Header.Columns.Items[i];
+      if (Column.Text = SelectedMenuText) then
+      begin
+        if (coVisible in Column.Options) then
+        begin
+          Column.Options := Column.Options - [coVisible];
+          SelectedMenuItem.Checked := False;
+        end
+        else
+        begin
+          Column.Options := Column.Options + [coVisible];
+          SelectedMenuItem.Checked := True;
+        end;
+      end;
+    end;
   end;
 end;
 

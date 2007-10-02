@@ -167,14 +167,42 @@ type
     FVSSPluginObject : TJSObject;
     FParamArray : array[0..2] of TJSBase; // used when calling a JS function
     FOnJSPluginSetStatusBarText : TJSPluginNotifyEvent;
-    
+
+    // Columns
+    FGetColumnBGColor : TJSFunction;
+    FGetColumnText : TJSFunction;
+
+    FCoreColumnsCount : Integer;
+    FExtraColumnsCount : Integer;
+    FColumnsTitle : TWideStringDynArray;
+    FColumnsSize : TIntegerDynArray;
+    FColumnsBGColorized : TBooleanDynArray;
+    FColumnsCustomText : TBooleanDynArray;
+    FIndexParam : TJSInteger;
+    FIndexParamArray : array[0..0]of TJSBase;
+    FICPNParamArray : array[0..3]of TJSBase; // Index, CurrentSub, PreviousSub, NextSub
+
     procedure FillParamArray(CurrentSub, PreviousSub, NextSub : TSubtitleRange);
+    procedure FillICPNParamArray(Index : Integer; CurrentSub, PreviousSub,
+      NextSub : TSubtitleRange);
+
   public
     constructor Create;
     destructor Destroy; override;
+
     function LoadScript(Filename : WideString) : Boolean;
     function NotifySubtitleModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifySelectionModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+
+    function GetColumnTitle(Index : Integer) : WideString;
+    function GetColumnSize(Index : Integer) : Integer;
+    function IsColumnBGColorized(Index : Integer) : Boolean;
+    function HasColumnCustomText(Index : Integer) : Boolean;
+    function GetColumnBgColor(Index : Integer; CurrentSub, PreviousSub, NextSub : TSubtitleRange) : TColor;
+    function GetColumnText(Index : Integer; CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+
+    property CoreColumnsCount : Integer read FCoreColumnsCount write FCoreColumnsCount;
+    property ExtraColumnsCount : Integer read FExtraColumnsCount;
     property OnJSPluginSetStatusBarText : TJSPluginNotifyEvent read FOnJSPluginSetStatusBarText write FOnJSPluginSetStatusBarText;
   end;
 
@@ -352,7 +380,7 @@ end;
 constructor TBaseJavascriptPlugin.Create;
 begin
   inherited Create;
-  FEngine := TJSEngine.Create(40000);
+  FEngine := TJSEngine.Create(256*1024);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
   FScriptLogJsFunc := FEngine.Global.AddMethod('ScriptLog', _JS_ScriptLog, 1);
@@ -783,6 +811,13 @@ begin
   FCurrentSubJS := nil; FPreviousSubJS := nil; FNextSubJS := nil;
   FVSSPluginObject := nil;
   FNotifySubtitleModificationFunc := nil;
+  FNotifySelectionModificationFunc := nil;
+
+  FCoreColumnsCount := 0;
+  FExtraColumnsCount := 0;
+  FGetColumnBGColor := nil;
+  FGetColumnText := nil;
+  FIndexParam := nil;
 end;
 
 //------------------------------------------------------------------------------
@@ -798,6 +833,16 @@ begin
 
   if Assigned(FNotifySubtitleModificationFunc) then
     FreeAndNil(FNotifySubtitleModificationFunc);
+  if Assigned(FNotifySelectionModificationFunc) then
+    FreeAndNil(FNotifySelectionModificationFunc);
+    
+  if Assigned(FGetColumnBGColor) then
+    FreeAndNil(FGetColumnBGColor);
+  if Assigned(FGetColumnText) then
+    FreeAndNil(FGetColumnText);
+  if Assigned(FIndexParam) then
+    FreeAndNil(FIndexParam);
+
   if Assigned(FVSSPluginObject) then
     FreeAndNil(FVSSPluginObject);
 
@@ -838,6 +883,11 @@ end;
 //------------------------------------------------------------------------------
 
 function TSimpleJavascriptWrapper.LoadScript(Filename : WideString) : Boolean;
+var JSFunction : TJSFunction;
+    i : Integer;
+    ParamResultWS : WideString;
+    ParamResultInt : Integer;
+    ParamResultBool : Boolean;
 begin
   Result := inherited LoadScript(Filename);
   if not Result then
@@ -851,6 +901,88 @@ begin
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
+
+    FVSSPluginObject.Evaluate('this.INDEX_COL_IDX = 0;');
+    FVSSPluginObject.Evaluate('this.START_COL_IDX = 1;');
+    FVSSPluginObject.Evaluate('this.STOP_COL_IDX = 2;');
+    FVSSPluginObject.Evaluate('this.STYLE_COL_IDX = 3;');
+    FVSSPluginObject.Evaluate('this.TEXT_COL_IDX = 4;');
+    FVSSPluginObject.Evaluate('this.LAST_CORE_COL_IDX = 4;');
+
+    JSFunction := FVSSPluginObject.GetFunction('Initialize');
+    if Assigned(JSFunction) then
+    begin
+      JSFunction.Call(ParamResultWS);
+      FreeAndNil(JSFunction);
+    end;
+
+    JSFunction := FVSSPluginObject.GetFunction('GetExtraColumnsCount');
+    if Assigned(JSFunction) then
+    begin
+      JSFunction.Call(FExtraColumnsCount);
+      FreeAndNil(JSFunction);
+    end;
+    
+    if (FExtraColumnsCount > 0) then
+    begin
+      FIndexParam := TJSInteger.Create(0, FEngine, '');
+      FIndexParamArray[0] := FIndexParam;
+
+      JSFunction := FVSSPluginObject.GetFunction('GetColumnTitle');
+      if Assigned(JSFunction) then
+      begin
+        SetLength(FColumnsTitle, FCoreColumnsCount + FExtraColumnsCount);
+        for i := 0 to (FCoreColumnsCount + FExtraColumnsCount - 1) do
+        begin
+          FIndexParam.Value := i;
+          JSFunction.Call(FIndexParamArray, ParamResultWS);
+          FColumnsTitle[i] := ParamResultWS;
+        end;
+        FreeAndNil(JSFunction);
+      end;
+
+      JSFunction := FVSSPluginObject.GetFunction('GetColumnSize');
+      if Assigned(JSFunction) then
+      begin
+        SetLength(FColumnsSize, FCoreColumnsCount + FExtraColumnsCount);
+        for i := 0 to (FCoreColumnsCount + FExtraColumnsCount - 1) do
+        begin
+          FIndexParam.Value := i;
+          JSFunction.Call(FIndexParamArray, ParamResultInt);
+          FColumnsSize[i] := ParamResultInt;
+        end;
+        FreeAndNil(JSFunction);
+      end;
+
+      JSFunction := FVSSPluginObject.GetFunction('IsColumnBGColorized');
+      if Assigned(JSFunction) then
+      begin
+        SetLength(FColumnsBGColorized, FCoreColumnsCount + FExtraColumnsCount);
+        for i := 0 to (FCoreColumnsCount + FExtraColumnsCount - 1) do
+        begin
+          FIndexParam.Value := i;
+          JSFunction.Call(FIndexParamArray, ParamResultBool);
+          FColumnsBGColorized[i] := ParamResultBool;
+        end;
+        FreeAndNil(JSFunction);
+      end;
+
+      JSFunction := FVSSPluginObject.GetFunction('HasColumnCustomText');
+      if Assigned(JSFunction) then
+      begin
+        SetLength(FColumnsCustomText, FCoreColumnsCount + FExtraColumnsCount);
+        for i := 0 to (FCoreColumnsCount + FExtraColumnsCount - 1) do
+        begin
+          FIndexParam.Value := i;
+          JSFunction.Call(FIndexParamArray, ParamResultBool);
+          FColumnsCustomText[i] := ParamResultBool;
+        end;
+        FreeAndNil(JSFunction);
+      end;
+    end;
+
+    FGetColumnBGColor := FVSSPluginObject.GetFunction('GetColumnBGColor');
+    FGetColumnText := FVSSPluginObject.GetFunction('GetColumnText');
 
     // Scene change
     g_SceneChange.RegisterSceneChange(FEngine.Global);
@@ -869,7 +1001,7 @@ var i : Integer;
 begin
   for i:=0 to Length(FParamArray)-1 do
     FParamArray[i] := nil;
-  
+
   if Assigned(CurrentSub) then
   begin
     FCurrentSub.SetSubtitle(CurrentSub);
@@ -885,6 +1017,101 @@ begin
     FNextSub.SetSubtitle(NextSub);
     FParamArray[2] := FNextSubJS;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TSimpleJavascriptWrapper.FillICPNParamArray(Index : Integer; CurrentSub, PreviousSub,
+  NextSub : TSubtitleRange);
+var i : Integer;
+begin
+  for i:=0 to Length(FICPNParamArray)-1 do
+    FParamArray[i] := nil;
+
+  FICPNParamArray[0] := FIndexParam;
+  if Assigned(CurrentSub) then
+  begin
+    FCurrentSub.SetSubtitle(CurrentSub);
+    FICPNParamArray[1] := FCurrentSubJS;
+  end;
+  if Assigned(PreviousSub) then
+  begin
+    FPreviousSub.SetSubtitle(PreviousSub);
+    FICPNParamArray[2] := FPreviousSubJS;
+  end;
+  if Assigned(NextSub) then
+  begin
+    FNextSub.SetSubtitle(NextSub);
+    FICPNParamArray[3] := FNextSubJS;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.GetColumnTitle(Index : Integer) : WideString;
+begin
+  if (Index >= Low(FColumnsTitle)) and (Index <= High(FColumnsTitle)) then
+    Result := FColumnsTitle[Index]
+  else
+    Result := '';
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.GetColumnSize(Index : Integer) : Integer;
+begin
+  if (Index >= Low(FColumnsSize)) and (Index <= High(FColumnsSize)) then
+    Result := FColumnsSize[Index]
+  else
+    Result := 50;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.IsColumnBGColorized(Index : Integer) : Boolean;
+begin
+  if (Index >= Low(FColumnsBGColorized)) and (Index <= High(FColumnsBGColorized)) then
+    Result := FColumnsBGColorized[Index]
+  else
+    Result := False;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.HasColumnCustomText(Index : Integer) : Boolean;
+begin
+  if (Index >= Low(FColumnsCustomText)) and (Index <= High(FColumnsCustomText)) then
+    Result := FColumnsCustomText[Index]
+  else
+    Result := False;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.GetColumnBgColor(Index : Integer;
+  CurrentSub, PreviousSub, NextSub : TSubtitleRange) : TColor;
+var ParamResult : Integer;
+begin
+  if Assigned(FGetColumnBGColor) then
+  begin
+    FillICPNParamArray(Index, CurrentSub, PreviousSub, NextSub);
+    FGetColumnBGColor.Call(FICPNParamArray, ParamResult);
+  end;
+  Result := JSColorToTColor(ParamResult);
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.GetColumnText(Index : Integer;
+  CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+var paramResult : WideString;
+begin
+  if Assigned(FGetColumnText) then
+  begin
+    FillICPNParamArray(Index, CurrentSub, PreviousSub, NextSub);
+    FGetColumnText.Call(FICPNParamArray, paramResult);
+  end;
+  Result := paramResult;
 end;
 
 //==============================================================================
@@ -952,7 +1179,7 @@ procedure TSceneChangeWrapper.RegisterSceneChange(JSObject : TJSObject);
 var SceneChangeJSObj : TJSObject;
 begin
   SceneChangeJSObj := JSObject.AddNativeObject(Self, 'SceneChange');
-  SceneChangeJSObj.SetMethodInfo('Contains', 2, rtBoolean);  
+  SceneChangeJSObj.SetMethodInfo('Contains', 2, rtBoolean);
   SceneChangeJSObj.SetMethodInfo('GetCount', 0, rtInteger);
   SceneChangeJSObj.SetMethodInfo('GetAt', 1, rtInteger);
   SceneChangeJSObj.SetMethodInfo('GetNext', 1, rtInteger);
