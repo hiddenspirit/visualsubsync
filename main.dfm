@@ -4012,9 +4012,5 @@ object MainForm: TMainForm
   object SubListHeaderPopupMenu: TTntPopupMenu
     Left = 192
     Top = 312
-    object pmiReadSpeed: TTntMenuItem
-      Caption = 'Read speed'
-      OnClick = pmiReadSpeedClick
-    end
   end
 end
