@@ -124,12 +124,12 @@ type
     TntPageControl1: TTntPageControl;
     tsGeneral: TTntTabSheet;
     tsErrorChecking: TTntTabSheet;
-    TntGroupBox1: TTntGroupBox;
+    GroupBoxWebServer: TTntGroupBox;
     EditServerPort: TTntEdit;
     TntLabel1: TTntLabel;
     ListErrorChecking: TTntCheckListBox;
     UpDownServerPort: TTntUpDown;
-    GroupBox1: TGroupBox;
+    GroupBoxMisc: TGroupBox;
     chkAssociateExt: TCheckBox;
     chkEnableCompression: TCheckBox;
     chkSwapSubList: TCheckBox;
@@ -154,7 +154,7 @@ type
     ComboWheelHZoomModifier: TComboBox;
     GroupBox3: TGroupBox;
     chkEnableSSATimingMode: TCheckBox;
-    GroupBox4: TGroupBox;
+    GroupBoxBackup: TGroupBox;
     chkCreateBackup: TCheckBox;
     bttOpenBackupDir: TButton;
     EditBackupTime: TEdit;
@@ -210,6 +210,13 @@ type
     TntLabel12: TTntLabel;
     EditSCFilterOffset: TEdit;
     UpDownSCFilter: TTntUpDown;
+    Bevel2: TBevel;
+    Bevel3: TBevel;
+    Bevel4: TBevel;
+    Bevel5: TBevel;
+    Bevel6: TBevel;
+    Bevel7: TBevel;
+    Bevel8: TBevel;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
