@@ -89,7 +89,6 @@ type
   TBaseJavascriptPlugin = class
   protected
     FEngine : TJSEngine;
-    FScriptLogJsFunc : TJSFunction;
     FLastErrorMsg : WideString;
     FFatalError : Boolean;
     FVSSPluginObject : TJSObject;
@@ -98,6 +97,9 @@ type
 
     procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
       report: PJSErrorReport);
+
+    // function called during the script loading just after compilation and before execution
+    procedure PreInitScript; virtual;
   public
     constructor Create;
     destructor Destroy; override;
@@ -159,7 +161,6 @@ type
 
   TSimpleJavascriptWrapper = class(TBaseJavascriptPlugin)
   private
-    FSetStatusBarTextJsFunc : TJSFunction;
     FNotifySubtitleModificationFunc : TJSFunction;
     FNotifySelectionModificationFunc : TJSFunction;
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
@@ -186,6 +187,9 @@ type
     procedure FillICPNParamArray(Index : Integer; CurrentSub, PreviousSub,
       NextSub : TSubtitleRange);
 
+  protected
+    procedure PreInitScript; override;
+    
   public
     constructor Create;
     destructor Destroy; override;
@@ -286,8 +290,8 @@ begin
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
     jsplugin := TBaseJavascriptPlugin(jseng.UserData);
-    if Assigned(jsplugin.FOnJSPluginError) then
-      jsplugin.FOnJSPluginError( JSStringToString(JSValToJSString(argv^)) );
+    if Assigned(jsplugin.OnJSPluginError) then
+      jsplugin.OnJSPluginError(JSStringToString(JSValToJSString(argv^)));
   end;
   Result := JS_TRUE;
 end;
@@ -298,15 +302,31 @@ function _JS_SetStatusBarText(cx: PJSContext; obj: PJSObject; argc: uintN; argv,
 var
   jseng: TJSEngine;
   jsplugin : TSimpleJavascriptWrapper;
+  Func : TJSPluginNotifyEvent;
 begin
   if (argc = 1) then
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
     jsplugin := TSimpleJavascriptWrapper(jseng.UserData);
-    if Assigned(jsplugin.FOnJSPluginSetStatusBarText) then
+    Func := jsplugin.OnJSPluginSetStatusBarText;
+    if Assigned(Func) then
     begin
-      jsplugin.FOnJSPluginSetStatusBarText(JSStringToString(JSValToJSString(argv^)));
+      jsplugin.OnJSPluginSetStatusBarText(JSStringToString(JSValToJSString(argv^)));
     end;
+  end;
+  Result := JS_TRUE;
+end;
+
+function _JS_LoadScript(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval: pjsval): JSBool; cdecl;
+var
+  jseng: TJSEngine;
+  jsplugin : TBaseJavascriptPlugin;
+begin
+  if (argc = 1) then
+  begin
+    jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
+    jsplugin := TBaseJavascriptPlugin(jseng.UserData);
+    jsplugin.LoadScript(JSStringToString(JSValToJSString(argv^)));
   end;
   Result := JS_TRUE;
 end;
@@ -383,15 +403,14 @@ begin
   FEngine := TJSEngine.Create(256*1024);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
-  FScriptLogJsFunc := FEngine.Global.AddMethod('ScriptLog', _JS_ScriptLog, 1);
+  FEngine.Global.AddMethod('ScriptLog', _JS_ScriptLog, 1);
+  //FEngine.Global.AddMethod('LoadScript', _JS_LoadScript, 1);
 end;
 
 //------------------------------------------------------------------------------
 
 destructor TBaseJavascriptPlugin.Destroy;
 begin
-  if Assigned(FScriptLogJsFunc) then
-    FreeAndNil(FScriptLogJsFunc);
   FEngine.Free;
   inherited;
 end;
@@ -426,6 +445,13 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TBaseJavascriptPlugin.PreInitScript;
+begin
+  // nothing to do by default
+end;
+
+//------------------------------------------------------------------------------
+
 function TBaseJavascriptPlugin.LoadScript(Filename : WideString) : Boolean;
 var FScript : TJSScript;
 begin
@@ -440,6 +466,8 @@ begin
     FScript.Free;
     Exit;
   end;
+
+  PreInitScript;
 
   Result := FScript.Execute(FEngine);
   FScript.Free;
@@ -802,8 +830,7 @@ constructor TSimpleJavascriptWrapper.Create;
 begin
   inherited Create;
 
-  FSetStatusBarTextJsFunc := FEngine.Global.AddMethod('SetStatusBarText',
-    _JS_SetStatusBarText, 1);
+  FEngine.Global.AddMethod('SetStatusBarText', _JS_SetStatusBarText, 1);
 
   FCurrentSub := TSubtitleRangeJSWrapper.Create;
   FPreviousSub := TSubtitleRangeJSWrapper.Create;
@@ -850,9 +877,6 @@ begin
   FPreviousSub.Free;
   FCurrentSub.Free;
 
-  if Assigned(FSetStatusBarTextJsFunc) then
-    FreeAndNil(FSetStatusBarTextJsFunc);
-
   inherited;
 end;
 
@@ -882,6 +906,20 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TSimpleJavascriptWrapper.PreInitScript;
+var VSSCore : TJSObject;
+begin
+  VSSCore := FEngine.Global.DeclareObject('VSSCore');
+  VSSCore.SetProperty('INDEX_COL_IDX', TJSInteger.Create(0, FEngine, '', VSSCore));
+  VSSCore.SetProperty('START_COL_IDX', TJSInteger.Create(1, FEngine, '', VSSCore));
+  VSSCore.SetProperty('STOP_COL_IDX', TJSInteger.Create(2, FEngine, '', VSSCore));
+  VSSCore.SetProperty('STYLE_COL_IDX', TJSInteger.Create(3, FEngine, '', VSSCore));
+  VSSCore.SetProperty('TEXT_COL_IDX', TJSInteger.Create(4, FEngine, '', VSSCore));
+  VSSCore.SetProperty('LAST_CORE_COL_IDX', TJSInteger.Create(4, FEngine, '', VSSCore));
+end;
+
+//------------------------------------------------------------------------------
+
 function TSimpleJavascriptWrapper.LoadScript(Filename : WideString) : Boolean;
 var JSFunction : TJSFunction;
     i : Integer;
@@ -901,20 +939,6 @@ begin
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
-
-    FVSSPluginObject.Evaluate('this.INDEX_COL_IDX = 0;');
-    FVSSPluginObject.Evaluate('this.START_COL_IDX = 1;');
-    FVSSPluginObject.Evaluate('this.STOP_COL_IDX = 2;');
-    FVSSPluginObject.Evaluate('this.STYLE_COL_IDX = 3;');
-    FVSSPluginObject.Evaluate('this.TEXT_COL_IDX = 4;');
-    FVSSPluginObject.Evaluate('this.LAST_CORE_COL_IDX = 4;');
-
-    JSFunction := FVSSPluginObject.GetFunction('Initialize');
-    if Assigned(JSFunction) then
-    begin
-      JSFunction.Call(ParamResultWS);
-      FreeAndNil(JSFunction);
-    end;
 
     JSFunction := FVSSPluginObject.GetFunction('GetExtraColumnsCount');
     if Assigned(JSFunction) then
@@ -1026,7 +1050,7 @@ procedure TSimpleJavascriptWrapper.FillICPNParamArray(Index : Integer; CurrentSu
 var i : Integer;
 begin
   for i:=0 to Length(FICPNParamArray)-1 do
-    FParamArray[i] := nil;
+    FICPNParamArray[i] := nil;
 
   FICPNParamArray[0] := FIndexParam;
   if Assigned(CurrentSub) then
@@ -1104,14 +1128,14 @@ end;
 
 function TSimpleJavascriptWrapper.GetColumnText(Index : Integer;
   CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
-var paramResult : WideString;
+var ParamResult : WideString;
 begin
   if Assigned(FGetColumnText) then
   begin
     FillICPNParamArray(Index, CurrentSub, PreviousSub, NextSub);
-    FGetColumnText.Call(FICPNParamArray, paramResult);
+    FGetColumnText.Call(FICPNParamArray, ParamResult);
   end;
-  Result := paramResult;
+  Result := ParamResult;
 end;
 
 //==============================================================================
