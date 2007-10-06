@@ -202,6 +202,7 @@ object MainForm: TMainForm
       OnCompareNodes = vtvSubsListCompareNodes
       OnDblClick = vtvSubsListDblClick
       OnFocusChanged = vtvSubsListFocusChanged
+      OnPaintText = vtvSubsListPaintText
       Columns = <>
     end
     object PanelPlaybackControl: TPanel
