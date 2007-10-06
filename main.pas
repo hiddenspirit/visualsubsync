@@ -493,6 +493,9 @@ type
     procedure ActionMergeExecute(Sender: TObject);
     procedure ActionSplitAtCursorExecute(Sender: TObject);
     procedure pmiToggleColumn(Sender: TObject);
+    procedure vtvSubsListPaintText(Sender: TBaseVirtualTree;
+      const TargetCanvas: TCanvas; Node: PVirtualNode;
+      Column: TColumnIndex; TextType: TVSTTextType);
    
   private
     { Private declarations }
@@ -696,7 +699,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Web : We need real gzip compression, deflate support is b0rked in IE
 
 // TODO : Split at cursor for submemo
-// TODO : Replace dialog
 // TODO : Check HD space before extraction
 
 // TODO : Rework project handling which is a bit messy ATM
@@ -1056,11 +1058,12 @@ begin
     NodeDataSize := SizeOf(TTreeData);
     TreeOptions.MiscOptions := TreeOptions.MiscOptions + [toReportMode];
     TreeOptions.SelectionOptions := TreeOptions.SelectionOptions +
-      [toFullRowSelect, toMultiSelect {,toExtendedFocus}];
+      [toFullRowSelect, toMultiSelect, toDisableDrawSelection {,toExtendedFocus}];
     TreeOptions.PaintOptions := TreeOptions.PaintOptions -
-      [toShowTreeLines,toShowRoot] +
-      [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection];
-    //SelectionBlendFactor := 50;
+      [toShowTreeLines, toShowRoot] +
+      [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection
+        {, toHotTrack, toAlwaysHideSelection}];
+
     Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
     Header.Style := hsFlatButtons;
 
@@ -6754,6 +6757,34 @@ begin
     NewColor := GeneralJSPlugin.GetColumnBgColor(Column, CurrentSub, PreviousSub, NextSub);
     TargetCanvas.Brush.Color := NewColor;
     TargetCanvas.FillRect(CellRect);
+    if vtvSubsList.Selected[Node] then
+    begin
+      // No selection blending
+      vtvSubsList.SelectionBlendFactor := 0;
+    end
+    else
+    begin
+      // default
+      vtvSubsList.SelectionBlendFactor := 128;
+    end;
+  end
+  else
+  begin
+    // default  
+    vtvSubsList.SelectionBlendFactor := 128;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.vtvSubsListPaintText(Sender: TBaseVirtualTree;
+  const TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  TextType: TVSTTextType);
+begin
+  if GeneralJSPlugin.IsColumnBGColorized(Column) then
+  begin
+    // Force default text color
+    TargetCanvas.Font.Color := clWindowText;
   end;
 end;
 
