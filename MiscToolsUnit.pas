@@ -76,6 +76,7 @@ type
   procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
   function StripTags(const Text : WideString) : WideString;
 
+  function WideIsAbsolutePath(const Path : WideString) : Boolean;  
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
   function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
 
@@ -822,6 +823,7 @@ var i, j, p : integer;
 begin
   i := 1;
   p := 1;
+  Filename := Tnt_WideStringReplace(Filename, '/', '\', [rfReplaceAll]);
   while (p <> 0) do
   begin
     p := PosEx('\', Filename, i);
