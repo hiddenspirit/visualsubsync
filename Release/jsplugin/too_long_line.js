@@ -28,7 +28,7 @@ VSSPlugin = {
   	var LineArray = SubText.split('\r\n');
   	var LineArrayLen = LineArray.length;
   	var LineLen = 0;
-  	for(i=0; i < LineArrayLen; i++)
+  	for(var i = 0; i < LineArrayLen; i++)
   	{
   		LineLen = LineArray[i].length;
   		if(LineLen > MaxLineLen)
@@ -49,7 +49,7 @@ VSSPlugin = {
     if(CurrentSub.Text.match(/^\s*-/mg)) {
 	    if(DebugMode)
       	ScriptLog('Dialog detected, exiting.');
-    	return;    	
+    	return;
     }
   	
     // Put all text on 1 line
@@ -84,9 +84,10 @@ VSSPlugin = {
   	// 14  10  4     0    <- SumFromEndArray  	
   	 	
   	var SumFromStart = 0;
-  	for(i=0; i < WordArrayLen; i++)
+  	var i;
+  	for(i = 0; i < WordArrayLen; i++)
   	{
-			if (i == 0) {
+			if (i === 0) {
 			  SumFromStart = WordArray[i].length;
 			} else {
 			  SumFromStart += (1 + WordArray[i].length);
@@ -112,7 +113,7 @@ VSSPlugin = {
   	
   	// 1st pass, try to break on ".", "?", or "!"
   	var RegExpEndWithL1 = /[.|?|!]$/;
-  	for(i=0; i < WordArrayLen; i++)
+  	for(i = 0; i < WordArrayLen; i++)
   	{
   		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
@@ -126,7 +127,7 @@ VSSPlugin = {
   	  	
   	// 2nd pass, try to break on "..." or ";"
   	var RegExpEndWithL2 = /[...|;]$/;
-  	for(i=0; i < WordArrayLen; i++)
+  	for(i = 0; i < WordArrayLen; i++)
   	{
   		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
@@ -140,7 +141,7 @@ VSSPlugin = {
   	
   	// 3rd pass, try to break on ","
   	var RegExpEndWithL3 = /[,]$/;
-  	for(i=0; i < WordArrayLen; i++)
+  	for(i = 0; i < WordArrayLen; i++)
   	{
   		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value && 
@@ -153,7 +154,7 @@ VSSPlugin = {
   	}
   	  	
   	// 4th pass, break on space
-  	for(i=0; i < WordArrayLen; i++)
+  	for(i = 0; i < WordArrayLen; i++)
   	{
   		if(SumFromStartArray[i] <= this.ParamMaxPerLine.Value &&
   			 SumFromEndArray[i] <= this.ParamMaxPerLine.Value)
@@ -172,7 +173,7 @@ VSSPlugin = {
   	var found = false;
   	var fallBackPoint = 0;
   	var previousLineDiff = 0;
-  	for(i=0; i < j && !found; i++)
+  	for(i = 0; i < j && !found; i++)
   	{
   		LineDiff = Math.abs(SumFromStartArray[CutList[i].idx] - SumFromEndArray[CutList[i].idx]);
       DiffPercent = (CutList[i].lvl == 4) ? 0.2 : 0.6;
@@ -191,7 +192,7 @@ VSSPlugin = {
   				}
   			}
   			if(DebugMode)
-  				ScriptLog('<'+NewText+'>');
+  				ScriptLog('<' + NewText + '>');
   			CurrentSub.Text = NewText;
   			found = true;
   		}
@@ -206,7 +207,7 @@ VSSPlugin = {
 	  	if(DebugMode)
 				ScriptLog('Using fallBackPoint = ' + fallBackPoint);
   		
-  		for(k=0; k < WordArrayLen; k++)
+  		for(var k=0; k < WordArrayLen; k++)
   		{
   			if(k == WordArrayLen-1)
   			{
@@ -218,11 +219,11 @@ VSSPlugin = {
   			}
   		}
   		if(DebugMode)
-  			ScriptLog('<'+NewText+'>');
+  			ScriptLog('<' + NewText + '>');
   		CurrentSub.Text = NewText;
   	} 	
   	  	
   	if(DebugMode)
 			ScriptLog('<===== too_long_lines.js : Leaving FixError.');
   }
-}
+};
