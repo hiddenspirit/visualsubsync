@@ -511,17 +511,13 @@ begin
   FScript := TJSScript.Create;
   FScript.LoadRaw(Filename);
   FScript.Compile(FEngine); // try to compile the script
-  if (not FScript.Compiled) then
+  if FScript.Compiled then
   begin
-    FScript.Free;
-    Exit;
+    PreInitScript;
+    Result := FScript.Execute(FEngine);
   end;
 
-  PreInitScript;
-
-  Result := FScript.Execute(FEngine);
   FScript.Free;
-
   FLoadingStack.Pop;
   Dispose(PFilename);
 end;
