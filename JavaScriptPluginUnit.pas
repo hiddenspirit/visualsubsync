@@ -2,7 +2,7 @@ unit JavaScriptPluginUnit;
 
 interface
 
-uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types;
+uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types, Contnrs;
 
 type
 {$TYPEINFO ON}
@@ -94,12 +94,15 @@ type
     FVSSPluginObject : TJSObject;
     FFilename : WideString;
     FOnJSPluginError : TJSPluginNotifyEvent;
+    FLoadingStack : TStack;
 
     procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
       report: PJSErrorReport);
 
     // function called during the script loading just after compilation and before execution
     procedure PreInitScript; virtual;
+    function InternalLoadScript(Filename : WideString) : Boolean;
+    function GetCurrentLoadingFile : WideString;     
   public
     constructor Create;
     destructor Destroy; override;
@@ -326,7 +329,7 @@ begin
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
     jsplugin := TBaseJavascriptPlugin(jseng.UserData);
-    jsplugin.LoadScript(JSStringToString(JSValToJSString(argv^)));
+    jsplugin.InternalLoadScript(JSStringToString(JSValToJSString(argv^)));
   end;
   Result := JS_TRUE;
 end;
@@ -400,11 +403,12 @@ end;
 constructor TBaseJavascriptPlugin.Create;
 begin
   inherited Create;
+  FLoadingStack := TStack.Create;  
   FEngine := TJSEngine.Create(256*1024);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
   FEngine.Global.AddMethod('ScriptLog', _JS_ScriptLog, 1);
-  //FEngine.Global.AddMethod('LoadScript', _JS_LoadScript, 1);
+  FEngine.Global.AddMethod('LoadScript', _JS_LoadScript, 1);
 end;
 
 //------------------------------------------------------------------------------
@@ -412,6 +416,7 @@ end;
 destructor TBaseJavascriptPlugin.Destroy;
 begin
   FEngine.Free;
+  FLoadingStack.Free;
   inherited;
 end;
 
@@ -421,6 +426,7 @@ procedure TBaseJavascriptPlugin.OnJsError(eng : TJSEngine; cx: PJSContext;
   Msg: PChar; report: PJSErrorReport);
 var
 	ErrorTypeStr: WideString;
+  CurrentFile : WideString;
 begin
   if (report^.flags and JSREPORT_EXCEPTION <> 0) then
   begin
@@ -437,8 +443,16 @@ begin
 		ErrorTypeStr := 'Error';
     FFatalError := True;
   end;
+  if (FLoadingStack.Count > 0) then
+  begin
+    CurrentFile := PWideString(FLoadingStack.Peek)^;
+  end
+  else
+  begin
+    CurrentFile := FFilename;
+  end;
 	FLastErrorMsg := Format('%s in %s (Line %d) / %s',
-    [ErrorTypeStr, WideExtractFileName(FFilename), report^.lineno+1, Msg]);
+    [ErrorTypeStr, WideExtractFileName(CurrentFile), report^.lineno + 1, Msg]);
   if Assigned(FOnJSPluginError) then
     FOnJSPluginError(FLastErrorMsg);
 end;
@@ -452,11 +466,47 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TBaseJavascriptPlugin.LoadScript(Filename : WideString) : Boolean;
+function TBaseJavascriptPlugin.GetCurrentLoadingFile : WideString;
+begin
+  if (FLoadingStack.Count > 0) then
+  begin
+    Result := PWideString(FLoadingStack.Peek)^;
+  end
+  else
+  begin
+    Result := FFilename;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TBaseJavascriptPlugin.InternalLoadScript(Filename : WideString) : Boolean;
 var FScript : TJSScript;
+    PFilename : PWideString;
+    CurrentFilePath : WideString;
 begin
   Result := False;
-  FFilename := Filename;
+
+  // Check if Filename is an absolute path
+  if not WideIsAbsolutePath(Filename) then
+  begin
+    // Resolve path to be absolute
+    CurrentFilePath := WideExtractFilePath(GetCurrentLoadingFile);
+    Filename := WideResolveRelativePath(CurrentFilePath, Filename);
+  end;
+
+  if not WideFileExists(Filename) then
+  begin
+    if Assigned(FOnJSPluginError) then
+    begin
+      FOnJSPluginError('Can''t find ' + Filename);
+    end;
+    Exit;
+  end;
+
+  New(PFilename);
+  PFilename ^:= Filename;
+  FLoadingStack.Push(PFilename);
 
   FScript := TJSScript.Create;
   FScript.LoadRaw(Filename);
@@ -471,6 +521,17 @@ begin
 
   Result := FScript.Execute(FEngine);
   FScript.Free;
+
+  FLoadingStack.Pop;
+  Dispose(PFilename);
+end;
+
+//------------------------------------------------------------------------------
+
+function TBaseJavascriptPlugin.LoadScript(Filename : WideString) : Boolean;
+begin
+  FFilename := Filename;
+  Result := InternalLoadScript(Filename);
 end;
 
 // =============================================================================
