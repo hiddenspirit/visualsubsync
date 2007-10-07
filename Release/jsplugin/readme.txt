@@ -9,6 +9,7 @@ VSS specific functions and properties:
 
 ScriptLog(Message) : Display a message in the log window
 SetStatusBarText(Message) : Display a message in the status bar
+LoadScript(Filename) : Load a external javascript file
 
 
 Subtitle.Start : Start time in ms of the subtitle
