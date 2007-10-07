@@ -72,8 +72,8 @@ function statusBarText(Sub) {
     else              rating = "TOO FAST!";
 
     // initialize template bars if needed
-    if (templateBarDS == null) templateBarDS = initBar(dsMin, dsMax);
-    if (templateBarRS == null) templateBarRS = initBar(rsMin, rsMax);
+    if (templateBarDS === null) templateBarDS = initBar(dsMin, dsMax);
+    if (templateBarRS === null) templateBarRS = initBar(rsMin, rsMax);
 
     // get display bars
     var barDS = getBar(dsX, dsMin, dsMax, templateBarDS);
@@ -84,9 +84,9 @@ function statusBarText(Sub) {
     var durLavie = 0.5 + len / rsIdeal;
     durLavie = decimal1Round(durLavie);
 
-    return "DS: " + ds + " " + barDS
-      + "  |  RS: " + rs + " " + barRS
-      + "  |  Duration: " + durS + " (ideal: " + durLavie + ")  |  " + rating;
+    return "DS: " + ds + " " + barDS +
+      "  |  RS: " + rs + " " + barRS +
+      "  |  Duration: " + durS + " (ideal: " + durLavie + ")  |  " + rating;
 
 }
 
@@ -207,8 +207,8 @@ VSSPlugin = {
   GetColumnText : function(Index, CurrentSub, PreviousSub, NextSub) {
     switch(Index) {
       case this.RS_COL_IDX: return getReadingSpeedText(CurrentSub);
-      default: '';
+      default: return '';
     }
   }
   
-}
+};

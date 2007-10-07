@@ -19,7 +19,7 @@ VSSPlugin = {
   // Otherwise return an empty string.
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
-    if (NextSub == null) {
+    if (NextSub === null) {
       return '';
     }
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
@@ -33,7 +33,7 @@ VSSPlugin = {
   },
   
   FixError : function(CurrentSub, PreviousSub, NextSub) {
-    if (NextSub == null) {
+    if (NextSub === null) {
       return '';
     }
     
@@ -47,7 +47,7 @@ VSSPlugin = {
     switch(this.ParamMode.Value){
 		  case 1:
 			  // Fix the overlap by dividing it by 2
-			  var MiddlePoint = (CurrentSub.Stop + (OverlapInMs / 2))
+			  var MiddlePoint = (CurrentSub.Stop + (OverlapInMs / 2));
 			  var HalfOffset = (this.ParamMinBlank.Value / 2);
 			  CurrentSub.Stop = MiddlePoint - HalfOffset;
 			  NextSub.Start = CurrentSub.Stop + this.ParamMinBlank.Value;
@@ -64,6 +64,10 @@ VSSPlugin = {
 			  var Required = this.ParamMinBlank.Value - OverlapInMs;
 			  NextSub.Start += Required;
 		    break;
+		    
+		  default:
+		    ScriptLog('ParamMode = ' + this.ParamMode.Value + ' is not supported');
+		    break;
 	  }
 
     // Special case when OverlapInMs == 0
@@ -71,6 +75,4 @@ VSSPlugin = {
 			NextSub.Start += 1;
     }
   }
-}
-
-
+};

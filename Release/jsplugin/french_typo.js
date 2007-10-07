@@ -31,7 +31,7 @@ VSSPlugin = {
 		{ re : /([^.])\.\.$/mg, msg : "Signe de ponctuation invalide '..' (3)", replaceby: "$1..."},
 		{ re : /\.{4,}\b/mg, msg : "Signe de ponctuation invalide '....'", replaceby: '... '},		
 		{ re : /\.{3}\b/mg, msg : "Un espace après '...'", replaceby: '... '},		
-		{ re : /(http:\/\/[^\s\)]+)/mg, msg : "Ignorer les point dans les URL (1)", replaceby: "[url1=$1]", exception: true, },
+		{ re : /(http:\/\/[^\s\)]+)/mg, msg : "Ignorer les point dans les URL (1)", replaceby: "[url1=$1]", exception: true},
 		{ re : /(www.[^\s)]+)/mg, msg : "Ignorer les points dans les URL (2)", replaceby: "[url2=$1]", exception: true},
 		{ re : /\b(([A-Z]\.){2,})\B/mg, msg : "Ignorer les points dans les acronymes", replaceby: "[acro=$1]", exception: true},
 		//{ re : /([0-9]+[.,])\s+([0-9]+)/mg, msg : "Pas d'espace dans un nombres", replaceby: "$1$2"}, // fonctionne pas pour : "50, 75 kg à peu près."
@@ -49,7 +49,7 @@ VSSPlugin = {
   	for(i=0; i < this.Rules.length; i++) {
   		if(this.Rules[i].re.test(SubText)) {
 
-  			if(DebugMode && this.Rules[i].replaceby != null) {
+  			if(DebugMode && this.Rules[i].replaceby !== null) {
   				ScriptLog(SubText.replace(this.Rules[i].re, this.Rules[i].replaceby));
   				ScriptLog('');
   			} 			
@@ -62,7 +62,7 @@ VSSPlugin = {
   FixError : function(CurrentSub, PreviousSub, NextSub) {
   	var SubText = CurrentSub.Text;
   	for(i=0; i < this.Rules.length; i++) {
-  		if((this.Rules[i].replaceby != null) && (this.Rules[i].re.test(SubText))) {
+  		if((this.Rules[i].replaceby !== null) && (this.Rules[i].re.test(SubText))) {
   		  if(!this.Rules[i].exception) {
 				  CurrentSub.Text = SubText.replace(this.Rules[i].re, this.Rules[i].replaceby);
 				}
@@ -70,4 +70,4 @@ VSSPlugin = {
   		}
   	}
   }
-}
+};
