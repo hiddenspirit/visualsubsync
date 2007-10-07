@@ -2,6 +2,12 @@
 // thyresias <at> gmail.com (www.calorifix.net)
 // 20-Jan-2007  first version
 
+LoadScript("../common/tools.js");
+
+// ---------------------------------------------------------------------------
+// ASCII bar stuff
+// ---------------------------------------------------------------------------
+
 var templateBarDS = null;
 var templateBarRS = null;
 
@@ -29,24 +35,29 @@ function getBar(value, min, max, templateBar) {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 function statusBarText(Sub) {
 
     // current length, duration
     var len = Sub.StrippedText.length;
-    var durMS = Sub.Stop - Sub.Start;     // in milliseconds
-    var dur = Math.round(durMS/100) / 10; // in seconds, rounded to 1 decimal digit
+    var durMs = Sub.Stop - Sub.Start;
+    var durS = decimal1Round(durMs / 1000);
 
     // display speed
     var dsMin = 4;
     var dsMax = 22;
-    var dsX = len * 1000 / durMS;       // exact
-    var ds = Math.round(dsX*10) / 10;   // rounded to 1 decimal digit
+    var dsX = len * 1000 / durMs;       // exact
+    var ds = decimal1Round(dsX);
 
     // reading speed
     var rsMin = 5;
     var rsMax = 35;
-    var rsX = len * 1000 / (durMS - 500);
-    var rs = Math.round(rsX*10) / 10;
+    if (durMs < 500) {
+      durMs = 500;
+    }    
+    var rsX = len * 1000 / (durMs - 500);
+    var rs = decimal1Round(rsX);
 
     // rating
     var rating;
@@ -71,18 +82,30 @@ function statusBarText(Sub) {
     // compute Lavie duration
     var rsIdeal = 20;
     var durLavie = 0.5 + len / rsIdeal;
-    durLavie = Math.round(durLavie*10) / 10;
+    durLavie = decimal1Round(durLavie);
 
     return "DS: " + ds + " " + barDS
       + "  |  RS: " + rs + " " + barRS
-      + "  |  Duration: " + dur + " (ideal: " + durLavie + ")  |  " + rating;
+      + "  |  Duration: " + durS + " (ideal: " + durLavie + ")  |  " + rating;
 
 }
 
-function getReadingSpeedColor(Sub) {
+// ---------------------------------------------------------------------------
+
+function getReadingSpeed(Sub) {
   var len = Sub.StrippedText.length;
-  var durMS = Sub.Stop - Sub.Start;
-  var rs = (len * 1000) / (durMS - 500);
+  var durMs = Sub.Stop - Sub.Start;
+  if (durMs < 500) {
+    durMs = 500;
+  }
+  var rs = (len * 1000) / (durMs - 500);
+  return rs;
+}
+
+// ---------------------------------------------------------------------------
+
+function getReadingSpeedColor(Sub) {
+  var rs = getReadingSpeed(Sub);
   
   // Pure green hue = 120° (red = 0°, blue = 240°)
   // Base color : 0x99FF99
@@ -98,13 +121,15 @@ function getReadingSpeedColor(Sub) {
   else              return 0xFF9999;  //   0° "TOO FAST!";
 }
 
+// ---------------------------------------------------------------------------
+
 function getReadingSpeedText(Sub) {
-  var len = Sub.StrippedText.length;
-  var durMS = Sub.Stop - Sub.Start;
-  var rs = (len * 1000) / (durMS - 500);
-  var rsRounded = Math.round(rs * 10) / 10;   // rounded to 1 decimal digit  
+  var rs = getReadingSpeed(Sub);  
+  var rsRounded = decimal1Round(rs);
   return '' + rsRounded;
 }
+
+// ---------------------------------------------------------------------------
 
 VSSPlugin = {
 
@@ -121,16 +146,17 @@ VSSPlugin = {
   // COLUMNS -----------------------------------------------------------------
 
   // VSS core columns index
-  // INDEX_COL_IDX : Index of the subtitle
-  // START_COL_IDX : Start time of the subtitle
-  // STOP_COL_IDX  : Stop time of the subtitle
-  // STYLE_COL_IDX : Style of the subtitle (SSA/ASS only)
-  // TEXT_COL_IDX  : Text of the subtitle
+  // VSSCore.INDEX_COL_IDX : Index of the subtitle
+  // VSSCore.START_COL_IDX : Start time of the subtitle
+  // VSSCore.STOP_COL_IDX  : Stop time of the subtitle
+  // VSSCore.STYLE_COL_IDX : Style of the subtitle (SSA/ASS only)
+  // VSSCore.TEXT_COL_IDX  : Text of the subtitle
+  //
+  // VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
+  //
   
-  Initialize : function() {
-    // Extra-columns index
-    this.RS_COL_IDX = this.LAST_CORE_COL_IDX + 1; // Reading speed
-  },
+  // Declare extra column index here
+  RS_COL_IDX : VSSCore.LAST_CORE_COL_IDX + 1, // Reading speed
   
   // Get the number of extra-columns (called only at VSS startup)
   GetExtraColumnsCount : function() {
@@ -156,11 +182,6 @@ VSSPlugin = {
   // Check if a column background can be colorized (called only at VSS startup)
   IsColumnBGColorized : function(Index) {
     switch(Index) {
-      case this.INDEX_COL_IDX: return false; 
-      case this.START_COL_IDX: return false;
-      case this.STOP_COL_IDX:  return false;
-      case this.STYLE_COL_IDX: return false;
-      case this.TEXT_COL_IDX:  return false;
       case this.RS_COL_IDX:    return true;
       default: return false;
     }
@@ -169,11 +190,6 @@ VSSPlugin = {
   // Check if a column has custom text (called only at VSS startup)
   HasColumnCustomText : function(Index) {
     switch(Index) {
-      case this.INDEX_COL_IDX: return false; 
-      case this.START_COL_IDX: return false;
-      case this.STOP_COL_IDX:  return false;
-      case this.STYLE_COL_IDX: return false;
-      case this.TEXT_COL_IDX:  return false;
       case this.RS_COL_IDX:    return true;
       default: return false;
     }
@@ -194,5 +210,5 @@ VSSPlugin = {
       default: '';
     }
   }
-    
+  
 }
