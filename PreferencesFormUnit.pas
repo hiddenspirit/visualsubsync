@@ -95,7 +95,7 @@ type
     // Fonts
     SubListFont : string;
     SubTextFont : string;
-    // WAV Displaye
+    // WAV Display
     ShowSceneChange : Boolean;
     SceneChangeStartOffset : Integer;
     SceneChangeStopOffset : Integer;
@@ -121,7 +121,7 @@ type
   end;
 
   TPreferencesForm = class(TForm)
-    TntPageControl1: TTntPageControl;
+    PageControlPreferences: TTntPageControl;
     tsGeneral: TTntTabSheet;
     tsErrorChecking: TTntTabSheet;
     GroupBoxWebServer: TTntGroupBox;
@@ -185,15 +185,6 @@ type
     chkEnableSubCreationWithSpaceKey: TCheckBox;
     chkSpaceKeyModifyTiming: TCheckBox;
     chkDisableSubEditionInTimingMode: TCheckBox;
-    EditCPSTarget: TTntEdit;
-    TntLabel2: TTntLabel;
-    EditMinimalDuration: TTntEdit;
-    TntLabel7: TTntLabel;
-    UpDownCPSTarget: TTntUpDown;
-    UpDownMinimalDuration: TTntUpDown;
-    TntLabel8: TTntLabel;
-    EditBlankBetweenSub: TTntEdit;
-    UpDownBlankBetweenSub: TTntUpDown;
     bttOpenBackupTempDir: TButton;
     tsWAVDisplay: TTntTabSheet;
     TntGroupBox5: TTntGroupBox;
@@ -217,6 +208,18 @@ type
     Bevel6: TBevel;
     Bevel7: TBevel;
     Bevel8: TBevel;
+    tsSubtitle: TTntTabSheet;
+    TntGroupBox1: TTntGroupBox;
+    TntLabel8: TTntLabel;
+    EditBlankBetweenSub: TTntEdit;
+    UpDownBlankBetweenSub: TTntUpDown;
+    TntLabel13: TTntLabel;
+    TntLabel2: TTntLabel;
+    EditCPSTarget: TTntEdit;
+    UpDownCPSTarget: TTntUpDown;
+    TntLabel7: TTntLabel;
+    EditMinimalDuration: TTntEdit;
+    UpDownMinimalDuration: TTntUpDown;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -746,7 +749,7 @@ end;
 
 procedure TPreferencesForm.FormCreate(Sender: TObject);
 begin
-  TntPageControl1.ActivePage := tsGeneral;
+  PageControlPreferences.ActivePage := tsGeneral;
   ListPluginParam.NodeDataSize := SizeOf(TParamData);
 end;
 
