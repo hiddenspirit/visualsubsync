@@ -1,3 +1,24 @@
+// -----------------------------------------------------------------------------
+//  VisualSubSync
+// -----------------------------------------------------------------------------
+//  Copyright (C) 2003-2007 Christophe Paris
+// -----------------------------------------------------------------------------
+//  This Program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2, or (at your option)
+//  any later version.
+//
+//  This Program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with GNU Make; see the file COPYING.  If not, write to
+//  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+//  http://www.gnu.org/copyleft/gpl.html
+// -----------------------------------------------------------------------------
+
 unit JavaScriptPluginUnit;
 
 interface
@@ -68,6 +89,43 @@ type
     property Visible : Boolean read FVisible;
   end;
 
+  TVSSCoreWrapper = class(TObject)
+  private
+    FINDEX_COL_IDX : Integer;
+    FSTART_COL_IDX : Integer;
+    FSTOP_COL_IDX : Integer;
+    FSTYLE_COL_IDX : Integer;
+    FTEXT_COL_IDX : Integer;
+    FLAST_CORE_COL_IDX : Integer;
+
+    FMinimumBlank : Integer;
+    FCpsTarget : Integer;
+    FMinimumDuration : Integer;
+  public
+    procedure Set_INDEX_COL_IDX(Value : Integer);
+    procedure Set_START_COL_IDX(Value : Integer);
+    procedure Set_STOP_COL_IDX(Value : Integer);
+    procedure Set_STYLE_COL_IDX(Value : Integer);
+    procedure Set_TEXT_COL_IDX(Value : Integer);
+    procedure Set_LAST_CORE_COL_IDX(Value : Integer);
+
+    procedure SetCpsTarget(Value : Integer);
+    procedure SetMinimumDuration(Value : Integer);
+    procedure SetMinimumBlank(Value : Integer);
+
+  published
+    property INDEX_COL_IDX : Integer read FINDEX_COL_IDX;
+    property START_COL_IDX : Integer read FSTART_COL_IDX;
+    property STOP_COL_IDX : Integer read FSTOP_COL_IDX;
+    property STYLE_COL_IDX : Integer read FSTYLE_COL_IDX;
+    property TEXT_COL_IDX : Integer read FTEXT_COL_IDX;
+    property LAST_CORE_COL_IDX : Integer read FLAST_CORE_COL_IDX;
+
+    property CpsTarget : Integer read FCpsTarget;
+    property MinimumDuration : Integer read FMinimumDuration;
+    property MinimumBlank : Integer read FMinimumBlank;
+  end;
+
 {$TYPEINFO OFF}
 
   TJSPluginParamType = (jsptUnknown, jsptBoolean, jsptInteger, jsptDouble, jsptWideString);
@@ -95,6 +153,7 @@ type
     FFilename : WideString;
     FOnJSPluginError : TJSPluginNotifyEvent;
     FLoadingStack : TStack;
+    FPreInitDone : Boolean;
 
     procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
       report: PJSErrorReport);
@@ -191,7 +250,7 @@ type
       NextSub : TSubtitleRange);
 
   protected
-    procedure PreInitScript; override;
+    // nothing for now
     
   public
     constructor Create;
@@ -242,7 +301,8 @@ type
   function JSColorToTColor(RGBColor : Integer) : TColor;
 
 var
-  g_SceneChange: TSceneChangeWrapper;
+  g_SceneChangeWrapper : TSceneChangeWrapper;
+  g_VSSCoreWrapper : TVSSCoreWrapper;
 
 implementation
 
@@ -403,7 +463,8 @@ end;
 constructor TBaseJavascriptPlugin.Create;
 begin
   inherited Create;
-  FLoadingStack := TStack.Create;  
+  FLoadingStack := TStack.Create;
+  FPreInitDone := False;
   FEngine := TJSEngine.Create(256*1024);
   FEngine.OnJSError := OnJsError;
   FEngine.UserData := Self;
@@ -461,7 +522,8 @@ end;
 
 procedure TBaseJavascriptPlugin.PreInitScript;
 begin
-  // nothing to do by default
+  // VSSCore
+  FEngine.Global.AddNativeObject(g_VSSCoreWrapper, 'VSSCore');
 end;
 
 //------------------------------------------------------------------------------
@@ -513,7 +575,11 @@ begin
   FScript.Compile(FEngine); // try to compile the script
   if FScript.Compiled then
   begin
-    PreInitScript;
+    if not FPreInitDone then
+    begin
+      PreInitScript;
+      FPreInitDone := True;
+    end;
     Result := FScript.Execute(FEngine);
   end;
 
@@ -633,7 +699,7 @@ begin
     FVSSPluginObject.GetProperty('Message', FMessage);
 
     // Scene change
-    g_SceneChange.RegisterSceneChange(FEngine.Global);
+    g_SceneChangeWrapper.RegisterSceneChange(FEngine.Global);
 
     // We need at least one function
     Result := (FHasErrorFunc <> nil);
@@ -963,20 +1029,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TSimpleJavascriptWrapper.PreInitScript;
-var VSSCore : TJSObject;
-begin
-  VSSCore := FEngine.Global.DeclareObject('VSSCore');
-  VSSCore.SetProperty('INDEX_COL_IDX', TJSInteger.Create(0, FEngine, '', VSSCore));
-  VSSCore.SetProperty('START_COL_IDX', TJSInteger.Create(1, FEngine, '', VSSCore));
-  VSSCore.SetProperty('STOP_COL_IDX', TJSInteger.Create(2, FEngine, '', VSSCore));
-  VSSCore.SetProperty('STYLE_COL_IDX', TJSInteger.Create(3, FEngine, '', VSSCore));
-  VSSCore.SetProperty('TEXT_COL_IDX', TJSInteger.Create(4, FEngine, '', VSSCore));
-  VSSCore.SetProperty('LAST_CORE_COL_IDX', TJSInteger.Create(4, FEngine, '', VSSCore));
-end;
-
-//------------------------------------------------------------------------------
-
 function TSimpleJavascriptWrapper.LoadScript(Filename : WideString) : Boolean;
 var JSFunction : TJSFunction;
     i : Integer;
@@ -1003,7 +1055,7 @@ begin
       JSFunction.Call(FExtraColumnsCount);
       FreeAndNil(JSFunction);
     end;
-    
+
     if (FExtraColumnsCount > 0) then
     begin
       FIndexParam := TJSInteger.Create(0, FEngine, '');
@@ -1066,7 +1118,7 @@ begin
     FGetColumnText := FVSSPluginObject.GetFunction('GetColumnText');
 
     // Scene change
-    g_SceneChange.RegisterSceneChange(FEngine.Global);
+    g_SceneChangeWrapper.RegisterSceneChange(FEngine.Global);
 
     // We need at least one function
     Result := (FNotifySubtitleModificationFunc <> nil) or
@@ -1291,12 +1343,60 @@ end;
 
 //==============================================================================
 
+procedure TVSSCoreWrapper.Set_INDEX_COL_IDX(Value : Integer);
+begin
+  FINDEX_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_START_COL_IDX(Value : Integer);
+begin
+  FSTART_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_STOP_COL_IDX(Value : Integer);
+begin
+  FSTOP_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_STYLE_COL_IDX(Value : Integer);
+begin
+  FSTYLE_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_TEXT_COL_IDX(Value : Integer);
+begin
+  FTEXT_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_LAST_CORE_COL_IDX(Value : Integer);
+begin
+  FLAST_CORE_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.SetCpsTarget(Value : Integer);
+begin
+  FCpsTarget := Value;
+end;
+
+procedure TVSSCoreWrapper.SetMinimumDuration(Value : Integer);
+begin
+  FMinimumDuration := Value;
+end;
+
+procedure TVSSCoreWrapper.SetMinimumBlank(Value : Integer);
+begin
+  FMinimumBlank := Value;
+end;
+
+//==============================================================================
+
 initialization
-  g_SceneChange := TSceneChangeWrapper.Create;
+  g_SceneChangeWrapper := TSceneChangeWrapper.Create;
+  g_VSSCoreWrapper := TVSSCoreWrapper.Create;
 
 finalization
-  g_SceneChange.Free;
-  g_SceneChange := nil;
+  FreeAndNil(g_VSSCoreWrapper);
+  FreeAndNil(g_SceneChangeWrapper);
 
 //------------------------------------------------------------------------------
 end.
