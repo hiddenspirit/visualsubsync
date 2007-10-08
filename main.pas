@@ -538,7 +538,7 @@ type
     UndoableMultiChangeTask : TUndoableMultiChangeTask;
 
     procedure InitVTV;
-    procedure InitVTVExtraColumns;    
+    procedure InitVTVExtraColumns;
     procedure EnableControl(Enable : Boolean);
     procedure EnableStyleControls(Enable : Boolean);
     procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
@@ -659,6 +659,7 @@ type
     procedure ReplaceText;
     procedure ReplaceAllText;
     function LastFindSucceded : Boolean;
+    procedure InitGeneralJSPlugin;    
   end;
 
 const
@@ -670,7 +671,8 @@ const
   STOP_COL_INDEX = 2;
   STYLE_COL_INDEX = 3;
   TEXT_COL_INDEX = 4;
-  LAST_CORE_COL_INDEX = 4;
+  LAST_CORE_COL_INDEX = TEXT_COL_INDEX;
+  COLUMN_COUNT = LAST_CORE_COL_INDEX + 1;
 
 var
   MainForm: TMainForm;
@@ -724,7 +726,6 @@ lovechange:
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
-    GeneralJSFilename : WideString;
     CustomMemo : TTntRichEditCustomUndo;
 begin
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
@@ -831,23 +832,6 @@ begin
   StartSubtitleTime := -1;
   ToggleStartSubtitleTime := -1;
   //StartStopServer;
-
-  GeneralJSPlugin := TSimpleJavascriptWrapper.Create;
-  GeneralJSPlugin.CoreColumnsCount := LAST_CORE_COL_INDEX + 1;
-  GeneralJSFilename := g_PluginPath + 'general\general_plugin.js';
-  if WideFileExists(GeneralJSFilename) then
-  begin
-    GeneralJSPlugin.OnJSPluginError := LogForm.LogMsg;
-    if GeneralJSPlugin.LoadScript(GeneralJSFilename) then
-    begin
-      GeneralJSPlugin.OnJSPluginSetStatusBarText := OnJsSetStatusBarText;
-      InitVTVExtraColumns;
-    end
-    else
-      LogForm.SilentLogMsg('Can''t load ' + GeneralJSFilename);
-  end
-  else
-    LogForm.SilentLogMsg('Can''t find ' + GeneralJSFilename);
 
   Application.HintHidePause := 10000;
 
@@ -1031,10 +1015,14 @@ begin
   WAVDisplayer.SceneChangeStopOffset := ConfigObject.SceneChangeStopOffset;
   WAVDisplayer.SceneChangeFilterOffset := ConfigObject.SceneChangeFilterOffset;
   WAVDisplayer.UpdateView([uvfRange]);
-  g_SceneChange.SetOffsets(ConfigObject.SceneChangeStartOffset,
+  g_SceneChangeWrapper.SetOffsets(ConfigObject.SceneChangeStartOffset,
     ConfigObject.SceneChangeStopOffset,
     ConfigObject.SceneChangeFilterOffset);
-  g_SceneChange.SetVisible(ConfigObject.ShowSceneChange);
+  g_SceneChangeWrapper.SetVisible(ConfigObject.ShowSceneChange);
+
+  g_VSSCoreWrapper.SetCpsTarget(ConfigObject.SpaceKeyCPSTarget);
+  g_VSSCoreWrapper.SetMinimumDuration(ConfigObject.SpaceKeyMinimalDuration);
+  g_VSSCoreWrapper.SetMinimumBlank(ConfigObject.SpaceKeyBlankBetweenSubtitles);
 end;
 
 //------------------------------------------------------------------------------
@@ -1127,6 +1115,37 @@ begin
       SubListHeaderPopupMenu.Items.Add(MenuItem);
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.InitGeneralJSPlugin;
+var GeneralJSFilename : WideString;
+begin
+  // Init VSS Core Wrapper
+  g_VSSCoreWrapper.Set_INDEX_COL_IDX(INDEX_COL_INDEX);
+  g_VSSCoreWrapper.Set_START_COL_IDX(START_COL_INDEX);
+  g_VSSCoreWrapper.Set_STOP_COL_IDX(STOP_COL_INDEX);
+  g_VSSCoreWrapper.Set_STYLE_COL_IDX(STYLE_COL_INDEX);
+  g_VSSCoreWrapper.Set_TEXT_COL_IDX(TEXT_COL_INDEX);
+  g_VSSCoreWrapper.Set_LAST_CORE_COL_IDX(LAST_CORE_COL_INDEX);
+
+  GeneralJSPlugin := TSimpleJavascriptWrapper.Create;
+  GeneralJSPlugin.CoreColumnsCount := COLUMN_COUNT;
+  GeneralJSFilename := g_PluginPath + 'general\general_plugin.js';
+  if WideFileExists(GeneralJSFilename) then
+  begin
+    GeneralJSPlugin.OnJSPluginError := LogForm.LogMsg;
+    if GeneralJSPlugin.LoadScript(GeneralJSFilename) then
+    begin
+      GeneralJSPlugin.OnJSPluginSetStatusBarText := OnJsSetStatusBarText;
+      InitVTVExtraColumns;
+    end
+    else
+      LogForm.SilentLogMsg('Can''t load ' + GeneralJSFilename);
+  end
+  else
+    LogForm.SilentLogMsg('Can''t find ' + GeneralJSFilename);
 end;
 
 //------------------------------------------------------------------------------
@@ -1999,7 +2018,7 @@ begin
 
   WAVDisplayer.SetSceneChangeList(SCArray);
   WAVDisplayer.UpdateView([uvfRange]);
-  g_SceneChange.SetSceneChangeList(SCArray);
+  g_SceneChangeWrapper.SetSceneChangeList(SCArray);
 end;
 
 //------------------------------------------------------------------------------
@@ -3336,7 +3355,7 @@ begin
   OldSwapState := ConfigObject.SwapSubtitlesList;
   PreferencesFormInstance.LoadConfig(ConfigObject);
   if TabSheet <> nil then
-    PreferencesFormInstance.TntPageControl1.ActivePage := TabSheet;
+    PreferencesFormInstance.PageControlPreferences.ActivePage := TabSheet;
   if (PreferencesFormInstance.ShowModal = mrOk) then
   begin
     PreferencesFormInstance.SaveConfig(ConfigObject);
@@ -6876,11 +6895,11 @@ TODO : display karaoke sylables in wavdisplay
 
 Quick style color size
 
-jsplugin for columns
-
 split at cursor need to respect minimum time between sub
 
 highlight subtitles with some criteria
+
+
 
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
@@ -6915,6 +6934,14 @@ begin
 // -----------------------------------------------------------------------------
 
 
+parametre commun à tous les plugins dans VSS : ex min blank
+
+
+ScriptLog('todo = ' + VSSCore);
+ScriptLog('VSSCore = ' + VSSCore.abc);
+
+
 XXX : Strip tags
 XXX : Split and Merge shortcut
 }
+
