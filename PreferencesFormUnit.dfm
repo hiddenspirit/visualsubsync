@@ -20,12 +20,12 @@ object PreferencesForm: TPreferencesForm
   OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
-  object TntPageControl1: TTntPageControl
+  object PageControlPreferences: TTntPageControl
     Left = 0
     Top = 0
     Width = 482
     Height = 356
-    ActivePage = tsGeneral
+    ActivePage = tsWAVDisplay
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -203,6 +203,108 @@ object PreferencesForm: TPreferencesForm
         end
       end
     end
+    object tsSubtitle: TTntTabSheet
+      Caption = 'Subtitle'
+      object TntGroupBox1: TTntGroupBox
+        Left = 0
+        Top = 0
+        Width = 474
+        Height = 328
+        Align = alClient
+        TabOrder = 0
+        object TntLabel8: TTntLabel
+          Left = 16
+          Top = 128
+          Width = 140
+          Height = 13
+          Caption = 'Blank between subtitles (ms) :'
+        end
+        object TntLabel13: TTntLabel
+          Left = 8
+          Top = 16
+          Width = 457
+          Height = 33
+          AutoSize = False
+          Caption = 
+            'Common settings used when editing subtitles in normal or timing ' +
+            'mode, and possibly when fixing error with JavaScript plug-ins.'
+          WordWrap = True
+        end
+        object TntLabel2: TTntLabel
+          Left = 16
+          Top = 72
+          Width = 143
+          Height = 13
+          Caption = 'Characters per second target :'
+        end
+        object TntLabel7: TTntLabel
+          Left = 16
+          Top = 100
+          Width = 146
+          Height = 13
+          Caption = 'Minimum subtitle duration (ms) :'
+        end
+        object EditBlankBetweenSub: TTntEdit
+          Left = 172
+          Top = 124
+          Width = 81
+          Height = 21
+          TabOrder = 0
+          Text = '0'
+        end
+        object UpDownBlankBetweenSub: TTntUpDown
+          Left = 253
+          Top = 124
+          Width = 15
+          Height = 21
+          Associate = EditBlankBetweenSub
+          Max = 500
+          Increment = 10
+          TabOrder = 1
+        end
+        object EditCPSTarget: TTntEdit
+          Left = 172
+          Top = 68
+          Width = 81
+          Height = 21
+          TabOrder = 2
+          Text = '5'
+        end
+        object UpDownCPSTarget: TTntUpDown
+          Left = 253
+          Top = 68
+          Width = 15
+          Height = 21
+          Associate = EditCPSTarget
+          Min = 5
+          Max = 50
+          Position = 5
+          TabOrder = 3
+          Thousands = False
+        end
+        object EditMinimalDuration: TTntEdit
+          Left = 172
+          Top = 96
+          Width = 81
+          Height = 21
+          TabOrder = 4
+          Text = '500'
+        end
+        object UpDownMinimalDuration: TTntUpDown
+          Left = 253
+          Top = 96
+          Width = 15
+          Height = 21
+          Associate = EditMinimalDuration
+          Min = 200
+          Max = 5000
+          Increment = 100
+          Position = 500
+          TabOrder = 5
+          Thousands = False
+        end
+      end
+    end
     object tsErrorChecking: TTntTabSheet
       BorderWidth = 4
       Caption = 'Error checking'
@@ -355,7 +457,7 @@ object PreferencesForm: TPreferencesForm
     end
     object tsHotKeys: TTntTabSheet
       BorderWidth = 4
-      Caption = 'Hot keys'
+      Caption = 'Hotkeys'
       DesignSize = (
         466
         320)
@@ -711,27 +813,6 @@ object PreferencesForm: TPreferencesForm
         Height = 320
         Align = alClient
         TabOrder = 0
-        object TntLabel2: TTntLabel
-          Left = 16
-          Top = 104
-          Width = 143
-          Height = 13
-          Caption = 'Characters per second target :'
-        end
-        object TntLabel7: TTntLabel
-          Left = 16
-          Top = 132
-          Width = 140
-          Height = 13
-          Caption = 'Minimal subtitle duration (ms) :'
-        end
-        object TntLabel8: TTntLabel
-          Left = 16
-          Top = 160
-          Width = 140
-          Height = 13
-          Caption = 'Blank between subtitles (ms) :'
-        end
         object chkEnableSubCreationWithSpaceKey: TCheckBox
           Left = 16
           Top = 56
@@ -755,65 +836,6 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Disable subtitle edition in timing mode'
           TabOrder = 2
-        end
-        object EditCPSTarget: TTntEdit
-          Left = 168
-          Top = 100
-          Width = 81
-          Height = 21
-          TabOrder = 3
-          Text = '5'
-        end
-        object EditMinimalDuration: TTntEdit
-          Left = 168
-          Top = 128
-          Width = 81
-          Height = 21
-          TabOrder = 4
-          Text = '500'
-        end
-        object UpDownCPSTarget: TTntUpDown
-          Left = 249
-          Top = 100
-          Width = 16
-          Height = 21
-          Associate = EditCPSTarget
-          Min = 5
-          Max = 50
-          Position = 5
-          TabOrder = 5
-          Thousands = False
-        end
-        object UpDownMinimalDuration: TTntUpDown
-          Left = 249
-          Top = 128
-          Width = 16
-          Height = 21
-          Associate = EditMinimalDuration
-          Min = 200
-          Max = 5000
-          Increment = 100
-          Position = 500
-          TabOrder = 6
-          Thousands = False
-        end
-        object EditBlankBetweenSub: TTntEdit
-          Left = 168
-          Top = 156
-          Width = 81
-          Height = 21
-          TabOrder = 7
-          Text = '0'
-        end
-        object UpDownBlankBetweenSub: TTntUpDown
-          Left = 249
-          Top = 156
-          Width = 16
-          Height = 21
-          Associate = EditBlankBetweenSub
-          Max = 500
-          Increment = 10
-          TabOrder = 8
         end
       end
     end
