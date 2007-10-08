@@ -146,11 +146,11 @@ VSSPlugin = {
   // COLUMNS -----------------------------------------------------------------
 
   // VSS core columns index
-  // VSSCore.INDEX_COL_IDX : Index of the subtitle
-  // VSSCore.START_COL_IDX : Start time of the subtitle
-  // VSSCore.STOP_COL_IDX  : Stop time of the subtitle
-  // VSSCore.STYLE_COL_IDX : Style of the subtitle (SSA/ASS only)
-  // VSSCore.TEXT_COL_IDX  : Text of the subtitle
+  // VSSCore.INDEX_COL_IDX : Index of the subtitle index column
+  // VSSCore.START_COL_IDX : Index of the start time column
+  // VSSCore.STOP_COL_IDX  : Index of the stop time colum
+  // VSSCore.STYLE_COL_IDX : Index of the style column (SSA/ASS only)
+  // VSSCore.TEXT_COL_IDX  : Index of the text column
   //
   // VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
   //
