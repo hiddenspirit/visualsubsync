@@ -3,13 +3,26 @@ This directory contains JavaScript plugins for VisualSubSync.
 For more information about JavaScript check this links:
 http://developer.mozilla.org/en/docs/Core_JavaScript_1.5_Guide
 http://developer.mozilla.org/en/docs/Core_JavaScript_1.5_Reference
+http://developer.mozilla.org/en/docs/A_re-introduction_to_JavaScript
 
 
 VSS specific functions and properties:
 
 ScriptLog(Message) : Display a message in the log window
 SetStatusBarText(Message) : Display a message in the status bar
-LoadScript(Filename) : Load a external javascript file
+LoadScript(Filename) : Load an external javascript file
+
+
+VSSCore.INDEX_COL_IDX : Index of the subtitle index column
+VSSCore.START_COL_IDX : Index of the start time column
+VSSCore.STOP_COL_IDX  : Index of the stop time colum
+VSSCore.STYLE_COL_IDX : Index of the style column (SSA/ASS only)
+VSSCore.TEXT_COL_IDX  : Index of the text column
+VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
+
+VSSCore.CpsTarget : Characters per second target 
+VSSCore.MinimumDuration : Minimum subtitle duration
+VSSCore.MinimumBlank : Minimum blank between subtitles
 
 
 Subtitle.Start : Start time in ms of the subtitle
