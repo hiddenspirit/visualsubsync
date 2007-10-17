@@ -60,16 +60,7 @@ function statusBarText(Sub) {
     var rs = decimal1Round(rsX);
 
     // rating
-    var rating;
-    if (rs < rsMin)   rating = "TOO SLOW!";
-    else if (rs < 10) rating = "Slow, acceptable.";
-    else if (rs < 13) rating = "A bit slow.";
-    else if (rs < 15) rating = "Good.";
-    else if (rs < 23) rating = "Perfect.";
-    else if (rs < 27) rating = "Good.";
-    else if (rs < 31) rating = "A bit fast.";
-    else if (rs < 35) rating = "Fast, acceptable.";
-    else              rating = "TOO FAST!";
+    var rating = getReadingSpeedRating(rs);
 
     // initialize template bars if needed
     if (templateBarDS === null) templateBarDS = initBar(dsMin, dsMax);
@@ -92,19 +83,7 @@ function statusBarText(Sub) {
 
 // ---------------------------------------------------------------------------
 
-function getReadingSpeed(Sub) {
-  var len = Sub.StrippedText.length;
-  var durMs = Sub.Stop - Sub.Start;
-  if (durMs < 500) {
-    durMs = 500;
-  }
-  var rs = (len * 1000) / (durMs - 500);
-  return rs;
-}
-
-// ---------------------------------------------------------------------------
-
-function getReadingSpeedColor(Sub) {
+function getReadingSpeedAsColor(Sub) {
   var rs = getReadingSpeed(Sub);
   
   // Pure green hue = 120° (red = 0°, blue = 240°)
@@ -123,7 +102,7 @@ function getReadingSpeedColor(Sub) {
 
 // ---------------------------------------------------------------------------
 
-function getReadingSpeedText(Sub) {
+function getReadingSpeedAsText(Sub) {
   var rs = getReadingSpeed(Sub);  
   var rsRounded = decimal1Round(rs);
   return '' + rsRounded;
@@ -198,7 +177,7 @@ VSSPlugin = {
   // Get the column background color (called on each cell repaint)
   GetColumnBGColor : function(Index, CurrentSub, PreviousSub, NextSub) {
     switch(Index) {
-      case this.RS_COL_IDX: return getReadingSpeedColor(CurrentSub);
+      case this.RS_COL_IDX: return getReadingSpeedAsColor(CurrentSub);
       default: return 0xffffff;
     }
   },
@@ -206,7 +185,7 @@ VSSPlugin = {
   // Get the text of the extra-column (called on each cell repaint)
   GetColumnText : function(Index, CurrentSub, PreviousSub, NextSub) {
     switch(Index) {
-      case this.RS_COL_IDX: return getReadingSpeedText(CurrentSub);
+      case this.RS_COL_IDX: return getReadingSpeedAsText(CurrentSub);
       default: return '';
     }
   }
