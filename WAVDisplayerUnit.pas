@@ -2538,14 +2538,23 @@ procedure TWAVDisplayer.ZoomRange(const Range : TRange);
 var NewPosition, NewPageSize : Integer;
     UpdateFlags : TUpdateViewFlags;
 begin
-  if Range.StartTime >= Range.StopTime then
+  if (Range.StartTime >= Range.StopTime) then
     Exit;
 
   NewPageSize := Range.StopTime - Range.StartTime;
-  Constrain(NewPageSize, 0, FLengthMs);
-  NewPosition := Range.StartTime;
+  if (NewPageSize < 100) then
+  begin
+    NewPageSize := 100; // Zoom to 100ms max
+    NewPosition := Range.StartTime + ((Range.StopTime - Range.StartTime - NewPageSize) div 2);
+  end
+  else
+  begin
+    Constrain(NewPageSize, 0, FLengthMs);
+    NewPosition := Range.StartTime;
+  end;
+
   Constrain(NewPosition, 0, FLengthMs - NewPageSize);
-  FScrollBar.SetPositionAndPageSize(NewPosition,NewPageSize);
+  FScrollBar.SetPositionAndPageSize(NewPosition, NewPageSize);
 
   UpdateFlags := [];
   if (NewPosition <> FPositionMs) or (NewPageSize <> FPageSizeMs) then
@@ -2638,7 +2647,8 @@ var
   RelativePos : TPoint;
     Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
-  bShift: ByteSet absolute shift;  
+  bShift: ByteSet absolute shift;
+  ScrollAmount : Integer;
 begin
   Result := True;
   RelativePos := ScreenToClient(MousePos);
@@ -2668,7 +2678,11 @@ begin
       Inc(FVerticalScaling, 5);
   end
   else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
-    SetPositionMs(FPositionMs - (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
+  begin
+    ScrollAmount := Round(FPageSizeMs / 4); // scroll amount = 1/4 of visible interval
+    if (ScrollAmount = 0) then ScrollAmount := 1;
+    SetPositionMs(FPositionMs - ScrollAmount);
+  end
   else
     Exit;
 
@@ -2685,6 +2699,7 @@ var
   Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
   bShift: ByteSet absolute shift;
+  ScrollAmount : Integer;
 begin
   Result := True;
   RelativePos := ScreenToClient(MousePos);
@@ -2715,7 +2730,11 @@ begin
       Dec(FVerticalScaling, 5);
   end
   else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
-    SetPositionMs(FPositionMs + (FPageSizeMs div 4)) // scroll amount = 1/4 of visible interval
+  begin
+    ScrollAmount := Round(FPageSizeMs / 4); // scroll amount = 1/4 of visible interval
+    if (ScrollAmount = 0) then ScrollAmount := 1;
+    SetPositionMs(FPositionMs + ScrollAmount);
+  end
   else
     Exit;
     
