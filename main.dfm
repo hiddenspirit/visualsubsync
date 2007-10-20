@@ -1875,10 +1875,12 @@ object MainForm: TMainForm
       OnExecute = ActionReplaceFromPipeExecute
     end
     object ActionDetachVideo: TTntAction
+      Tag = 1
       Caption = 'Detach video window'
       OnExecute = ActionDetachVideoExecute
     end
     object ActionShowHideLogs: TTntAction
+      Tag = 1
       Caption = 'Show/Hide Logs'
       OnExecute = ActionShowHideLogsExecute
     end
@@ -2054,16 +2056,20 @@ object MainForm: TMainForm
       OnExecute = ActionShowHideSceneChangeExecute
     end
     object ActionTextItalic: TTntAction
+      Tag = 1
       Category = 'QuickStyle'
       Caption = 'Text in italic'
+      ShortCut = 16457
       OnExecute = ActionTextItalicExecute
     end
     object ActionTextBold: TTntAction
+      Tag = 1
       Category = 'QuickStyle'
       Caption = 'Text in bold'
       OnExecute = ActionTextBoldExecute
     end
     object ActionTextUnderline: TTntAction
+      Tag = 1
       Category = 'QuickStyle'
       Caption = 'Text in underline'
       OnExecute = ActionTextUnderlineExecute
@@ -3875,6 +3881,24 @@ object MainForm: TMainForm
     end
     object N19: TTntMenuItem
       Caption = '-'
+    end
+    object extinitalic1: TTntMenuItem
+      Action = ActionTextItalic
+    end
+    object Otherstyles1: TTntMenuItem
+      Caption = 'Other styles'
+      object extinbold2: TTntMenuItem
+        Action = ActionTextBold
+      end
+      object extinunderline2: TTntMenuItem
+        Action = ActionTextUnderline
+      end
+      object extcolor2: TTntMenuItem
+        Action = ActionTextColor
+      end
+      object extsize2: TTntMenuItem
+        Action = ActionTextSize
+      end
     end
     object pmiStriptags: TTntMenuItem
       Action = ActionStripTags

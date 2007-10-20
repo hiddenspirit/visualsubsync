@@ -332,6 +332,12 @@ type
     pmiStriptags: TTntMenuItem;
     ActionMerge: TTntAction;
     ActionSplitAtCursor: TTntAction;
+    extinitalic1: TTntMenuItem;
+    Otherstyles1: TTntMenuItem;
+    extinbold2: TTntMenuItem;
+    extinunderline2: TTntMenuItem;
+    extcolor2: TTntMenuItem;
+    extsize2: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -594,6 +600,8 @@ type
     function DetectCharsetDataLoss : Boolean;
 
     procedure TagText(StartTag, StopTag : WideString); overload;
+    procedure TagTextMemo(StartTag, StopTag : WideString);
+    procedure TagTextLines(StartTag, StopTag : WideString);
     procedure TagText(TagType : TTagType); overload;
 
     // General JS plugins
@@ -1366,7 +1374,7 @@ begin
       vtvSubsListFocusChanged(vtvSubsList, Node, 0);
     vtvSubsList.ClearSelection;
     vtvSubsList.Selected[Node] := True;
-    if not MemoSubtitleText.Focused then
+    if (not MemoSubtitleText.Focused) and (MemoSubtitleText.Enabled) then
     begin
       MemoSubtitleText.SetFocus;
     end;
@@ -3838,7 +3846,7 @@ begin
   UndoableAddTask.DoTask;
   PushUndoableTask(UndoableAddTask);
   
-  if IsNormalMode then
+  if IsNormalMode and MemoSubtitleText.Enabled then
     MemoSubtitleText.SetFocus;
 end;
 
@@ -4185,7 +4193,7 @@ begin
 
     UndoableCompositeTask.DoTask;
     PushUndoableTask(UndoableCompositeTask);
-    if IsNormalMode then
+    if IsNormalMode and MemoSubtitleText.Enabled then
       MemoSubtitleText.SetFocus;
   end;
 end;
@@ -6008,14 +6016,16 @@ end;
 
 procedure TMainForm.ActionSetEditorFocusExecute(Sender: TObject);
 begin
-  MemoSubtitleText.SetFocus;
+  if MemoSubtitleText.Enabled then
+    MemoSubtitleText.SetFocus;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionSetEditorFocusAndSelectExecute(Sender: TObject);
 begin
-  MemoSubtitleText.SetFocus;
+  if MemoSubtitleText.Enabled then
+    MemoSubtitleText.SetFocus;
   MemoSubtitleText.SelectAll;
 end;
 
@@ -6057,7 +6067,7 @@ begin
         VideoRenderer.UpdateImage;
       end;
       VideoPreviewNeedSubtitleUpdate := False;
-      LogForm.SilentLogMsg('Save took ' + IntToStr(GetTickCount - StartTime) +' ms');
+      //LogForm.SilentLogMsg('Save took ' + IntToStr(GetTickCount - StartTime) +' ms');
     end
   end
   else
@@ -6173,8 +6183,11 @@ var TntPanel : TTntStatusPanel;
 begin
   // Use an owner drawn panel to avoid the 127 bytes text limit in
   // Windows version inferior to Windows Vista
+
   TntPanel := Panel as TTntStatusPanel;
   WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
+  //OutputDebugStringW(PWideChar(TntPanel.Text));
+  // todo :
 end;
 
 //------------------------------------------------------------------------------
@@ -6642,6 +6655,16 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.TagText(StartTag, StopTag : WideString);
+begin
+  if MemoSubtitleText.Focused then
+    TagTextMemo(StartTag, StopTag)
+  else
+    TagTextLines(StartTag, StopTag);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TagTextMemo(StartTag, StopTag : WideString);
 var SelStart, SelLength : Integer;
     NewText : WideString;
 begin
@@ -6685,6 +6708,48 @@ begin
     // Place the cursor after the start tag
     MemoSubtitleText.SelStart := SelStart + Length(StartTag);
     MemoSubtitleText.SelLength := 0;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TagTextLines(StartTag, StopTag : WideString);
+var Cursor : PVirtualNode;
+    NodeData : PTreeData;
+    MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+    TaggedText : WideString;
+    SubtitleRange : TSubtitleRange;
+begin
+  MultiChangeTask := TUndoableMultiChangeTask.Create;
+  Cursor := vtvSubsList.GetFirstSelected;
+  while (Cursor <> nil) do
+  begin
+    NodeData := vtvSubsList.GetNodeData(Cursor);
+    SubtitleRange := NodeData.Range;
+    TaggedText := StartTag + SubtitleRange.Text + StopTag;
+    if (TaggedText <> SubtitleRange.Text) then
+    begin
+      ChangeSubData := TChangeSubData.Create(Cursor.Index);
+      ChangeSubData.OldText := SubtitleRange.Text;
+      ChangeSubData.NewText := TaggedText;
+      SubtitleRange.Text := TaggedText;
+      MultiChangeTask.AddData(ChangeSubData);
+    end;
+    Cursor := vtvSubsList.GetNextSelected(Cursor);
+  end;
+
+  if (MultiChangeTask.GetCount > 0) then
+  begin
+    PushUndoableTask(MultiChangeTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end
+  else
+  begin
+    FreeAndNil(MultiChangeTask);
   end;
 end;
 
@@ -6892,8 +6957,6 @@ undo text pipe text modification (modifiy, clear, load)
 undo for style?
 
 TODO : display karaoke sylables in wavdisplay
-
-Quick style color size
 
 split at cursor need to respect minimum time between sub
 
