@@ -25,7 +25,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 482
     Height = 356
-    ActivePage = tsWAVDisplay
+    ActivePage = tsErrorChecking
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -44,7 +44,7 @@ object PreferencesForm: TPreferencesForm
         Top = 140
         Width = 466
         Height = 4
-        Align = alBottom
+        Align = alTop
         Shape = bsSpacer
       end
       object GroupBoxWebServer: TTntGroupBox
@@ -104,7 +104,7 @@ object PreferencesForm: TPreferencesForm
         Top = 144
         Width = 466
         Height = 176
-        Align = alBottom
+        Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
         object chkAssociateExt: TCheckBox
@@ -135,7 +135,7 @@ object PreferencesForm: TPreferencesForm
         Top = 53
         Width = 466
         Height = 87
-        Align = alClient
+        Align = alTop
         Caption = ' Backup : '
         TabOrder = 2
         object Label6: TLabel
@@ -212,6 +212,9 @@ object PreferencesForm: TPreferencesForm
         Height = 328
         Align = alClient
         TabOrder = 0
+        DesignSize = (
+          474
+          328)
         object TntLabel8: TTntLabel
           Left = 16
           Top = 128
@@ -224,6 +227,7 @@ object PreferencesForm: TPreferencesForm
           Top = 16
           Width = 457
           Height = 33
+          Anchors = [akLeft, akTop, akRight]
           AutoSize = False
           Caption = 
             'Common settings used when editing subtitles in normal or timing ' +
@@ -321,7 +325,7 @@ object PreferencesForm: TPreferencesForm
         Top = 112
         Width = 466
         Height = 4
-        Align = alTop
+        Align = alBottom
         Shape = bsSpacer
       end
       object ListErrorChecking: TTntCheckListBox
@@ -330,7 +334,7 @@ object PreferencesForm: TPreferencesForm
         Width = 466
         Height = 112
         OnClickCheck = ListErrorCheckingClickCheck
-        Align = alTop
+        Align = alClient
         ItemHeight = 13
         Sorted = True
         TabOrder = 0
@@ -341,7 +345,7 @@ object PreferencesForm: TPreferencesForm
         Top = 116
         Width = 466
         Height = 88
-        Align = alClient
+        Align = alBottom
         BevelOuter = bvLowered
         TabOrder = 1
         DesignSize = (
@@ -823,7 +827,7 @@ object PreferencesForm: TPreferencesForm
         end
         object chkSpaceKeyModifyTiming: TCheckBox
           Left = 48
-          Top = 72
+          Top = 73
           Width = 217
           Height = 17
           Caption = 'Space key modify existing subtitles timing'
