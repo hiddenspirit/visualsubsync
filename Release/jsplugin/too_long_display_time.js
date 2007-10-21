@@ -19,7 +19,7 @@ VSSPlugin = {
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
     // Ignore lines with length < to this.ParamIgnoreLinesOf.Value
-    if(CurrentSub.StrippedText.length < this.ParamIgnoreLinesOf.Value)
+    if(CurrentSub.StrippedText.length <= this.ParamIgnoreLinesOf.Value)
     {
         return '';
     }
