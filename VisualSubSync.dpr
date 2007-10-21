@@ -53,6 +53,7 @@ begin
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
   MainForm.LoadSettings;
   MainForm.FinishLoadSettings;
+  MainForm.InitGeneralJSPlugin;
   Application.ProcessMessages;
   MainForm.ProcessParams;
   Application.Run;
