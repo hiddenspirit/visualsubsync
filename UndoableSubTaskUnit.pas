@@ -117,6 +117,7 @@ type
   TUndoableMergeTask = class(TUndoableTaskIndexed)
   private
     FDeletedSubs : TObjectList;
+    FSelectedSubIndex : Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -124,6 +125,8 @@ type
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
+
+    procedure SetData(SelectedSubIndex : Integer);
   end;
 
   TUndoableSubTextTask = class(TUndoableTask)
@@ -438,6 +441,7 @@ begin
   inherited;
   FDeletedSubs := TObjectList.Create;
   FDeletedSubs.OwnsObjects := True;
+  FSelectedSubIndex := -1;
 end;
 
 destructor TUndoableMergeTask.Destroy;
@@ -460,9 +464,11 @@ begin
   Node := MainForm.AddSubtitle(SubRange);
   // Focus the merged node
   MainForm.FocusNode(Node, False);
-  MainForm.ClearWAVSelection;
   // Free temporarily created merged sub
   SubRange.Free;
+  // If Select the new merged subtitle
+  if (FSelectedSubIndex <> -1) then
+    MainForm.SelectNode(Node);
 end;
 
 function TUndoableMergeTask.GetName : WideString;
@@ -477,6 +483,14 @@ begin
   // Restaure deleted subtitles
   MainForm.RestoreSubtitles(FDeletedSubs);
   FDeletedSubs.Clear;
+  // Restaure selection
+  if (FSelectedSubIndex <> -1) then
+    MainForm.SelectNodeAtIndex(FSelectedSubIndex);
+end;
+
+procedure TUndoableMergeTask.SetData(SelectedSubIndex : Integer);
+begin
+  FSelectedSubIndex := SelectedSubIndex;
 end;
 
 // -----------------------------------------------------------------------------

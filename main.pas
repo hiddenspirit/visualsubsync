@@ -543,6 +543,8 @@ type
     // Used only during fix error
     UndoableMultiChangeTask : TUndoableMultiChangeTask;
 
+    PrefFormInitialized : Boolean;
+
     procedure InitVTV;
     procedure InitVTVExtraColumns;
     procedure EnableControl(Enable : Boolean);
@@ -617,15 +619,13 @@ type
     procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
-    function SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
-    function SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
-    function SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
 
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
     procedure SelectNode(Node : PVirtualNode);
     procedure SelectNodeFromTimestamps(Start, Stop : Integer);
+    procedure SelectNodeAtIndex(Index : Integer);
     procedure StartStopServer(Stop : Boolean = False);
     procedure SaveSettings;
     procedure LoadSettings;
@@ -962,12 +962,15 @@ begin
     IniFile := TIniFile.Create(IniFilename);
     MRUList.SaveIni(IniFile, 'MRUList');
     ConfigObject.SaveIni(IniFile);
-    SaveFormPosition(IniFile,MainForm);
-    SaveFormPosition(IniFile,ErrorReportForm);
-    SaveFormPosition(IniFile,SuggestionForm);
-    SaveFormPosition(IniFile,DetachedVideoForm);
-    SaveFormPosition(IniFile,LogForm);
-    SaveFormPosition(IniFile,FindForm);    
+    SaveFormPosition(IniFile, MainForm);
+    SaveFormPosition(IniFile, ErrorReportForm);
+    SaveFormPosition(IniFile, SuggestionForm);
+    SaveFormPosition(IniFile, DetachedVideoForm);
+    SaveFormPosition(IniFile, LogForm);
+    SaveFormPosition(IniFile, FindForm);
+    if PrefFormInitialized then
+      SaveFormPosition(IniFile, PreferencesFormInstance);
+
 
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
     IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
@@ -2913,6 +2916,7 @@ end;
 procedure TMainForm.ActionMergeExecute(Sender: TObject);
 var UndoableMergeTask : TUndoableMergeTask;
     Node : PVirtualNode;
+    SubRange : TSubtitleRange;
 begin
   UndoableMergeTask := TUndoableMergeTask.Create;
   UndoableMergeTask.SetCapacity(vtvSubsList.SelectedCount);
@@ -2923,69 +2927,20 @@ begin
     Node := vtvSubsList.GetNextSelected(Node);
   end;
 
+  if Assigned(WAVDisplayer.SelectedRange) then
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.SelectedRange);
+    if vtvSubsList.Selected[SubRange.Node] then
+    begin
+      UndoableMergeTask.SetData(SubRange.Node.Index);
+    end;
+  end;
+
   UndoableMergeTask.DoTask;
   PushUndoableTask(UndoableMergeTask);
 
-  {
-  AccuText := '';
-  LastStopTime := 0;
-
-  g_WebRWSynchro.BeginWrite;
-
-  try
-
-    // First pass
-    // - maybe check if selected item are consecutive ??? TODO
-    // - accumulate text
-    // - get last stop time
-    // - make the list of nodes to delete
-    DeleteList := TList.Create;
-    Node := vtvSubsList.GetFirstSelected;
-    i := 0;
-    while Assigned(Node) do
-    begin
-      NodeData := vtvSubsList.GetNodeData(Node);
-      LastStopTime := Max(LastStopTime, NodeData.Range.StopTime);
-      if (i > 0) then
-        DeleteList.Add(Node);
-      AccuText := AccuText + CRLF + NodeData.Range.Text;
-      Node := vtvSubsList.GetNextSelected(Node);
-      Inc(i);
-    end;
-
-    // - set new settings to first node
-    Node := vtvSubsList.GetFirstSelected;
-    NodeData := vtvSubsList.GetNodeData(Node);
-    NodeData.Range.Text := Trim(AccuText);
-    NodeData.Range.StopTime := LastStopTime;
-    vtvSubsList.FocusedNode := nil;
-
-    // Finally delete nodes
-    for i := 0 to DeleteList.Count-1 do
-    begin
-      Node := DeleteList[i];
-      NodeData := vtvSubsList.GetNodeData(Node);
-      ErrorReportForm.DeleteError(NodeData.Range);
-      Idx := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
-      WAVDisplayer.DeleteRangeAtIdx(Idx,False);
-      vtvSubsList.DeleteNode(Node);
-    end;
-    DeleteList.Free;
-
-    CurrentProject.IsDirty := True;
-  finally
-    g_WebRWSynchro.EndWrite;
-  end;
-  
-  // Make sure to update display
-  Node := vtvSubsList.GetFirstSelected;
-  vtvSubsList.FocusedNode := Node;
-  if Assigned(WAVDisplayer.SelectedRange) then
-    WAVDisplayer.SelectedRange := nil;
-  WAVDisplayer.ClearSelection;
   WAVDisplayer.UpdateView([uvfRange,uvfSelection]);
-  vtvSubsList.Repaint;  
-  }
+  vtvSubsList.Repaint;
 end;
 
 //------------------------------------------------------------------------------
@@ -3318,6 +3273,18 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.SelectNodeAtIndex(Index : Integer);
+var SubRange : TSubtitleRange;
+begin
+  if (Index >= 0) and (Index < WAVDisplayer.RangeList.Count) then
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+    SelectNode(SubRange.Node);
+  end
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.StartStopServer(Stop : Boolean);
 begin
   if Stop then
@@ -3359,11 +3326,21 @@ end;
 
 procedure TMainForm.ShowPreferences(TabSheet : TTntTabSheet);
 var OldSwapState : Boolean;
+    IniFile : TIniFile;
 begin
   OldSwapState := ConfigObject.SwapSubtitlesList;
   PreferencesFormInstance.LoadConfig(ConfigObject);
-  if TabSheet <> nil then
+  if (TabSheet <> nil) then
     PreferencesFormInstance.PageControlPreferences.ActivePage := TabSheet;
+
+  if (not PrefFormInitialized) then
+  begin
+    IniFile := TIniFile.Create(GetIniFilename);
+    LoadFormPosition(IniFile, PreferencesFormInstance);
+    IniFile.Free;
+    PrefFormInitialized := True;
+  end;
+
   if (PreferencesFormInstance.ShowModal = mrOk) then
   begin
     PreferencesFormInstance.SaveConfig(ConfigObject);
@@ -6476,32 +6453,6 @@ begin
   Result.Assign(FirstRange);
   Result.StopTime := LastStopTime;
   Result.Text := AccuText;
-end;
-
-// -----------------------------------------------------------------------------
-
-function TMainForm.SimpleSetSubtitleStartTime(Index, NewTime : Integer) : Integer;
-var SubRange : TSubtitleRange;
-begin
-  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
-  Result := SubRange.StartTime;
-  SubRange.StartTime := NewTime;
-end;
-
-function TMainForm.SimpleSetSubtitleStopTime(Index, NewTime : Integer) : Integer;
-var SubRange : TSubtitleRange;
-begin
-  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
-  Result := SubRange.StopTime;
-  SubRange.StopTime := NewTime;
-end;
-
-function TMainForm.SimpleSetSubtitleText(Index : Integer; NewText : WideString) : WideString;
-var SubRange : TSubtitleRange;
-begin
-  SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
-  Result := SubRange.Text;
-  SubRange.Text := NewText;
 end;
 
 // -----------------------------------------------------------------------------
