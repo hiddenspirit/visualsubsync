@@ -656,7 +656,7 @@ type
     procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
     procedure RestoreSubtitles(List : TList);
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
-    procedure SplitSubtitle(Index, SplitTime : Integer);
+    procedure SplitSubtitle(Index, SplitTime, BlankTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
     procedure FocusNodeAt(Index : Integer); overload;
@@ -1505,7 +1505,7 @@ begin
     UndoableSplitTask := TUndoableSplitTask.Create;
     Range := WAVDisplayer.RangeList[Idx];
     UndoableSplitTask.SetData(Idx, Range.StartTime, Range.StopTime,
-      WAVDisplayer.GetCursorPos);
+      WAVDisplayer.GetCursorPos, ConfigObject.SpaceKeyBlankBetweenSubtitles);
     UndoableSplitTask.DoTask;
     PushUndoableTask(UndoableSplitTask);
   end;
@@ -6379,16 +6379,33 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SplitSubtitle(Index, SplitTime : Integer);
+procedure TMainForm.SplitSubtitle(Index, SplitTime, BlankTime : Integer);
 var SubRange, NewSubRange : TSubtitleRange;
     NewNode : PVirtualNode;
     NodeData : PTreeData;
+    SplitTime1, SplitTime2 : Integer;
 begin
   SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
   NewSubRange := TSubtitleRange(SubRangeFactory.CreateRange);
   NewSubRange.Assign(SubRange);
-  SubRange.StopTime := SplitTime - 1;
-  NewSubRange.StartTime := SplitTime;
+
+  SplitTime1 := SplitTime - (BlankTime div 2);
+  SplitTime2 := SplitTime + (BlankTime div 2);
+  // Make sure there is enough space for the blank time
+  if (SplitTime1 < SubRange.StartTime) or (SplitTime2 > SubRange.StopTime) then
+  begin
+    // no blank time
+    SplitTime1 := SplitTime - 1;
+    SplitTime2 := SplitTime;
+  end;
+  // Make sur there is no overlapping
+  if (SplitTime1 = SplitTime2) then
+  begin
+    SplitTime1 := SplitTime1 - 1;
+  end;
+  SubRange.StopTime := SplitTime1;
+  NewSubRange.StartTime := SplitTime2;
+
   NewNode := vtvSubsList.InsertNode(SubRange.Node, amInsertAfter);
   NodeData := vtvSubsList.GetNodeData(NewNode);
   NodeData.Range := NewSubRange;
