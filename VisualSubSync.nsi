@@ -36,6 +36,7 @@
 !define FILES_JSPLUGIN5 "too_short_display_time.js"
 !define FILES_JSPLUGIN6 "too_many_lines.js"
 !define FILES_JSPLUGIN7 "readme.txt"
+!define FILES_JSPLUGIN8 "scene_change.js"
 
 !define DIR_JSPLUGIN_GENERAL "jsplugin\general\"
 !define FILES_JSPLUGIN_GENERAL1 "general_plugin.js"
@@ -129,6 +130,7 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN5}"
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN6}"
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN7}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN8}"
   SetOutPath "$INSTDIR\${DIR_JSPLUGIN_GENERAL}"
   File "${INPUT_PATH}${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL1}"
   SetOutPath "$INSTDIR\${DIR_JSPLUGIN_COMMON}"
@@ -203,6 +205,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN5}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN6}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN7}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN8}"
   RMDir "$INSTDIR\${DIR_JSPLUGIN}"
   
   ; Delete install directory if empty
