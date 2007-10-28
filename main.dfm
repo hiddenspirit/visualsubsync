@@ -1259,6 +1259,9 @@ object MainForm: TMainForm
         Action = ActionProjectProperties
         Caption = 'Project Properties...'
       end
+      object MenuItemOpenProjectFolder: TTntMenuItem
+        Action = ActionOpenProjectFolder
+      end
       object N4: TTntMenuItem
         Caption = '-'
       end
@@ -2098,6 +2101,16 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Split at cursor'
       OnExecute = ActionSplitAtCursorExecute
+    end
+    object ActionOpenProjectFolder: TTntAction
+      Caption = 'Open Project Folder'
+      OnExecute = ActionOpenProjectFolderExecute
+    end
+    object ActionPlay1sBeforeToEnd: TTntAction
+      Tag = 1
+      Category = 'Playback'
+      Caption = 'Play 1s before start to end'
+      OnExecute = ActionPlay1sBeforeToEndExecute
     end
   end
   object ImageList1: TImageList

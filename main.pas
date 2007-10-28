@@ -338,6 +338,9 @@ type
     extinunderline2: TTntMenuItem;
     extcolor2: TTntMenuItem;
     extsize2: TTntMenuItem;
+    MenuItemOpenProjectFolder: TTntMenuItem;
+    ActionOpenProjectFolder: TTntAction;
+    ActionPlay1sBeforeToEnd: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -502,6 +505,8 @@ type
     procedure vtvSubsListPaintText(Sender: TBaseVirtualTree;
       const TargetCanvas: TCanvas; Node: PVirtualNode;
       Column: TColumnIndex; TextType: TVSTTextType);
+    procedure ActionOpenProjectFolderExecute(Sender: TObject);
+    procedure ActionPlay1sBeforeToEndExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -1294,6 +1299,7 @@ begin
 
   ActionClose.Enabled := Enable;
   ActionSave.Enabled := False;
+  ActionOpenProjectFolder.Enabled := Enable;  
 
   ActionSetPlaybackRate60.Enabled := Enable;
   ActionSetPlaybackRate70.Enabled := Enable;
@@ -5562,6 +5568,28 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ActionPlay1sBeforeToEndExecute(Sender: TObject);
+var NodeData: PTreeData;
+begin
+  if (not WAVDisplayer.SelectionIsEmpty) then
+  begin
+    PlayingMode := pmtSelection;
+    WAVDisplayer.PlayRange(
+      Max(WAVDisplayer.Selection.StartTime - 1000, 0),
+      WAVDisplayer.Length);
+  end
+  else if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    PlayingMode := pmtSelection;
+    WAVDisplayer.PlayRange(
+      Max(NodeData.Range.StartTime - 1000, 0),
+      WAVDisplayer.Length)
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.ActionSelectNextSubExecute(Sender: TObject);
 begin
   SelectNextSub;
@@ -6915,6 +6943,16 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.ActionOpenProjectFolderExecute(Sender: TObject);
+var ProjectFolder : WideString;
+begin
+  ProjectFolder := WideExtractFilePath(CurrentProject.Filename);
+  Tnt_ShellExecuteW(Handle, 'explore', PWideChar(ProjectFolder), nil,
+    nil, SW_SHOWNORMAL);
+end;
+
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
@@ -6925,8 +6963,6 @@ undo text pipe text modification (modifiy, clear, load)
 undo for style?
 
 TODO : display karaoke sylables in wavdisplay
-
-split at cursor need to respect minimum time between sub
 
 highlight subtitles with some criteria
 
@@ -6953,14 +6989,6 @@ begin
 >
 > Ha ok, genre en restant appuyé sur ctrl ou shift ou chépakel touche,
 > les cp sont considérés comem des subs, ça serait pratique + un mode à cocher, ou c'est locké.
-
-// -----------------------------------------------------------------------------
-
-> a un autre truc qui pourrai être sympa (je continue de tester,
-> et de n'utiliser que la new version,a ucun bug pour le moment, aucun plantage)
-> : une fonction "Split at scene change" quand 1 ou plusieurs CP traversent un
-> sub + automatiqquement faire le trou de 129 avant et 129 après (ou suivant
-> le paramètres défini dans les options).
 
 // -----------------------------------------------------------------------------
 
