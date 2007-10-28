@@ -2467,6 +2467,9 @@ begin
     exit;
   end;
 
+  // TODO : check real return type before converting
+  // it will crash in some case if the js function return an integer instead of a string
+
   str := JS_GetStringChars(JS_ValueToString(FEngine.Context, rval));
   {$IFDEF D6OR7}
   UniqueString(str);
