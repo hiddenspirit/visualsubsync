@@ -336,6 +336,7 @@ object PreferencesForm: TPreferencesForm
         OnClickCheck = ListErrorCheckingClickCheck
         Align = alClient
         ItemHeight = 13
+        PopupMenu = pmErrorChecking
         Sorted = True
         TabOrder = 0
         OnClick = ListErrorCheckingClick
@@ -1028,5 +1029,17 @@ object PreferencesForm: TPreferencesForm
     Options = [fdAnsiOnly, fdEffects, fdNoVectorFonts, fdScalableOnly]
     Left = 4
     Top = 336
+  end
+  object pmErrorChecking: TPopupMenu
+    Left = 12
+    Top = 32
+    object pmiSelectAll: TMenuItem
+      Caption = 'Select all'
+      OnClick = pmiSelectAllClick
+    end
+    object pmiUnselectAll: TMenuItem
+      Caption = 'Unselect all'
+      OnClick = pmiUnselectAllClick
+    end
   end
 end
