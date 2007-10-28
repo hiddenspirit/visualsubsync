@@ -21,105 +21,107 @@ VSSPlugin = {
     if (!subtitleContainsSceneChange) {
       return '';
     }
+    
+    // Check for scene change around start time
 
+    // Get the scene change previous to the start time
     var scTiming1 = SceneChange.GetPrevious(CurrentSub.Start);
-    //CP pertinent ?
-    var totalCPStart1 = scTiming1 - SceneChange.StartOffset;
-    var totalCPEnd1 = scTiming1 + SceneChange.StopOffset;
-    var diff = totalCPEnd1 - CurrentSub.Start;
-    if (diff < SceneChange.StopOffSet && diff > 0) {
-      return 'Overlap on start: ' + diff + 'ms';
-	  }	
-
+    var scEnd1 = scTiming1 + SceneChange.StopOffset;
+    if (scEnd1 > CurrentSub.Start) {
+      return '1 - Overlap on start: ' + (scEnd1 - CurrentSub.Start) + 'ms';
+    }
+	  
+	  // Get the scene change next to the start time
     var scTiming2 = SceneChange.GetNext(CurrentSub.Start);
-    //CP pertinent ?
-    var totalCPStart2 = scTiming2 - SceneChange.StartOffset;
-    var totalCPEnd2 = scTiming2 + SceneChange.StopOffset;
-    if (totalCPStart2 < CurrentSub.Start) {
-      diff = totalCPEnd2 - CurrentSub.Start;
-      return 'Overlap on start: ' + diff + 'ms';
+    var scStart2 = scTiming2 - SceneChange.StartOffset;
+    if (scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
+      var scEnd2 = scTiming2 + SceneChange.StopOffset;
+      return '2 - Overlap on start: ' + (scEnd2 - CurrentSub.Start) + 'ms';
     }
-    if (totalCPEnd2 > CurrentSub.Stop) {
-      diff = CurrentSub.Stop - totalCPStart2;
-      return 'Overlap on stop: ' + diff + 'ms';
+	  
+    // Check for scene change around stop time	  
+	  
+	  // Get the scene change next to the stop time
+    var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
+    var scStart3 = scTiming3 - SceneChange.StartOffset;
+    if (scStart3 < CurrentSub.Stop) {
+      return '3 - Overlap on stop: ' + (CurrentSub.Stop - scStart3) + 'ms';
     }
 
+	  // Get the scene change previous to the stop time
     var scTiming4 = SceneChange.GetPrevious(CurrentSub.Stop);
-    //CP pertinent ?
-    var totalCPStart4 = scTiming4 - SceneChange.StartOffset;
-    var totalCPEnd4 = scTiming4 + SceneChange.StopOffset;
-    if (totalCPStart4 < CurrentSub.Start) {
-      diff = totalCPEnd4 - CurrentSub.Start;
-      return 'Overlap on start: ' + diff + 'ms';
+    var scEnd4 = scTiming4 + SceneChange.StopOffset;
+    if (scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
+      var scStart4 = scTiming4 - SceneChange.StartOffset;
+      return '4 - Overlap on stop: ' + (CurrentSub.Stop - scStart4) + 'ms';
     }
-    if (totalCPEnd4 > CurrentSub.Stop) {
-      diff = CurrentSub.Stop - totalCPStart4;
-      return 'Overlap on stop: ' + diff + 'ms';
-    }
-			
-    var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
-    //CP pertinent ?
-    var totalCPStart3 = scTiming3 - SceneChange.StartOffset;
-    var totalCPEnd3 = scTiming3 + SceneChange.StopOffset;
-    diff = CurrentSub.Stop - totalCPEnd3;
-    if (diff < SceneChange.StartOffSet && diff > 0) {
-      return 'Overlap on stop: ' + diff + 'ms';
-	  }
 	
-	  //sinon, CP non pertinent
     return '';
   },
   
   FixError : function(CurrentSub, PreviousSub, NextSub) {
-    var scTiming = SceneChange.GetNext(CurrentSub.Start);
-    var totalCPStart = scTiming - SceneChange.StartOffset;
-    var totalCPEnd = scTiming + SceneChange.StopOffset;
+    var subtitleContainsSceneChange = SceneChange.Contains(
+      CurrentSub.Start - SceneChange.StartOffset,
+      CurrentSub.Stop + SceneChange.StopOffset);
+    if (!subtitleContainsSceneChange) {
+      return;
+    }
+    
     var Message = "";
+    
+    // Check if a scene change is overlapping on start and stop at the same time
+    var scTimingA = SceneChange.GetNext(CurrentSub.Start);
+    var scStartA = scTimingA - SceneChange.StartOffset;
+    var scEndA = scTimingA + SceneChange.StopOffset;
+    if (scStartA < CurrentSub.Start && scEndA > CurrentSub.Stop) {
+      // Don't fix this automatically
+      return;
+    }
+    var scTimingB = SceneChange.GetPrevious(CurrentSub.Stop);
+    var scStartB = scTimingB - SceneChange.StartOffset;
+    var scEndB = scTimingB + SceneChange.StopOffset;
+    if (scStartB < CurrentSub.Start && scEndB > CurrentSub.Stop) {
+      // Don't fix this automatically
+      return;
+    }
+    
+    // Check for scene change around start time
+    
+    // Get the scene change previous to the start time
     var scTiming1 = SceneChange.GetPrevious(CurrentSub.Start);
-    //CP pertinent ?
-    var totalCPStart1 = scTiming1 - SceneChange.StartOffset;
-    var totalCPEnd1 = scTiming1 + SceneChange.StopOffset;
-    var diff = totalCPEnd1 - CurrentSub.Start;
-    if (diff < SceneChange.StopOffSet && diff > 0) {
+    var scEnd1 = scTiming1 + SceneChange.StopOffset;
+    if (scEnd1 > CurrentSub.Start) {
+      var diff = scEnd1 - CurrentSub.Start;
       CurrentSub.Start = scTiming1 + SceneChange.StopOffset + 1;
       Message += "1";
-    }	
-
+    }
+    
+	  // Get the scene change next to the start time
     var scTiming2 = SceneChange.GetNext(CurrentSub.Start);
-    //CP pertinent ?
-    var totalCPStart2 = scTiming2 - SceneChange.StartOffset;
-    var totalCPEnd2 = scTiming2 + SceneChange.StopOffset;
-    //overlap au début ou à la fin ?
-    if (totalCPStart2 < CurrentSub.Start){
+    var scStart2 = scTiming2 - SceneChange.StartOffset;
+    if (scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
       CurrentSub.Start = scTiming2 + SceneChange.StopOffset + 1;
       Message += "2";
-    }
-    if(totalCPEnd2 > CurrentSub.Stop && (totalCPStart2 - CurrentSub.Stop) < (SceneChange.StartOffset + SceneChange.StopOffset)) {
-      CurrentSub.Stop = scTiming2 - SceneChange.StartOffset - 1;
+    }    
+
+    // Check for scene change around stop time	  
+	  
+	  // Get the scene change next to the stop time
+    var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
+    var scStart3 = scTiming3 - SceneChange.StartOffset;
+    if (scStart3 < CurrentSub.Stop) {
+      CurrentSub.Stop = scTiming3 - SceneChange.StartOffset - 1;
       Message += "3";
     }
-
+    
+	  // Get the scene change previous to the stop time
     var scTiming4 = SceneChange.GetPrevious(CurrentSub.Stop);
-    var totalCPStart4 = scTiming4 - SceneChange.StartOffset;
-    var totalCPEnd4 = scTiming4 + SceneChange.StopOffset;
-    if (totalCPStart4 < CurrentSub.Start && (CurrentSub.Start - totalCPEnd4) < (SceneChange.StartOffset + SceneChange.StopOffset)){
-      CurrentSub.Start = scTiming4 + SceneChange.StopOffset + 1;
-		  Message += "4";
-    }
-    if (totalCPEnd4 > CurrentSub.Stop) {
+    var scEnd4 = scTiming4 + SceneChange.StopOffset;
+    if (scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
       CurrentSub.Stop = scTiming4 - SceneChange.StartOffset - 1;
-      Message += "5";
+      Message += "4";
     }
 
-    var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
-    //CP pertinent ?
-    var totalCPStart3 = scTiming3 - SceneChange.StartOffset;
-    var totalCPEnd3 = scTiming3 + SceneChange.StopOffset;
-    diff = CurrentSub.Stop - totalCPEnd3;
-    if (diff < SceneChange.StartOffSet && diff > 0) {
-      CurrentSub.Stop = scTiming3 - SceneChange.StartOffset - 1;
-      Message += "6";
-    }
-    //ScriptLog(Message)
+    //ScriptLog(Message);
   }
 };
