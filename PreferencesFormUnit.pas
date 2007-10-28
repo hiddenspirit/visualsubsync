@@ -220,6 +220,9 @@ type
     TntLabel7: TTntLabel;
     EditMinimalDuration: TTntEdit;
     UpDownMinimalDuration: TTntUpDown;
+    pmErrorChecking: TPopupMenu;
+    pmiSelectAll: TMenuItem;
+    pmiUnselectAll: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -250,6 +253,8 @@ type
       Node: PVirtualNode; Column: TColumnIndex;
       var LineBreakStyle: TVTTooltipLineBreakStyle;
       var HintText: WideString);
+    procedure pmiSelectAllClick(Sender: TObject);
+    procedure pmiUnselectAllClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -1430,6 +1435,35 @@ begin
     0: HintText := ParamData.Param.Description;
   end;
 end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.pmiSelectAllClick(Sender: TObject);
+var i : Integer;
+    JSPluginInfo : TJSPluginInfo;
+begin
+  for i := 0 to ListErrorChecking.Count-1 do
+  begin
+    JSPluginInfo := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
+    ListErrorChecking.Checked[i] := True;
+    JSPluginInfo.Enabled := True;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.pmiUnselectAllClick(Sender: TObject);
+var i : Integer;
+    JSPluginInfo : TJSPluginInfo;
+begin
+  for i := 0 to ListErrorChecking.Count-1 do
+  begin
+    JSPluginInfo := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
+    ListErrorChecking.Checked[i] := False;
+    JSPluginInfo.Enabled := False;
+  end;
+end;
+
 
 //------------------------------------------------------------------------------
 end.
