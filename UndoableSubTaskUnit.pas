@@ -105,13 +105,13 @@ type
   TUndoableSplitTask = class(TUndoableTask)
   private
     FIndex : Integer;
-    FStartTime, FStopTime, FSplitTime : Integer;
+    FStartTime, FStopTime, FSplitTime, FBlankTime : Integer;
   public
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
 
-    procedure SetData(Index, StartTime, StopTime, SplitTime : Integer);
+    procedure SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
   end;
 
   TUndoableMergeTask = class(TUndoableTaskIndexed)
@@ -412,7 +412,7 @@ end;
 
 procedure TUndoableSplitTask.DoTask;
 begin
-  MainForm.SplitSubtitle(FIndex, FSplitTime);
+  MainForm.SplitSubtitle(FIndex, FSplitTime, FBlankTime);
 end;
 
 function TUndoableSplitTask.GetName : WideString;
@@ -426,12 +426,13 @@ begin
   MainForm.SetSubtitleTime(FIndex, FStartTime, FStopTime);
 end;
 
-procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime : Integer);
+procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
 begin
   FIndex := Index;
   FStartTime := StartTime;
   FStopTime := StopTime;
   FSplitTime := SplitTime;
+  FBlankTime := BlankTime;
 end;
 
 //------------------------------------------------------------------------------
