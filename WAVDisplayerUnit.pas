@@ -2037,6 +2037,7 @@ begin
       Constrain(X, 0, Width);
       CursorPosMs := PixelToTime(X) + FPositionMs;
       RangeSelWindow := PixelToTime(4);
+      if (RangeSelWindow < 1) then RangeSelWindow := 1;
 
       // First pass : check only inside sub
       RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs, 0);
@@ -2049,6 +2050,7 @@ begin
 
       // 2nd pass : Wider search
       RangeSelWindow := PixelToTime(2);
+      if (RangeSelWindow < 1) then RangeSelWindow := 1;
       RangeUnder := FRangeList.FindFirstRangeAt(CursorPosMs, RangeSelWindow);
       while Assigned(RangeUnder) do
       begin
@@ -2058,9 +2060,10 @@ begin
       end;
 
       // Check selection
-      RangeSelWindow := PixelToTime(4);
       if (not SelectionIsEmpty) then
       begin
+        RangeSelWindow := PixelToTime(4);
+        if (RangeSelWindow < 1) then RangeSelWindow := 1;
         if CheckSubtitleForDynamicSelection(FSelection, CursorPosMs, RangeSelWindow, X, Y) then
           Exit;
       end;
