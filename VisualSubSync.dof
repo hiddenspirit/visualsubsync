@@ -97,7 +97,7 @@ PackageDCPOutputDir=
 SearchPath=F:\Borland\Compo\DirectX;.\WinSock2;.\jsbridge
 Packages=vcl;rtl;vclx;indy;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;dsnapcon;vcldb;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;vclshlctrls;MiscCompo;FlatStyle_D6;CCCompo;RegComponents6;CoolTrayIcon_D6;SxMagD5
 Conditionals=
-DebugSourceDirs=
+DebugSourceDirs=F:\Borland\Delphi7\Projects\VisuaSubSync\jsbridge
 UsePackages=0
 [Parameters]
 RunParams=
@@ -114,8 +114,8 @@ IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=0
 MinorVer=9
-Release=10
-Build=807
+Release=11
+Build=852
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=VisualSubSync
-FileVersion=0.9.10.807
+FileVersion=0.9.11.852
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -134,13 +134,21 @@ OriginalFilename=
 ProductName=VisualSubSync
 ProductVersion=1.0.0.0
 Comments=
+[Excluded Packages]
+f:\borland\delphi7\Projects\Bpl\CoreCodec5.bpl=(untitled)
+f:\borland\delphi7\Projects\Bpl\MedusaComponents.bpl=Medusa Components
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=F:\Borland\Delphi7\Projects\VisuaSubSync\jsbridge
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=2
+Count=4
 Item0=F:\Borland\Compo\DirectX;.\WinSock2;.\jsbridge
-Item1=C:\Borland\Delphi7\Source\ToolsAPI
+Item1=..;..\jsbridge;F:\Borland\Compo\DirectX
+Item2=..;..\jsbridge
+Item3=C:\Borland\Delphi7\Source\ToolsAPI
 [HistoryLists\hlUnitOutputDirectory]
 Count=1
 Item0=dcu
