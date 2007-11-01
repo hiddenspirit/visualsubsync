@@ -2621,7 +2621,7 @@ begin
       else
       begin
         Match := WideStringFind(1, NodeData.Range.Text, FindText,
-          FindForm.MatchCase, FindForm.WholeWord) > 0;
+          not FindForm.MatchCase, FindForm.WholeWord) > 0;
       end;
     end;
     vtvSubsList.IsVisible[Node] := Match;
@@ -2685,7 +2685,7 @@ begin
     else
     begin
       SearchPos := WideStringFind(SearchPos, NodeData.Range.Text, FindText,
-        FindForm.MatchCase, FindForm.WholeWord);
+        not FindForm.MatchCase, FindForm.WholeWord);
     end;
 
     if (SearchPos > 0) then
