@@ -6497,7 +6497,7 @@ begin
   Result := TSubtitleRange(SubRangeFactory.CreateRange);
   Result.Assign(FirstRange);
   Result.StopTime := LastStopTime;
-  Result.Text := AccuText;
+  Result.Text := Trim(AccuText);
 end;
 
 // -----------------------------------------------------------------------------
