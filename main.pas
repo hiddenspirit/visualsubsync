@@ -755,7 +755,6 @@ begin
   CustomMemo.Left := MemoSubtitleText.Left;
   CustomMemo.Align := MemoSubtitleText.Align;
   CustomMemo.HideSelection := MemoSubtitleText.HideSelection;
-  CustomMemo.DisableWindowsUndo;
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
@@ -1570,7 +1569,7 @@ var
   i, lineIndex : integer;
   Start, Stop : Integer;
   NextStart, NextStop : Integer;
-  Text : WideString;
+  SubText : WideString;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
@@ -1613,16 +1612,16 @@ begin
   while (lineIndex < Source.Count) do
   begin
     // Copy text until a timestamps line
-    Text := '';
+    SubText := '';
     while (lineIndex < Source.Count) do
     begin
       S := Source[lineIndex];
       Inc(lineIndex);
       if IsTimeStampsLine(S, NextStart, NextStop) then
         Break;
-      Text := Text + Trim(S) + CRLF;
+      SubText := SubText + Trim(S) + CRLF;
     end;
-    Text := TrimRight(Text);
+    SubText := TrimRight(SubText);
     if (Start <> -1) and (Stop <> -1) then
     begin
       // Auto fix timestamp if this subtitle stop time is equal
@@ -1633,13 +1632,13 @@ begin
         Dec(Stop);
       end;
       // Remove the index line if any
-      i := RPos(CRLF, Text);
-      if ((i > 0) and (StrToIntDef(Copy(Text, i+2, MaxInt), -1) <> -1) and (lineIndex < Source.Count)) then
+      i := RPos(CRLF, SubText);
+      if ((i > 0) and (StrToIntDef(Copy(SubText, i+2, MaxInt), -1) <> -1) and (lineIndex < Source.Count)) then
       begin
-        Delete(Text, i, MaxInt);
+        Delete(SubText, i, MaxInt);
       end;
       NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-      TSubtitleRange(NewRange).Text := Trim(Text);
+      TSubtitleRange(NewRange).Text := Trim(SubText);
 
       if (EnableExperimentalKaraoke = True) then
         NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
@@ -1671,7 +1670,7 @@ end;
 function TMainForm.LoadASS(Filename: WideString; var IsUTF8 : Boolean; isSSA : Boolean) : Boolean;
 var
   i, Start, Stop : Integer;
-  Text : WideString;
+  SubText : WideString;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
@@ -1706,8 +1705,8 @@ begin
     if (Start <> -1) and (Stop <> -1) then
     begin
       NewRange := SubRangeFactory.CreateRangeSS(Start, Stop);
-      Text := ssaParser.GetDialogueValueAsString(i, 'Text');
-      TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(Text, '\N', CRLF,[rfReplaceAll]);
+      SubText := ssaParser.GetDialogueValueAsString(i, 'Text');
+      TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(SubText, '\N', CRLF,[rfReplaceAll]);
       if ssaParser.GetIsASS then
         TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Layer')
       else
@@ -1740,16 +1739,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-
-function GetReadingSpeed(SubRange : TSubtitleRange) : Double;
-var StrippedText : WideString;
-    Len, durMs : Integer;
-begin
-    StrippedText := StripTags(SubRange.Text);
-    Len := Length(StrippedText);
-    durMs := SubRange.StopTime - SubRange.StartTime;
-    Result := Len * 1000 / (durMS - 500);
-end;
 
 procedure TMainForm.vtvSubsListGetText(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
@@ -5181,10 +5170,10 @@ var i : integer;
     s : WideString;
     style : TSSAStyle;
     
-    procedure WriteStringLnStream(s : string; Stream : TStream);
+    procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      s := s + CRLF;
-      Stream.Write(s[1],Length(s));
+      str := str + CRLF;
+      Stream.Write(str[1], Length(str));
     end;
 begin
   // Write BOM if any
@@ -5263,10 +5252,10 @@ var i : integer;
     s : WideString;
     style : TSSAStyle;
 
-    procedure WriteStringLnStream(s : string; Stream : TStream);
+    procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      s := s + #13#10;
-      Stream.Write(s[1],Length(s));
+      str := str + CRLF;
+      Stream.Write(str[1], Length(str));
     end;
 begin
   // Write BOM if any
@@ -5608,12 +5597,12 @@ procedure TMainForm.SaveSubtitlesAsCUE(Filename: WideString);
 var i : integer;
     SubRange : TSubtitleRange;
     FS : TTntFileStream;
-    Text : WideString;
+    SubText : WideString;
 
-    procedure WriteStringLnStream(s : string; Stream : TStream);
+    procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      s := s + #13#10;
-      Stream.Write(s[1],Length(s));
+      str := str + CRLF;
+      Stream.Write(str[1], Length(str));
     end;
 begin
   FS := TTntFileStream.Create(Filename, fmCreate);
@@ -5626,16 +5615,16 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    Text := Subrange.Text;
+    SubText := Subrange.Text;
     // Remove line breaks
-    Text := Tnt_WideStringReplace(Text, ' ' + CRLF + ' ', ' ', [rfReplaceAll]);
-    Text := Tnt_WideStringReplace(Text, ' ' + CRLF, ' ', [rfReplaceAll]);
-    Text := Tnt_WideStringReplace(Text, CRLF + ' ', ' ', [rfReplaceAll]);
-    Text := Tnt_WideStringReplace(Text, CRLF, ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, ' ' + CRLF + ' ', ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, ' ' + CRLF, ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, CRLF + ' ', ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, CRLF, ' ', [rfReplaceAll]);
 
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+2]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StartTime)]), FS);
-    WriteStringLnStream(Format('    TITLE "%s"', [Text]), FS);
+    WriteStringLnStream(Format('    TITLE "%s"', [SubText]), FS);
     
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+3]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StopTime)]), FS);
@@ -6826,13 +6815,11 @@ end;
 procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   CellRect: TRect);
-var NodeData : PTreeData;
-    CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
     NewColor : TColor;
 begin
   if GeneralJSPlugin.IsColumnBGColorized(Column) then
   begin
-    NodeData := vtvSubsList.GetNodeData(Node);
     GetCurrentPreviousNextSubtitles(Node, CurrentSub, PreviousSub, NextSub);
     NewColor := GeneralJSPlugin.GetColumnBgColor(Column, CurrentSub, PreviousSub, NextSub);
     TargetCanvas.Brush.Color := NewColor;
