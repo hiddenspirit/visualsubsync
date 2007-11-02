@@ -412,6 +412,7 @@ begin
   inherited;
 end;
 
+// Can cause a crash in riched20.dll on some system
 procedure TTntRichEditCustomUndo.DisableWindowsUndo;
 var RichEditOle: IUnknown;
     TxtDocI : ITextDocument;
