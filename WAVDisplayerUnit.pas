@@ -2648,9 +2648,9 @@ type
   ByteSet = Set of 0..7;
 var
   RelativePos : TPoint;
-    Range : TRange;
+  Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
-  bShift: ByteSet absolute shift;
+  bShift: ByteSet absolute Shift;
   ScrollAmount : Integer;
 begin
   Result := True;
@@ -2701,7 +2701,7 @@ var
   RelativePos : TPoint;
   Range : TRange;
   NewPageSize, MouseCursorPosTime, NewMouseCursorPosTime : Integer;
-  bShift: ByteSet absolute shift;
+  bShift: ByteSet absolute Shift;
   ScrollAmount : Integer;
 begin
   Result := True;
