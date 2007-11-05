@@ -75,6 +75,7 @@ class CWavWriterFilter : public CBaseFilter
 	int m_InputSampleRate;
 	int m_InputChannels;
 	int m_InputBitsPerSample;
+    int m_IsPCM;
 
 	bool m_bFastConvertMode;
 	DWORD m_SamplePerPeakRatio;

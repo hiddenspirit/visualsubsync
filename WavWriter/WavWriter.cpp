@@ -129,7 +129,8 @@ CWavWriterFilter::CWavWriterFilter(LPUNKNOWN pUnk, HRESULT *phr) :
     m_ConvBuff(NULL),
 	m_InputBitsPerSample(0),
 	m_InputSampleRate(0),
-	m_InputChannels(0)
+	m_InputChannels(0),
+    m_IsPCM(0)
 {
     m_pPin = new CWavWriterInputPin(this, &m_Lock, &m_ReceiveLock, phr);
     if (m_pPin == NULL) {
@@ -438,7 +439,30 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength,
                 break;
 
             case 32:
+                if (m_IsPCM)
                 {
+                    int* src = (int*) m_ConvBuff;
+                    short* dst = (short*) pOutData;
+                    __int64 sample;
+                    int i = 0, j = 0;
+                    int loop = BytesToRead / sizeof(int) / m_InputChannels / 2;
+                    while (i < loop)
+                    {
+                        // Read and convert one sample to mono
+                        sample = 0;
+                        for (j = 0; j < m_InputChannels; ++j) {
+                            sample += *src++;
+                        }
+                        sample /= m_InputChannels;
+                        // Skip next sample
+                        src += m_InputChannels;
+                        // Write the sample
+                        *dst++ = (short) (sample >> 16);
+                        i++;
+                    }
+                    *lOutLength += i * sizeof(short);
+                    pOutData += i * sizeof(short);
+                } else {
                     // Convert from 32 bits float to 16 bits integer
                     float* src = (float*)m_ConvBuff;
                     short* dst = (short*)pOutData;
@@ -578,7 +602,22 @@ void CWavWriterFilter::PeakProcessing(BYTE* pInData, LONG lInLength, bool finali
             }
             break;
         case 32:
-            {
+            if (m_IsPCM) {
+                int *src = (int*) m_PeakCalcBuffer;
+                int maxValue = 0x80000000;
+                int minValue = 0x7fffffff;
+                for (unsigned int i = 0; i < BytesToRead / sizeof(int) ; ++i)
+                {
+                    if(src[i] > maxValue)
+                        maxValue = src[i];
+                    if(src[i] < minValue)
+                        minValue = src[i];
+                }
+                m_Peak.Max = (short)(maxValue >> 16);
+                m_Peak.Min = (short)(minValue >> 16);
+                m_PeakFile->Write(&m_Peak, sizeof(m_Peak));
+                m_PeakFileHeader.PeakTabLen++;
+            } else {
                 float *src = (float*) m_PeakCalcBuffer;
                 float maxValue = -1.0;
                 float minValue = 1.0;
@@ -845,25 +884,38 @@ CWavWriterInputPin::CWavWriterInputPin(CWavWriterFilter *pFilter,
 //
 HRESULT CWavWriterInputPin::CheckMediaType(const CMediaType *mtIn)
 {
+// 00000001-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_PCM
+    
     if(mtIn->formattype == FORMAT_WaveFormatEx)
     {
         WAVEFORMATEX *wf = NULL;
+        WAVEFORMATEXTENSIBLE *wfe = NULL;
         if(mtIn->FormatLength() == sizeof(WAVEFORMATEX))
         {
             wf = (WAVEFORMATEX *) mtIn->Format();
         } else if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
             wf = &((WAVEFORMATEXTENSIBLE*) mtIn->Format())->Format;
+            wfe = (WAVEFORMATEXTENSIBLE*) mtIn->Format();
         } else {
             return S_FALSE;
         }
 
 		if (wf->wFormatTag == WAVE_FORMAT_PCM &&
-			(wf->wBitsPerSample == 8 || wf->wBitsPerSample == 16)) {
+			(wf->wBitsPerSample == 8 || wf->wBitsPerSample == 16 || wf->wBitsPerSample == 32)) {
 			return S_OK;
 		}
 		if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT && wf->wBitsPerSample == 32) {
 			return S_OK;
 		}
+        if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE) && wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+            if(wfe->SubFormat == MEDIASUBTYPE_PCM &&
+                (wf->wBitsPerSample == 8 || wf->wBitsPerSample == 16 || wf->wBitsPerSample == 32)) {
+                return S_OK;
+            }
+            if(wfe->SubFormat == MEDIASUBTYPE_IEEE_FLOAT && wf->wBitsPerSample == 32) {
+                return S_OK;
+            }
+        }
     }
     return S_FALSE;
 }
@@ -890,8 +942,16 @@ HRESULT CWavWriterInputPin::CompleteConnect(IPin *pReceivePin)
     if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEX))
     {
         m_pFilter->m_OutputWF = (WAVEFORMATEX *) m_pFilter->m_OutType.Format();
+        m_pFilter->m_IsPCM = (m_pFilter->m_OutputWF->wFormatTag == WAVE_FORMAT_PCM) ? 1 : 0;
+
     } else if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
-        m_pFilter->m_OutputWF = &((WAVEFORMATEXTENSIBLE*) m_pFilter->m_OutType.Format())->Format;
+        WAVEFORMATEXTENSIBLE* wfe = (WAVEFORMATEXTENSIBLE*) m_pFilter->m_OutType.Format();
+        m_pFilter->m_OutputWF = &wfe->Format;
+        if(wfe->SubFormat == MEDIASUBTYPE_PCM) {
+            m_pFilter->m_IsPCM = 1;
+        } else if(wfe->SubFormat == MEDIASUBTYPE_IEEE_FLOAT) {
+            m_pFilter->m_IsPCM = 0;
+        }
     } else {
         m_pFilter->m_OutputWF = NULL; // not good :>
     }
