@@ -27,14 +27,14 @@ VSSPlugin = {
     // Get the scene change previous to the start time
     var scTiming1 = SceneChange.GetPrevious(CurrentSub.Start);
     var scEnd1 = scTiming1 + SceneChange.StopOffset;
-    if (scEnd1 > CurrentSub.Start) {
+    if (scTiming1 != -1 && scEnd1 > CurrentSub.Start) {
       return '1 - Overlap on start: ' + (scEnd1 - CurrentSub.Start) + 'ms';
     }
 	  
 	  // Get the scene change next to the start time
     var scTiming2 = SceneChange.GetNext(CurrentSub.Start);
     var scStart2 = scTiming2 - SceneChange.StartOffset;
-    if (scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
+    if (scTiming2 != -1 && scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
       var scEnd2 = scTiming2 + SceneChange.StopOffset;
       return '2 - Overlap on start: ' + (scEnd2 - CurrentSub.Start) + 'ms';
     }
@@ -44,14 +44,14 @@ VSSPlugin = {
 	  // Get the scene change next to the stop time
     var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
     var scStart3 = scTiming3 - SceneChange.StartOffset;
-    if (scStart3 < CurrentSub.Stop) {
+    if (scTiming3 != -1 && scStart3 < CurrentSub.Stop) {
       return '3 - Overlap on stop: ' + (CurrentSub.Stop - scStart3) + 'ms';
     }
 
 	  // Get the scene change previous to the stop time
     var scTiming4 = SceneChange.GetPrevious(CurrentSub.Stop);
     var scEnd4 = scTiming4 + SceneChange.StopOffset;
-    if (scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
+    if (scTiming4 != -1 && scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
       var scStart4 = scTiming4 - SceneChange.StartOffset;
       return '4 - Overlap on stop: ' + (CurrentSub.Stop - scStart4) + 'ms';
     }
@@ -90,7 +90,7 @@ VSSPlugin = {
     // Get the scene change previous to the start time
     var scTiming1 = SceneChange.GetPrevious(CurrentSub.Start);
     var scEnd1 = scTiming1 + SceneChange.StopOffset;
-    if (scEnd1 > CurrentSub.Start) {
+    if (scTiming1 != -1 && scEnd1 > CurrentSub.Start) {
       var diff = scEnd1 - CurrentSub.Start;
       CurrentSub.Start = scTiming1 + SceneChange.StopOffset + 1;
       Message += "1";
@@ -99,7 +99,7 @@ VSSPlugin = {
 	  // Get the scene change next to the start time
     var scTiming2 = SceneChange.GetNext(CurrentSub.Start);
     var scStart2 = scTiming2 - SceneChange.StartOffset;
-    if (scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
+    if (scTiming2 != -1 && scTiming2 < CurrentSub.Stop && scStart2 <= CurrentSub.Start) {
       CurrentSub.Start = scTiming2 + SceneChange.StopOffset + 1;
       Message += "2";
     }    
@@ -109,7 +109,7 @@ VSSPlugin = {
 	  // Get the scene change next to the stop time
     var scTiming3 = SceneChange.GetNext(CurrentSub.Stop);
     var scStart3 = scTiming3 - SceneChange.StartOffset;
-    if (scStart3 < CurrentSub.Stop) {
+    if (scTiming3 != -1 && scStart3 < CurrentSub.Stop) {
       CurrentSub.Stop = scTiming3 - SceneChange.StartOffset - 1;
       Message += "3";
     }
@@ -117,11 +117,11 @@ VSSPlugin = {
 	  // Get the scene change previous to the stop time
     var scTiming4 = SceneChange.GetPrevious(CurrentSub.Stop);
     var scEnd4 = scTiming4 + SceneChange.StopOffset;
-    if (scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
+    if (scTiming4 != -1 && scTiming4 > CurrentSub.Start && scEnd4 >= CurrentSub.Stop) {
       CurrentSub.Stop = scTiming4 - SceneChange.StartOffset - 1;
       Message += "4";
     }
 
-    //ScriptLog(Message);
+    ScriptLog(Message);
   }
 };
