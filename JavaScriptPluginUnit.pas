@@ -1278,8 +1278,10 @@ begin
       Min := Mid + 1
     else if FSceneChangeList[Mid] > TimeMs then
       Max := Mid - 1
-    else
-      Break;
+    else begin
+      Result := Mid;
+      Exit;
+    end;
     Mid := (Max + Min) div 2;
   end;
   if Backward then
