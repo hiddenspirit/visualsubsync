@@ -122,6 +122,6 @@ VSSPlugin = {
       Message += "4";
     }
 
-    ScriptLog(Message);
+    //ScriptLog(Message);
   }
 };
