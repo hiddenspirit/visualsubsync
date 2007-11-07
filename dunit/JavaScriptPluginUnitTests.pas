@@ -18,8 +18,6 @@ type
 
   published
     // Test methods
-//    procedure TestRegisterSceneChange;
-//    procedure TestSetSceneChangeList;
     procedure TestSetStartAndStopOffset;
     procedure TestSetVisible;
     procedure TestContains;
@@ -105,6 +103,7 @@ begin
 
   CheckEquals(-1, SceneChangeWrapper.GetPrevious(0), 'SceneChangeWrapper.GetPrevious(0)');
   CheckEquals(10, SceneChangeWrapper.GetPrevious(10), 'SceneChangeWrapper.GetPrevious(10)');
+  CheckEquals(20, SceneChangeWrapper.GetPrevious(20), 'SceneChangeWrapper.GetPrevious(20)');
   CheckEquals(10, SceneChangeWrapper.GetPrevious(15), 'SceneChangeWrapper.GetPrevious(15)');
   CheckEquals(40, SceneChangeWrapper.GetPrevious(45), 'SceneChangeWrapper.GetPrevious(45)');
 end;
