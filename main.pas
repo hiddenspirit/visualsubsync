@@ -555,7 +555,8 @@ type
     procedure EnableControl(Enable : Boolean);
     procedure EnableStyleControls(Enable : Boolean);
     procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
-    procedure SaveSubtitles(Filename: WideString; InUTF8 : Boolean; BackupOnly : Boolean);
+    procedure SaveSubtitles(Filename: WideString; PreviousFilename : WideString;
+      InUTF8 : Boolean; BackupOnly : Boolean);
     procedure SaveProject(Project : TVSSProject; SilentSave : Boolean);
     procedure UpdateLinesCounter;
     function CheckSubtitlesAreSaved : Boolean;
@@ -1710,7 +1711,7 @@ begin
       if ssaParser.GetIsASS then
         TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Layer')
       else
-        TSubtitleRange(NewRange).Layer := ssaParser.GetDialogueValueAsString(i, 'Marked');
+        TSubtitleRange(NewRange).Marked := ssaParser.GetDialogueValueAsString(i, 'Marked');
       TSubtitleRange(NewRange).Effect := ssaParser.GetDialogueValueAsString(i, 'Effect');
       TSubtitleRange(NewRange).RightMarg := ssaParser.GetDialogueValueAsString(i, 'MarginR');
       TSubtitleRange(NewRange).LeftMarg := ssaParser.GetDialogueValueAsString(i, 'MarginL');
@@ -1933,8 +1934,9 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitles(Filename: WideString; InUTF8 : Boolean; BackupOnly : Boolean);
-var Ext : WideString;
+procedure TMainForm.SaveSubtitles(Filename: WideString; PreviousFilename : WideString;
+  InUTF8 : Boolean; BackupOnly : Boolean);
+var Ext, PreviousExt : WideString;
     BackupDstFilename : WideString;
 begin
   if (not BackupOnly) and WideFileExists(Filename) and ConfigObject.EnableBackup then
@@ -1945,6 +1947,7 @@ begin
   end;
 
   Ext := WideLowerCase(WideExtractFileExt(Filename));
+  PreviousExt := WideLowerCase(WideExtractFileExt(PreviousFilename));
   if (Ext = '.srt') then
     SaveSubtitlesAsSRT(Filename, InUTF8)
   else if (Ext = '.ass') then
@@ -2397,7 +2400,7 @@ begin
         PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
       CurrentProject.IsUTF8 := True;
     end;
-    SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
+    SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
     VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
   end;
   SaveProject(CurrentProject, False);
@@ -2407,6 +2410,7 @@ end;
 
 procedure TMainForm.ActionSaveAsExecute(Sender: TObject);
 var InputExt : WideString;
+    NewExt : WideString;
 begin
   TntSaveDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
     'SSA files (*.ssa)|*.SSA' + '|' +
@@ -2430,13 +2434,15 @@ begin
   begin
     // Force extension filter
     case TntSaveDialog1.FilterIndex of
-      1 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.srt');
-      2 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ssa');
-      3 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.ass');
-      4 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.cue');
-      5 : TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, '.txt');
+      1 : NewExt := '.srt';
+      2 : NewExt := '.ssa';
+      3 : NewExt := '.ass';
+      4 : NewExt := '.cue';
+      5 : NewExt := '.txt';
     end;
-    SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.IsUTF8, False);
+    TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, NewExt);
+    SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.SubtitlesFile,
+      CurrentProject.IsUTF8, False);
   end;
 end;
 
@@ -2459,6 +2465,7 @@ end;
 
 procedure TMainForm.ActionProjectPropertiesExecute(Sender: TObject);
 var ProjectHasChanged, VideoHasChanged, SubtitleFileHasChanged : Boolean;
+    PreviousSubtitlesFile : WideString;
 begin
   // TODO : test this more
 
@@ -2481,9 +2488,22 @@ begin
         // Check if it's a file format change
         if HasExtensionChanged(CurrentProject.SubtitlesFile, ProjectForm.EditSubtitleFilename.Text) then
         begin
+          PreviousSubtitlesFile := CurrentProject.SubtitlesFile;
           CurrentProject.SubtitlesFile := ProjectForm.EditSubtitleFilename.Text;
+
           if not WideFileExists(CurrentProject.SubtitlesFile) then
-            ActionSaveExecute(nil);
+          begin
+            if (not CurrentProject.IsUTF8) and DetectCharsetDataLoss then
+            begin
+              MessageBoxW(Handle, PWideChar(WideString(
+                'Subtitles contain some characters that may not be saved correctly,' +
+                ' the file will be saved in Unicode UTF-8 starting from now.')),
+                PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
+              CurrentProject.IsUTF8 := True;
+            end;
+            SaveSubtitles(CurrentProject.SubtitlesFile, PreviousSubtitlesFile,
+              CurrentProject.IsUTF8, False);
+          end;
         end;
 
         CurrentProject.SubtitlesFile := ProjectForm.EditSubtitleFilename.Text;
@@ -2992,7 +3012,7 @@ begin
       MB_YESNOCANCEL or MB_ICONWARNING);
     if (res = IDYES) then
     begin
-      SaveSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False);
+      SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
       SaveProject(CurrentProject, False);
     end
     else if(res = IDCANCEL) then
@@ -4255,7 +4275,7 @@ begin
     CheckBackupDirectory;
     BackupDstFilename := g_BackupDirectory +
       WideChangeFileExt(WideExtractFileName(CurrentProject.SubtitlesFile), '.bak');
-    SaveSubtitles(BackupDstFilename, CurrentProject.IsUTF8, True);
+    SaveSubtitles(BackupDstFilename, '', CurrentProject.IsUTF8, True);
   end;
 end;
 
@@ -5169,6 +5189,7 @@ var i : integer;
     FS : TTntFileStream;
     s : WideString;
     style : TSSAStyle;
+    RegExpr : TRegExpr;
     
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
@@ -5201,7 +5222,10 @@ begin
   end
   else
   begin
-    WriteStringLnStream(Trim(SubtitleFileHeader), FS);
+    // Make sure to write "ScriptType: v4.00"
+    s := ReplaceRegExpr('ScriptType: v4\.00\+?', SubtitleFileHeader,
+      'ScriptType: v4.00');
+    WriteStringLnStream(Trim(s), FS);
   end;
 
   // Write Styles
@@ -5224,7 +5248,7 @@ begin
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
     s := Format('Dialogue: %s,%s,%s,%s,%s,%s,%s,%s,%s,',
-      [SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
+      [SubRange.Marked, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style, SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
     if InUTF8 then
@@ -5284,7 +5308,10 @@ begin
   end
   else
   begin
-    WriteStringLnStream(Trim(SubtitleFileHeader), FS);
+    // Make sure to write "ScriptType: v4.00+"
+    s := ReplaceRegExpr('ScriptType: v4\.00\+?', SubtitleFileHeader,
+      'ScriptType: v4.00+');
+    WriteStringLnStream(Trim(s), FS);
   end;
 
   // Write Styles
@@ -6054,7 +6081,7 @@ begin
   begin
     if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused or ForceUpdate) then
     begin
-      SaveSubtitles(TmpDstFilename, CurrentProject.IsUTF8, True);
+      SaveSubtitles(TmpDstFilename, '', CurrentProject.IsUTF8, True);
       VideoRenderer.SetSubtitleFilename(TmpDstFilename);
       if VideoRenderer.IsPaused then
       begin
