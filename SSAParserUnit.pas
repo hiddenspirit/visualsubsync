@@ -69,9 +69,13 @@ type
   end;
 
   TStyleParser = class(TFormatedParser)
+  private
+    FIsASS : Boolean;
   public
     function IsSection(line : WideString) : Boolean;
     procedure ParseLine(line: WideString); override;
+
+    property IsASS : Boolean read FIsASS;
   end;
 
   TDialogueParser = class(TFormatedParser)
@@ -277,6 +281,10 @@ end;
 function TStyleParser.IsSection(line : WideString) : Boolean;
 begin
   Result := StartsText('[v4', Trim(line)) and EndsText('Styles]', Trim(line));
+  if Result then
+  begin
+    FIsASS := StartsText('[v4+', Trim(line));
+  end;
 end;
 
 procedure TStyleParser.ParseLine(line: WideString);
@@ -426,7 +434,7 @@ begin
   Source.Free;
 
   ScriptType := Trim(ScriptInfoParser.GetValueAsString('ScriptType'));
-  IsASS := StartsText('v4.00+',ScriptType);
+  IsASS := StartsText('v4.00+', ScriptType) or StyleParser.IsASS;
 end;
 
 function TSSAParser.GetStylesCount : Integer;
