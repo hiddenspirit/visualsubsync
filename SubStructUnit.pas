@@ -34,6 +34,7 @@ type
 
     Effect : WideString;
     Layer : WideString;
+    Marked : WideString;
     Actor : WideString;
     RightMarg : WideString;
     LeftMarg : WideString;
@@ -69,6 +70,7 @@ begin
   Self.Text := SubRange.Text;
   Self.Effect := SubRange.Effect;
   Self.Layer := SubRange.Layer;
+  Self.Marked := SubRange.Marked;
   Self.Actor := SubRange.Actor;
   Self.RightMarg := SubRange.RightMarg;
   Self.LeftMarg := SubRange.LeftMarg;
@@ -85,6 +87,7 @@ begin
   TSubtitleRange(Result).Text := '';
   TSubtitleRange(Result).Effect := '';
   TSubtitleRange(Result).Layer := '0';
+  TSubtitleRange(Result).Marked := 'Marked=0';
   TSubtitleRange(Result).Actor := '';
   TSubtitleRange(Result).RightMarg := '0000';
   TSubtitleRange(Result).LeftMarg := '0000';
