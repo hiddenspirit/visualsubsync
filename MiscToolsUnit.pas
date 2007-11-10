@@ -94,7 +94,9 @@ type
 
   function WideStringFind(const Offset : Integer; const S, Pattern: WideString;
     IgnoreCase: Boolean = False; WholeWord: Boolean = False): Integer;
-
+  function WideStringCount(const S, Pattern: WideString;
+    IgnoreCase: Boolean = False; WholeWord: Boolean = False): Integer;
+    
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
@@ -1019,6 +1021,71 @@ begin
   end;
 end;
 
+// Based on Tnt_WideStringReplace
+function WideStringCount(const S, Pattern: WideString;
+  IgnoreCase: Boolean = False; WholeWord: Boolean = False): Integer;
+
+  function IsWordSeparator(WC: WideChar): Boolean;
+  begin
+    Result := (WC = WideChar(#0))
+           or IsWideCharSpace(WC)
+           or IsWideCharPunct(WC);
+  end;
+
+var
+  SearchStr, Patt: WideString;
+  Off: Integer;
+  PrevChar, NextChar: WideChar;
+begin
+  Result := 0;
+  if (Length(S) <= 0) then Exit;
+  if (Length(Pattern) <= 0) then
+  begin
+    Result := 1;
+    Exit;
+  end;
+  if IgnoreCase then
+  begin
+    SearchStr := Tnt_WideUpperCase(S);
+    Patt := Tnt_WideUpperCase(Pattern);
+  end else
+  begin
+    SearchStr := S;
+    Patt := Pattern;
+  end;
+  Off := 1;
+  while (Off <= Length(SearchStr)) do
+  begin
+    Off := PosEx(Patt, SearchStr, Off);
+    if Off = 0 then
+    begin
+      Break;
+    end; // done
+
+    if (WholeWord) then
+    begin
+      if (Off = 1) then
+        PrevChar := WideChar(#0)
+      else
+        PrevChar := SearchStr[Off - 1];
+
+      if Off + Length(Pattern) <= Length(SearchStr) then
+        NextChar := SearchStr[Off + Length(Pattern)]
+      else
+        NextChar := WideChar(#0);
+
+      if (not IsWordSeparator(PrevChar))
+      or (not IsWordSeparator(NextChar)) then
+      begin
+        Off := Off + Length(Pattern);
+        Continue;
+      end;
+    end;
+
+    Inc(Result);
+    Inc(Off);
+  end;
+end;
 // -----------------------------------------------------------------------------
 end.
 // -----------------------------------------------------------------------------
