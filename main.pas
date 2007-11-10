@@ -341,6 +341,11 @@ type
     MenuItemOpenProjectFolder: TTntMenuItem;
     ActionOpenProjectFolder: TTntAction;
     ActionPlay1sBeforeToEnd: TTntAction;
+    ActionDeleteSceneChange: TTntAction;
+    pmiDeleteSC: TTntMenuItem;
+    ShowHidescenechange1: TTntMenuItem;
+    ActionReload: TTntAction;
+    Reload1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -507,6 +512,8 @@ type
       Column: TColumnIndex; TextType: TVSTTextType);
     procedure ActionOpenProjectFolderExecute(Sender: TObject);
     procedure ActionPlay1sBeforeToEndExecute(Sender: TObject);
+    procedure ActionDeleteSceneChangeExecute(Sender: TObject);
+    procedure ActionReloadExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -673,7 +680,10 @@ type
     procedure ReplaceText;
     procedure ReplaceAllText;
     function LastFindSucceded : Boolean;
-    procedure InitGeneralJSPlugin;    
+    procedure InitGeneralJSPlugin;
+    
+    procedure InsertSceneChange(SrcSCArray : TIntegerDynArray);
+    function DeleteSceneChange(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
   end;
 
 const
@@ -1271,9 +1281,11 @@ begin
   ActionDelay.Enabled := Enable;
   ActionInsertTextFile.Enabled := Enable;
 
+  ActionShowHideSceneChange.Enabled := Enable;
   ActionShowHideVideo.Enabled := Enable;
   ActionDetachVideo.Enabled := Enable;
   ActionProjectProperties.Enabled := Enable;
+  ActionReload.Enabled := Enable;
   ActionSaveAs.Enabled := Enable;
   ActionExportToSSA.Enabled := Enable;
   ActionExportToWAV.Enabled := Enable;
@@ -2608,9 +2620,11 @@ var Node : PVirtualNode;
     NodeData : PTreeData;
     Match : Boolean;
     FindText : WideString;
-    RegExpr : TRegExpr;    
+    RegExpr : TRegExpr;
+    MatchingCount : Integer;
 begin
   FindText := FindForm.GetFindText;
+  MatchingCount := 0;
 
   RegExpr := TRegExpr.Create;
   RegExpr.Expression := FindText;
@@ -2634,10 +2648,13 @@ begin
       end;
     end;
     vtvSubsList.IsVisible[Node] := Match;
+    if Match then Inc(MatchingCount);
     Node := vtvSubsList.GetNext(Node);
   end;
   RegExpr.Free;
   vtvSubsList.Repaint;
+  if (not DisplayAll) then
+    ShowStatusBarMessage(IntToStr(MatchingCount) + ' subtitle(s) match.');
 end;
 
 //------------------------------------------------------------------------------
@@ -2727,9 +2744,12 @@ var Node : PVirtualNode;
     ChangeSubData : TChangeSubData;
     NewText : WideString;
     SubRange : TSubtitleRange;
+    TotalReplaceCount : Integer;
 begin
   if Length(FindForm.GetFindText) <= 0 then
     Exit;
+
+  TotalReplaceCount := 0;
 
   if FindForm.FromCursor then
     Node := vtvSubsList.FocusedNode
@@ -2751,14 +2771,18 @@ begin
       if FindForm.UseRegExp then
       begin
         NewText := RegExpr.Replace(NodeData.Range.Text, FindForm.GetReplaceText, True);
+        TotalReplaceCount := TotalReplaceCount + RegExpr.ReplaceCount;
       end
       else
       begin
         ReplaceFlags := [rfReplaceAll];
         if (not FindForm.MatchCase) then
           Include(ReplaceFlags, rfIgnoreCase);
+        TotalReplaceCount := TotalReplaceCount + WideStringCount(
+          NodeData.Range.Text, FindForm.GetFindText, not FindForm.MatchCase,
+          FindForm.WholeWord);
         NewText := Tnt_WideStringReplace(NodeData.Range.Text, FindForm.GetFindText,
-          FindForm.GetReplaceText, ReplaceFlags);
+          FindForm.GetReplaceText, ReplaceFlags, FindForm.WholeWord);
       end;
       ChangeSubData := TChangeSubData.Create(Node.Index);
       ChangeSubData.OldText := SubRange.Text;
@@ -2784,6 +2808,7 @@ begin
   begin
     FreeAndNil(MultiChangeTask);
   end;
+  ShowStatusBarMessage(IntToStr(TotalReplaceCount) + ' item(s) replaced.');
 end;
 
 //------------------------------------------------------------------------------
@@ -3041,6 +3066,7 @@ begin
     WAVDisplayer.GetCursorPos) <> -1;
   pmiWAVDispSplitAtCursor.Enabled := pmiWAVDispDeleteRange.Enabled;
   pmiInsertKaraokeMarker.Enabled := pmiWAVDispDeleteRange.Enabled;
+  pmiDeleteSC.Enabled := (not WAVDisplayer.SelectionIsEmpty);
 end;
 
 //------------------------------------------------------------------------------
@@ -3455,7 +3481,7 @@ begin
     WAVDisplayer.Stop;
     chkAutoScrollSub.Checked := False;
     TimerAutoScrollSub.Enabled := False;
-    SetLength(EmptyArray, 0);    
+    SetLength(EmptyArray, 0);
 
     g_WebRWSynchro.BeginWrite;
     try
@@ -3495,7 +3521,7 @@ begin
     VideoRenderer.Close;
 
     ClearStack(RedoStack);
-    ClearStack(UndoStack);    
+    ClearStack(UndoStack);
     ActionUndo.Enabled := False;
     ActionRedo.Enabled := False;
   end;
@@ -6967,6 +6993,79 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.InsertSceneChange(SrcSCArray : TIntegerDynArray);
+var SCArray : TIntegerDynArray;
+    SceneChangeFileName : WideString;
+begin
+  g_SceneChangeWrapper.Insert(SrcSCArray);
+  SCArray := g_SceneChangeWrapper.GetSCArray;
+  WAVDisplayer.SetSceneChangeList(SCArray);
+  WAVDisplayer.UpdateView([uvfRange]);
+  SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
+    '.scenechange');
+  if WideFileExists(SceneChangeFileName) then
+  begin
+    SaveSceneChange(SceneChangeFileName, SCArray);
+  end;
+end;
+
+function TMainForm.DeleteSceneChange(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
+var SCArray :TIntegerDynArray;
+    SceneChangeFileName : WideString;
+begin
+  Result := g_SceneChangeWrapper.Delete(StartTimeMs, StopTimeMs);
+  SCArray := g_SceneChangeWrapper.GetSCArray;
+  WAVDisplayer.SetSceneChangeList(SCArray);
+  WAVDisplayer.UpdateView([uvfRange]);
+  SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
+    '.scenechange');
+  if WideFileExists(SceneChangeFileName) then
+  begin
+    SaveSceneChange(SceneChangeFileName, SCArray);
+  end;
+end;
+
+procedure TMainForm.ActionDeleteSceneChangeExecute(Sender: TObject);
+var UndoableDeleteSceneChange : TUndoableDeleteSceneChange;
+begin
+  if (WAVDisplayer.SelectionIsEmpty) then
+    Exit;
+  if (not g_SceneChangeWrapper.Contains(WAVDisplayer.Selection.StartTime,
+      WAVDisplayer.Selection.StopTime)) then
+    Exit;
+
+  UndoableDeleteSceneChange := TUndoableDeleteSceneChange.Create;
+  UndoableDeleteSceneChange.SetData(WAVDisplayer.Selection.StartTime,
+    WAVDisplayer.Selection.StopTime);
+  UndoableDeleteSceneChange.DoTask;
+  PushUndoableTask(UndoableDeleteSceneChange);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionReloadExecute(Sender: TObject);
+var Index : Integer;
+begin
+  if CheckSubtitlesAreSaved then
+  begin
+    if Assigned(vtvSubsList.FocusedNode) then
+    begin
+      Index := vtvSubsList.FocusedNode.Index;
+    end;
+
+    ShowStatusBarMessage('Loading subtitles...');
+    LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+    SelectNodeAtIndex(Index);
+    ClearStack(RedoStack);
+    ClearStack(UndoStack);
+    ActionUndo.Enabled := False;
+    ActionRedo.Enabled := False;
+    CurrentProject.IsDirty := False;
+  end;
+end;
+
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
@@ -6982,7 +7081,6 @@ highlight subtitles with some criteria
 
 
 
-
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
 const
   SB_SIMPLEID = Integer($FF);
@@ -6992,8 +7090,6 @@ var
   WideText: WideString;
 begin
   if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
-
-
 
 
 // -----------------------------------------------------------------------------
@@ -7006,15 +7102,9 @@ begin
 
 // -----------------------------------------------------------------------------
 
-
 parametre commun à tous les plugins dans VSS : ex min blank
-
 
 ScriptLog('todo = ' + VSSCore);
 ScriptLog('VSSCore = ' + VSSCore.abc);
-
-
-XXX : Strip tags
-XXX : Split and Merge shortcut
 }
 

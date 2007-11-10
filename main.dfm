@@ -1249,6 +1249,9 @@ object MainForm: TMainForm
         AutoHotkeys = maManual
         Caption = 'Open Recent'
       end
+      object Reload1: TTntMenuItem
+        Action = ActionReload
+      end
       object MenuItemClose: TTntMenuItem
         Action = ActionClose
       end
@@ -1400,6 +1403,9 @@ object MainForm: TMainForm
       end
       object MenuItemShowHideVideo: TTntMenuItem
         Action = ActionShowHideVideo
+      end
+      object ShowHidescenechange1: TTntMenuItem
+        Action = ActionShowHideSceneChange
       end
       object MenuItemDetachVideoWindow: TTntMenuItem
         Action = ActionDetachVideo
@@ -2111,6 +2117,14 @@ object MainForm: TMainForm
       Category = 'Playback'
       Caption = 'Play 1s before start to end'
       OnExecute = ActionPlay1sBeforeToEndExecute
+    end
+    object ActionDeleteSceneChange: TTntAction
+      Caption = 'Delete scene change'
+      OnExecute = ActionDeleteSceneChangeExecute
+    end
+    object ActionReload: TTntAction
+      Caption = 'Reload'
+      OnExecute = ActionReloadExecute
     end
   end
   object ImageList1: TImageList
@@ -3868,6 +3882,9 @@ object MainForm: TMainForm
     end
     object pmiWAVDispSetSubtitleTime: TTntMenuItem
       Action = ActionSetSubtitleTime
+    end
+    object pmiDeleteSC: TTntMenuItem
+      Action = ActionDeleteSceneChange
     end
     object pmiInsertKaraokeMarker: TTntMenuItem
       Action = ActionInsertKaraokeMarker
