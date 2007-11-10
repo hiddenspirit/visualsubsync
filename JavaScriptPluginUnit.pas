@@ -76,6 +76,9 @@ type
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
     procedure SetOffsets(StartOffset, StopOffset, FilterOffset : Integer);
     procedure SetVisible(Value : Boolean);
+    function Delete(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
+    procedure Insert(Src : TIntegerDynArray);
+    function GetSCArray : TIntegerDynArray;
   published
     function Contains(Start, Stop : Integer) : Boolean;
     function GetCount : Integer;
@@ -1341,6 +1344,83 @@ end;
 procedure TSceneChangeWrapper.SetVisible(Value : Boolean);
 begin
   FVisible := Value;
+end;
+
+function TSceneChangeWrapper.Delete(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
+var StartIdx, StopIdx, Count, I, J : Integer;
+begin
+  StartIdx := GetNextIndex(StartTimeMs);
+  StopIdx := GetNextIndex(StopTimeMs, True);
+  if (StopIdx = -1) then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+  Count := StopIdx - StartIdx + 1;
+
+  SetLength(Result, Count);
+  J := 0;
+  for I := StartIdx to StopIdx do
+  begin
+    Result[J] := FSceneChangeList[I];
+    Inc(J);
+  end;
+
+  for I := (StopIdx + 1) to High(FSceneChangeList) do
+  begin
+    FSceneChangeList[I - Count] := FSceneChangeList[I];
+  end;
+  SetLength(FSceneChangeList, Length(FSceneChangeList) - Count);
+end;
+
+procedure TSceneChangeWrapper.Insert(Src : TIntegerDynArray);
+var NewSCArray : TIntegerDynArray;
+    I, J, K : Integer;
+begin
+  I := 0; J := 0; K := 0;
+  SetLength(NewSCArray, Length(FSceneChangeList) + Length(Src));
+  while (I < Length(FSceneChangeList)) and (J < Length(Src))  do
+  begin
+    while (I < Length(FSceneChangeList)) and (FSceneChangeList[I] < Src[J]) do
+    begin
+      NewSCArray[K] := FSceneChangeList[I];
+      Inc(K);
+      Inc(I);
+    end;
+    while (J < Length(Src)) and (FSceneChangeList[I] > Src[J]) do
+    begin
+      NewSCArray[K] := Src[J];
+      Inc(K);
+      Inc(J);
+    end;
+    while (J < Length(Src)) and (I < Length(FSceneChangeList)) and (FSceneChangeList[I] = Src[J]) do
+    begin
+      NewSCArray[K] := FSceneChangeList[I];
+      Inc(K);
+      Inc(J);
+      Inc(I);
+    end;
+  end;
+  while (I < Length(FSceneChangeList)) do
+  begin
+    NewSCArray[K] := FSceneChangeList[I];
+    Inc(K);
+    Inc(I);
+  end;
+  while (J < Length(Src)) do
+  begin
+    NewSCArray[K] := Src[J];
+    Inc(K);
+    Inc(J);
+  end;
+  // Re-adjust space
+  SetLength(NewSCArray, K);
+  SetSceneChangeList(NewSCArray);
+end;
+
+function TSceneChangeWrapper.GetSCArray : TIntegerDynArray;
+begin
+  Result := FSceneChangeList;
 end;
 
 //==============================================================================
