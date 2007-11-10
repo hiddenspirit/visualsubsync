@@ -185,6 +185,7 @@ type
 
  TRegExpr = class
    private
+    FReplaceCount : Integer;
     startp : array [0 .. NSUBEXP - 1] of PRegExprChar; // founded expr starting points
     endp : array [0 .. NSUBEXP - 1] of PRegExprChar; // founded expr end points
 
@@ -464,6 +465,8 @@ type
     procedure Split (AInputStr : RegExprString; APieces : TStrings);
     // Split AInputStr into APieces by r.e. occurencies
     // Internally calls Exec[Next]
+
+    property ReplaceCount : Integer read FReplaceCount;
 
     function Replace (AInputStr : RegExprString;
       const AReplaceStr : RegExprString;
@@ -3785,6 +3788,7 @@ function TRegExpr.Replace (AInputStr : RegExprString; const AReplaceStr : RegExp
  begin
   Result := '';
   PrevPos := 1;
+  FReplaceCount := 0;
   if Exec (AInputStr) then
    REPEAT
     Result := Result + System.Copy (AInputStr, PrevPos,
@@ -3793,6 +3797,7 @@ function TRegExpr.Replace (AInputStr : RegExprString; const AReplaceStr : RegExp
     then Result := Result + Substitute (AReplaceStr)
     else Result := Result + AReplaceStr;
     PrevPos := MatchPos [0] + MatchLen [0];
+    Inc(FReplaceCount);
    UNTIL not ExecNext;
   Result := Result + System.Copy (AInputStr, PrevPos, MaxInt); // Tail
  end; { of function TRegExpr.Replace
@@ -3806,12 +3811,14 @@ function TRegExpr.ReplaceEx (AInputStr : RegExprString;
  begin
   Result := '';
   PrevPos := 1;
+  FReplaceCount := 0;
   if Exec (AInputStr) then
    REPEAT
     Result := Result + System.Copy (AInputStr, PrevPos,
       MatchPos [0] - PrevPos)
      + AReplaceFunc (Self);
     PrevPos := MatchPos [0] + MatchLen [0];
+    Inc(FReplaceCount);
    UNTIL not ExecNext;
   Result := Result + System.Copy (AInputStr, PrevPos, MaxInt); // Tail
  end; { of function TRegExpr.ReplaceEx
