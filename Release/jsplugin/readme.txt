@@ -33,6 +33,7 @@ Subtitle.StrippedText : Subtitle's text without any tags
 
 SceneChange.StartOffset : The offset in ms to keep before a scene change (value set in the preferences dialog)
 SceneChange.StopOffset : The offset in ms to keep after a scene change (value set in the preferences dialog)
+SceneChange.FilterOffset : The offset in ms from subtitle start and stop where scene change are filtered (value set in the preferences dialog)
 SceneChange.Visible : True if scene change are currenlty visible in VSS (value set in the preferences dialog)
 SceneChange.GetCount() : Get the total number of scene change
 SceneChange.GetAt(Index) : Get the time of the scene change at the specified index in ms. Index is between 0 and GetCount()-1
