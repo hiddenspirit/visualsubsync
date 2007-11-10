@@ -25,6 +25,8 @@ type
     procedure TestGetAt;
     procedure TestGetNext;
     procedure TestGetPrevious;
+    procedure TestDelete;
+    procedure TestInsert;
 
   end;
 
@@ -124,6 +126,62 @@ begin
   CheckEquals(123, SceneChangeWrapper.StartOffset, 'SceneChangeWrapper.StartOffset = 123');
   CheckEquals(456, SceneChangeWrapper.StopOffset, 'SceneChangeWrapper.StartOffset = 456');
   CheckEquals(789, SceneChangeWrapper.FilterOffset, 'SceneChangeWrapper.FilterOffset = 789');
+end;
+
+procedure TSceneChangeWrapperTests.TestDelete;
+var SCArray : TIntegerDynArray;
+begin
+  SCArray := EmptySceneChangeWrapper.Delete(10, 20);
+  CheckEquals(0, Length(SCArray), 'EmptySceneChangeWrapper.Delete(10, 20)');
+
+  SCArray := SceneChangeWrapper.Delete(-5, 5);
+  CheckEquals(0, Length(SCArray), 'SceneChangeWrapper.Delete(-5, 5)');
+
+  SCArray := SceneChangeWrapper.Delete(45, 50);
+  CheckEquals(0, Length(SCArray), 'SceneChangeWrapper.Delete(45, 50)');
+
+  SCArray := SceneChangeWrapper.Delete(5, 10);
+  CheckEquals(1, Length(SCArray), 'SceneChangeWrapper.Delete(5, 10)');
+  CheckEquals(10, SCArray[0], 'SCArray[0] = 10');
+  CheckEquals(3, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 3');
+  CheckEquals(20, SceneChangeWrapper.GetSCArray[0], 'SceneChangeWrapper.GetSCArray[0] = 20');
+  CheckEquals(30, SceneChangeWrapper.GetSCArray[1], 'SceneChangeWrapper.GetSCArray[1] = 30');
+  CheckEquals(40, SceneChangeWrapper.GetSCArray[2], 'SceneChangeWrapper.GetSCArray[2] = 40');
+
+  SCArray := SceneChangeWrapper.Delete(25, 35);
+  CheckEquals(1, Length(SCArray), 'SceneChangeWrapper.Delete(25, 35)');
+  CheckEquals(30, SCArray[0], 'SCArray[0] = 30');
+  CheckEquals(2, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 2');
+  CheckEquals(20, SceneChangeWrapper.GetSCArray[0], 'SceneChangeWrapper.GetSCArray[0] = 20');
+  CheckEquals(40, SceneChangeWrapper.GetSCArray[1], 'SceneChangeWrapper.GetSCArray[1] = 40');
+
+  SCArray := SceneChangeWrapper.Delete(40, 45);
+  CheckEquals(1, Length(SCArray), 'SceneChangeWrapper.Delete(40, 45)');
+  CheckEquals(40, SCArray[0], 'SCArray[0] = 40');
+  CheckEquals(1, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 1');
+  CheckEquals(20, SceneChangeWrapper.GetSCArray[0], 'SceneChangeWrapper.GetSCArray[0] = 20');
+
+  SCArray := SceneChangeWrapper.Delete(20, 20);
+  CheckEquals(1, Length(SCArray), 'SceneChangeWrapper.Delete(20, 20)');
+  CheckEquals(20, SCArray[0], 'SCArray[0] = 20');
+  CheckEquals(0, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 0');
+end;
+
+procedure TSceneChangeWrapperTests.TestInsert;
+var SCArray : TIntegerDynArray;
+begin
+  SetLength(SCArray, 0);
+  SceneChangeWrapper.Insert(SCArray);
+  CheckEquals(4, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 4');
+
+  SetLength(SCArray, 3);
+  SCArray[0] := 5;
+  SCArray[1] := 20;
+  SCArray[2] := 45;
+  SceneChangeWrapper.Insert(SCArray);
+  CheckEquals(6, Length(SceneChangeWrapper.GetSCArray), 'Length(SceneChangeWrapper.GetSCArray) = 7');
+  CheckEquals(5, SceneChangeWrapper.GetSCArray[0], 'SceneChangeWrapper.GetSCArray[0] = 5');
+  CheckEquals(45, SceneChangeWrapper.GetSCArray[5], 'SceneChangeWrapper.GetSCArray[5] = 45');
 end;
 
 // -----------------------------------------------------------------------------
