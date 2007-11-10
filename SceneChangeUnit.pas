@@ -95,10 +95,16 @@ begin
 end;
 
 procedure ExtractSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
+var Ext : WideString;
 begin
-  if WideLowerCase(WideExtractFileExt(Filename)) = '.avi' then
+  Ext := WideLowerCase(WideExtractFileExt(Filename));
+  if (Ext = '.avi') then
   begin
     ExtractKeyFramesAVI(Filename, SCArray);
+  end
+  else if (Ext = '.mkv') then
+  begin
+    // TODO
   end;
 end;
 
