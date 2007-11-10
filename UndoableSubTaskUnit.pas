@@ -226,9 +226,22 @@ type
     procedure SetData(ActionType : Integer; RichEdit : TTntRichEdit; NewColor : TColor);
   end;
 
+  TUndoableDeleteSceneChange = class(TUndoableTask)
+  private
+    FStartTimeMs, FStopTimeMs : Integer;
+    FDeletedSC : TIntegerDynArray;
+    
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(StartTimeMs, StopTimeMs : Integer);
+  end;
+
 implementation
 
-uses Main, MiscToolsUnit, VirtualTrees, Windows;
+uses Main, MiscToolsUnit, VirtualTrees, Windows, JavascriptPluginUnit;
 
 //==============================================================================
 
@@ -770,6 +783,30 @@ begin
   FOldSelText := RichEdit.SelText;
   FOldSelColor := RichEdit.SelAttributes.Color;
   FNewSelColor := NewColor;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TUndoableDeleteSceneChange.DoTask;
+begin
+  FDeletedSC := MainForm.DeleteSceneChange(FStartTimeMs, FStopTimeMs);
+end;
+
+function TUndoableDeleteSceneChange.GetName : WideString;
+begin
+  Result := 'TUndoableDeleteSceneChange';
+end;
+
+procedure TUndoableDeleteSceneChange.UndoTask;
+begin
+  MainForm.InsertSceneChange(FDeletedSC);
+  SetLength(FDeletedSC, 0);
+end;
+
+procedure TUndoableDeleteSceneChange.SetData(StartTimeMs, StopTimeMs : Integer);
+begin
+  FStartTimeMs := StartTimeMs;
+  FStopTimeMs := StopTimeMs;
 end;
 
 // -----------------------------------------------------------------------------
