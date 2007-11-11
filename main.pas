@@ -7048,13 +7048,13 @@ procedure TMainForm.ActionReloadExecute(Sender: TObject);
 var Index : Integer;
 begin
   if CheckSubtitlesAreSaved then
-  begin
+  begin    
     if Assigned(vtvSubsList.FocusedNode) then
     begin
       Index := vtvSubsList.FocusedNode.Index;
     end;
 
-    ShowStatusBarMessage('Loading subtitles...');
+    ShowStatusBarMessage('Reloading subtitles...');
     LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
     SelectNodeAtIndex(Index);
     ClearStack(RedoStack);
