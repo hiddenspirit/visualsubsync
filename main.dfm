@@ -2119,6 +2119,7 @@ object MainForm: TMainForm
       OnExecute = ActionPlay1sBeforeToEndExecute
     end
     object ActionDeleteSceneChange: TTntAction
+      Tag = 1
       Caption = 'Delete scene change'
       OnExecute = ActionDeleteSceneChangeExecute
     end
