@@ -10,7 +10,8 @@ procedure LoadSceneChange(Filename : WideString; var SCArray : TIntegerDynArray)
 
 implementation
 
-uses Windows, VFW, SysUtils, TntClasses, TntSysUtils, MiscToolsUnit;
+uses Windows, VFW, SysUtils, TntClasses, TntSysUtils, MiscToolsUnit,
+  MatroskaHelper, LogWriterIntf;
 
 // -----------------------------------------------------------------------------
 
@@ -94,9 +95,46 @@ begin
   AVIFileExit;
 end;
 
+procedure ExtractKeyFramesMKV(Filename : WideString; var KFArray : TIntegerDynArray);
+var MatroskaReader : TMatroskaReader;
+    FileReader : TFileReader;
+    LogWriterNull : TLogWriterNull;
+    ParseResult : Boolean;
+    I : Integer;
+    CuePoint : PMatroskaCuePoint;
+begin
+  LogWriterNull := TLogWriterNull.Create;
+  FileReader := TFileReader.Create(Filename);
+  MatroskaReader := TMatroskaReader.Create(FileReader, LogWriterNull);
+  ParseResult := False;
+  try
+    ParseResult := MatroskaReader.ReadHeader
+  except
+    on E: Exception do
+      begin
+        //Writer.AddTextLine(E.Message);
+        //ParsingLogWriter.AddTextLine(E.Message);
+      end;
+  end;
+  if ParseResult then
+  begin
+    for I := 0 to MatroskaReader.Cues.Count-1 do
+    begin
+      CuePoint := PMatroskaCuePoint(MatroskaReader.Cues[I]);
+      SetLength(KFArray, Length(KFArray) + 1);
+      KFArray[Length(KFArray) - 1] := Trunc((CuePoint.CueTime *
+        MatroskaReader.SegmentInfo.TimecodeScale) / 1000000);
+    end;
+  end;
+  MatroskaReader.Free;
+  FileReader.Free;
+  LogWriterNull.Free;
+end;
+
 procedure ExtractSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 var Ext : WideString;
 begin
+  SetLength(SCArray, 0);
   Ext := WideLowerCase(WideExtractFileExt(Filename));
   if (Ext = '.avi') then
   begin
@@ -104,7 +142,7 @@ begin
   end
   else if (Ext = '.mkv') then
   begin
-    // TODO
+    ExtractKeyFramesMKV(Filename, SCArray);
   end;
 end;
 
