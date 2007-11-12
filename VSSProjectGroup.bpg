@@ -14,6 +14,7 @@ PROJECTS = VisualSubSync.exe VisualSubSyncTests.exe
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
 
+
 VisualSubSync.exe: VisualSubSync.dpr
   $(DCC)
 
