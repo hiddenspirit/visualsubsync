@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=0
 MinorVer=9
 Release=11
-Build=852
+Build=865
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=VisualSubSync
-FileVersion=0.9.11.852
+FileVersion=0.9.11.865
 InternalName=
 LegalCopyright=
 LegalTrademarks=
