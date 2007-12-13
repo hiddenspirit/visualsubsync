@@ -2105,12 +2105,6 @@ begin
     begin
       FOnSelectedRangeChanged(Self, FRangeOldStart, FRangeOldStop);
     end;
-    if Assigned(FOnKaraokeChanged) and
-       Assigned(FSelectedRange) and
-       (System.Length(FSelectedRange.SubTime) > 0) then
-    begin
-      FOnKaraokeChanged(Self, FSelectedRange, FDynamicEditTime, FOldKaraokeSubTime);
-    end;
   end;
 
     // TODO : auto clear karoke timing that are out of subtitle bound ???
