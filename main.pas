@@ -6493,28 +6493,37 @@ end;
 // -----------------------------------------------------------------------------
 
 function TMainForm.SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
-var Range : TRange;
+var SubRange : TSubtitleRange;
+    NewText : WIdeString;
 begin
   try
-    Range := WAVDisplayer.RangeList[Index];
-    Range.StartTime := NewStartTime;
-    Range.StopTime := NewStopTime;
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+    SubRange.StartTime := NewStartTime;
+    SubRange.StopTime := NewStopTime;
+    if (Length(SubRange.SubTime) > 0) then
+    begin
+      NewText := CalculateNewTextFromSubTime(SubRange);
+      if (NewText <> SubRange.Text) then
+        SubRange.Text := NewText;
+    end;    
     FullSortTreeAndSubList;
     CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
   end;
 
-  if WAVDisplayer.SelectedRange = Range then
+  if (WAVDisplayer.SelectedRange = SubRange) then
   begin
     WAVDisplayer.Selection.StartTime := NewStartTime;
     WAVDisplayer.Selection.StopTime := NewStopTime;
   end;
 
   WAVDisplayer.UpdateView([uvfRange]);
+  if (Length(SubRange.SubTime) > 0) then
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
 
-  Result := TSubtitleRange(Range).Node.Index;
+  Result := SubRange.Node.Index;
 end;
 
 // -----------------------------------------------------------------------------
@@ -7077,8 +7086,6 @@ undo for style?
 
 TODO : display karaoke sylables in wavdisplay
 
-highlight subtitles with some criteria
-
 
 
 procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
@@ -7106,5 +7113,15 @@ parametre commun à tous les plugins dans VSS : ex min blank
 
 ScriptLog('todo = ' + VSSCore);
 ScriptLog('VSSCore = ' + VSSCore.abc);
+
+
+TODO : group undo actions (keyboard)
+TODO : convert tag when converting format
+
+TODO : test wav extraction with divx installed
+DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
+
+FIXED : [#83] Error editing an inital Time-Out inside a Karaoke (moving StartTime of a Karaoke)
+
 }
 
