@@ -60,7 +60,7 @@ VSSPlugin = {
         // Reset the regexp
         this.Rules[i].re.lastIndex = 0;
         // Print some debug info
-        if (DebugMode && this.Rules[i].replaceby !== null) {
+        if (DebugMode && this.Rules[i].replaceby !== undefined) {
           ScriptLog(SubText.replace(this.Rules[i].re, this.Rules[i].replaceby));
           ScriptLog('');
         }
@@ -73,8 +73,8 @@ VSSPlugin = {
   FixError : function(CurrentSub, PreviousSub, NextSub) {
     var SubText = CurrentSub.Text;
     for (var i = 0; i < this.Rules.length; i++) {
-      if ((this.Rules[i].replaceby !== null) && (this.Rules[i].re.test(SubText))) {
-        if (!this.Rules[i].exception) {
+      if ((this.Rules[i].replaceby !== undefined) && (this.Rules[i].re.test(SubText))) {
+        if (this.Rules[i].exception !== true) {
           CurrentSub.Text = SubText.replace(this.Rules[i].re, this.Rules[i].replaceby);
         }
         // Reset the regexp
@@ -224,6 +224,7 @@ function TestPlugin() {
   // { re : /[A-Z]{2,}[a-z]{2,}/mg, msg : "Erreur de majuscule"}               
   // no fix available, just test if the type of error is detected
   TestHasError("Erreur de MAjuscule", "Erreur de majuscule");
+  TestFixError("Erreur de MAjuscule", "Erreur de MAjuscule");
                
   // { re : /([0-9]+[.,][0-9]+)/mg, msg : "Ignorer points et virgules dans les nombres", replaceby: "[nombre=$1]", exception: true},
   TestFixError("10.3",
