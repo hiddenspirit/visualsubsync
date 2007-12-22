@@ -96,7 +96,10 @@ type
     IgnoreCase: Boolean = False; WholeWord: Boolean = False): Integer;
   function WideStringCount(const S, Pattern: WideString;
     IgnoreCase: Boolean = False; WholeWord: Boolean = False): Integer;
-    
+
+  function ConvertSSAToSRT(Src : WideString) : WideString;
+  function ConvertSRTToSSA(Src : WideString) : WideString;
+
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
@@ -1086,6 +1089,46 @@ begin
     Inc(Off);
   end;
 end;
+
+// -----------------------------------------------------------------------------
+
+// TODO : better convertion
+// 1) convert SRT/SSA/XXX into an internal format
+// 2) convert internal format into SRT/SSA/XXX
+//
+// font size: <font size="10"></font> <=> {\fs10}
+// font color: <font color="#FF0000"></font> <=> {\1c&H000000&}
+
+function ConvertSSAToSRT(Src : WideString) : WideString;
+begin
+  // Italic
+  Result := Tnt_WideStringReplace(Src, '{\i1}', '<i>', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '{\i0}', '</i>', [rfReplaceAll]);
+
+  // Bold
+  Result := Tnt_WideStringReplace(Result, '{\b1}', '<b>', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '{\b0}', '</b>', [rfReplaceAll]);
+
+  // Underline
+  Result := Tnt_WideStringReplace(Result, '{\u1}', '<u>', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '{\u0}', '</u>', [rfReplaceAll]);
+end;
+
+function ConvertSRTToSSA(Src : WideString) : WideString;
+begin
+  // Italic
+  Result := Tnt_WideStringReplace(Src, '<i>', '{\i1}', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '</i>', '{\i0}', [rfReplaceAll]);
+
+  // Bold
+  Result := Tnt_WideStringReplace(Result, '<b>', '{\b1}', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '</b>', '{\b0}', [rfReplaceAll]);
+
+  // Underline
+  Result := Tnt_WideStringReplace(Result, '<u>', '{\u1}', [rfReplaceAll]);
+  Result := Tnt_WideStringReplace(Result, '</u>', '{\u0}', [rfReplaceAll]);
+end;
+
 // -----------------------------------------------------------------------------
 end.
 // -----------------------------------------------------------------------------
