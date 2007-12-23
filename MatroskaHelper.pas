@@ -599,8 +599,16 @@ begin
     Inc(Len);
   end;
 
-  DataLength := DataLength and (not BitMask);
-  DataLengthLen := Len+1;
+  if (DataLength = $FF) and (BitMask = (1 shl 7)) then
+  begin
+    // Unknown length, assume up to the end of file
+    DataLength := FEbmlReader.FFileReader.Size - FEbmlReader.FFileReader.Tell;
+    FEbmlReader.AddLog(Format('Element with ID %X at position %d is of unknown length', [ID, Position]));
+  end
+  else
+    DataLength := DataLength and (not BitMask);
+
+  DataLengthLen := Len + 1;
   Length := IDLen + DataLengthLen + DataLength;
   Result := DataLengthLen;
 end;
