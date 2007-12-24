@@ -137,7 +137,7 @@ type
     FPositionMs : Integer;
     FPageSizeMs : Integer;
     FLengthMs : Integer;
-    FVerticalScaling : Integer; // 1..400%
+    FVerticalScaling : Integer; // 1..800%
 
     FOldPositionMs : Integer; // Used to optimize drawing
     FOldPageSizeMs : Integer;    
@@ -203,6 +203,7 @@ type
     procedure PaintRulerOnCanvas(ACanvas : TCanvas);
 
     procedure CreatePeakTab(WAVFile : TWAVFile);
+    function NormalizePeakTab(NormFactor : Double) : Boolean;
     function PixelToTime(const Pixel : Integer) : Integer;
     function TimeToPixel(const Time : Integer) : Integer;
     procedure SetScrollBar(Value : TMiniScrollBar);
@@ -988,7 +989,7 @@ var x, y1, y2 : Integer;
     StartPositionInPeaks : Double;
     Middle : Integer;
     i : Integer;
-    PeakMax, PeakMin : Smallint;
+    PeakMax, PeakMin : Integer;
     Rect : TRect;
     RectHeight : Integer;
 begin
@@ -2162,13 +2163,11 @@ var
     PeakMax8, PeakMin8 : Byte;
     PeakMax32, PeakMin32 : Single;
     PeakMaxMax, PeakMinMin : SmallInt;
-    MaxAbsoluteValue : Integer; 
+    MaxAbsoluteValue : Integer;
     NormFactor : Double;
 begin
   if Assigned(FOnPeakFileCreation) then
     FOnPeakFileCreation(Self,pfcevtStart,0);
-
-  NormFactor := 1.0;
 
   // Get 1 peak value every ~10ms
   FSamplesPerPeak := WAVFile.SamplesPerSecond div 100;
@@ -2278,21 +2277,50 @@ begin
       if Assigned(FOnPeakFileCreation) then
         FOnPeakFileCreation(Self, pfcevtProgress,(i*100) div Integer(FPeakTabSize));
     end;
-    
-    // Calc. normalize factor
-    MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
-    NormFactor := 32768.0 / MaxAbsoluteValue;
   end;
+  // Calc. normalize factor
+  MaxAbsoluteValue := Max(Abs(PeakMaxMax), Abs(PeakMinMin));
+  NormFactor := 32768.0 / MaxAbsoluteValue;
   // Normalize peak tab
-  for i:=0 to FPeakTabSize-1 do
-  begin
-    FPeakTab[i].Max := Round(FPeakTab[i].Max * NormFactor);
-    FPeakTab[i].Min := Round(FPeakTab[i].Min * NormFactor);
-  end;
+  NormalizePeakTab(NormFactor);
   Buffer8 := nil;
   Buffer16 := nil;
   if Assigned(FOnPeakFileCreation) then
     FOnPeakFileCreation(Self,pfcevtStop,0);
+end;
+
+
+//------------------------------------------------------------------------------
+
+function TWAVDisplayer.NormalizePeakTab(NormFactor : Double) : Boolean;
+var i, MaxAbsoluteValue, Value : Integer;
+begin
+  Result := False;
+  if (NormFactor = -1) then
+  begin
+    MaxAbsoluteValue := 0;
+    // First pass, calculate normalization factor
+    for i:=0 to FPeakTabSize-1 do
+    begin
+      Value := FPeakTab[i].Max;
+      if (Value > MaxAbsoluteValue) then
+        MaxAbsoluteValue := Value;
+      Value := Abs(FPeakTab[i].Min);
+      if (Value > MaxAbsoluteValue) then
+        MaxAbsoluteValue := Value;
+    end;
+    NormFactor := 32768.0 / MaxAbsoluteValue;
+  end;
+  if (NormFactor > 1.1) then
+  begin
+    // Apply normalization factor
+    for i:=0 to FPeakTabSize-1 do
+    begin
+      FPeakTab[i].Max := Round(FPeakTab[i].Max * NormFactor);
+      FPeakTab[i].Min := Round(FPeakTab[i].Min * NormFactor);
+    end;
+    Result := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -2304,10 +2332,26 @@ var PeakFilename : WideString;
     PeakFileVerRead : Cardinal;
     WAVFile : TWAVFile;
     HDRSize : Integer;
-    CreatePeakFile : Boolean;    
+    CreatePeakFile : Boolean;
+    Normalized : Boolean;
 const
     PeakFileID : string = 'PeakFile';
     PeakFileVer : Cardinal = $0100;
+
+    procedure SavePeakFile;
+    begin
+      PeakFS := TTntFileStream.Create(PeakFilename, fmCreate);
+      PeakFS.WriteBuffer(PeakFileID[1], System.Length(PeakFileID));
+      PeakFS.WriteBuffer(PeakFileVer, SizeOf(PeakFileVer));
+      PeakFS.WriteBuffer(FLengthMs, SizeOf(FLengthMs));
+      PeakFS.WriteBuffer(FWavFormat.nSamplesPerSec, SizeOf(FWavFormat.nSamplesPerSec));
+      PeakFS.WriteBuffer(FWavFormat.nChannels, SizeOf(FWavFormat.nChannels));
+      PeakFS.WriteBuffer(FWavFormat.wBitsPerSample, SizeOf(FWavFormat.wBitsPerSample));
+      PeakFS.WriteBuffer(FSamplesPerPeak, SizeOf(FSamplesPerPeak));
+      PeakFS.WriteBuffer(FPeakTabSize, SizeOf(FPeakTabSize));
+      PeakFS.WriteBuffer(FPeakTab[0], FPeakTabSize*SizeOf(TPeak));
+      PeakFS.Free;
+    end;
 begin
   FPeakDataLoaded := False;
   CreatePeakFile := True;
@@ -2339,9 +2383,17 @@ begin
       PeakFS.ReadBuffer(FSamplesPerPeak, SizeOf(FSamplesPerPeak));
       PeakFS.ReadBuffer(FPeakTabSize, SizeOf(FPeakTabSize));
       FPeakTab := nil;
-      SetLength(FPeakTab,FPeakTabSize);
-      PeakFS.Read(FPeakTab[0], FPeakTabSize*SizeOf(TPeak));
+      SetLength(FPeakTab, FPeakTabSize);
+      PeakFS.Read(FPeakTab[0], FPeakTabSize * SizeOf(TPeak));
       PeakFS.Free;
+
+      Normalized := NormalizePeakTab(-1);
+      if Normalized then
+      begin
+        // rewrite normalized data
+        SavePeakFile;
+      end;
+
       CreatePeakFile := False;
     end;
   end;
@@ -2367,17 +2419,7 @@ begin
     // Create the "peak" file
     CreatePeakTab(WAVFile);
     // Save it
-    PeakFS := TTntFileStream.Create(PeakFilename, fmCreate);
-    PeakFS.WriteBuffer(PeakFileID[1], System.Length(PeakFileID));
-    PeakFS.WriteBuffer(PeakFileVer, SizeOf(PeakFileVer));
-    PeakFS.WriteBuffer(FLengthMs, SizeOf(FLengthMs));
-    PeakFS.WriteBuffer(FWavFormat.nSamplesPerSec, SizeOf(FWavFormat.nSamplesPerSec));
-    PeakFS.WriteBuffer(FWavFormat.nChannels, SizeOf(FWavFormat.nChannels));
-    PeakFS.WriteBuffer(FWavFormat.wBitsPerSample, SizeOf(FWavFormat.wBitsPerSample));
-    PeakFS.WriteBuffer(FSamplesPerPeak, SizeOf(FSamplesPerPeak));
-    PeakFS.WriteBuffer(FPeakTabSize, SizeOf(FPeakTabSize));
-    PeakFS.WriteBuffer(FPeakTab[0], FPeakTabSize*SizeOf(TPeak));
-    PeakFS.Free;
+    SavePeakFile;
     WAVFile.Close;
     WAVFile.Free;
   end;
@@ -3062,7 +3104,7 @@ end;
 
 procedure TWAVDisplayer.SetVerticalScaling(Value : Integer);
 begin
-  Constrain(Value, 1, 400);
+  Constrain(Value, 1, 800);
   if (Value <> FVerticalScaling) then
   begin
     FVerticalScaling := Value;
