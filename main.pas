@@ -346,6 +346,9 @@ type
     ShowHidescenechange1: TTntMenuItem;
     ActionReload: TTntAction;
     Reload1: TTntMenuItem;
+    ActionMergeWithPrevious: TTntAction;
+    ActionMergeWithNext: TTntAction;
+    ActionMergeDialog: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -514,6 +517,9 @@ type
     procedure ActionPlay1sBeforeToEndExecute(Sender: TObject);
     procedure ActionDeleteSceneChangeExecute(Sender: TObject);
     procedure ActionReloadExecute(Sender: TObject);
+    procedure ActionMergeWithPreviousExecute(Sender: TObject);
+    procedure ActionMergeWithNextExecute(Sender: TObject);
+    procedure ActionMergeDialogExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -556,6 +562,8 @@ type
     UndoableMultiChangeTask : TUndoableMultiChangeTask;
 
     PrefFormInitialized : Boolean;
+
+    StartupShowVideo, StartupDetachVideo : Boolean;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -611,6 +619,7 @@ type
     procedure UpdateVolume;
     procedure UpdateSubtitleForPreview(ForceUpdate: Boolean);
     procedure SetSubtitleStartTime(SetStopTime : Boolean);
+    procedure Merge(MergeType : TMergeType; MergeRange : TMergeRange);
 
     function DetectCharsetDataLoss : Boolean;
 
@@ -632,7 +641,6 @@ type
     procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
-
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -670,7 +678,7 @@ type
     procedure RestoreSubtitles(List : TList);
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
     procedure SplitSubtitle(Index, SplitTime, BlankTime : Integer);
-    function MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
+    function MergeSubtitles(var FIndexes : array of Integer; MergeType : TMergeType) : TSubtitleRange;
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
     procedure FocusNodeAt(Index : Integer); overload;
     procedure ClearWAVSelection;
@@ -989,6 +997,8 @@ begin
 
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
     IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
+    IniFile.WriteBool('Windows', 'DetachedVideo', MenuItemDetachVideoWindow.Checked);
+    IniFile.WriteBool('Windows', 'ShowVideo', ShowingVideo);
 
     IniFile.WriteInteger('General', 'Volume', tbVolume.Position);
 
@@ -1028,6 +1038,9 @@ begin
   TntStatusBar1.Top := Maxint;
 
   tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
+
+  StartupDetachVideo := IniFile.ReadBool('Windows', 'DetachedVideo', False);
+  StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
 
   IniFile.Free;
 end;
@@ -1216,8 +1229,8 @@ begin
   if (NewText <> TntStatusBar1.Panels[1].Text) then
   begin
     TntStatusBar1.Panels[1].Text := NewText;
-    TntStatusBar1.Repaint;
-//    TCustomStatusBar.UpdatePanel
+    TntStatusBar1.Invalidate;
+    Application.ProcessMessages;
   end;
 end;
 
@@ -2144,13 +2157,16 @@ begin
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
-      if CurrentProject.DetachedVideo <> MenuItemDetachVideoWindow.Checked then
+      if (CurrentProject.DetachedVideo <> MenuItemDetachVideoWindow.Checked) then
         ActionDetachVideoExecute(nil);
-      if CurrentProject.ShowVideo <> ShowingVideo then
+      if (CurrentProject.ShowVideo <> ShowingVideo) then
         ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
       VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
       LoadVideoSceneChange;
+      DetachedVideoForm.SetNormalPos(CurrentProject.VideoWindowNormalLeft,
+        CurrentProject.VideoWindowNormalTop, CurrentProject.VideoWindowNormalWidth,
+        CurrentProject.VideoWindowNormalHeight);
     end;
 
     if ShowingVideo then
@@ -2227,6 +2243,11 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelHeight', Project.VideoPanelHeight);
   ProjectFileIni.WriteBool('VisualSubsync','ShowVideo', Project.ShowVideo);
   ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo', Project.DetachedVideo);
+
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalLeft', DetachedVideoForm.NormalLeft);
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalTop', DetachedVideoForm.NormalTop);
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalWidth', DetachedVideoForm.NormalWidth);
+  ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalHeight', DetachedVideoForm.NormalHeight);
 
   ProjectFileIni.Free;
 end;
@@ -2333,6 +2354,8 @@ begin
     ProjectFileIni.WriteString('VisualSubsync','PeakFile',ProjectForm.EditPeakFilename.Text);
     ProjectFileIni.WriteInteger('VisualSubsync','WAVMode',Ord(ProjectForm.GetWAVMode));
     ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',ProjectForm.EditSubtitleFilename.Text);
+    ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
+    ProjectFileIni.WriteBool('VisualSubsync','ShowVideo',StartupShowVideo);
     ProjectFileIni.Free;
 
     // Load the project
@@ -2954,17 +2977,44 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionMergeExecute(Sender: TObject);
+begin
+  Merge(mtNormal, mrSelected);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.Merge(MergeType : TMergeType; MergeRange : TMergeRange);
 var UndoableMergeTask : TUndoableMergeTask;
-    Node : PVirtualNode;
+    Node, NodePrevious, NodeNext : PVirtualNode;
     SubRange : TSubtitleRange;
 begin
   UndoableMergeTask := TUndoableMergeTask.Create;
-  UndoableMergeTask.SetCapacity(vtvSubsList.SelectedCount);
-  Node := vtvSubsList.GetFirstSelected;
-  while Assigned(Node) do
+
+  if (MergeRange = mrSelected) then
   begin
+    UndoableMergeTask.SetCapacity(vtvSubsList.SelectedCount);
+    Node := vtvSubsList.GetFirstSelected;
+    while Assigned(Node) do
+    begin
+      UndoableMergeTask.AddSubtitleIndex(Node.Index);
+      Node := vtvSubsList.GetNextSelected(Node);
+    end;
+  end
+  else if (MergeRange = mrWithPrevious) then
+  begin
+    Node := vtvSubsList.GetFirstSelected;
+    NodePrevious := vtvSubsList.GetPrevious(Node);
+    UndoableMergeTask.SetCapacity(2);
+    UndoableMergeTask.AddSubtitleIndex(NodePrevious.Index);
     UndoableMergeTask.AddSubtitleIndex(Node.Index);
-    Node := vtvSubsList.GetNextSelected(Node);
+  end
+  else if (MergeRange = mrWithNext) then
+  begin
+    Node := vtvSubsList.GetFirstSelected;
+    NodeNext := vtvSubsList.GetNext(Node);
+    UndoableMergeTask.SetCapacity(2);
+    UndoableMergeTask.AddSubtitleIndex(Node.Index);
+    UndoableMergeTask.AddSubtitleIndex(NodeNext.Index);
   end;
 
   if Assigned(WAVDisplayer.SelectedRange) then
@@ -2972,7 +3022,7 @@ begin
     SubRange := TSubtitleRange(WAVDisplayer.SelectedRange);
     if vtvSubsList.Selected[SubRange.Node] then
     begin
-      UndoableMergeTask.SetData(SubRange.Node.Index);
+      UndoableMergeTask.SetData(SubRange.Node.Index, MergeType);
     end;
   end;
 
@@ -6230,11 +6280,16 @@ var TntPanel : TTntStatusPanel;
 begin
   // Use an owner drawn panel to avoid the 127 bytes text limit in
   // Windows version inferior to Windows Vista
-
-  TntPanel := Panel as TTntStatusPanel;
-  WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
-  //OutputDebugStringW(PWideChar(TntPanel.Text));
-  // todo :
+  if (Panel = StatusBar.Panels[1]) then
+  begin
+    TntPanel := Panel as TTntStatusPanel;
+    WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
+  end
+  else if  (Panel = StatusBar.Panels[2]) then
+  begin
+    StatusBar.Canvas.Brush.Color := clRed;
+    StatusBar.Canvas.FillRect(Rect);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -6528,7 +6583,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TMainForm.MergeSubtitles(var FIndexes : array of Integer) : TSubtitleRange;
+function TMainForm.MergeSubtitles(var FIndexes : array of Integer; MergeType : TMergeType) : TSubtitleRange;
 var i, idx : integer;
     AccuText : WideString;
     LastStopTime : Integer;
@@ -6536,13 +6591,19 @@ var i, idx : integer;
 begin
   idx := FIndexes[Low(FIndexes)];
   FirstRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
-  AccuText := FirstRange.Text;
+  if (MergeType = mtDialog) then
+    AccuText := '- ' + FirstRange.Text
+  else
+    AccuText := FirstRange.Text;
   LastStopTime := FirstRange.StopTime;
   for i := Low(FIndexes) + 1 to High(FIndexes) do
   begin
     idx := FIndexes[i];
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
-    AccuText := AccuText + CRLF + SubRange.Text;
+    if (MergeType = mtDialog) then
+      AccuText := AccuText + CRLF + '- ' + SubRange.Text
+    else
+      AccuText := AccuText + CRLF + SubRange.Text;
     LastStopTime := Max(LastStopTime, SubRange.StopTime);
   end;
   Result := TSubtitleRange(SubRangeFactory.CreateRange);
@@ -7071,6 +7132,40 @@ begin
     ActionUndo.Enabled := False;
     ActionRedo.Enabled := False;
     CurrentProject.IsDirty := False;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionMergeWithPreviousExecute(Sender: TObject);
+var Node : PVirtualNode;
+begin
+  Node := vtvSubsList.GetFirstSelected;
+  if not Assigned(Node) then Exit;
+  Node := vtvSubsList.GetPrevious(Node);
+  if not Assigned(Node) then Exit;
+  Merge(mtNormal, mrWithPrevious);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionMergeWithNextExecute(Sender: TObject);
+var Node : PVirtualNode;
+begin
+  Node := vtvSubsList.GetFirstSelected;
+  if not Assigned(Node) then Exit;
+  Node := vtvSubsList.GetNext(Node);
+  if not Assigned(Node) then Exit;
+  Merge(mtNormal, mrWithNext);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionMergeDialogExecute(Sender: TObject);
+begin
+  if (vtvSubsList.SelectedCount > 1) then
+  begin
+    Merge(mtDialog, mrSelected);
   end;
 end;
 
