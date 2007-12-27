@@ -114,10 +114,13 @@ type
     procedure SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
   end;
 
+  TMergeType = (mtNormal, mtDialog);
+  TMergeRange = (mrWithPrevious, mrWithNext, mrSelected);
   TUndoableMergeTask = class(TUndoableTaskIndexed)
   private
     FDeletedSubs : TObjectList;
     FSelectedSubIndex : Integer;
+    FMergeType : TMergeType;
   public
     constructor Create;
     destructor Destroy; override;
@@ -126,7 +129,7 @@ type
     function GetName : WideString; override;
     procedure UndoTask; override;
 
-    procedure SetData(SelectedSubIndex : Integer);
+    procedure SetData(SelectedSubIndex : Integer; MergeType : TMergeType);
   end;
 
   TUndoableSubTextTask = class(TUndoableTask)
@@ -456,6 +459,7 @@ begin
   FDeletedSubs := TObjectList.Create;
   FDeletedSubs.OwnsObjects := True;
   FSelectedSubIndex := -1;
+  FMergeType := mtNormal;
 end;
 
 destructor TUndoableMergeTask.Destroy;
@@ -469,7 +473,7 @@ var SubRange : TSubtitleRange;
     Node : PVirtualNode;
 begin
   // Calculate the merged subtitle
-  SubRange := MainForm.MergeSubtitles(FIndexes);
+  SubRange := MainForm.MergeSubtitles(FIndexes, FMergeType);
   // Clone subtitles
   MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
   // Now delete them
@@ -502,9 +506,10 @@ begin
     MainForm.SelectNodeAtIndex(FSelectedSubIndex);
 end;
 
-procedure TUndoableMergeTask.SetData(SelectedSubIndex : Integer);
+procedure TUndoableMergeTask.SetData(SelectedSubIndex : Integer; MergeType : TMergeType);
 begin
   FSelectedSubIndex := SelectedSubIndex;
+  FMergeType := MergeType;
 end;
 
 // -----------------------------------------------------------------------------

@@ -1227,7 +1227,7 @@ object MainForm: TMainForm
       end
       item
         Style = psOwnerDraw
-        Width = 50
+        Width = 400
       end>
     OnDrawPanel = TntStatusBar1DrawPanel
   end
@@ -2128,6 +2128,21 @@ object MainForm: TMainForm
       Caption = 'Reload'
       OnExecute = ActionReloadExecute
     end
+    object ActionMergeWithPrevious: TTntAction
+      Tag = 1
+      Caption = 'Merge with previous'
+      OnExecute = ActionMergeWithPreviousExecute
+    end
+    object ActionMergeWithNext: TTntAction
+      Tag = 1
+      Caption = 'Merge with next'
+      OnExecute = ActionMergeWithNextExecute
+    end
+    object ActionMergeDialog: TTntAction
+      Tag = 1
+      Caption = 'Merge dialog'
+      OnExecute = ActionMergeDialogExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia
@@ -2135,7 +2150,7 @@ object MainForm: TMainForm
     Left = 72
     Top = 8
     Bitmap = {
-      494C01012D003100040010001000FF00FF00FF00FFFFFFFFFFFFFFFF424D3600
+      494C01012D003100040010001000FF00FF00FF10FFFFFFFFFFFFFFFF424D3600
       000000000000360000002800000040000000D0000000010020000000000000D0
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3855,7 +3870,8 @@ object MainForm: TMainForm
       FFF1FFF10001F001FFE3FFE30001F001F8C7F8C70001F001E00FE00F0001C001
       C01FC01F00018001C01FC01F00010001800F800F00010001800F800F00010001
       800F800F00010001C01FC01F00010001C01FC01F00018003E03FE03F0001C007
-      F8FFF8FF0001F00FFFFFFFFF0003F01F}
+      F8FFF8FF0001F00FFFFFFFFF0003F01F00000000000000000000000000000000
+      000000000000}
   end
   object TntOpenDialog1: TTntOpenDialog
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]

@@ -49,6 +49,10 @@ type
     ShowVideo : Boolean;
     VideoPanelWidth : Integer;
     VideoPanelHeight : Integer;
+    VideoWindowNormalLeft : Integer;
+    VideoWindowNormalTop : Integer;
+    VideoWindowNormalWidth : Integer;
+    VideoWindowNormalHeight : Integer;
     DetachedVideo : Boolean;
 
     procedure LoadFromINIFile(ProjectFilename : WideString);
@@ -162,6 +166,10 @@ begin
     VideoPanelHeight := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelHeight', 0);
     ShowVideo := ProjectFileIni.ReadBool('VisualSubsync','ShowVideo', False);
     DetachedVideo := ProjectFileIni.ReadBool('VisualSubsync','DetachedVideo', False);
+    VideoWindowNormalLeft := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalLeft', 0);
+    VideoWindowNormalTop := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalTop', 0);
+    VideoWindowNormalWidth := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalWidth', 0);
+    VideoWindowNormalHeight := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalHeight', 0);
 
     ProjectFileIni.Free;
 
