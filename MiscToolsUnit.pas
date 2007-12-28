@@ -100,6 +100,8 @@ type
   function ConvertSSAToSRT(Src : WideString) : WideString;
   function ConvertSRTToSSA(Src : WideString) : WideString;
 
+  function SwapColor(Color : Integer) : Integer;
+
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
@@ -1127,6 +1129,15 @@ begin
   // Underline
   Result := Tnt_WideStringReplace(Result, '<u>', '{\u1}', [rfReplaceAll]);
   Result := Tnt_WideStringReplace(Result, '</u>', '{\u0}', [rfReplaceAll]);
+end;
+
+// -----------------------------------------------------------------------------
+
+function SwapColor(Color : Integer) : Integer;
+begin
+  Result := Color and $0000FF00;
+  Result := Result or ((Color and $000000FF) shl 16);
+  Result := Result or ((Color and $00FF0000) shr 16);
 end;
 
 // -----------------------------------------------------------------------------
