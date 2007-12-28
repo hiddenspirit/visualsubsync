@@ -1,6 +1,6 @@
 object ErrorReportForm: TErrorReportForm
-  Left = 515
-  Top = 110
+  Left = 197
+  Top = 178
   Width = 321
   Height = 425
   BorderStyle = bsSizeToolWin
@@ -106,6 +106,10 @@ object ErrorReportForm: TErrorReportForm
         Caption = 'Clear all'
         OnClick = miClearAllClick
       end
+      object miExportToHTML: TTntMenuItem
+        Caption = 'Export to HTML...'
+        OnClick = miExportToHTMLClick
+      end
       object N2: TTntMenuItem
         Caption = '-'
       end
@@ -120,5 +124,9 @@ object ErrorReportForm: TErrorReportForm
         OnClick = miCloseClick
       end
     end
+  end
+  object TntSaveDialog1: TTntSaveDialog
+    Left = 16
+    Top = 80
   end
 end
