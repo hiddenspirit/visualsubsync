@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 220
-  Top = 89
+  Left = 205
+  Top = 93
   Width = 780
   Height = 581
   Caption = 'VisualSubSync'
@@ -1277,6 +1277,7 @@ object MainForm: TMainForm
       end
       object MenuItemExportToWAV: TTntMenuItem
         Action = ActionExportToWAV
+        Caption = 'Export to WAV...'
       end
       object N2: TTntMenuItem
         Caption = '-'

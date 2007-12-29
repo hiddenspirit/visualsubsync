@@ -564,6 +564,8 @@ type
     PrefFormInitialized : Boolean;
 
     StartupShowVideo, StartupDetachVideo : Boolean;
+    StartupVisibleExtraColumns : string;
+    StartupColumnsPosition : string;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -641,6 +643,8 @@ type
     procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
+
+    procedure ShowColumn(ColumnName : WideString; Show : Boolean);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -976,9 +980,30 @@ begin
   end;
 end;
 
+function GetVTVColumnByName(Vtv : TVirtualStringTree; Name : WideString) : TVirtualTreeColumn;
+var i : Integer;
+    Column : TVirtualTreeColumn;
+begin
+  for i := 0 to Vtv.Header.Columns.Count-1 do
+  begin
+    Column := Vtv.Header.Columns.Items[i];
+    if (Column.Text = Name) then
+    begin
+      Result := Column;
+      Exit;
+    end;
+  end;
+  Result := nil;
+end;
+
 procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
     IniFilename : WideString;
+    i : Integer;
+    VisibleExtraColumnsList : TStrings;
+    ColumnsPositionList : TStrings;
+    ColumnName : WideString;
+    Column : TVirtualTreeColumn;
 begin
   IniFilename := GetIniFilename;
   try
@@ -1001,6 +1026,29 @@ begin
     IniFile.WriteBool('Windows', 'ShowVideo', ShowingVideo);
 
     IniFile.WriteInteger('General', 'Volume', tbVolume.Position);
+
+    // Save column settings
+    VisibleExtraColumnsList := TStringList.Create;
+    for i := 0 to GeneralJSPlugin.ExtraColumnsCount-1 do
+    begin
+      ColumnName := GeneralJSPlugin.GetColumnTitle(LAST_CORE_COL_INDEX + 1 + i);
+      Column := GetVTVColumnByName(vtvSubsList, ColumnName);
+      if Assigned(Column) and (coVisible in Column.Options)  then
+      begin
+        VisibleExtraColumnsList.Add(ColumnName);
+      end;
+    end;
+    IniFile.WriteString('General', 'VisibleExtraColumns', VisibleExtraColumnsList.CommaText);
+    VisibleExtraColumnsList.Free;
+
+    ColumnsPositionList := TStringList.Create;
+    for i := 0 to vtvSubsList.Header.Columns.Count-1 do
+    begin
+      Column := vtvSubsList.Header.Columns.Items[i];
+      ColumnsPositionList.Add(IntToStr(Column.Position));
+    end;
+    IniFile.WriteString('General', 'ColumnsPosition', ColumnsPositionList.CommaText);
+    ColumnsPositionList.Free;
 
     IniFile.Free;
   except
@@ -1038,6 +1086,8 @@ begin
   TntStatusBar1.Top := Maxint;
 
   tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
+  StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
+  StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
 
   StartupDetachVideo := IniFile.ReadBool('Windows', 'DetachedVideo', False);
   StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
@@ -1091,36 +1141,36 @@ begin
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection
         {, toHotTrack, toAlwaysHideSelection}];
 
-    Header.Options := Header.Options + [hoVisible, hoAutoResize] - [hoDrag];
+    Header.Options := Header.Options + [hoVisible, hoAutoResize, hoDrag];
     Header.Style := hsFlatButtons;
 
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
     Column.MinWidth := 50;
-    Column.Options := Column.Options - [coAllowClick,coDraggable];
+    Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 100;
     Column.MinWidth := 100;
-    Column.Options := Column.Options - [coAllowClick,coDraggable];
+    Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 100;
     Column.MinWidth := 100;
-    Column.Options := Column.Options - [coAllowClick,coDraggable];
+    Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Style';
     Column.Width := 100;
     Column.MinWidth := 60;
-    Column.Options := Column.Options - [coAllowClick,coDraggable];
+    Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Text';
-    Column.Options := Column.Options - [coAllowClick,coDraggable];
+    Column.Options := Column.Options - [coAllowClick];
     Column.Width := 500;
     Column.MinWidth := 100;
 
@@ -1135,25 +1185,47 @@ end;
 
 procedure TMainForm.InitVTVExtraColumns;
 var Column : TVirtualTreeColumn;
-    i : Integer;
+    i, NewPos : Integer;
     MenuItem : TTntMenuItem;
+    VisibleExtraColumnsList, ColumnsPositionList : TStrings;
 begin
-  with vtvSubsList do
+  VisibleExtraColumnsList := TStringList.Create;
+  VisibleExtraColumnsList.CommaText := StartupVisibleExtraColumns;
+
+  for i := 0 to GeneralJSPlugin.ExtraColumnsCount-1 do
   begin
-    for i := 0 to GeneralJSPlugin.ExtraColumnsCount-1 do
+    Column := vtvSubsList.Header.Columns.Add;
+    Column.Text := GeneralJSPlugin.GetColumnTitle(LAST_CORE_COL_INDEX + 1 + i);
+    Column.Width := GeneralJSPlugin.GetColumnSize(LAST_CORE_COL_INDEX + 1 + i);;
+    Column.MinWidth := Column.Width;
+    Column.Options := Column.Options - [coAllowClick, coResizable];
+    if (VisibleExtraColumnsList.IndexOf(Column.Text) = -1) then
     begin
-      Column := Header.Columns.Add;
-      Column.Text := GeneralJSPlugin.GetColumnTitle(LAST_CORE_COL_INDEX + 1 + i);
-      Column.Width := GeneralJSPlugin.GetColumnSize(LAST_CORE_COL_INDEX + 1 + i);;
-      Column.MinWidth := Column.Width;
-      Column.Options := Column.Options - [coAllowClick,coDraggable,coResizable,coVisible];
-      MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
-      MenuItem.Caption := Column.Text;
-      MenuItem.OnClick := pmiToggleColumn;
-      MenuItem.Checked := (coVisible in Column.Options);
-      SubListHeaderPopupMenu.Items.Add(MenuItem);
+      Column.Options := Column.Options - [coVisible];
+    end;
+    MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
+    MenuItem.Caption := Column.Text;
+    MenuItem.OnClick := pmiToggleColumn;
+    MenuItem.Checked := (coVisible in Column.Options);
+    MenuItem.Tag := Integer(Column);
+    Column.Tag := Integer(MenuItem);
+    SubListHeaderPopupMenu.Items.Add(MenuItem);
+  end;
+
+  VisibleExtraColumnsList.Free;
+
+  ColumnsPositionList := TStringList.Create;
+  ColumnsPositionList.CommaText := StartupColumnsPosition;
+  for i := 0 to vtvSubsList.Header.Columns.Count-1 do
+  begin
+    Column := vtvSubsList.Header.Columns.Items[i];
+    if (i < ColumnsPositionList.Count) then
+    begin
+      NewPos := StrToIntDef(ColumnsPositionList[I], MaxInt);
+      Column.Position := NewPos;
     end;
   end;
+  ColumnsPositionList.Free;
 end;
 
 //------------------------------------------------------------------------------
@@ -6955,13 +7027,13 @@ begin
     else
     begin
       // default
-      vtvSubsList.SelectionBlendFactor := 128;
+      vtvSubsList.SelectionBlendFactor := 180;
     end;
   end
   else
   begin
     // default  
-    vtvSubsList.SelectionBlendFactor := 128;
+    vtvSubsList.SelectionBlendFactor := 180;
   end;
 end;
 
@@ -7022,6 +7094,33 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ShowColumn(ColumnName : WideString; Show : Boolean);
+var MenuItem : TTntMenuItem;
+    i : Integer;
+    Column : TVirtualTreeColumn;
+begin
+  for i := 0 to vtvSubsList.Header.Columns.Count - 1 do
+  begin
+    Column := vtvSubsList.Header.Columns.Items[i];
+    if (Column.Text = ColumnName) then
+    begin
+      MenuItem := (TObject(Column.Tag) as TTntMenuItem);
+      MenuItem.Checked := Show;
+      if Show then
+      begin
+        Column.Options := Column.Options + [coVisible];
+      end
+      else
+      begin
+        Column.Options := Column.Options - [coVisible];
+      end;
+      Break;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.pmiToggleColumn(Sender: TObject);
 var Column : TVirtualTreeColumn;
     i : integer;
@@ -7031,23 +7130,16 @@ begin
   if (Sender is TTntMenuItem) then
   begin
     SelectedMenuItem := (Sender as TTntMenuItem);
-    SelectedMenuText := Tnt_WideStringReplace(SelectedMenuItem.Caption, '&', '', [rfReplaceAll]);
-    for i := 0 to vtvSubsList.Header.Columns.Count - 1 do
+    Column := (TObject(SelectedMenuItem.Tag) as TVirtualTreeColumn);
+    if (coVisible in Column.Options) then
     begin
-      Column := vtvSubsList.Header.Columns.Items[i];
-      if (Column.Text = SelectedMenuText) then
-      begin
-        if (coVisible in Column.Options) then
-        begin
-          Column.Options := Column.Options - [coVisible];
-          SelectedMenuItem.Checked := False;
-        end
-        else
-        begin
-          Column.Options := Column.Options + [coVisible];
-          SelectedMenuItem.Checked := True;
-        end;
-      end;
+      Column.Options := Column.Options - [coVisible];
+      SelectedMenuItem.Checked := False;
+    end
+    else
+    begin
+      Column.Options := Column.Options + [coVisible];
+      SelectedMenuItem.Checked := True;
     end;
   end;
 end;
