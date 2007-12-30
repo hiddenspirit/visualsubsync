@@ -118,7 +118,7 @@ type
   TKaraokeTimeChangedEvent = procedure (Sender: TObject; Range : TRange; SubTimeIndex, OldTime : Integer) of object;
   TSelectedKaraokeRangeEvent = procedure (Sender: TObject; Range : TRange) of object;
   TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
-  TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer) of object;
+  TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer; NeedSort : Boolean) of object;
   TCustomDrawRange = procedure (Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect) of object;
 
   TWAVDisplayer = class(TCustomPanel)
@@ -2155,13 +2155,14 @@ begin
   // The selected sub has changed, we need to keep range list sorted
   if FNeedToSortSelectedSub then
   begin
-    FRangeList.FullSort; // TODO improvement : re-sort only selected sub
-    FNeedToSortSelectedSub := False;
     if Assigned(FOnSelectedRangeChanged) and
        Assigned(FSelectedRange) then
     begin
-      FOnSelectedRangeChanged(Self, FRangeOldStart, FRangeOldStop);
+      FOnSelectedRangeChanged(Self, FRangeOldStart, FRangeOldStop, FNeedToSortSelectedSub);
     end;
+    // Make sure we keep the list sorted internally
+    FRangeList.FullSort;
+    FNeedToSortSelectedSub := False;
   end;
 
     // TODO : auto clear karoke timing that are out of subtitle bound ???
