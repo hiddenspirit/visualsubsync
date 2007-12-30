@@ -1103,6 +1103,7 @@ begin
   WAVDisplayer.SceneChangeStartOffset := ConfigObject.SceneChangeStartOffset;
   WAVDisplayer.SceneChangeStopOffset := ConfigObject.SceneChangeStopOffset;
   WAVDisplayer.SceneChangeFilterOffset := ConfigObject.SceneChangeFilterOffset;
+  WAVDisplayer.MinimumBlank := ConfigObject.SpaceKeyBlankBetweenSubtitles;
   WAVDisplayer.UpdateView([uvfRange]);
   g_SceneChangeWrapper.SetOffsets(ConfigObject.SceneChangeStartOffset,
     ConfigObject.SceneChangeStopOffset,
