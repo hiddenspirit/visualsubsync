@@ -54,6 +54,8 @@ type
     function  GetSubTimeRange(const PosMS : Integer; Range : TRange) : Integer;
     procedure GetSubTimeRangeAt(const Idx : Integer; Range : TRange);
     function UpdateSubTimeFromText(const Text : WideString) : Boolean;
+    function SetTimes(Start,Stop : Integer) : Boolean; // Return true if changed
+    function ToString : string;
   end;
 
   TRangeFactory = class
@@ -197,7 +199,10 @@ type
     FSceneChangeList : TIntegerDynArray;
     FSceneChangeStartOffset, FSceneChangeStopOffset, FSceneChangeFilterOffset : Integer;
     FSceneChangeEnabled : Boolean;
+    FMinimumBlank : Integer; // Minimum blank between subtitle in ms
+    FMinBlank1, FMinBlank2 : TRange;
 
+    procedure DrawAlphaRect(ACanvas : TCanvas; t1, t2 : Integer);
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
     procedure PaintRulerOnCanvas(ACanvas : TCanvas);
@@ -208,7 +213,7 @@ type
     function TimeToPixel(const Time : Integer) : Integer;
     procedure SetScrollBar(Value : TMiniScrollBar);
     procedure OnScrollBarChange(Sender: TObject);
-    function GetPositionMs : Cardinal;
+    function GetPositionMs : Integer;
     procedure InternalOnStopPlaying(Sender : TObject);
     procedure OnUpdateCursor(Sender : TObject);
 
@@ -227,6 +232,9 @@ type
 
     function GetWavCanvasHeight : Integer;
     function IsFilteredSceneChange(SceneChange : Integer) : Boolean;
+
+    function SetMinBlankOnIdx(Idx : Integer) : Boolean;
+    function SetMinBlankAt(TimeMs : Integer) : Boolean;
         
   protected
     procedure DblClick; override;
@@ -312,6 +320,7 @@ type
     property Enabled;
     property Length : Integer read FLengthMs;
     property EnableMouseAntiOverlapping : Boolean read FEnableMouseAntiOverlapping write FEnableMouseAntiOverlapping;
+    property MinimumBlank : Integer read FMinimumBlank write FMinimumBlank;
     property PageSize : Integer read FPageSizeMs;
     property PopupMenu;
     property Position : Integer read FPositionMs;
@@ -638,6 +647,26 @@ begin
   Result := AreTimesDifferent;
 end;
 
+function TRange.SetTimes(Start, Stop : Integer) : Boolean; // Return true if changed
+begin
+  Result := False;
+  if (Self.StartTime <> Start) then
+  begin
+    Self.StartTime := Start;
+    Result := True;
+  end;
+  if (Self.StopTime <> Stop) then
+  begin
+    Self.StopTime := Stop;
+    Result := True;
+  end;
+end;
+
+function TRange.ToString : string;
+begin
+  Result := Format('[%d,%d]', [StartTime, StopTime]);
+end;
+
 // =============================================================================
 
 function TRangeFactory.CreateRange : TRange;
@@ -935,6 +964,13 @@ begin
   FSceneChangeStopOffset := 130;
   FSceneChangeFilterOffset := 250;
   FSceneChangeEnabled := True;
+  FMinimumBlank := 0;
+  FMinBlank1 := TRange.Create;
+  FMinBlank1.StartTime := 0;
+  FMinBlank1.StopTime := 0;
+  FMinBlank2 := TRange.Create;
+  FMinBlank2.StartTime := 0;
+  FMinBlank2.StopTime := 0;
   
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
@@ -968,6 +1004,8 @@ begin
   FRangeList.Free;
   FOffscreenWAV.Free;
   FOffscreen.Free;
+  FMinBlank1.Free;
+  FMinBlank2.Free;
 
   inherited;
 end;
@@ -1124,12 +1162,32 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TWAVDisplayer.DrawAlphaRect(ACanvas : TCanvas; t1, t2 : Integer);
+var x1, x2 : Integer;
+    r : TRect;
+begin
+  x1 := TimeToPixel(t1 - FPositionMs);
+  x2 := TimeToPixel(t2 - FPositionMs);
+
+  Constrain(x1, 0, Width);
+  Constrain(x2, 0, Width);
+  r := ClientRect;
+  r.Left := x1;
+  r.Right := x2;
+  r.Bottom := r.Bottom - FScrollBar.Height;
+  if FDisplayRuler then
+    r.Bottom := r.Bottom - FDisplayRulerHeight;
+
+  VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, r,
+    Point(0,0), bmConstantAlphaAndColor, 80, ACanvas.Pen.Color);
+end;
+
 procedure TWAVDisplayer.PaintOnCanvas(ACanvas : TCanvas);
 var x, SceneChange : Integer;
     x1, x2, y1, y2 : Integer;
-    i, j : Integer;
+    i, j, t1, t2 : Integer;
     r : TRange;
-    SelRect, CustomDrawRect, SCRect : TRect;
+    SelRect, CustomDrawRect : TRect;
     CanvasHeight : Integer;
 begin
   CanvasHeight := GetWavCanvasHeight;
@@ -1151,20 +1209,8 @@ begin
         if (FSceneChangeStopOffset + FSceneChangeStartOffset > 0) and
            (not IsFilteredSceneChange(SceneChange))  then
         begin
-          x1 := TimeToPixel(SceneChange - FPositionMs - FSceneChangeStartOffset);
-          x2 := TimeToPixel(SceneChange - FPositionMs + FSceneChangeStopOffset);
-
-          Constrain(x1, 0, Width);
-          Constrain(x2, 0, Width);
-          SCRect := ClientRect;
-          SCRect.Left := x1;
-          SCRect.Right := x2;
-          SCRect.Bottom := SCRect.Bottom - FScrollBar.Height;
-          if FDisplayRuler then
-            SCRect.Bottom := SCRect.Bottom - FDisplayRulerHeight;
-
-          VirtualTrees.AlphaBlend(ACanvas.Handle, ACanvas.Handle, SCRect,
-            Point(0,0), bmConstantAlphaAndColor, 80, ACanvas.Pen.Color);
+          DrawAlphaRect(ACanvas, SceneChange - FSceneChangeStartOffset,
+            SceneChange + FSceneChangeStopOffset);
         end;
 
         x := TimeToPixel(SceneChange - FPositionMs);
@@ -1174,7 +1220,22 @@ begin
     end;
   end;
 
-  // TODO : this is very slow when lot's of range are on screen
+  //OutputDebugString(PChar(Format('FDynamicEditMode = %d, FSelectionOrigin = %d, FCursorMs = %d, FDynamicSelRange = %p, SelStartTime = %d',
+  //  [Ord(FDynamicEditMode), FSelectionOrigin, FCursorMs, Pointer(FDynamicSelRange), FSelection.StartTime])));
+
+  if (FMinBlank1.StartTime <> FMinBlank1.StopTime) then
+  begin
+    ACanvas.Pen.Color := clWhite;
+    DrawAlphaRect(ACanvas, FMinBlank1.StartTime, FMinBlank1.StopTime);
+  end;
+
+  if (FMinBlank2.StartTime <> FMinBlank2.StopTime) then
+  begin
+    ACanvas.Pen.Color := clWhite;
+    DrawAlphaRect(ACanvas, FMinBlank2.StartTime, FMinBlank2.StopTime);
+  end;
+
+  // TODO improvement : this is very slow when lot's of range are on screen
   // We should do this in 2 pass to group ranges, and use another color
 
   // Range
@@ -1302,7 +1363,7 @@ begin
     begin
       Constrain(x1, 0, Width);
       Constrain(x2, 0, Width);
-      if x1 <> x2 then
+      if (x1 <> x2) then
       begin
         SelRect := ClientRect;
         SelRect.Left := x1;
@@ -1471,9 +1532,6 @@ begin
   begin
     UpdateView([uvfPageSize]);
   end;
-  //Canvas.Draw(0, 0, FOffscreen);
-  //OutputDebugString(PChar(Format('ClipRect L T R B : %d %d %d %d',
-  //  [Canvas.ClipRect.Left, Canvas.ClipRect.Top, Canvas.ClipRect.Right, Canvas.ClipRect.Bottom])));
   Canvas.CopyRect(Canvas.ClipRect, FOffscreen.Canvas, Canvas.ClipRect);
 end;
 
@@ -1584,14 +1642,9 @@ begin
     end else begin
       if (FSelection.StartTime <> FSelection.StopTime) then
         Include(UpdateFlags, uvfSelection); // clear selection
-      FSelectedRange := nil;
       FSelectionOrigin := NewCursorPos;
-      FSelection.StartTime := 0;
-      FSelection.StopTime := 0;
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
+      SetSelectedRangeEx(nil, False);
     end;
-
 
     if (FEnableMouseAntiOverlapping = True) then
     begin
@@ -1711,12 +1764,8 @@ begin
       end
       else
       begin
-        FSelectedRange := nil;
         FSelectionOrigin := NewCursorPos;
-        FSelection.StartTime := 0;
-        FSelection.StopTime := 0;
-        if Assigned(FOnSelectionChange) then
-          FOnSelectionChange(Self);
+        SetSelectedRangeEx(nil, False);
       end;
     end;
   end;
@@ -1743,12 +1792,8 @@ begin
       end
       else
       begin
-        FSelectedRange := nil;
         FSelectionOrigin := NewCursorPos;
-        FSelection.StartTime := 0;
-        FSelection.StopTime := 0;
-        if Assigned(FOnSelectionChange) then
-          FOnSelectionChange(Self);
+        SetSelectedRangeEx(nil, False);
       end;
     end;
   end;
@@ -1868,15 +1913,19 @@ begin
     FDynamicEditMode := NewDynamicEditMode;
     FDynamicSelRangeOld := FDynamicSelRange;
     if (Range <> FSelection) then
-    begin
-      FDynamicSelRange := Range;
-    end
+      FDynamicSelRange := Range
+    else if Assigned(FSelectedRange) then
+      FDynamicSelRange := FSelectedRange
     else
       FDynamicSelRange := nil;
   end;
 
   if (FDynamicSelRange <> FDynamicSelRangeOld) then
   begin
+    if Assigned(FDynamicSelRange) and ((FDynamicEditMode = demStart) or (FDynamicEditMode = demStop)) then
+    begin
+      SetMinBlankAt(FDynamicSelRange.StartTime)
+    end;
     UpdateView([uvfRange]);
   end;
 end;
@@ -2031,12 +2080,13 @@ begin
   end
   else
   begin
-    // "Dynamic selection" 
+    Constrain(X, 0, Width);
+    CursorPosMs := PixelToTime(X) + FPositionMs;
+
+    // "Dynamic selection"
     if (FSelMode = smCoolEdit) and (Shift = []) then
     begin
       // Find a subtitle under the mouse
-      Constrain(X, 0, Width);
-      CursorPosMs := PixelToTime(X) + FPositionMs;
       RangeSelWindow := PixelToTime(4);
       if (RangeSelWindow < 1) then RangeSelWindow := 1;
 
@@ -2069,13 +2119,19 @@ begin
           Exit;
       end;
     end;
+    
+    if SetMinBlankAt(CursorPosMs) then
+    begin
+      Include(UpdateFlags, uvfRange);
+    end;
+
     Cursor := crIBeam;
     FDynamicEditMode := demNone;
     FDynamicSelRangeOld := FDynamicSelRange;
     FDynamicSelRange := nil;
     if (FDynamicSelRange <> FDynamicSelRangeOld) then
     begin
-      UpdateView([uvfRange]);
+      Include(UpdateFlags, uvfRange);
     end;
   end;
 
@@ -2140,6 +2196,54 @@ begin
   FMinSelTime := -1;
   FMaxSelTime := -1;
   ClipCursor(nil);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.DblClick;
+var idx : Integer;
+    Range : TRange;
+    MouseCursorPT : TPoint;
+    CanvasHeight, y1, y2 : Integer;
+begin
+  inherited;
+
+  // Disable subtitle selection for SSA mode
+  if (not FPeakDataLoaded) or (SelMode = smSSA) then
+    Exit;
+  idx := FRangeList.GetRangeIdxAt(FCursorMs);
+  if (idx = -1) then
+    Exit;
+
+  Range := FRangeList[idx];
+
+  // Karaoke subtime selection
+  if (System.Length(Range.SubTime) > 0) then
+  begin
+    Windows.GetCursorPos(MouseCursorPT);
+    MouseCursorPT := ScreenToClient(MouseCursorPT);
+    CanvasHeight := GetWavCanvasHeight;
+    y1 := CanvasHeight div 10;
+    y2 := (CanvasHeight * 9) div 10;
+    if (MouseCursorPT.Y > y1) and (MouseCursorPT.Y < y2) then
+    begin
+      FSelectedKaraokeIndex := Range.GetSubTimeRange(FCursorMs, FSelection);
+      UpdateView([uvfSelection,uvfRange]);
+      if Assigned(FOnSelectionChange) then
+        FOnSelectionChange(Self);
+      if Assigned(FOnSelectedKaraokeRange) then
+        FOnSelectedKaraokeRange(Self, Range);
+      FSelectedRange := nil;
+      FSelectedKaraokeRange := Range;
+      Exit;
+    end
+  end;
+
+  // Full subtitle selection
+  SetSelectedRangeEx(Range, False);
+  UpdateView([uvfSelection, uvfRange]);
+  if Assigned(FOnSelectedRange) then
+    FOnSelectedRange(Self, FSelectedRange, False);
 end;
 
 //------------------------------------------------------------------------------
@@ -2532,7 +2636,7 @@ end;
 //------------------------------------------------------------------------------
 
 // Called only internally when the scroll bar change
-function TWAVDisplayer.GetPositionMs : Cardinal;
+function TWAVDisplayer.GetPositionMs : Integer;
 begin
   if (FScrollBar.Position + FPageSizeMs - 1) > FLengthMs then
     Result := (FLengthMs - FPageSizeMs)
@@ -2782,55 +2886,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TWAVDisplayer.DblClick;
-var idx : Integer;
-    Range : TRange;
-    MouseCursorPT : TPoint;
-    CanvasHeight, y1, y2 : Integer;
-begin
-  inherited;
-
-  // Disable subtitle selection for SSA mode
-  if (not FPeakDataLoaded) or (SelMode = smSSA) then
-    Exit;
-  idx := FRangeList.GetRangeIdxAt(FCursorMs);
-  if (idx <> -1) then
-  begin
-    Range := FRangeList[idx];
-
-    // Karaoke subtime selection    
-    Windows.GetCursorPos(MouseCursorPT);
-    MouseCursorPT := ScreenToClient(MouseCursorPT);
-    CanvasHeight := GetWavCanvasHeight;
-    y1 := CanvasHeight div 10;
-    y2 := (CanvasHeight * 9) div 10;
-    if (MouseCursorPT.Y > y1) and (MouseCursorPT.Y < y2) and
-       (System.Length(Range.SubTime) > 0) then
-    begin
-      FSelectedKaraokeIndex := Range.GetSubTimeRange(FCursorMs, FSelection);
-      UpdateView([uvfSelection,uvfRange]);
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
-      if Assigned(FOnSelectedKaraokeRange) then
-        FOnSelectedKaraokeRange(Self, Range);
-      FSelectedRange := nil;
-      FSelectedKaraokeRange := Range;
-    end
-    else
-    begin
-      FSelectedRange := Range;
-      FSelection.StartTime := FSelectedRange.StartTime;
-      FSelection.StopTime := FSelectedRange.StopTime;
-      UpdateView([uvfSelection,uvfRange]);
-      if Assigned(FOnSelectionChange) then
-        FOnSelectionChange(Self);
-      if Assigned(FOnSelectedRange) then
-        FOnSelectedRange(Self, FSelectedRange, False);
-    end;
-  end;
-end;
-
-//------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.DeleteRangeAt(const Pos : Integer; const UpdateDisplay : Boolean);
 var Idx : Integer;
@@ -2849,7 +2904,9 @@ begin
   if (Idx < 0) or (Idx >= FRangeList.Count) then
     Exit;
   if FRangeList[Idx] = FSelectedRange then
-    FSelectedRange := nil;
+  begin
+    SetSelectedRangeEx(nil, False);
+  end;
   FRangeList.Delete(Idx);
   if (UpdateDisplay) then
     UpdateView([uvfRange]);
@@ -2967,18 +3024,116 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TWAVDisplayer.SetMinBlankOnIdx(Idx : Integer) : Boolean;
+var NewStartTime, NewStopTime : Integer;
+    StepResult : Boolean;
+begin
+  Result := False;
+
+  if (Idx > 0) then
+  begin
+    NewStartTime := FRangeList[Idx - 1].StopTime;
+    NewStopTime := FRangeList[Idx - 1].StopTime + FMinimumBlank;
+  end
+  else
+  begin
+    NewStartTime := 0;
+    NewStopTime := 0;
+  end;
+  StepResult := FMinBlank1.SetTimes(NewStartTime, NewStopTime);
+  if StepResult then
+    OutputDebugString(PChar('SetMinBlankOnIdx FMinBlank1'));
+  Result := Result or StepResult;
+
+  if (Idx < FRangeList.Count-1) then
+  begin
+    NewStartTime := FRangeList[Idx + 1].StartTime - FMinimumBlank;
+    NewStopTime := FRangeList[Idx + 1].StartTime;
+  end
+  else
+  begin
+    NewStartTime := 0;
+    NewStopTime := 0;
+  end;
+  StepResult := FMinBlank2.SetTimes(NewStartTime, NewStopTime);
+  if StepResult then
+    OutputDebugString(PChar('SetMinBlankOnIdx FMinBlank2'));  
+  Result := Result or StepResult;
+end;
+
+//------------------------------------------------------------------------------
+
+function TWAVDisplayer.SetMinBlankAt(TimeMs : Integer) : Boolean;
+var idx : Integer;
+    NewStartTime, NewStopTime  : Integer;
+    StepResult : Boolean;
+begin
+  Result := False;
+
+  idx := FRangeList.GetRangeIdxAt(TimeMs);
+  if (idx <> -1) then
+  begin
+    StepResult := SetMinBlankOnIdx(idx);
+    Result := Result or StepResult;
+  end
+  else
+  begin
+    idx := FRangeList.FindInsertPos(TimeMs, -1);
+    if (idx > 0) then
+    begin
+      NewStartTime := FRangeList[idx - 1].StopTime;
+      NewStopTime := FRangeList[idx - 1].StopTime + FMinimumBlank;
+    end
+    else
+    begin
+      NewStartTime := 0;
+      NewStopTime := 0;
+    end;
+    StepResult := FMinBlank1.SetTimes(NewStartTime, NewStopTime);
+    if StepResult then
+      OutputDebugString(PChar('SetMinBlankAt FMinBlank1'));
+    Result := Result or StepResult;
+
+    if (idx < FRangeList.Count-1) then
+    begin
+      NewStartTime := FRangeList[idx].StartTime - FMinimumBlank;
+      NewStopTime := FRangeList[idx].StartTime;
+    end
+    else
+    begin
+      NewStartTime := 0;
+      NewStopTime := 0;
+    end;
+    StepResult := FMinBlank2.SetTimes(NewStartTime, NewStopTime);
+    if StepResult then
+      OutputDebugString(PChar('SetMinBlankAt FMinBlank2'));    
+    Result := Result or StepResult;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TWAVDisplayer.SetSelectedRangeEx(Value : TRange; UpdateDisplay : Boolean);
 begin
+  // Make sure to reset selection if Value is nil
+  if (Value = nil) then
+  begin
+    FSelection.StartTime := 0;
+    FSelection.StopTime := 0;
+  end;
+  
   if (FSelectedRange <> Value) then
   begin
     FSelectedRange := Value;
-    if FSelectedRange <> nil then
+    if (FSelectedRange <> nil) then
     begin
       FSelection.StartTime := FSelectedRange.StartTime;
       FSelection.StopTime := FSelectedRange.StopTime;
+      SetMinBlankAt(FSelectedRange.StartTime);
     end;
+    
     if UpdateDisplay then
-      UpdateView([uvfSelection,uvfRange]);
+      UpdateView([uvfSelection, uvfRange]);
     if Assigned(FOnSelectionChange) then
       FOnSelectionChange(Self);
     //if Assigned(FOnSelectedRange) then
@@ -3006,7 +3161,7 @@ begin
 
   OldPageSize := FPageSizeMs;
   OldPos := FPositionMs;
-  SetSelectedRangeEx(Range,False);
+  SetSelectedRangeEx(Range, False);
   ZoomRange(TmpRange);
   if (OldPageSize = FPageSizeMs) and (OldPos = FPositionMs) then
     UpdateView([uvfSelection,uvfRange]);
@@ -3070,7 +3225,7 @@ begin
   FPositionMs := 0;
   FSelection.StartTime := 0;
   FSelection.StopTime := 0;
-  FSelectedRange := nil;
+  SetSelectedRangeEx(nil, False);
   FCursorMs := 0;
   FPlayCursorMs := 0;
 
