@@ -358,7 +358,7 @@ type
     procedure WAVDisplayer1SelectedRange(Sender: TObject; SelectedRange : TRange; IsDynamic : Boolean);
     procedure WAVDisplayer1SelectedRangeChange(Sender: TObject);
     procedure WAVDisplayer1SelectedRangeChanged(Sender: TObject;
-      OldStart, OldStop : Integer);
+      OldStart, OldStop : Integer; NeedSort : Boolean);
     procedure WAVDisplayer1AutoScrollChange(Sender: TObject);
     procedure WAVDisplayPopup_DeleteRange(Sender: TObject);
     procedure WAVDisplayer1StartPlaying(Sender: TObject);
@@ -1512,7 +1512,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.WAVDisplayer1SelectedRangeChanged(
-  Sender: TObject; OldStart, OldStop : Integer);
+  Sender: TObject; OldStart, OldStop : Integer; NeedSort : Boolean);
 var SubRange : TSubtitleRange;
     UndoableSetTimeTask : TUndoableSetTimeTask;
 begin
