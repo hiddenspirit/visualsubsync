@@ -1622,23 +1622,27 @@ begin
   Result := -1;
 
   SnappingDistanceTime := PixelToTime(SNAPPING_DISTANCE_PIXEL);
-  if (FMinBlankInfo1.Exists) then
-  begin
-    Candidate := FMinBlankInfo1.GetSnappingPoint(FMinimumBlank);
-    if Abs(Candidate - PosMs) <= SnappingDistanceTime then
-    begin
-      Result := Candidate;
-      Exit;
-    end;
-  end;
 
-  if (FMinBlankInfo2.Exists) then
+  if (FMinimumBlank > 0) then
   begin
-    Candidate := FMinBlankInfo2.GetSnappingPoint(FMinimumBlank);
-    if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+    if (FMinBlankInfo1.Exists) then
     begin
-      Result := Candidate;
-      Exit;
+      Candidate := FMinBlankInfo1.GetSnappingPoint(FMinimumBlank);
+      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      begin
+        Result := Candidate;
+        Exit;
+      end;
+    end;
+
+    if (FMinBlankInfo2.Exists) then
+    begin
+      Candidate := FMinBlankInfo2.GetSnappingPoint(FMinimumBlank);
+      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      begin
+        Result := Candidate;
+        Exit;
+      end;
     end;
   end;
 
@@ -1687,7 +1691,7 @@ procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
     ClipKaraokeRect, ClipSubRect : TRect;
-    x1, x2, i : Integer;
+    x1, x2, i, SnappingPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
@@ -1738,12 +1742,12 @@ begin
     end;
     NewCursorPos := PixelToTime(X) + FPositionMs;
 
-    if (FMinimumBlank > 0) then
+    if (not (ssCtrl in Shift)) then
     begin
-      i := FindSnappingPoint(NewCursorPos);
-      if (i <> -1) then
+      SnappingPos := FindSnappingPoint(NewCursorPos);
+      if (SnappingPos <> -1) then
       begin
-        NewCursorPos := i;
+        NewCursorPos := SnappingPos;
       end
     end;
 
@@ -2088,7 +2092,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.MouseMove(Shift: TShiftState; X, Y: Integer);
-var NewCursorPos, CursorPosMs, i : Integer;
+var NewCursorPos, CursorPosMs, SnappingPos : Integer;
     ScrollDiff : Integer;
     DiffMuliplier : Integer;
     UpdateFlags : TUpdateViewFlags;
@@ -2122,12 +2126,12 @@ begin
             Constrain(NewCursorPos, 0, FMaxSelTime);
           end;
 
-          if (FMinimumBlank > 0) then
+          if (not (ssCtrl in Shift)) then
           begin
-            i := FindSnappingPoint(NewCursorPos);
-            if (i <> -1) then
+            SnappingPos := FindSnappingPoint(NewCursorPos);
+            if (SnappingPos <> -1) then
             begin
-              NewCursorPos := i;
+              NewCursorPos := SnappingPos;
             end;
           end;
 
