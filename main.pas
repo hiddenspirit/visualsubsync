@@ -1675,6 +1675,7 @@ begin
   Result := False;
   if not WideFileExists(Filename) then
   begin
+    WAVDisplayer.ClearSelection;
     WAVDisplayer.RangeList.Clear;
     vtvSubsList.Clear;
     Exit;
@@ -1683,6 +1684,7 @@ begin
   SubtitleFileHeader := '';
   SubtitleFileFooter := '';
 
+  WAVDisplayer.ClearSelection;
   WAVDisplayer.RangeList.Clear;
 
   Source := TTntStringList.Create;
@@ -1777,6 +1779,7 @@ begin
   begin
     SubtitleFileHeader := '';
     SubtitleFileFooter := '';
+    WAVDisplayer.ClearSelection;
     WAVDisplayer.RangeList.Clear;
     vtvSubsList.Clear;
     StyleFormInstance.ClearAll;
@@ -1784,6 +1787,7 @@ begin
     Exit;
   end;
 
+  WAVDisplayer.ClearSelection;
   WAVDisplayer.RangeList.Clear;
 
   ssaParser := TSSAParser.Create;
@@ -3638,6 +3642,7 @@ begin
       ErrorReportForm.Clear;
       vtvSubsList.Clear;
 
+      WAVDisplayer.ClearSelection;
       WAVDisplayer.RangeList.Clear;
       WAVDisplayer.Enabled := False;
       WAVDisplayer.Close;

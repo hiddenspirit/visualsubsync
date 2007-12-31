@@ -121,6 +121,19 @@ type
   TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer; NeedSort : Boolean) of object;
   TCustomDrawRange = procedure (Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect) of object;
 
+  TMinBlankInfoPart = (mbipStart, mbipStop, mbipInvalid);
+  TMinBlankInfo = class(TObject)
+  private
+    Range : TRange;
+    Part : TMinBlankInfoPart;
+  public
+    constructor Create;
+    function Exists : Boolean;
+    function SetInfo(NewRange : TRange; NewPart : TMinBlankInfoPart) : Boolean;
+    function GetStart(MinBlankTime : Integer) : Integer;
+    function GetStop(MinBlankTime : Integer) : Integer;
+  end;
+
   TWAVDisplayer = class(TCustomControl)
   private
     { Private declarations }
@@ -200,7 +213,7 @@ type
     FSceneChangeStartOffset, FSceneChangeStopOffset, FSceneChangeFilterOffset : Integer;
     FSceneChangeEnabled : Boolean;
     FMinimumBlank : Integer; // Minimum blank between subtitle in ms
-    FMinBlank1, FMinBlank2 : TRange;
+    FMinBlankInfo1, FMinBlankInfo2 : TMinBlankInfo;
 
     procedure DrawAlphaRect(ACanvas : TCanvas; t1, t2 : Integer);
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
@@ -450,6 +463,50 @@ begin
       s := '';
     end;
   end;
+end;
+
+// =============================================================================
+
+constructor TMinBlankInfo.Create;
+begin
+  inherited;
+  Range := nil;
+end;
+
+function TMinBlankInfo.Exists : Boolean;
+begin
+  Result := Assigned(Range);
+end;
+
+function TMinBlankInfo.SetInfo(NewRange : TRange; NewPart : TMinBlankInfoPart) : Boolean;
+begin
+  Result := False;
+  if (Range <> NewRange) then
+  begin
+    Range := NewRange;
+    Result := True; // Changed
+  end;
+  if (Part <> NewPart) then
+  begin
+    Part := NewPart;
+    Result := True; // Changed
+  end;
+end;
+
+function TMinBlankInfo.GetStart(MinBlankTime : Integer): Integer;
+begin
+  if (Part = mbipStart) then
+    Result := Range.StartTime - MinBlankTime
+  else
+    Result := Range.StopTime;
+end;
+
+function TMinBlankInfo.GetStop(MinBlankTime : Integer) : Integer;
+begin
+  if (Part = mbipStart) then
+    Result := Range.StartTime
+  else
+    Result := Range.StopTime + MinBlankTime;
 end;
 
 // =============================================================================
@@ -965,12 +1022,8 @@ begin
   FSceneChangeFilterOffset := 250;
   FSceneChangeEnabled := True;
   FMinimumBlank := 0;
-  FMinBlank1 := TRange.Create;
-  FMinBlank1.StartTime := 0;
-  FMinBlank1.StopTime := 0;
-  FMinBlank2 := TRange.Create;
-  FMinBlank2.StartTime := 0;
-  FMinBlank2.StopTime := 0;
+  FMinBlankInfo1 := TMinBlankInfo.Create;
+  FMinBlankInfo2 := TMinBlankInfo.Create;
   
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
@@ -1004,8 +1057,8 @@ begin
   FRangeList.Free;
   FOffscreenWAV.Free;
   FOffscreen.Free;
-  FMinBlank1.Free;
-  FMinBlank2.Free;
+  FMinBlankInfo1.Free;
+  FMinBlankInfo2.Free;
 
   inherited;
 end;
@@ -1224,16 +1277,18 @@ begin
   //OutputDebugString(PChar(Format('FDynamicEditMode = %d, FSelectionOrigin = %d, FCursorMs = %d, FDynamicSelRange = %p, SelStartTime = %d',
   //  [Ord(FDynamicEditMode), FSelectionOrigin, FCursorMs, Pointer(FDynamicSelRange), FSelection.StartTime])));
 
-  if (FMinBlank1.StartTime <> FMinBlank1.StopTime) then
+  if (FMinBlankInfo1.Exists) then
   begin
     ACanvas.Pen.Color := clWhite;
-    DrawAlphaRect(ACanvas, FMinBlank1.StartTime, FMinBlank1.StopTime);
+    DrawAlphaRect(ACanvas, FMinBlankInfo1.GetStart(FMinimumBlank),
+      FMinBlankInfo1.GetStop(FMinimumBlank));
   end;
 
-  if (FMinBlank2.StartTime <> FMinBlank2.StopTime) then
+  if (FMinBlankInfo2.Exists) then
   begin
     ACanvas.Pen.Color := clWhite;
-    DrawAlphaRect(ACanvas, FMinBlank2.StartTime, FMinBlank2.StopTime);
+    DrawAlphaRect(ACanvas, FMinBlankInfo2.GetStart(FMinimumBlank),
+      FMinBlankInfo2.GetStop(FMinimumBlank));
   end;
 
   // TODO improvement : this is very slow when lot's of range are on screen
@@ -3037,39 +3092,29 @@ end;
 
 function TWAVDisplayer.SetMinBlankOnIdx(Idx : Integer) : Boolean;
 var NewStartTime, NewStopTime : Integer;
-    StepResult : Boolean;
+    ChangedInStep : Boolean;
 begin
   Result := False;
 
   if (Idx > 0) then
   begin
-    NewStartTime := FRangeList[Idx - 1].StopTime;
-    NewStopTime := FRangeList[Idx - 1].StopTime + FMinimumBlank;
+    ChangedInStep := FMinBlankInfo1.SetInfo(FRangeList[Idx - 1], mbipStop);
   end
   else
   begin
-    NewStartTime := 0;
-    NewStopTime := 0;
+    ChangedInStep := FMinBlankInfo1.SetInfo(nil, mbipInvalid);
   end;
-  StepResult := FMinBlank1.SetTimes(NewStartTime, NewStopTime);
-  if StepResult then
-    OutputDebugString(PChar('SetMinBlankOnIdx FMinBlank1'));
-  Result := Result or StepResult;
+  Result := Result or ChangedInStep;
 
   if (Idx < FRangeList.Count-1) then
   begin
-    NewStartTime := FRangeList[Idx + 1].StartTime - FMinimumBlank;
-    NewStopTime := FRangeList[Idx + 1].StartTime;
+    ChangedInStep := FMinBlankInfo2.SetInfo(FRangeList[Idx + 1], mbipStart);
   end
   else
   begin
-    NewStartTime := 0;
-    NewStopTime := 0;
+    ChangedInStep := FMinBlankInfo2.SetInfo(nil, mbipInvalid);
   end;
-  StepResult := FMinBlank2.SetTimes(NewStartTime, NewStopTime);
-  if StepResult then
-    OutputDebugString(PChar('SetMinBlankOnIdx FMinBlank2'));  
-  Result := Result or StepResult;
+  Result := Result or ChangedInStep;
 end;
 
 //------------------------------------------------------------------------------
@@ -3077,48 +3122,38 @@ end;
 function TWAVDisplayer.SetMinBlankAt(TimeMs : Integer) : Boolean;
 var idx : Integer;
     NewStartTime, NewStopTime  : Integer;
-    StepResult : Boolean;
+    ChangedInStep : Boolean;
 begin
   Result := False;
 
   idx := FRangeList.GetRangeIdxAt(TimeMs);
   if (idx <> -1) then
   begin
-    StepResult := SetMinBlankOnIdx(idx);
-    Result := Result or StepResult;
+    ChangedInStep := SetMinBlankOnIdx(idx);
+    Result := Result or ChangedInStep;
   end
   else
   begin
     idx := FRangeList.FindInsertPos(TimeMs, -1);
     if (idx > 0) then
     begin
-      NewStartTime := FRangeList[idx - 1].StopTime;
-      NewStopTime := FRangeList[idx - 1].StopTime + FMinimumBlank;
+      ChangedInStep := FMinBlankInfo1.SetInfo(FRangeList[Idx - 1], mbipStop);
     end
     else
     begin
-      NewStartTime := 0;
-      NewStopTime := 0;
+      ChangedInStep := FMinBlankInfo1.SetInfo(nil, mbipInvalid);
     end;
-    StepResult := FMinBlank1.SetTimes(NewStartTime, NewStopTime);
-    if StepResult then
-      OutputDebugString(PChar('SetMinBlankAt FMinBlank1'));
-    Result := Result or StepResult;
+    Result := Result or ChangedInStep;
 
     if (idx < FRangeList.Count) then
     begin
-      NewStartTime := FRangeList[idx].StartTime - FMinimumBlank;
-      NewStopTime := FRangeList[idx].StartTime;
+      ChangedInStep := FMinBlankInfo2.SetInfo(FRangeList[Idx], mbipStart);
     end
     else
     begin
-      NewStartTime := 0;
-      NewStopTime := 0;
+      ChangedInStep := FMinBlankInfo2.SetInfo(nil, mbipInvalid);
     end;
-    StepResult := FMinBlank2.SetTimes(NewStartTime, NewStopTime);
-    if StepResult then
-      OutputDebugString(PChar('SetMinBlankAt FMinBlank2'));    
-    Result := Result or StepResult;
+    Result := Result or ChangedInStep;
   end;
 end;
 
@@ -3204,8 +3239,7 @@ end;
 
 procedure TWAVDisplayer.ClearSelection;
 begin
-  FSelection.StartTime := 0;
-  FSelection.StopTime := 0;
+  SetSelectedRangeEx(nil, False);
   if Assigned(FOnSelectionChange) then
     FOnSelectionChange(Self);
   UpdateView([uvfSelection,uvfRange]);
