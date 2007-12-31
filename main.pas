@@ -2131,6 +2131,7 @@ procedure TMainForm.LoadProject(Filename : WideString);
 var
   CM : ICursorManager;
   LoadWAVOK : Boolean;
+  Idx : Integer;
 begin
   if (not WideFileExists(Filename)) then
   begin
@@ -2256,6 +2257,18 @@ begin
       Perform(EM_SCROLLCARET, 0, 0);
     end;
 
+    // ----- Restore position ---
+    if (CurrentProject.WAVDisplayerPositionStartMs <> -1) and (CurrentProject.WAVDisplayerPositionStopMs <> -1) then
+    begin
+      WAVDisplayer.ZoomRange(CurrentProject.WAVDisplayerPositionStartMs,
+        CurrentProject.WAVDisplayerPositionStopMs);
+    end;
+    if (CurrentProject.FocusedTimeMs <> -1) then
+    begin
+      Idx := WAVDisplayer.RangeList.FindInsertPos(CurrentProject.FocusedTimeMs, -1);
+      SelectNodeAtIndex(Idx - 1);
+    end;
+
     UpdateVolume;
     EnableControl(True);
 
@@ -2276,6 +2289,8 @@ end;
 procedure TMainForm.SaveProject(Project : TVSSProject; SilentSave : Boolean);
 var
   ProjectFileIni : TTntIniFile;
+  NodeData : PTreeData;
+  FocusedTimeMs : Integer;
 begin
   if WideFileIsReadOnly(Project.Filename) then
   begin
@@ -2318,6 +2333,17 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalTop', DetachedVideoForm.NormalTop);
   ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalWidth', DetachedVideoForm.NormalWidth);
   ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalHeight', DetachedVideoForm.NormalHeight);
+
+  ProjectFileIni.WriteInteger('VisualSubsync', 'WAVDisplayerPositionStartMs', WAVDisplayer.Position);
+  ProjectFileIni.WriteInteger('VisualSubsync', 'WAVDisplayerPositionStopMs', WAVDisplayer.Position + WAVDisplayer.PageSize);
+
+  FocusedTimeMs := -1;
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    FocusedTimeMs := NodeData.Range.StartTime + ((NodeData.Range.StopTime - NodeData.Range.StartTime) div 2);
+  end;
+  ProjectFileIni.WriteInteger('VisualSubsync', 'FocusedTimeMs', FocusedTimeMs);
 
   ProjectFileIni.Free;
 end;
@@ -3331,28 +3357,31 @@ begin
   if WAVDisplayer.IsPlaying then
   begin
     Idx := WAVDisplayer.RangeList.GetRangeIdxAt(WAVDisplayer.GetPlayCursorPos);
-    if (Idx <> -1) then
+    if (Idx <> OldAutoScrollIdx) then
     begin
-      if (Idx <> OldAutoScrollIdx) then
+      if (Idx <> -1) then
       begin
         SubRange := TSubtitleRange(WAVDisplayer.RangeList[Idx]);
         Node := SubRange.Node;
         vtvSubsList.ScrollIntoView(Node,True);
         // Needed if subtitle node is already the focused node
-        vtvSubsList.FocusedNode := nil;
+        if (MemoSubtitleText.Text = '') then
+        begin
+          vtvSubsList.FocusedNode := nil;
+        end;
         vtvSubsList.FocusedNode := Node;
         vtvSubsList.ClearSelection;
         vtvSubsList.Selected[Node] := True;
+      end
+      else
+      begin
+        MemoSubtitleText.Tag := 0;
+        TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
+        MemoSubtitleText.Text := '';
+        TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
       end;
-    end
-    else
-    begin
-      MemoSubtitleText.Tag := 0;
-      TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
-      MemoSubtitleText.Text := '';
-      TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+      OldAutoScrollIdx := Idx;
     end;
-    OldAutoScrollIdx := Idx;
   end;
 end;
 
