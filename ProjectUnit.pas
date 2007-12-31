@@ -54,6 +54,9 @@ type
     VideoWindowNormalWidth : Integer;
     VideoWindowNormalHeight : Integer;
     DetachedVideo : Boolean;
+    WAVDisplayerPositionStartMs : Integer;
+    WAVDisplayerPositionStopMs : Integer;
+    FocusedTimeMs : Integer;
 
     procedure LoadFromINIFile(ProjectFilename : WideString);
     constructor Create;
@@ -170,6 +173,10 @@ begin
     VideoWindowNormalTop := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalTop', 0);
     VideoWindowNormalWidth := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalWidth', 0);
     VideoWindowNormalHeight := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalHeight', 0);
+
+    WAVDisplayerPositionStartMs := ProjectFileIni.ReadInteger('VisualSubsync', 'WAVDisplayerPositionStartMs', -1);
+    WAVDisplayerPositionStopMs := ProjectFileIni.ReadInteger('VisualSubsync', 'WAVDisplayerPositionStopMs', -1);
+    FocusedTimeMs := ProjectFileIni.ReadInteger('VisualSubsync', 'FocusedTimeMs', -1);
 
     ProjectFileIni.Free;
 
