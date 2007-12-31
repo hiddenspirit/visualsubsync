@@ -1269,28 +1269,8 @@ end;
 
 function TSceneChangeWrapper.GetNextIndex(TimeMs : Integer;
   Backward : Boolean = False) : Integer;
-var Min, Mid, Max : Integer;
 begin
-  Min := Low(FSceneChangeList);
-  Max := High(FSceneChangeList);
-  Mid := (Max + Min) div 2;
-
-  while (Min <= Max) do
-  begin
-    if FSceneChangeList[Mid] < TimeMs then
-      Min := Mid + 1
-    else if FSceneChangeList[Mid] > TimeMs then
-      Max := Mid - 1
-    else begin
-      Result := Mid;
-      Exit;
-    end;
-    Mid := (Max + Min) div 2;
-  end;
-  if Backward then
-    Result := Max
-  else
-    Result := Min;
+  Result := BinarySearch(FSceneChangeList, TimeMs, Backward);
 end;
 
 // SceneChange.GetNext(TimeMs) : Get the time in ms of the next scene change >= TimeMs

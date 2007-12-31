@@ -102,6 +102,9 @@ type
 
   function SwapColor(Color : Integer) : Integer;
 
+  function BinarySearch(IntArray : TIntegerDynArray; Value : Integer;
+    Backward : Boolean = False) : Integer;
+
 implementation
 
 uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
@@ -1138,6 +1141,34 @@ begin
   Result := Color and $0000FF00;
   Result := Result or ((Color and $000000FF) shl 16);
   Result := Result or ((Color and $00FF0000) shr 16);
+end;
+
+// -----------------------------------------------------------------------------
+
+function BinarySearch(IntArray : TIntegerDynArray; Value : Integer;
+  Backward : Boolean = False) : Integer;
+var Min, Mid, Max : Integer;
+begin
+  Min := Low(IntArray);
+  Max := High(IntArray);
+  Mid := (Max + Min) div 2;
+
+  while (Min <= Max) do
+  begin
+    if (IntArray[Mid] < Value) then
+      Min := Mid + 1
+    else if (IntArray[Mid] > Value) then
+      Max := Mid - 1
+    else begin
+      Result := Mid;
+      Exit;
+    end;
+    Mid := (Max + Min) div 2;
+  end;
+  if Backward then
+    Result := Max
+  else
+    Result := Min;
 end;
 
 // -----------------------------------------------------------------------------
