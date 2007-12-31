@@ -624,7 +624,7 @@ begin
       Msg := Msg + '<td class="CellIndex">' + IntToStr(pErrorData.Range.Node.Index + 1) + '</td>';
       Msg := Msg + '<td class="CellFromTo">' + TimeMsToString(pErrorData.Range.StartTime)
         + ' - ' + TimeMsToString(pErrorData.Range.StopTime) + '</td>';
-      Msg := Msg + '<td class="CellText">' + UTF8Encode(pErrorData.Range.Text) + '</td>';
+      Msg := Msg + '<td class="CellText">' + UTF8Encode(StringConvertCRLFToBR(pErrorData.Range.Text)) + '</td>';
       Msg := Msg + '</tr>';
       WriteStringLnStream(Msg, FS);
       Node := vtvErrorList.GetNext(Node);
