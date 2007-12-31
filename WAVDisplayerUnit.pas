@@ -132,6 +132,7 @@ type
     function SetInfo(NewRange : TRange; NewPart : TMinBlankInfoPart) : Boolean;
     function GetStart(MinBlankTime : Integer) : Integer;
     function GetStop(MinBlankTime : Integer) : Integer;
+    function GetSnappingPoint(MinBlankTime : Integer) : Integer;
   end;
 
   TWAVDisplayer = class(TCustomControl)
@@ -248,6 +249,8 @@ type
 
     function SetMinBlankOnIdx(Idx : Integer) : Boolean;
     function SetMinBlankAt(TimeMs : Integer) : Boolean;
+
+    function FindSnappingPoint(PosMs : Integer) : Integer;
         
   protected
     procedure DblClick; override;
@@ -507,6 +510,14 @@ begin
     Result := Range.StartTime
   else
     Result := Range.StopTime + MinBlankTime;
+end;
+
+function TMinBlankInfo.GetSnappingPoint(MinBlankTime : Integer) : Integer;
+begin
+  if (Part = mbipStart) then
+    Result := GetStart(MinBlankTime)
+  else
+    Result := GetStop(MinBlankTime);
 end;
 
 // =============================================================================
@@ -1602,6 +1613,29 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TWAVDisplayer.FindSnappingPoint(PosMs : Integer) : Integer;
+var Candidate : Integer;
+    SnappingDistanceTime : Integer;
+const SNAPPING_DISTANCE_PIXEL : Integer = 8;
+begin
+  Result := -1;
+
+  SnappingDistanceTime := PixelToTime(SNAPPING_DISTANCE_PIXEL);
+  if (FMinBlankInfo1.Exists) then
+  begin
+    Candidate := FMinBlankInfo1.GetSnappingPoint(FMinimumBlank);
+    if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      Result := Candidate;
+  end;
+
+  if (FMinBlankInfo2.Exists) then
+  begin
+    Candidate := FMinBlankInfo2.GetSnappingPoint(FMinimumBlank);
+    if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      Result := Candidate;
+  end;
+end;
+
 procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
@@ -1610,6 +1644,8 @@ var NewCursorPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
+
+    // TODO : snap to scene change and min blank
 
     if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
     begin
@@ -1656,6 +1692,15 @@ begin
       Windows.SetCursorPos(X + ClientOrigin.X, Y + ClientOrigin.Y);
     end;
     NewCursorPos := PixelToTime(X) + FPositionMs;
+
+    if (FMinimumBlank > 0) then
+    begin
+      i := FindSnappingPoint(NewCursorPos);
+      if (i <> -1) then
+      begin
+        NewCursorPos := i;
+      end
+    end;
 
     if (ssShift in Shift) or (FDynamicEditMode = demStart) or (FDynamicEditMode = demStop) then
     begin
@@ -1998,7 +2043,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.MouseMove(Shift: TShiftState; X, Y: Integer);
-var NewCursorPos, CursorPosMs : Integer;
+var NewCursorPos, CursorPosMs, i : Integer;
     ScrollDiff : Integer;
     DiffMuliplier : Integer;
     UpdateFlags : TUpdateViewFlags;
@@ -2030,6 +2075,15 @@ begin
           if(FMaxSelTime <> -1) then
           begin
             Constrain(NewCursorPos, 0, FMaxSelTime);
+          end;
+
+          if (FMinimumBlank > 0) then
+          begin
+            i := FindSnappingPoint(NewCursorPos);
+            if (i <> -1) then
+            begin
+              NewCursorPos := i;
+            end;
           end;
 
           if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
@@ -3091,8 +3145,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TWAVDisplayer.SetMinBlankOnIdx(Idx : Integer) : Boolean;
-var NewStartTime, NewStopTime : Integer;
-    ChangedInStep : Boolean;
+var ChangedInStep : Boolean;
 begin
   Result := False;
 
@@ -3121,7 +3174,6 @@ end;
 
 function TWAVDisplayer.SetMinBlankAt(TimeMs : Integer) : Boolean;
 var idx : Integer;
-    NewStartTime, NewStopTime  : Integer;
     ChangedInStep : Boolean;
 begin
   Result := False;
