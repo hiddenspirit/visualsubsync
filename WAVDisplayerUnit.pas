@@ -1742,7 +1742,7 @@ begin
     end;
     NewCursorPos := PixelToTime(X) + FPositionMs;
 
-    if (not (ssCtrl in Shift)) then
+    if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) then
     begin
       SnappingPos := FindSnappingPoint(NewCursorPos);
       if (SnappingPos <> -1) then
@@ -2126,7 +2126,7 @@ begin
             Constrain(NewCursorPos, 0, FMaxSelTime);
           end;
 
-          if (not (ssCtrl in Shift)) then
+          if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) then
           begin
             SnappingPos := FindSnappingPoint(NewCursorPos);
             if (SnappingPos <> -1) then
