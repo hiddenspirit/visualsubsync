@@ -643,8 +643,6 @@ type
     procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
-
-    procedure ShowColumn(ColumnName : WideString; Show : Boolean);
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -1263,10 +1261,9 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnRecentMenuItemClick(Sender : TObject);
-var MenuItem : TMenuItem;
+var MenuItem : TTntMenuItem;
 begin
-  // TODO : Fix MRU for unicode
-  MenuItem := Sender as TMenuItem;
+  MenuItem := Sender as TTntMenuItem;
   LoadProject(MenuItem.Caption);
 end;
 
@@ -3995,7 +3992,7 @@ end;
 
 procedure TMainForm.ActionSetSubtitleTimeExecute(Sender: TObject);
 var NodeData : PTreeData;
-    NextNodeToFocus, FocusedNode : PVirtualNode;
+    FocusedNode : PVirtualNode;
     SelDuration : Integer;
     UndoableSetTimeTask : TUndoableSetTimeTask;
 begin
@@ -4014,33 +4011,6 @@ begin
       WAVDisplayer.Selection.StartTime, WAVDisplayer.Selection.StopTime);
     UndoableSetTimeTask.DoTask;
     PushUndoableTask(UndoableSetTimeTask);
-
-
-    {
-    NextNodeToFocus := vtvSubsList.GetNext(vtvSubsList.FocusedNode);
-    try
-      g_WebRWSynchro.BeginWrite;
-      NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-
-      NodeData.Range.StartTime := WAVDisplayer.Selection.StartTime;
-      NodeData.Range.StopTime := WAVDisplayer.Selection.StopTime;
-
-      FullSortTreeAndSubList; // lazy me :) but well it's fast enough
-      CurrentProject.IsDirty := True;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
-
-    if Assigned(NextNodeToFocus) then
-    begin
-      vtvSubsList.FocusedNode := NextNodeToFocus;
-      vtvSubsList.ClearSelection;
-      vtvSubsList.Selected[NextNodeToFocus] := True;
-    end;
-
-    WAVDisplayer.UpdateView([uvfRange]);
-    vtvSubsList.Repaint;
-    }
   end;
 end;
 
@@ -5338,7 +5308,6 @@ var i : integer;
     FS : TTntFileStream;
     s : WideString;
     style : TSSAStyle;
-    RegExpr : TRegExpr;
     
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
@@ -7095,38 +7064,9 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ShowColumn(ColumnName : WideString; Show : Boolean);
-var MenuItem : TTntMenuItem;
-    i : Integer;
-    Column : TVirtualTreeColumn;
-begin
-  for i := 0 to vtvSubsList.Header.Columns.Count - 1 do
-  begin
-    Column := vtvSubsList.Header.Columns.Items[i];
-    if (Column.Text = ColumnName) then
-    begin
-      MenuItem := (TObject(Column.Tag) as TTntMenuItem);
-      MenuItem.Checked := Show;
-      if Show then
-      begin
-        Column.Options := Column.Options + [coVisible];
-      end
-      else
-      begin
-        Column.Options := Column.Options - [coVisible];
-      end;
-      Break;
-    end;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.pmiToggleColumn(Sender: TObject);
 var Column : TVirtualTreeColumn;
-    i : integer;
     SelectedMenuItem : TTntMenuItem;
-    SelectedMenuText : WideString;
 begin
   if (Sender is TTntMenuItem) then
   begin
@@ -7215,6 +7155,10 @@ begin
     if Assigned(vtvSubsList.FocusedNode) then
     begin
       Index := vtvSubsList.FocusedNode.Index;
+    end
+    else
+    begin
+      Index := -1;
     end;
 
     ShowStatusBarMessage('Reloading subtitles...');

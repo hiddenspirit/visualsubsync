@@ -19,29 +19,27 @@
 //  http://www.gnu.org/copyleft/gpl.html
 // -----------------------------------------------------------------------------
 
-// TODO : unicode friendly
-
 unit MRUListUnit;
 
 interface
 
-uses Classes, Menus, IniFiles;
+uses Classes, Menus, IniFiles, TntClasses, TntMenus;
 
 type
   TMRUList = class
   private
-    FFileList : TStringList;
+    FFileList : TTntStrings;
     FLimit : Integer;
-    FRootMenuItem : TMenuItem;
+    FRootMenuItem : TTntMenuItem;
     FOnRecentMenuItemClick : TNotifyEvent;
 
-    procedure FillMenuItem(MenuItem : TMenuItem);
+    procedure FillMenuItem(MenuItem : TTntMenuItem);
     procedure OnClearItemClick(Sender: TObject);
     procedure OnClearDeadEntriesItemClick(Sender: TObject);
   public
-    constructor Create(RootMenuItem : TMenuItem);
+    constructor Create(RootMenuItem : TTntMenuItem);
     destructor Destroy; override;
-    procedure AddFile(Filename : string);
+    procedure AddFile(Filename : WideString);
     procedure SaveIni(IniFile : TIniFile; SectionName : string);
     procedure LoadIni(IniFile : TIniFile; SectionName : string);
   published
@@ -50,13 +48,13 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, TntSysUtils;
 
 // -----------------------------------------------------------------------------
 
-constructor TMRUList.Create(RootMenuItem : TMenuItem);
+constructor TMRUList.Create(RootMenuItem : TTntMenuItem);
 begin
-  FFileList := TStringList.Create;
+  FFileList := TTntStringList.Create;
   FLimit := 8;
   FRootMenuItem := RootMenuItem;
 end;
@@ -71,15 +69,15 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TMRUList.AddFile(Filename : string);
+procedure TMRUList.AddFile(Filename : WideString);
 var Idx : Integer;
 begin
   // Search if file is already present
   Idx := FFileList.IndexOf(Filename);
   if (Idx = -1) then
-    FFileList.Insert(0,Filename)
+    FFileList.Insert(0, Filename)
   else
-    FFileList.Move(Idx,0);
+    FFileList.Move(Idx, 0);
   while (FFileList.Count > FLimit) do
     FFileList.Delete(FLimit);
   FillMenuItem(FRootMenuItem);
@@ -87,30 +85,30 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TMRUList.FillMenuItem(MenuItem : TMenuItem);
-var NewItem : TMenuItem;
+procedure TMRUList.FillMenuItem(MenuItem : TTntMenuItem);
+var NewItem : TTntMenuItem;
     i : Integer;
 begin
   MenuItem.Clear;
   MenuItem.Enabled := (FFileList.Count > 0);
   for i:=0 to FFileList.Count-1 do
   begin
-    NewItem := TMenuItem.Create(MenuItem);
+    NewItem := TTntMenuItem.Create(MenuItem);
     NewItem.Caption := FFileList[i];
     NewItem.OnClick := FOnRecentMenuItemClick;
     MenuItem.Add(NewItem);
   end;
   // Add special "Clear list" menu
-  NewItem := TMenuItem.Create(MenuItem);
+  NewItem := TTntMenuItem.Create(MenuItem);
   NewItem.Caption := '-';
   MenuItem.Add(NewItem);
 
-  NewItem := TMenuItem.Create(MenuItem);
+  NewItem := TTntMenuItem.Create(MenuItem);
   NewItem.Caption := 'Clear list';
   NewItem.OnClick := OnClearItemClick;
   MenuItem.Add(NewItem);
 
-  NewItem := TMenuItem.Create(MenuItem);
+  NewItem := TTntMenuItem.Create(MenuItem);
   NewItem.Caption := 'Clear dead entries';
   NewItem.OnClick := OnClearDeadEntriesItemClick;
   MenuItem.Add(NewItem);
@@ -123,10 +121,10 @@ var i : Integer;
 begin
   for i:=0 to FLimit-1 do
   begin
-    if i < FFileList.Count then
-      IniFile.WriteString(SectionName,'Recent'+IntToStr(i),FFileList[i])
+    if (i < FFileList.Count) then
+      IniFile.WriteString(SectionName, 'Recent' + IntToStr(i), UTF8Encode(FFileList[i]))
     else
-      IniFile.WriteString(SectionName,'Recent'+IntToStr(i),'')
+      IniFile.WriteString(SectionName, 'Recent' + IntToStr(i), '')
   end;
 end;
 
@@ -134,12 +132,12 @@ end;
 
 procedure TMRUList.LoadIni(IniFile : TIniFile; SectionName : string);
 var i : Integer;
-    s : string;
+    s : WideString;
 begin
   FFileList.Clear;
   for i:=0 to FLimit-1 do
   begin
-    s := IniFile.ReadString(SectionName, 'Recent'+IntToStr(i),'');
+    s := UTF8Decode(IniFile.ReadString(SectionName, 'Recent' + IntToStr(i), ''));
     s := Trim(s);
     if (s <> '') then
       FFileList.Add(s);
@@ -162,7 +160,7 @@ var i : Integer;
 begin
   for i:=FFileList.Count-1 downto 0 do
   begin
-    if not FileExists(FFileList[i]) then
+    if (not WideFileExists(FFileList[i])) then
     begin
       FFileList.Delete(i);
     end;
