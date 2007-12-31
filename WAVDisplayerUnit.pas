@@ -1457,6 +1457,7 @@ begin
   begin
     ACanvas.Pen.Color := CURSOR_COLOR;
     ACanvas.Pen.Style := psDot;
+    ACanvas.Pen.Mode := pmXor;
     x := TimeToPixel(FCursorMs - FPositionMs);
     ACanvas.MoveTo(x, 0);
     ACanvas.LineTo(x, CanvasHeight);
@@ -1469,6 +1470,7 @@ begin
     begin
       ACanvas.Pen.Color := clWhite;
       ACanvas.Pen.Style := psSolid;
+      ACanvas.Pen.Mode := pmXor;
       x := TimeToPixel(FPlayCursorMs - FPositionMs);
       ACanvas.MoveTo(x, 0);
       ACanvas.LineTo(x, CanvasHeight);
@@ -1616,7 +1618,7 @@ end;
 function TWAVDisplayer.FindSnappingPoint(PosMs : Integer) : Integer;
 var Candidate : Integer;
     SnappingDistanceTime : Integer;
-    Idx, IdxCursor, SceneChange : Integer;
+    Idx, IdxCursor : Integer;
 const SNAPPING_DISTANCE_PIXEL : Integer = 8;
 begin
   Result := -1;
