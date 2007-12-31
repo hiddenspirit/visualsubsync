@@ -3095,7 +3095,7 @@ begin
       OutputDebugString(PChar('SetMinBlankAt FMinBlank1'));
     Result := Result or StepResult;
 
-    if (idx < FRangeList.Count-1) then
+    if (idx < FRangeList.Count) then
     begin
       NewStartTime := FRangeList[idx].StartTime - FMinimumBlank;
       NewStopTime := FRangeList[idx].StartTime;
