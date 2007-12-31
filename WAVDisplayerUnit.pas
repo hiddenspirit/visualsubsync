@@ -121,7 +121,7 @@ type
   TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer; NeedSort : Boolean) of object;
   TCustomDrawRange = procedure (Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect) of object;
 
-  TWAVDisplayer = class(TCustomPanel)
+  TWAVDisplayer = class(TCustomControl)
   private
     { Private declarations }
     FPeakTab : array of TPeak;
@@ -1189,6 +1189,7 @@ var x, SceneChange : Integer;
     r : TRange;
     SelRect, CustomDrawRect : TRect;
     CanvasHeight : Integer;
+    ShowStart, ShowStop, FullHLines : Boolean;
 begin
   CanvasHeight := GetWavCanvasHeight;
   y1 := CanvasHeight div 10;
@@ -1245,10 +1246,6 @@ begin
   begin
     r := FRangeList[i];
     x1 := -1; x2 := -1;
-    if (i mod 2) = 0 then
-      ACanvas.Pen.Color := RANGE_COLOR_1
-    else
-      ACanvas.Pen.Color := RANGE_COLOR_2;
     if (r.StartTime >= FPositionMs) and (r.StartTime <= FPositionMs + FPageSizeMs) then
     begin
       x1 := TimeToPixel(r.StartTime - FPositionMs);
@@ -1258,8 +1255,20 @@ begin
       x2 := TimeToPixel(r.StopTime - FPositionMs);
     end;
 
+    ShowStart := (x1 <> -1);
+    ShowStop := (x2 <> -1) and (x2 <> x1);
+    FullHLines := (r.StartTime < FPositionMs) and (r.StopTime > FPositionMs + FPageSizeMs);
+    
+    if (ShowStart or ShowStop or FullHLines) then
+    begin
+      if (i mod 2) = 0 then
+        ACanvas.Pen.Color := RANGE_COLOR_1
+      else
+        ACanvas.Pen.Color := RANGE_COLOR_2;
+    end;
+
     // Paint start time
-    if (x1 <> -1) then
+    if ShowStart then
     begin
       if (FDynamicEditMode = demStart) and (FDynamicSelRange = r) then
         ACanvas.Pen.Style := psSolid
@@ -1270,7 +1279,7 @@ begin
     end;
 
     // Paint stop time
-    if (x2 <> -1) and (x2 <> x1) then
+    if ShowStop then
     begin
       if (FDynamicEditMode = demStop) and (FDynamicSelRange = r) then
         ACanvas.Pen.Style := psSolid
@@ -1281,7 +1290,7 @@ begin
     end;
 
     // Draw the top and bottom horizontal lines
-    if (r.StartTime < FPositionMs) and (r.StopTime > FPositionMs + FPageSizeMs) then
+    if FullHLines then
     begin
       x1 := 0;
       x2 := Width-1;
@@ -1300,7 +1309,7 @@ begin
       ACanvas.LineTo(x2, y2);
       ACanvas.Pen.Width := 1;
 
-      // Cusom draw
+      // Custom draw
       if Assigned(FOnCustomDrawRange) and ((x2 - x1) > 10) then
       begin
         CustomDrawRect.Top := y1;
@@ -1341,11 +1350,12 @@ begin
   end;
 
   // Selection
-  ACanvas.Pen.Color := clWhite;
-  ACanvas.Pen.Mode := pmXor;
-  ACanvas.Pen.Style := psSolid;
   if (FSelection.StopTime > 0) then
   begin
+    ACanvas.Pen.Color := clWhite;
+    ACanvas.Pen.Mode := pmXor;
+    ACanvas.Pen.Style := psSolid;
+    
     x1 := TimeToPixel(FSelection.StartTime - FPositionMs);
     x2 := TimeToPixel(FSelection.StopTime - FPositionMs);
 
