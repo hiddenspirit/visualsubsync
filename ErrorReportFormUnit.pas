@@ -582,6 +582,11 @@ begin
     'body { text-align: center;	}' + CRLF +
     'td { padding-left: 5px; padding-right: 5px; }' + CRLF +
     '.MainColumn { width: 90%; margin: auto; }' + CRLF +
+    '.HeaderColor { background-color: #BBDDFF; }' + CRLF +
+    '.HeaderError { background-color: #BBDDFF; }' + CRLF +
+		'.HeaderIndex { background-color: #BBDDFF; }' + CRLF +
+		'.HeaderFromTo { background-color: #BBDDFF; }' + CRLF +
+		'.HeaderText { background-color: #DDEEFF; }' + CRLF +
     '.CellIndex { background-color: #DDDDDD; text-align: center; }' + CRLF +
     '.CellFromTo { background-color: #DDDDDD; text-align: center; white-space: nowrap; }' + CRLF +
     '.CellText { background-color: #EEEEEE; }' + CRLF +
@@ -599,6 +604,16 @@ begin
     WriteStringLnStream(Msg, FS);
     Msg := '<table style="margin: auto;">';
     WriteStringLnStream(Msg, FS);
+    // Table header
+    Msg := '<tr>' + CRLF +
+      '<th class="HeaderColor">Color</th>' + CRLF +
+      '<th class="HeaderError">Error</th>' + CRLF +
+      '<th class="HeaderIndex">Index</th>' + CRLF +
+      '<th class="HeaderFromTo">From - To</th>' + CRLF +
+      '<th class="HeaderText">Text</th>' + CRLF +
+      '</tr>';
+    WriteStringLnStream(Msg, FS);
+    // Table content
     Node := vtvErrorList.GetFirst;
     while Assigned(Node) do
     begin
