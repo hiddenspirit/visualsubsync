@@ -1616,6 +1616,7 @@ end;
 function TWAVDisplayer.FindSnappingPoint(PosMs : Integer) : Integer;
 var Candidate : Integer;
     SnappingDistanceTime : Integer;
+    Idx, IdxCursor, SceneChange : Integer;
 const SNAPPING_DISTANCE_PIXEL : Integer = 8;
 begin
   Result := -1;
@@ -1625,16 +1626,62 @@ begin
   begin
     Candidate := FMinBlankInfo1.GetSnappingPoint(FMinimumBlank);
     if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+    begin
       Result := Candidate;
+      Exit;
+    end;
   end;
 
   if (FMinBlankInfo2.Exists) then
   begin
     Candidate := FMinBlankInfo2.GetSnappingPoint(FMinimumBlank);
     if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+    begin
       Result := Candidate;
+      Exit;
+    end;
+  end;
+
+  if FSceneChangeEnabled and (System.Length(FSceneChangeList) > 0) then
+  begin
+    Idx := BinarySearch(FSceneChangeList, PosMs);
+    // Search forward for a not filtered scene change
+    IdxCursor := Idx;
+    while (IdxCursor < System.Length(FSceneChangeList))
+           and IsFilteredSceneChange(FSceneChangeList[IdxCursor]) do
+    begin
+      Inc(IdxCursor);
+    end;
+
+    if (IdxCursor < System.Length(FSceneChangeList)) and (FSelectionOrigin < FSceneChangeList[IdxCursor]) then
+    begin
+      Candidate := FSceneChangeList[IdxCursor] - FSceneChangeStartOffset;
+      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      begin
+        Result := Candidate;
+        Exit;
+      end;
+    end;
+
+    // Search backward for a not filtered scene change
+    IdxCursor := Idx - 1;
+    while (IdxCursor >= 0) and IsFilteredSceneChange(FSceneChangeList[IdxCursor]) do
+    begin
+      Dec(IdxCursor);
+    end;
+    if (IdxCursor >= 0) and (FSelectionOrigin > FSceneChangeList[IdxCursor]) then
+    begin
+      Candidate := FSceneChangeList[IdxCursor] + FSceneChangeStopOffset;
+      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      begin
+        Result := Candidate;
+        Exit;
+      end;
+    end;
   end;
 end;
+
+//------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
@@ -1644,8 +1691,6 @@ var NewCursorPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
-
-    // TODO : snap to scene change and min blank
 
     if (FDynamicEditMode = demKaraoke) and Assigned(FDynamicSelRange) then
     begin
