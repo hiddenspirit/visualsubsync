@@ -343,7 +343,7 @@ type
     ActionPlay1sBeforeToEnd: TTntAction;
     ActionDeleteSceneChange: TTntAction;
     pmiDeleteSC: TTntMenuItem;
-    ShowHidescenechange1: TTntMenuItem;
+    MenuItemShowHidesSeneChange: TTntMenuItem;
     ActionReload: TTntAction;
     Reload1: TTntMenuItem;
     ActionMergeWithPrevious: TTntAction;
@@ -1111,6 +1111,8 @@ begin
   g_VSSCoreWrapper.SetCpsTarget(ConfigObject.SpaceKeyCPSTarget);
   g_VSSCoreWrapper.SetMinimumDuration(ConfigObject.SpaceKeyMinimalDuration);
   g_VSSCoreWrapper.SetMinimumBlank(ConfigObject.SpaceKeyBlankBetweenSubtitles);
+
+  MenuItemShowHidesSeneChange.Checked := ConfigObject.ShowSceneChange;
 end;
 
 //------------------------------------------------------------------------------
@@ -6833,7 +6835,8 @@ procedure TMainForm.ActionShowHideSceneChangeExecute(Sender: TObject);
 begin
   WAVDisplayer.SceneChangeEnabled := not WAVDisplayer.SceneChangeEnabled;
   WAVDisplayer.UpdateView([uvfRange]);
-  ConfigObject.ShowSceneChange := WAVDisplayer.SceneChangeEnabled;   
+  ConfigObject.ShowSceneChange := WAVDisplayer.SceneChangeEnabled;
+  MenuItemShowHidesSeneChange.Checked := ConfigObject.ShowSceneChange;
 end;
 
 //------------------------------------------------------------------------------

@@ -1405,7 +1405,7 @@ object MainForm: TMainForm
       object MenuItemShowHideVideo: TTntMenuItem
         Action = ActionShowHideVideo
       end
-      object ShowHidescenechange1: TTntMenuItem
+      object MenuItemShowHidesSeneChange: TTntMenuItem
         Action = ActionShowHideSceneChange
       end
       object MenuItemDetachVideoWindow: TTntMenuItem
@@ -1695,7 +1695,7 @@ object MainForm: TMainForm
     object ActionShowSuggestions: TTntAction
       Tag = 1
       Caption = 'Show suggestions'
-      Hint = 'Show suggestions'
+      Hint = 'Show network suggestions'
       ImageIndex = 24
       OnExecute = ActionShowSuggestionsExecute
     end
