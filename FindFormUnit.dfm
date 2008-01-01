@@ -1,6 +1,7 @@
 object FindForm: TFindForm
   Left = 258
   Top = 479
+  AutoSize = True
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   BorderWidth = 4
