@@ -7,7 +7,7 @@ object PreferencesForm: TPreferencesForm
   Caption = 'Preferences'
   Color = clBtnFace
   Constraints.MinHeight = 380
-  Constraints.MinWidth = 440
+  Constraints.MinWidth = 480
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -24,8 +24,8 @@ object PreferencesForm: TPreferencesForm
     Left = 0
     Top = 0
     Width = 482
-    Height = 356
-    ActivePage = tsErrorChecking
+    Height = 349
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -103,7 +103,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 144
         Width = 466
-        Height = 176
+        Height = 169
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -154,7 +154,7 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 0
         end
         object bttOpenBackupDir: TButton
-          Left = 296
+          Left = 288
           Top = 49
           Width = 90
           Height = 20
@@ -190,7 +190,7 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 4
         end
         object bttOpenBackupTempDir: TButton
-          Left = 392
+          Left = 384
           Top = 49
           Width = 18
           Height = 20
@@ -209,12 +209,12 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 474
-        Height = 328
+        Height = 321
         Align = alClient
         TabOrder = 0
         DesignSize = (
           474
-          328)
+          321)
         object TntLabel8: TTntLabel
           Left = 16
           Top = 128
@@ -314,7 +314,7 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Error checking'
       object Bevel7: TBevel
         Left = 0
-        Top = 204
+        Top = 197
         Width = 466
         Height = 4
         Align = alBottom
@@ -322,7 +322,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Bevel8: TBevel
         Left = 0
-        Top = 112
+        Top = 105
         Width = 466
         Height = 4
         Align = alBottom
@@ -332,7 +332,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 466
-        Height = 112
+        Height = 105
         OnClickCheck = ListErrorCheckingClickCheck
         Align = alClient
         ItemHeight = 13
@@ -343,7 +343,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Panel2: TPanel
         Left = 0
-        Top = 116
+        Top = 109
         Width = 466
         Height = 88
         Align = alBottom
@@ -411,7 +411,7 @@ object PreferencesForm: TPreferencesForm
       end
       object ListPluginParam: TVirtualStringTree
         Left = 0
-        Top = 208
+        Top = 201
         Width = 466
         Height = 112
         Align = alBottom
@@ -463,33 +463,20 @@ object PreferencesForm: TPreferencesForm
     object tsHotKeys: TTntTabSheet
       BorderWidth = 4
       Caption = 'Hotkeys'
-      DesignSize = (
-        466
-        320)
-      object TntLabel5: TTntLabel
+      object Bevel9: TBevel
         Left = 0
-        Top = 280
-        Width = 33
-        Height = 13
-        Anchors = [akLeft, akBottom]
-        Caption = 'Mode :'
-      end
-      object TntLabel6: TTntLabel
-        Left = 128
-        Top = 280
-        Width = 257
-        Height = 13
-        Anchors = [akLeft, akRight, akBottom]
-        AutoSize = False
-        Caption = 'Hot key :'
+        Top = 275
+        Width = 466
+        Height = 4
+        Align = alBottom
+        Shape = bsSpacer
       end
       object ListHotkeys: TTntListView
         Left = 0
         Top = 0
         Width = 466
-        Height = 273
-        Align = alTop
-        Anchors = [akLeft, akTop, akRight, akBottom]
+        Height = 275
+        Align = alClient
         Columns = <
           item
             Caption = 'Name'
@@ -513,62 +500,88 @@ object PreferencesForm: TPreferencesForm
         OnDeletion = ListHotkeysDeletion
         OnSelectItem = ListHotkeysSelectItem
       end
-      object HotKey1: THotKey
-        Left = 128
-        Top = 297
-        Width = 257
-        Height = 19
-        Anchors = [akLeft, akRight, akBottom]
-        HotKey = 0
-        InvalidKeys = [hcNone]
-        Modifiers = []
-        TabOrder = 1
-      end
-      object ComboHotkeyMode: TTntComboBox
+      object Panel3: TPanel
         Left = 0
-        Top = 296
-        Width = 113
-        Height = 21
-        Style = csDropDownList
-        Anchors = [akLeft, akBottom]
-        ItemHeight = 13
-        ItemIndex = 0
-        TabOrder = 4
-        Text = 'Normal'
-        OnSelect = ComboHotkeyModeSelect
-        Items.Strings = (
-          'Normal'
-          'Timing')
-      end
-      object bttResetAllHotkeys: TTntButton
-        Left = 400
         Top = 279
-        Width = 65
-        Height = 19
-        Anchors = [akRight, akBottom]
-        Caption = 'Reset all'
-        TabOrder = 5
-        OnClick = bttResetAllHotkeysClick
-      end
-      object bttSetHotkey: TTntButton
-        Left = 400
-        Top = 297
-        Width = 33
-        Height = 19
-        Anchors = [akRight, akBottom]
-        Caption = 'Set'
-        TabOrder = 2
-        OnClick = bttSetHotkeyClick
-      end
-      object bttClearHotkey: TTntButton
-        Left = 432
-        Top = 297
-        Width = 33
-        Height = 19
-        Anchors = [akRight, akBottom]
-        Caption = 'Clear'
-        TabOrder = 3
-        OnClick = bttClearHotkeyClick
+        Width = 466
+        Height = 34
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 1
+        DesignSize = (
+          466
+          34)
+        object TntLabel5: TTntLabel
+          Left = 0
+          Top = 1
+          Width = 33
+          Height = 13
+          Caption = 'Mode :'
+        end
+        object TntLabel6: TTntLabel
+          Left = 128
+          Top = 1
+          Width = 257
+          Height = 13
+          AutoSize = False
+          Caption = 'Hot key :'
+        end
+        object ComboHotkeyMode: TTntComboBox
+          Left = 0
+          Top = 13
+          Width = 113
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          ItemIndex = 0
+          TabOrder = 0
+          Text = 'Normal'
+          OnSelect = ComboHotkeyModeSelect
+          Items.Strings = (
+            'Normal'
+            'Timing')
+        end
+        object HotKey1: THotKey
+          Left = 128
+          Top = 15
+          Width = 258
+          Height = 19
+          Anchors = [akLeft, akTop, akRight]
+          HotKey = 0
+          InvalidKeys = [hcNone]
+          Modifiers = []
+          TabOrder = 1
+        end
+        object bttResetAllHotkeys: TTntButton
+          Left = 401
+          Top = 0
+          Width = 65
+          Height = 18
+          Anchors = [akTop, akRight]
+          Caption = 'Reset all'
+          TabOrder = 2
+          OnClick = bttResetAllHotkeysClick
+        end
+        object bttSetHotkey: TTntButton
+          Left = 401
+          Top = 17
+          Width = 33
+          Height = 18
+          Anchors = [akTop, akRight]
+          Caption = 'Set'
+          TabOrder = 3
+          OnClick = bttSetHotkeyClick
+        end
+        object bttClearHotkey: TTntButton
+          Left = 433
+          Top = 17
+          Width = 33
+          Height = 18
+          Anchors = [akTop, akRight]
+          Caption = 'Clear'
+          TabOrder = 4
+          OnClick = bttClearHotkeyClick
+        end
       end
     end
     object tsMouse: TTntTabSheet
@@ -706,7 +719,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 125
         Width = 466
-        Height = 195
+        Height = 188
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -778,13 +791,13 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 85
         Width = 466
-        Height = 235
+        Height = 228
         Align = alClient
         Caption = ' Subtitles text : '
         TabOrder = 1
         DesignSize = (
           466
-          235)
+          228)
         object EditSubTextFont: TTntEdit
           Left = 16
           Top = 24
@@ -815,7 +828,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 466
-        Height = 320
+        Height = 313
         Align = alClient
         TabOrder = 0
         object chkEnableSubCreationWithSpaceKey: TCheckBox
@@ -973,7 +986,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 125
         Width = 466
-        Height = 195
+        Height = 188
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -990,7 +1003,7 @@ object PreferencesForm: TPreferencesForm
   end
   object Panel1: TPanel
     Left = 0
-    Top = 356
+    Top = 349
     Width = 482
     Height = 41
     Align = alBottom
@@ -1028,11 +1041,11 @@ object PreferencesForm: TPreferencesForm
     Font.Style = []
     Options = [fdAnsiOnly, fdEffects, fdNoVectorFonts, fdScalableOnly]
     Left = 4
-    Top = 336
+    Top = 360
   end
   object pmErrorChecking: TPopupMenu
-    Left = 12
-    Top = 32
+    Left = 236
+    Top = 168
     object pmiSelectAll: TMenuItem
       Caption = 'Select all'
       OnClick = pmiSelectAllClick
