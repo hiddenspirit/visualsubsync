@@ -1146,6 +1146,11 @@ begin
   ACanvas.Pen.Mode := pmCopy;
 
   // TODO : when using huge zoom, use wav data directly if available
+  {if (PeaksPerPixelScaled < 1.0) then
+  begin
+
+  end;}
+
   for x:=x1_update to x2_update do
   begin
     x_scaled := Round((x * PeaksPerPixelScaled) + StartPositionInPeaks);
@@ -1618,10 +1623,12 @@ end;
 function TWAVDisplayer.FindSnappingPoint(PosMs : Integer) : Integer;
 var Candidate : Integer;
     SnappingDistanceTime : Integer;
-    Idx, IdxCursor : Integer;
+    Idx, IdxForward, IdxBackward : Integer;
+    DistForward, DistBackward : Integer;
 const SNAPPING_DISTANCE_PIXEL : Integer = 8;
 begin
   Result := -1;
+  Candidate := -1;
 
   SnappingDistanceTime := PixelToTime(SNAPPING_DISTANCE_PIXEL);
 
@@ -1651,37 +1658,71 @@ begin
   if FSceneChangeEnabled and (System.Length(FSceneChangeList) > 0) then
   begin
     Idx := BinarySearch(FSceneChangeList, PosMs);
-    // Search forward for a not filtered scene change
-    IdxCursor := Idx;
-    while (IdxCursor < System.Length(FSceneChangeList))
-           and IsFilteredSceneChange(FSceneChangeList[IdxCursor]) do
-    begin
-      Inc(IdxCursor);
-    end;
 
-    if (IdxCursor < System.Length(FSceneChangeList)) and (FSelectionOrigin < FSceneChangeList[IdxCursor]) then
+    // Search forward for a not filtered scene change
+    IdxForward := Idx;
+    while (IdxForward < System.Length(FSceneChangeList))
+           and IsFilteredSceneChange(FSceneChangeList[IdxForward]) do
     begin
-      Candidate := FSceneChangeList[IdxCursor] - FSceneChangeStartOffset;
-      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
-      begin
-        Result := Candidate;
-        Exit;
-      end;
+      Inc(IdxForward);
     end;
 
     // Search backward for a not filtered scene change
-    IdxCursor := Idx - 1;
-    while (IdxCursor >= 0) and IsFilteredSceneChange(FSceneChangeList[IdxCursor]) do
+    IdxBackward := Idx - 1;
+    while (IdxBackward >= 0) and IsFilteredSceneChange(FSceneChangeList[IdxBackward]) do
     begin
-      Dec(IdxCursor);
-    end;
-    if (IdxCursor >= 0) and (FSelectionOrigin > FSceneChangeList[IdxCursor]) then
+      Dec(IdxBackward);
+    end;    
+    
+    if (FSelectionOrigin = -1) then
     begin
-      Candidate := FSceneChangeList[IdxCursor] + FSceneChangeStopOffset;
-      if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+      // Choose the closest one
+      if (IdxForward < System.Length(FSceneChangeList)) and (IdxBackward >= 0) then
+      begin
+        DistForward := FSceneChangeList[IdxForward] - FSceneChangeStartOffset - PosMs;
+        DistBackward := PosMs - FSceneChangeList[IdxBackward] + FSceneChangeStopOffset;
+
+        if (DistForward < DistBackward) then
+          Candidate := FSceneChangeList[IdxForward] - FSceneChangeStartOffset
+        else
+          Candidate := FSceneChangeList[IdxBackward] + FSceneChangeStopOffset;
+      end
+      else if (IdxBackward >= 0) then
+      begin
+        Candidate := FSceneChangeList[IdxBackward] + FSceneChangeStopOffset;
+      end
+      else if (IdxForward < System.Length(FSceneChangeList)) then
+      begin
+        Candidate := FSceneChangeList[IdxForward] - FSceneChangeStartOffset;
+      end;
+
+      if (Candidate <> -1) and (Abs(Candidate - PosMs) <= SnappingDistanceTime) then
       begin
         Result := Candidate;
-        Exit;
+      end;
+    end
+    else
+    begin
+      // Check forward
+      if (IdxForward < System.Length(FSceneChangeList)) and (FSelectionOrigin < FSceneChangeList[IdxForward]) then
+      begin
+        Candidate := FSceneChangeList[IdxForward] - FSceneChangeStartOffset;
+        if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+        begin
+          Result := Candidate;
+          Exit;
+        end;
+      end;
+
+      // Check backward
+      if (IdxBackward >= 0) and (FSelectionOrigin > FSceneChangeList[IdxBackward]) then
+      begin
+        Candidate := FSceneChangeList[IdxBackward] + FSceneChangeStopOffset;
+        if Abs(Candidate - PosMs) <= SnappingDistanceTime then
+        begin
+          Result := Candidate;
+          Exit;
+        end;
       end;
     end;
   end;
