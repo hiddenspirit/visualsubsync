@@ -20,7 +20,6 @@ object MainForm: TMainForm
   OnKeyDown = TntFormKeyDown
   OnKeyUp = TntFormKeyUp
   OnMouseWheel = FormMouseWheel
-  OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
   object Splitter1: TSplitter

@@ -421,7 +421,6 @@ type
     procedure ActionClearSelectionExecute(Sender: TObject);
     procedure Splitter1CanResize(Sender: TObject; var NewSize: Integer;
       var Accept: Boolean);
-    procedure FormResize(Sender: TObject);
     procedure bttWorkingModeClick(Sender: TObject);
     procedure ActionLoopSelStartExecute(Sender: TObject);
     procedure ActionLoopSelEndExecute(Sender: TObject);
@@ -3847,13 +3846,6 @@ begin
     Accept := ((PanelMiddle.Height + PanelBottom.Height - NewSize) > PanelMiddle.Constraints.MinHeight) and
       (NewSize > PanelBottom.Constraints.MinHeight);
   end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.FormResize(Sender: TObject);
-begin
-  // TODO : add some autoresizing maybe
 end;
 
 //------------------------------------------------------------------------------
@@ -7288,16 +7280,6 @@ begin
 
 // -----------------------------------------------------------------------------
 
-> En affichant les scenes changes comment on fait pour pouvoir se locker dessus
-> comme on ferait avec un sub ? (étirer le sub jusqu'au scene change quoi)
->
-> Ha ok, genre en restant appuyé sur ctrl ou shift ou chépakel touche,
-> les cp sont considérés comem des subs, ça serait pratique + un mode à cocher, ou c'est locké.
-
-// -----------------------------------------------------------------------------
-
-parametre commun à tous les plugins dans VSS : ex min blank
-
 ScriptLog('todo = ' + VSSCore);
 ScriptLog('VSSCore = ' + VSSCore.abc);
 
@@ -7307,8 +7289,6 @@ TODO : convert tag when converting format
 
 TODO : test wav extraction with divx installed
 DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
-
-FIXED : [#83] Error editing an inital Time-Out inside a Karaoke (moving StartTime of a Karaoke)
 
 }
 
