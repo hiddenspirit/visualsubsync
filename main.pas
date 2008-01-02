@@ -4705,6 +4705,11 @@ begin
     end;
     ChangeSubData.OldStart := SubtitleRange.StartTime;
     ChangeSubData.NewStart := NewValue;
+    // Subtitle match current selection, update selection accordingly
+    if (SubtitleRange = WavDisplayer.SelectedRange) then
+    begin
+      WavDisplayer.Selection.StartTime := NewValue;
+    end;
   end;
   CurrentProject.IsDirty := True;
 end;
@@ -4725,6 +4730,11 @@ begin
     end;
     ChangeSubData.OldStop := SubtitleRange.StopTime;
     ChangeSubData.NewStop := NewValue;
+    // Subtitle match current selection, update selection accordingly
+    if (SubtitleRange = WavDisplayer.SelectedRange) then
+    begin
+      WavDisplayer.Selection.StopTime := NewValue;
+    end;
   end;
   CurrentProject.IsDirty := True;
 end;
@@ -6715,7 +6725,7 @@ var i : integer;
 begin
   if (not Assigned(ChangeList)) or (ChangeList.Count = 0) then
     Exit;
-    
+
   ModifiedRangeList := TList.Create;
   g_WebRWSynchro.BeginWrite;
   try
@@ -6733,6 +6743,14 @@ begin
         SubtitleRange.Text := ChangeSubData.GetText(IsUndo);
       if (ChangeSubData.SubTimeChanged) then
         SubtitleRange.SubTime := ChangeSubData.GetSubTime(IsUndo);
+      if (SubtitleRange = WavDisplayer.SelectedRange) then
+      begin
+        // Change selection
+        if (ChangeSubData.StartChanged) then
+          WavDisplayer.Selection.StartTime := SubtitleRange.StartTime;
+        if (ChangeSubData.StopChanged) then
+          WavDisplayer.Selection.StopTime := SubtitleRange.StopTime;
+      end;
     end;
     // Sort subtitles
     FullSortTreeAndSubList;
