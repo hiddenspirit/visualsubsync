@@ -5,13 +5,12 @@
 VSSPlugin = {
   // ----- Plugin constant -----
   Name : 'Overlapping & minimum blank',
-  Description : 'An error is detected when the subtitle overlap on next subtitle, or when the minimum blank is not respected.',
+  Description : 'An error is detected when the subtitle overlap on next subtitle, or when the minimum blank (see global subtitle preferences) is not respected.',
   Color : 0xFF3737, 
   Message : 'Subtitle overlap on next subtitle :',
   
   // ----- Plugin parameters available from VSS GUI (name must start with "Param") -----
   ParamFixableOverlap : { Value : 100, Unit : 'ms', Description : 'The overlap must be inferior to this to be fixed automatically.'},
-  ParamMinBlank : { Value : 1, Unit : 'ms', Description : 'The minimum blank time between 2 subtitles.'},
   ParamMode : { Value : 2, Unit : '(1/2/3)', Description : 'Mode 1: Split the overlap zone in two.\nMode 2: Change the current subtitle stop time.\nMode 3: Change the next subtitle start time.'},
 
   // ----- HasError method called for each subtitle during the error checking -----
@@ -23,7 +22,7 @@ VSSPlugin = {
       return '';
     }
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
-    if ((OverlapInMs > 0) && (OverlapInMs >= this.ParamMinBlank.Value)) {
+    if ((OverlapInMs > 0) && (OverlapInMs >= VSSCore.MinimumBlank)) {
       return '';
     }
     if (OverlapInMs < 0) {
@@ -39,7 +38,7 @@ VSSPlugin = {
     
     var OverlapInMs = NextSub.Start - CurrentSub.Stop;
     	
-    if (((OverlapInMs > 0) && (OverlapInMs > this.ParamMinBlank.Value)) ||
+    if (((OverlapInMs > 0) && (OverlapInMs > VSSCore.MinimumBlank)) ||
         (-OverlapInMs > this.ParamFixableOverlap.Value)) {
       return '';
     }
@@ -48,20 +47,20 @@ VSSPlugin = {
 		  case 1:
 			  // Fix the overlap by dividing it by 2
 			  var MiddlePoint = (CurrentSub.Stop + (OverlapInMs / 2));
-			  var HalfOffset = (this.ParamMinBlank.Value / 2);
+			  var HalfOffset = (VSSCore.MinimumBlank / 2);
 			  CurrentSub.Stop = MiddlePoint - HalfOffset;
-			  NextSub.Start = CurrentSub.Stop + this.ParamMinBlank.Value;
+			  NextSub.Start = CurrentSub.Stop + VSSCore.MinimumBlank;
 		    break;
 		
       case 2:
 			  // Fix the overlap by changing the stop time of the current subtitle
-			  var Required = this.ParamMinBlank.Value - OverlapInMs;
+			  var Required = VSSCore.MinimumBlank - OverlapInMs;
 			  CurrentSub.Stop -= Required;
 		    break;
 		
       case 3:
         // Fix the overlap by changing the start time of the next subtitle
-			  var Required = this.ParamMinBlank.Value - OverlapInMs;
+			  var Required = VSSCore.MinimumBlank - OverlapInMs;
 			  NextSub.Start += Required;
 		    break;
 		    
