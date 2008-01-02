@@ -73,7 +73,7 @@ type
     SwapSubtitlesList : Boolean;
     DisableSubtitleEdition : Boolean;
     EnableToggleCreation : Boolean;
-    EnableMouseAntiOverlapping : Boolean;
+    EnableMouseSnapping : Boolean;
     SpaceKeyModifyTiming : Boolean;
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
@@ -172,7 +172,7 @@ type
     EditSubTextFont: TTntEdit;
     bttSubTextFont: TTntButton;
     chkAutoSaveWhenPlaying: TCheckBox;
-    chkEnableMouseAntiOverlapping: TCheckBox;
+    chkEnableMouseSnapping: TCheckBox;
     tsTimingMode: TTntTabSheet;
     TntGroupBox4: TTntGroupBox;
     chkEnableSubCreationWithSpaceKey: TCheckBox;
@@ -468,7 +468,7 @@ begin
   SwapSubtitlesList := False;
   DisableSubtitleEdition := True;
   EnableToggleCreation := True;
-  EnableMouseAntiOverlapping := True;
+  EnableMouseSnapping := True;
   SpaceKeyModifyTiming := True;
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
@@ -594,7 +594,7 @@ begin
   IniFile.WriteBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
   IniFile.WriteInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
-  IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
+  IniFile.WriteBool('Misc','EnableMouseSnapping',EnableMouseSnapping);
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
 
   // Web server
@@ -671,7 +671,7 @@ begin
   SpaceKeyModifyTiming := IniFile.ReadBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
   SpaceKeyCPSTarget := IniFile.ReadInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
-  EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
+  EnableMouseSnapping := IniFile.ReadBool('Misc','EnableMouseSnapping',EnableMouseSnapping);
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
 
   // Web server
@@ -799,7 +799,7 @@ begin
   chkSwapSubList.Checked := Config.SwapSubtitlesList;
   chkDisableSubEditionInTimingMode.Checked := Config.DisableSubtitleEdition;
   chkEnableSubCreationWithSpaceKey.Checked := Config.EnableToggleCreation;
-  chkEnableMouseAntiOverlapping.Checked := Config.EnableMouseAntiOverlapping;
+  chkEnableMouseSnapping.Checked := Config.EnableMouseSnapping;
   chkSpaceKeyModifyTiming.Checked := Config.SpaceKeyModifyTiming;
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
@@ -887,7 +887,7 @@ begin
   Config.SwapSubtitlesList := chkSwapSubList.Checked;
   Config.DisableSubtitleEdition := chkDisableSubEditionInTimingMode.Checked;
   Config.EnableToggleCreation := chkEnableSubCreationWithSpaceKey.Checked;
-  Config.EnableMouseAntiOverlapping := chkEnableMouseAntiOverlapping.Checked;
+  Config.EnableMouseSnapping := chkEnableMouseSnapping.Checked;
   Config.SpaceKeyModifyTiming := chkSpaceKeyModifyTiming.Checked;
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;

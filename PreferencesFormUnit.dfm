@@ -733,12 +733,12 @@ object PreferencesForm: TPreferencesForm
             'mouse mode)'
           TabOrder = 0
         end
-        object chkEnableMouseAntiOverlapping: TCheckBox
+        object chkEnableMouseSnapping: TCheckBox
           Left = 16
           Top = 40
           Width = 385
           Height = 17
-          Caption = 'Enable mouse anti-overlapping'
+          Caption = 'Enable mouse snapping'
           TabOrder = 1
         end
       end
