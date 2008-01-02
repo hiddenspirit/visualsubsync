@@ -4417,7 +4417,7 @@ begin
     else
       WAVDisplayer.SelMode := smCoolEdit;
   end;
-  WAVDisplayer.EnableMouseAntiOverlapping := ConfigObject.EnableMouseAntiOverlapping;
+  WAVDisplayer.SnappingEnabled := ConfigObject.EnableMouseSnapping;
 end;
 
 //------------------------------------------------------------------------------

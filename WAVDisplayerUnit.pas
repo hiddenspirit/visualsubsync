@@ -203,7 +203,6 @@ type
     FSelectedKaraokeIndex : Integer; // Index of the range, 0 -> [StartTime,SubTime[0]]
     FSelectedKaraokeRange : TRange;
 
-    FEnableMouseAntiOverlapping : Boolean;
     FMinSelTime : Integer;
     FMaxSelTime : Integer;
 
@@ -215,6 +214,8 @@ type
     FSceneChangeEnabled : Boolean;
     FMinimumBlank : Integer; // Minimum blank between subtitle in ms
     FMinBlankInfo1, FMinBlankInfo2 : TMinBlankInfo;
+    FShowMinimumBlank : Boolean;
+    FSnappingEnabled : Boolean;
 
     procedure DrawAlphaRect(ACanvas : TCanvas; t1, t2 : Integer);
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
@@ -335,7 +336,6 @@ type
     property IsPlaying : Boolean read FIsPlaying;
     property Enabled;
     property Length : Integer read FLengthMs;
-    property EnableMouseAntiOverlapping : Boolean read FEnableMouseAntiOverlapping write FEnableMouseAntiOverlapping;
     property MinimumBlank : Integer read FMinimumBlank write FMinimumBlank;
     property PageSize : Integer read FPageSizeMs;
     property PopupMenu;
@@ -350,6 +350,8 @@ type
     property SceneChangeStartOffset : Integer read FSceneChangeStartOffset write FSceneChangeStartOffset;
     property SceneChangeStopOffset : Integer read FSceneChangeStopOffset write FSceneChangeStopOffset;
     property SceneChangeFilterOffset : Integer read FSceneChangeFilterOffset write FSceneChangeFilterOffset;
+    property ShowMinimumBlank : Boolean read FShowMinimumBlank write FShowMinimumBlank;
+    property SnappingEnabled : Boolean read FSnappingEnabled write FSnappingEnabled;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -1032,9 +1034,11 @@ begin
   FSceneChangeStopOffset := 130;
   FSceneChangeFilterOffset := 250;
   FSceneChangeEnabled := True;
-  FMinimumBlank := 0;
+  FMinimumBlank := 1;
+  FShowMinimumBlank := True;
   FMinBlankInfo1 := TMinBlankInfo.Create;
   FMinBlankInfo2 := TMinBlankInfo.Create;
+  FSnappingEnabled := True;
   
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
@@ -1293,18 +1297,21 @@ begin
   //OutputDebugString(PChar(Format('FDynamicEditMode = %d, FSelectionOrigin = %d, FCursorMs = %d, FDynamicSelRange = %p, SelStartTime = %d',
   //  [Ord(FDynamicEditMode), FSelectionOrigin, FCursorMs, Pointer(FDynamicSelRange), FSelection.StartTime])));
 
-  if (FMinBlankInfo1.Exists) then
+  if ShowMinimumBlank then
   begin
-    ACanvas.Pen.Color := clWhite;
-    DrawAlphaRect(ACanvas, FMinBlankInfo1.GetStart(FMinimumBlank),
-      FMinBlankInfo1.GetStop(FMinimumBlank));
-  end;
+    if (FMinBlankInfo1.Exists) then
+    begin
+      ACanvas.Pen.Color := clWhite;
+      DrawAlphaRect(ACanvas, FMinBlankInfo1.GetStart(FMinimumBlank),
+        FMinBlankInfo1.GetStop(FMinimumBlank));
+    end;
 
-  if (FMinBlankInfo2.Exists) then
-  begin
-    ACanvas.Pen.Color := clWhite;
-    DrawAlphaRect(ACanvas, FMinBlankInfo2.GetStart(FMinimumBlank),
-      FMinBlankInfo2.GetStop(FMinimumBlank));
+    if (FMinBlankInfo2.Exists) then
+    begin
+      ACanvas.Pen.Color := clWhite;
+      DrawAlphaRect(ACanvas, FMinBlankInfo2.GetStart(FMinimumBlank),
+        FMinBlankInfo2.GetStop(FMinimumBlank));
+    end;
   end;
 
   // TODO improvement : this is very slow when lot's of range are on screen
@@ -1733,8 +1740,8 @@ end;
 procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
-    ClipKaraokeRect, ClipSubRect : TRect;
-    x1, x2, i, SnappingPos : Integer;
+    ClipKaraokeRect : TRect;
+    x1, x2, SnappingPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
@@ -1785,7 +1792,7 @@ begin
     end;
     NewCursorPos := PixelToTime(X) + FPositionMs;
 
-    if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) then
+    if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) and (FSnappingEnabled) then
     begin
       SnappingPos := FindSnappingPoint(NewCursorPos);
       if (SnappingPos <> -1) then
@@ -1846,77 +1853,6 @@ begin
         Include(UpdateFlags, uvfSelection); // clear selection
       FSelectionOrigin := NewCursorPos;
       SetSelectedRangeEx(nil, False);
-    end;
-
-    if (FEnableMouseAntiOverlapping = True) then
-    begin
-      // Clip mouse left/right position to avoid overlapp on previous/next subtitle
-      x1 := 0;
-      x2 := Width;
-      FMinSelTime := -1;
-      FMaxSelTime := -1;
-      i := RangeList.FindInsertPos(NewCursorPos,-1);
-      if (i >= 0) then
-      begin
-        if Assigned(FSelectedRange) then
-        begin
-          if(NewCursorPos = FSelectedRange.StartTime) then
-          begin
-            if (i > 0) then
-            begin
-              FMinSelTime := RangeList[i-1].StopTime + 1;
-              x1 := TimeToPixel(FMinSelTime - FPositionMs);
-            end;
-            FMaxSelTime := FSelectedRange.StopTime - 1;
-            x2 := TimeToPixel(FMaxSelTime - FPositionMs);
-          end
-          else
-          begin
-            // TODO : better change stop when ovelapping on next sub ???
-            FMinSelTime := FSelectedRange.StartTime + 1;
-            x1 := TimeToPixel(FMinSelTime - FPositionMs );
-            if(i < RangeList.Count) then
-            begin
-              FMaxSelTime := RangeList[i].StartTime - 1;
-              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
-            end;
-          end;
-        end
-        else
-        begin
-          if (i > 0) and
-             (NewCursorPos >= RangeList[i-1].StartTime) and
-             (NewCursorPos <= RangeList[i-1].StopTime) then
-          begin
-            // Selection only INSIDE subtitle range
-          end
-          else
-          begin
-            // Selection only OUTSIDE subtitle range
-            if (i > 0) then
-            begin
-              FMinSelTime := RangeList[i-1].StopTime  + 1;
-              x1 := TimeToPixel(FMinSelTime - FPositionMs);
-            end;
-            if(i < RangeList.Count) then
-            begin
-              FMaxSelTime := RangeList[i].StartTime - 1;
-              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
-            end;
-          end;
-        end;
-      end;
-      Constrain(x1, 0, Width);
-      Constrain(x2, 0, Width);
-      // allow the cursor to go a bit further than allowed, we will do the real
-      // clipping based on FMinSelTime and FMaxSelTime.
-      ClipSubRect.Left := x1-2;
-      ClipSubRect.Right := x2+3;
-      ClipSubRect.Top := 0;
-      ClipSubRect.Bottom := Height;
-      // Convert in screen coordinate
-      OffsetRect(ClipSubRect, ClientOrigin.X, ClientOrigin.Y);
-      ClipCursor(@ClipSubRect);
     end;
 
     if (FCursorMs <> NewCursorPos) and (FDynamicEditMode = demNone) then
@@ -2169,7 +2105,7 @@ begin
             Constrain(NewCursorPos, 0, FMaxSelTime);
           end;
 
-          if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) then
+          if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) and (FSnappingEnabled) then
           begin
             SnappingPos := FindSnappingPoint(NewCursorPos);
             if (SnappingPos <> -1) then
