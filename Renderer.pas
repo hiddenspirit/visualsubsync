@@ -60,6 +60,7 @@ type
     FLoop : Boolean;
     FStart, FStop : Int64;
     FVideoWidth, FVideoHeight : Integer;
+    FVideoTop, FVideoLeft : Integer;
     FDisplayWindow : THandle;
     FIsOpen : Boolean;
     FStartStopAccessCS : TRtlCriticalSection;
@@ -734,12 +735,25 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TDShowRenderer.DisplayWindowProc(var Mesg : TMessage);
+var xPos, yPos : Short;
+    CursorPos : TPoint;
 begin
   with Mesg do
   begin
-    if (Msg = WM_SIZE) then
-    begin
-      UpdateDisplayWindow;
+    case Msg of
+    WM_SIZE: UpdateDisplayWindow;
+    WM_RBUTTONUP:
+      // Translate coordinate
+      begin
+        if (GetCursorPos(CursorPos) = True) and (ScreenToClient(FDisplayWindow, CursorPos) = True) then
+        begin
+          // horizontal position of cursor : LOWORD(lParam)
+          // vertical position of cursor : HIWORD(lParam)
+          xPos := CursorPos.X;
+          yPos := CursorPos.Y;
+          lParam := MakeLParam(xPos, yPos);
+        end;
+      end;
     end;
     
     Result := CallWindowProc(FDisplayWindowOldProc, FDisplayWindow, Msg,
@@ -763,6 +777,7 @@ begin
   begin
     FVideoWindow.put_Visible(False);
     FVideoWindow.put_MessageDrain(0);
+
     // This steal the focus, so we do it only before releasing the graph
     if WinHwnd = 0 then
       FVideoWindow.put_Owner(0);
@@ -832,9 +847,11 @@ begin
     NewHeight := WinHeight;
   end;
 
+  FVideoTop := (WinHeight - NewHeight) div 2;
+  FVideoLeft := (WinWidth - NewWidth) div 2;
   FVideoWindow.SetWindowPosition(
-    (WinWidth - NewWidth) div 2,
-    (WinHeight - NewHeight) div 2,
+    FVideoLeft,
+    FVideoTop,
     NewWidth,
     NewHeight);
 end;
