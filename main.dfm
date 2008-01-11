@@ -1895,7 +1895,7 @@ object MainForm: TMainForm
     end
     object ActionFixErrorMain: TTntAction
       Tag = 1
-      Caption = 'Fix error'
+      Caption = 'Fix errors'
       OnExecute = ActionFixErrorMainExecute
     end
     object ActionStartSub: TTntAction
@@ -2142,6 +2142,11 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Merge dialog'
       OnExecute = ActionMergeDialogExecute
+    end
+    object ActionFixSelectedErrors: TTntAction
+      Tag = 1
+      Caption = 'Fix selected errors'
+      OnExecute = ActionFixSelectedErrorsExecute
     end
   end
   object ImageList1: TImageList

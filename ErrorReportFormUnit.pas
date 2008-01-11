@@ -98,6 +98,7 @@ type
     procedure DeleteError(Range : TSubtitleRange);
     procedure GoToNextError;
     procedure GoToPreviousError;
+    procedure FixSelectedErrors;
   end;
 
 var
@@ -332,7 +333,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TErrorReportForm.pmiFixErrorClick(Sender: TObject);
+procedure TErrorReportForm.FixSelectedErrors;
 var ErrorLst : TList;
     Node : PVirtualNode;
 begin
@@ -346,6 +347,13 @@ begin
   MainForm.FixErrorInList(ErrorLst);
   ErrorLst.Free;
   vtvErrorList.Repaint;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.pmiFixErrorClick(Sender: TObject);
+begin
+  FixSelectedErrors;
 end;
 
 //------------------------------------------------------------------------------
