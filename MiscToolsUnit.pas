@@ -855,6 +855,9 @@ begin
   end;
   // Remove slash at start
   Delete(Result, 1, 1);
+  // Check for network path
+  if (Pos('\\', Filename) = 1) then
+    Result := '\\' + Result; 
 end;
 
 // -----------------------------------------------------------------------------
