@@ -24,8 +24,8 @@ object PreferencesForm: TPreferencesForm
     Left = 0
     Top = 0
     Width = 482
-    Height = 349
-    ActivePage = tsGeneral
+    Height = 356
+    ActivePage = tsSubtitle
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -103,7 +103,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 144
         Width = 466
-        Height = 169
+        Height = 176
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -209,12 +209,12 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 474
-        Height = 321
+        Height = 328
         Align = alClient
         TabOrder = 0
         DesignSize = (
           474
-          321)
+          328)
         object TntLabel8: TTntLabel
           Left = 16
           Top = 128
@@ -314,7 +314,7 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Error checking'
       object Bevel7: TBevel
         Left = 0
-        Top = 197
+        Top = 204
         Width = 466
         Height = 4
         Align = alBottom
@@ -322,7 +322,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Bevel8: TBevel
         Left = 0
-        Top = 105
+        Top = 112
         Width = 466
         Height = 4
         Align = alBottom
@@ -332,7 +332,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 466
-        Height = 105
+        Height = 112
         OnClickCheck = ListErrorCheckingClickCheck
         Align = alClient
         ItemHeight = 13
@@ -343,7 +343,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Panel2: TPanel
         Left = 0
-        Top = 109
+        Top = 116
         Width = 466
         Height = 88
         Align = alBottom
@@ -411,7 +411,7 @@ object PreferencesForm: TPreferencesForm
       end
       object ListPluginParam: TVirtualStringTree
         Left = 0
-        Top = 201
+        Top = 208
         Width = 466
         Height = 112
         Align = alBottom
@@ -465,7 +465,7 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Hotkeys'
       object Bevel9: TBevel
         Left = 0
-        Top = 275
+        Top = 281
         Width = 466
         Height = 4
         Align = alBottom
@@ -475,7 +475,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 466
-        Height = 275
+        Height = 281
         Align = alClient
         Columns = <
           item
@@ -502,15 +502,15 @@ object PreferencesForm: TPreferencesForm
       end
       object Panel3: TPanel
         Left = 0
-        Top = 279
+        Top = 285
         Width = 466
-        Height = 34
+        Height = 35
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 1
         DesignSize = (
           466
-          34)
+          35)
         object TntLabel5: TTntLabel
           Left = 0
           Top = 1
@@ -719,7 +719,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 125
         Width = 466
-        Height = 188
+        Height = 195
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -791,13 +791,13 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 85
         Width = 466
-        Height = 228
+        Height = 235
         Align = alClient
         Caption = ' Subtitles text : '
         TabOrder = 1
         DesignSize = (
           466
-          228)
+          235)
         object EditSubTextFont: TTntEdit
           Left = 16
           Top = 24
@@ -828,7 +828,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 0
         Width = 466
-        Height = 313
+        Height = 320
         Align = alClient
         TabOrder = 0
         object chkEnableSubCreationWithSpaceKey: TCheckBox
@@ -986,7 +986,7 @@ object PreferencesForm: TPreferencesForm
         Left = 0
         Top = 125
         Width = 466
-        Height = 188
+        Height = 195
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -1003,7 +1003,7 @@ object PreferencesForm: TPreferencesForm
   end
   object Panel1: TPanel
     Left = 0
-    Top = 349
+    Top = 356
     Width = 482
     Height = 41
     Align = alBottom

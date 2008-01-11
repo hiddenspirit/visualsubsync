@@ -59,8 +59,7 @@ object ErrorReportForm: TErrorReportForm
     Left = 16
     Top = 48
     object pmiFixError: TTntMenuItem
-      Caption = 'Fix error'
-      OnClick = pmiFixErrorClick
+      Action = MainForm.ActionFixSelectedErrors
     end
     object pmiFixAllXXX: TTntMenuItem
       Caption = 'Fix all errors of same type (color)'

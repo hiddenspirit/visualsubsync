@@ -349,6 +349,7 @@ type
     ActionMergeWithPrevious: TTntAction;
     ActionMergeWithNext: TTntAction;
     ActionMergeDialog: TTntAction;
+    ActionFixSelectedErrors: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -519,6 +520,7 @@ type
     procedure ActionMergeWithPreviousExecute(Sender: TObject);
     procedure ActionMergeWithNextExecute(Sender: TObject);
     procedure ActionMergeDialogExecute(Sender: TObject);
+    procedure ActionFixSelectedErrorsExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -4547,6 +4549,13 @@ end;
 procedure TMainForm.ActionShowHideLogsExecute(Sender: TObject);
 begin
   LogForm.Visible := not LogForm.Visible;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionFixSelectedErrorsExecute(Sender: TObject);
+begin
+  ErrorReportForm.FixSelectedErrors;
 end;
 
 //------------------------------------------------------------------------------
