@@ -350,6 +350,7 @@ type
     ActionMergeWithNext: TTntAction;
     ActionMergeDialog: TTntAction;
     ActionFixSelectedErrors: TTntAction;
+    pmiSubListMergeDialog: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);

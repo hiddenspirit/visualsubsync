@@ -3925,6 +3925,9 @@ object MainForm: TMainForm
     object pmiSubListMerge: TTntMenuItem
       Action = ActionMerge
     end
+    object pmiSubListMergeDialog: TTntMenuItem
+      Action = ActionMergeDialog
+    end
     object pmiSubListDelay: TTntMenuItem
       Action = ActionDelay
     end
