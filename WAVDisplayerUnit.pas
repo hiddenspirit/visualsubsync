@@ -203,6 +203,7 @@ type
     FSelectedKaraokeIndex : Integer; // Index of the range, 0 -> [StartTime,SubTime[0]]
     FSelectedKaraokeRange : TRange;
 
+    FEnableMouseAntiOverlapping : Boolean;
     FMinSelTime : Integer;
     FMaxSelTime : Integer;
 
@@ -336,6 +337,7 @@ type
     property IsPlaying : Boolean read FIsPlaying;
     property Enabled;
     property Length : Integer read FLengthMs;
+    property EnableMouseAntiOverlapping : Boolean read FEnableMouseAntiOverlapping write FEnableMouseAntiOverlapping;
     property MinimumBlank : Integer read FMinimumBlank write FMinimumBlank;
     property PageSize : Integer read FPageSizeMs;
     property PopupMenu;
@@ -1039,6 +1041,7 @@ begin
   FMinBlankInfo1 := TMinBlankInfo.Create;
   FMinBlankInfo2 := TMinBlankInfo.Create;
   FSnappingEnabled := True;
+  FEnableMouseAntiOverlapping := True;
   
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
@@ -1740,8 +1743,8 @@ end;
 procedure TWAVDisplayer.MouseDownCoolEdit(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
-    ClipKaraokeRect : TRect;
-    x1, x2, SnappingPos : Integer;
+    ClipKaraokeRect , ClipSubRect : TRect;
+    x1, x2, i, SnappingPos : Integer;
 begin
   if (ssLeft in Shift) then
   begin
@@ -1853,6 +1856,77 @@ begin
         Include(UpdateFlags, uvfSelection); // clear selection
       FSelectionOrigin := NewCursorPos;
       SetSelectedRangeEx(nil, False);
+    end;
+
+    if (FEnableMouseAntiOverlapping = True) then
+    begin
+      // Clip mouse left/right position to avoid overlapp on previous/next subtitle
+      x1 := 0;
+      x2 := Width;
+      FMinSelTime := -1;
+      FMaxSelTime := -1;
+      i := RangeList.FindInsertPos(NewCursorPos,-1);
+      if (i >= 0) then
+      begin
+        if Assigned(FSelectedRange) then
+        begin
+          if(NewCursorPos = FSelectedRange.StartTime) then
+          begin
+            if (i > 0) then
+            begin
+              FMinSelTime := RangeList[i-1].StopTime + 1;
+              x1 := TimeToPixel(FMinSelTime - FPositionMs);
+            end;
+            FMaxSelTime := FSelectedRange.StopTime - 1;
+            x2 := TimeToPixel(FMaxSelTime - FPositionMs);
+          end
+          else
+          begin
+            // TODO : better change stop when ovelapping on next sub ???
+            FMinSelTime := FSelectedRange.StartTime + 1;
+            x1 := TimeToPixel(FMinSelTime - FPositionMs );
+            if(i < RangeList.Count) then
+            begin
+              FMaxSelTime := RangeList[i].StartTime - 1;
+              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
+            end;
+          end;
+        end
+        else
+        begin
+          if (i > 0) and
+             (NewCursorPos >= RangeList[i-1].StartTime) and
+             (NewCursorPos <= RangeList[i-1].StopTime) then
+          begin
+            // Selection only INSIDE subtitle range
+          end
+          else
+          begin
+            // Selection only OUTSIDE subtitle range
+            if (i > 0) then
+            begin
+              FMinSelTime := RangeList[i-1].StopTime  + 1;
+              x1 := TimeToPixel(FMinSelTime - FPositionMs);
+            end;
+            if(i < RangeList.Count) then
+            begin
+              FMaxSelTime := RangeList[i].StartTime - 1;
+              x2 := TimeToPixel(FMaxSelTime - FPositionMs);
+            end;
+          end;
+        end;
+      end;
+      Constrain(x1, 0, Width);
+      Constrain(x2, 0, Width);
+      // allow the cursor to go a bit further than allowed, we will do the real
+      // clipping based on FMinSelTime and FMaxSelTime.
+      ClipSubRect.Left := x1-2;
+      ClipSubRect.Right := x2+3;
+      ClipSubRect.Top := 0;
+      ClipSubRect.Bottom := Height;
+      // Convert in screen coordinate
+      OffsetRect(ClipSubRect, ClientOrigin.X, ClientOrigin.Y);
+      ClipCursor(@ClipSubRect);
     end;
 
     if (FCursorMs <> NewCursorPos) and (FDynamicEditMode = demNone) then
@@ -3128,7 +3202,8 @@ begin
        (FMouseIsDown = False) and
        ((NewPos < FPositionMs) or (FPlayCursorMs > (FPositionMs + FPageSizeMs))) then
     begin
-      SetPositionMs(NewPos - (FPageSizeMs div 10))
+      // Keep 1/8 of the previous display
+      SetPositionMs(NewPos - (FPageSizeMs div 8))
     end
     else
       UpdateView([uvfPlayCursor])
