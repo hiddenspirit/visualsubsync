@@ -25,7 +25,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 482
     Height = 356
-    ActivePage = tsSubtitle
+    ActivePage = tsMouse
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -449,7 +449,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 166
+            Width = 170
             WideText = 'Value'
           end
           item
@@ -740,6 +740,14 @@ object PreferencesForm: TPreferencesForm
           Height = 17
           Caption = 'Enable mouse snapping'
           TabOrder = 1
+        end
+        object chkEnableMouseAntiOverlapping: TCheckBox
+          Left = 16
+          Top = 56
+          Width = 385
+          Height = 17
+          Caption = 'Enable mouse anti-overlapping'
+          TabOrder = 2
         end
       end
     end
