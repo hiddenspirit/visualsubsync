@@ -307,6 +307,8 @@ type
     procedure Scroll(ViewPercent : Integer);
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 
+    procedure ClearRangeList;
+
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
@@ -3125,9 +3127,17 @@ procedure TWAVDisplayer.DeleteRangeAtIdx(const Idx : Integer; const UpdateDispla
 begin
   if (Idx < 0) or (Idx >= FRangeList.Count) then
     Exit;
-  if FRangeList[Idx] = FSelectedRange then
+  if (FRangeList[Idx] = FSelectedRange) then
   begin
     SetSelectedRangeEx(nil, False);
+  end;
+  if FMinBlankInfo1.Exists and (FMinBlankInfo1.Range = FRangeList[Idx]) then
+  begin
+    FMinBlankInfo1.SetInfo(nil, mbipInvalid);
+  end;
+  if FMinBlankInfo2.Exists and (FMinBlankInfo2.Range = FRangeList[Idx]) then
+  begin
+    FMinBlankInfo2.SetInfo(nil, mbipInvalid);
   end;
   FRangeList.Delete(Idx);
   if (UpdateDisplay) then
@@ -3416,6 +3426,8 @@ end;
 
 procedure TWAVDisplayer.Close;
 begin
+  ClearRangeList;
+
   FPeakDataLoaded := False;
   FPeakTab := nil;
   FPeakTabSize := 0;
@@ -3590,6 +3602,16 @@ begin
   SetLength(FSceneChangeList, System.Length(SceneChangeList));
   CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
     System.Length(SceneChangeList) * SizeOf(Integer));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.ClearRangeList;
+begin
+  FMinBlankInfo1.SetInfo(nil, mbipInvalid);
+  FMinBlankInfo2.SetInfo(nil, mbipInvalid);
+  FRangeList.Clear;
+  ClearSelection;
 end;
 
 //------------------------------------------------------------------------------
