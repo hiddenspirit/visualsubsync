@@ -778,6 +778,7 @@ begin
   CustomMemo.Left := MemoSubtitleText.Left;
   CustomMemo.Align := MemoSubtitleText.Align;
   CustomMemo.HideSelection := MemoSubtitleText.HideSelection;
+  //CustomMemo.DisableWindowsUndo;
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
@@ -1303,8 +1304,7 @@ begin
   if (NewText <> TntStatusBar1.Panels[1].Text) then
   begin
     TntStatusBar1.Panels[1].Text := NewText;
-    TntStatusBar1.Invalidate;
-    Application.ProcessMessages;
+    TntStatusBar1.Repaint;
   end;
 end;
 
@@ -1679,8 +1679,7 @@ begin
   Result := False;
   if not WideFileExists(Filename) then
   begin
-    WAVDisplayer.ClearSelection;
-    WAVDisplayer.RangeList.Clear;
+    WAVDisplayer.ClearRangeList;
     vtvSubsList.Clear;
     Exit;
   end;
@@ -1688,8 +1687,7 @@ begin
   SubtitleFileHeader := '';
   SubtitleFileFooter := '';
 
-  WAVDisplayer.ClearSelection;
-  WAVDisplayer.RangeList.Clear;
+  WAVDisplayer.ClearRangeList;
 
   Source := TTntStringList.Create;
   Source.LoadFromFile(Filename);
@@ -1783,16 +1781,14 @@ begin
   begin
     SubtitleFileHeader := '';
     SubtitleFileFooter := '';
-    WAVDisplayer.ClearSelection;
-    WAVDisplayer.RangeList.Clear;
+    WAVDisplayer.ClearRangeList;
     vtvSubsList.Clear;
     StyleFormInstance.ClearAll;
     StyleFormInstance.AddDefaultStyle;
     Exit;
   end;
 
-  WAVDisplayer.ClearSelection;
-  WAVDisplayer.RangeList.Clear;
+  WAVDisplayer.ClearRangeList;
 
   ssaParser := TSSAParser.Create;
   ssaParser.Parse(Filename);
@@ -1950,7 +1946,7 @@ begin
     finally
       g_WebRWSynchro.EndWrite;
     end;
-    
+
     if (NeedUpdate = True) then
     begin
       WAVDisplayer.UpdateView([uvfRange]);
@@ -3646,8 +3642,7 @@ begin
       ErrorReportForm.Clear;
       vtvSubsList.Clear;
 
-      WAVDisplayer.ClearSelection;
-      WAVDisplayer.RangeList.Clear;
+      WAVDisplayer.ClearRangeList;
       WAVDisplayer.Enabled := False;
       WAVDisplayer.Close;
       WAVDisplayer.Repaint;
@@ -5531,7 +5526,7 @@ begin
     vtvSubsList.ClearSelection;
     vtvSubsList.Selected[Node] := True;
   end;
-  TagHighlight(MemoSubtitleText,WAVDisplayer.KaraokeSelectedIndex);  
+  TagHighlight(MemoSubtitleText,WAVDisplayer.KaraokeSelectedIndex);
 end;
 
 //------------------------------------------------------------------------------
@@ -6269,7 +6264,7 @@ procedure TMainForm.CurrentProjectOnDirtySet(Sender: TObject);
 begin
   UpdateSubtitleForPreview(False);
   VideoPreviewNeedSubtitleUpdate := True;
-  CallJSOnSubtitleModification;  
+  CallJSOnSubtitleModification;
 end;
 
 //------------------------------------------------------------------------------
@@ -7274,19 +7269,6 @@ undo text pipe text modification (modifiy, clear, load)
 undo for style?
 
 TODO : display karaoke sylables in wavdisplay
-
-
-
-procedure TTntCustomStatusBar.WndProc(var Msg: TMessage);
-const
-  SB_SIMPLEID = Integer($FF);
-var
-  iPart: Integer;
-  szText: PAnsiChar;
-  WideText: WideString;
-begin
-  if Win32PlatformIsUnicode and (Msg.Msg = SB_SETTEXTA) and ((Msg.WParam and SBT_OWNERDRAW) = 0)
-
 
 // -----------------------------------------------------------------------------
 
