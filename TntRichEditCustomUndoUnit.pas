@@ -101,7 +101,7 @@ type
     constructor Create(AOwner: TComponent); override;
     procedure DisableWindowsUndo;
     procedure SaveSelectionInfo;
-
+    
   published
     property UndoDisabled: Boolean read FUndoDisabled write FUndoDisabled;
     property OnUndo : TNotifyUndo read FOnUndo write FOnUndo;
@@ -115,13 +115,13 @@ uses SysUtils, tom_TLB;
 
 procedure TUndoableTextTask.DoTask;
 var TxtStart, TxtEnd, NewText : WideString;
-    lenOText : Integer;
+    LenOText : Integer;
 begin
-  lenOText := Length(FOriginalText);
+  LenOText := Length(FOriginalText);
   // Get the new text start
   TxtStart := Copy(FRichEdit.Text, 1, FReplaceStart - 1);
   // Get the new text end
-  TxtEnd := Copy(FRichEdit.Text, FReplaceStart + lenOText, MaxInt);
+  TxtEnd := Copy(FRichEdit.Text, FReplaceStart + LenOText, MaxInt);
   // Recalculate the new text (We are replacing "FReplaceByText" at "FReplaceStart" by "FOriginalText")
   NewText := TxtStart + FReplaceByText + TxtEnd;
 
@@ -148,13 +148,13 @@ end;
 
 procedure TUndoableTextTask.UndoTask;
 var TxtStart, TxtEnd, OriginalText : WideString;
-    lenRText : Integer;
+  LenRText : Integer;
 begin
-  lenRText := Length(FReplaceByText);
+  LenRText := Length(FReplaceByText);
   // Get the old text start
   TxtStart := Copy(FRichEdit.Text, 1, FReplaceStart - 1);
   // Get the old text end
-  TxtEnd := Copy(FRichEdit.Text, FReplaceStart + lenRText, MaxInt);
+  TxtEnd := Copy(FRichEdit.Text, FReplaceStart + LenRText, MaxInt);
   // Recalculate the original text (We are replacing "FReplaceByText" at "FReplaceStart" by "FOriginalText")
   OriginalText := TxtStart + FOriginalText + TxtEnd;
 
@@ -251,9 +251,8 @@ begin
 
   if (not fReally) then
   begin
-    // Save the current selection 
-    FOwner.FSelStartBeforeChange := FOwner.SelStart;
-    FOwner.FSelLengthBeforeChange := FOwner.SelLength;
+    // Save the current selection
+    FOwner.SaveSelectionInfo;
   end;
   
   Result:= E_NOTIMPL;
@@ -277,7 +276,7 @@ begin
 end;
 
 function TRichEditOleCallback.GetContextMenu(seltype: Word; oleobj: IOleObject;
-const chrg: TCharRange; var menu: HMENU): HRESULT;
+  const chrg: TCharRange; var menu: HMENU): HRESULT;
 var CursorPos : TPoint;
 begin
   if Assigned(FOwner.PopupMenu) then
@@ -308,24 +307,21 @@ end;
 procedure TTntRichEditCustomUndo.WMClear(var Msg: TMessage);
 begin
   // Save selection position
-  FSelStartBeforeChange := SelStart;
-  FSelLengthBeforeChange := SelLength;
+  SaveSelectionInfo;
   inherited;
 end;
 
 procedure TTntRichEditCustomUndo.WMCut(var Msg: TMessage);
 begin
   // Save selection position
-  FSelStartBeforeChange := SelStart;
-  FSelLengthBeforeChange := SelLength;
+  SaveSelectionInfo;
   inherited;
 end;
 
 procedure TTntRichEditCustomUndo.WMPaste(var Msg: TMessage);
 begin
   // Save selection position
-  FSelStartBeforeChange := SelStart;
-  FSelLengthBeforeChange := SelLength;
+  SaveSelectionInfo;
   inherited;
 end;
 
@@ -387,8 +383,8 @@ end;
 procedure TTntRichEditCustomUndo.Change;
 var UndoTask : TUndoableTextTask;
 begin
-  if (FUndoDisabled = False) and (Text <> FOldText) and Assigned(FOnUndo) then
-  begin
+    if (FUndoDisabled = False) and Assigned(FOnUndo) and (Text <> FOldText) then
+    begin
       // Make a very simple diff
       UndoTask := TUndoableTextTask.Create;
       DiffText(Text, FOldText, UndoTask);
@@ -398,17 +394,15 @@ begin
       UndoTask.FSelLength := SelLength;
       UndoTask.FRichEdit := Self;
       FOnUndo(Self, UndoTask);
-  end;
-
-  FOldText := Text;
+    end;
+    FOldText := Text;
   inherited;
 end;
 
 procedure TTntRichEditCustomUndo.KeyDown(var Key: Word; Shift: TShiftState);
 begin
   // Save selection position
-  FSelStartBeforeChange := SelStart;
-  FSelLengthBeforeChange := SelLength;
+  SaveSelectionInfo;
   inherited;
 end;
 
