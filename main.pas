@@ -3964,7 +3964,10 @@ end;
 procedure TMainForm.FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean);
 var NodeData : PTreeData;
 begin
-  vtvSubsList.ScrollIntoView(Node, True);
+  if (not vtvSubsList.IsVisible[Node]) then
+  begin
+    vtvSubsList.ScrollIntoView(Node, True);
+  end;
   vtvSubsList.FocusedNode := Node;
   vtvSubsList.ClearSelection;
   vtvSubsList.Selected[Node] := True;
@@ -5584,6 +5587,7 @@ var
   PP : TPageProcessor;
   DummyEnvVars : TStringList;
   CM : ICursorManager;
+  //SelectedSubList : TRangeList;
 begin
   if Trim(CurrentProject.WAVFile) = '' then
   begin
@@ -5601,7 +5605,17 @@ begin
       begin
         CM := TCursorManager.Create(crHourGlass);
         ShowStatusBarMessage('Exporting to wav files, please wait...');
-        Node := vtvSubsList.GetFirst;
+        {
+        if (vtvSubsList.SelectedCount > 1) then
+        begin
+          SelectedSubList := TRangeList.Create;
+          Node := vtvSubsList.GetFirstSelected
+        end else begin
+          SelectedSubList := nil;}
+          Node := vtvSubsList.GetFirst;{
+        end;
+        }
+        
         while (Node <> nil) do
         begin
           NodeData := vtvSubsList.GetNodeData(Node);
@@ -5610,8 +5624,20 @@ begin
           WAVFile.ExtractToStream(NodeData.Range.StartTime,
             NodeData.Range.StopTime, FS);
           FS.Free;
-          Node := vtvSubsList.GetNext(Node);
+          {if (vtvSubsList.SelectedCount > 1) then
+          begin
+            SelectedSubList.Add(NodeData.Range);
+            Node := vtvSubsList.GetNextSelected(Node);
+          end else begin}
+            Node := vtvSubsList.GetNext(Node);
+          {end;}
         end;
+
+        {if (vtvSubsList.SelectedCount > 1) then
+        begin
+          g_GlobalContext.SubList := SelectedSubList;
+        end;}
+
         PP := TPageProcessor.Create;
         DummyEnvVars := TStringList.Create;
         FS := TFileStream.Create(SelectedDir + 'index_wav.html', fmCreate);
@@ -5619,6 +5645,13 @@ begin
         PP.Free;
         FS.Free;
         DummyEnvVars.Free;
+
+        {if (vtvSubsList.SelectedCount > 1) then
+        begin
+          // Restore complete sub list
+          g_GlobalContext.SubList := WAVDisplayer.RangeList;
+          SelectedSubList.Free;
+        end;}
       end;
       WAVFile.Free;
     end;
@@ -6783,10 +6816,22 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.PushUndoableTask(UndoableTask : TUndoableTask);
+var TopTask : TUndoableTask;
+    TaskMerged : Boolean;
 begin
   ClearStack(RedoStack);
   ActionRedo.Enabled := False;
-  UndoStack.Push(UndoableTask);
+  TaskMerged := False;
+  // Try to merge the new task with the task on top of stack
+  if (UndoStack.Count > 0) then
+  begin
+    TopTask := TUndoableTask(UndoStack.Peek);
+    TaskMerged := TopTask.Merge(UndoableTask);
+  end;
+  if (not TaskMerged) then
+  begin
+    UndoStack.Push(UndoableTask);
+  end;
   ActionUndo.Enabled := True;
 end;
 

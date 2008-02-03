@@ -142,6 +142,7 @@ type
 
     procedure DoTask; override;
     function GetName : WideString; override;
+    function Merge(UndoableTask : TUndoableTask) : Boolean; override;
     procedure UndoTask; override;
 
     procedure SetData(Index : Integer; UndoableTextTask : TUndoableTask);
@@ -548,6 +549,16 @@ procedure TUndoableSubTextTask.SetData(Index : Integer; UndoableTextTask : TUndo
 begin
   FIndex := Index;
   FUndoableTextTask := UndoableTextTask;
+end;
+
+function TUndoableSubTextTask.Merge(UndoableTask : TUndoableTask) : Boolean;
+begin
+  if (UndoableTask is TUndoableSubTextTask) then
+  begin
+    Result := FUndoableTextTask.Merge(TUndoableSubTextTask(UndoableTask).FUndoableTextTask);
+  end else begin
+    Result := False;
+  end;
 end;
 
 // -----------------------------------------------------------------------------

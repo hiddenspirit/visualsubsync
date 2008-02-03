@@ -44,12 +44,14 @@ type
     FReplaceStart : Integer;
     // Part of the text replaced after modification
     FReplaceByText : WideString;
+    
+    FMerged : Boolean;
 
   public
     procedure DoTask; override;
     function GetName : WideString; override;
     function GetMemSize : Integer;
-    function Merge(UndoableTask : TUndoableTextTask) : Boolean;
+    function Merge(UndoableTask : TUndoableTask) : Boolean; override;
     procedure UndoTask; override;
   end;
 
@@ -172,10 +174,54 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TUndoableTextTask.Merge(UndoableTask : TUndoableTextTask) : Boolean;
+function TUndoableTextTask.Merge(UndoableTask : TUndoableTask) : Boolean;
+var TaskToMerge : TUndoableTextTask;
 begin
-  // TODO : Merge 2 undoable tasks (fox example insertion/deletion of 1 char)
   Result := False;
+  // Merge 2 undoable tasks (for example insertion/deletion of 1 char)
+  if (UndoableTask is TUndoableTextTask) then
+  begin
+    TaskToMerge := TUndoableTextTask(UndoableTask);
+    // Insertion of 1 new char
+    if (Length(TaskToMerge.FReplaceByText) = 1)
+      and (Length(TaskToMerge.FOriginalText) = 0)
+      and (Length(FOriginalText) = 0)
+      and (TaskToMerge.FReplaceStart = FReplaceStart + Length(FReplaceByText))
+      and ((Length(FReplaceByText) = 1) or FMerged) then
+    begin
+      FReplaceByText := FReplaceByText + TaskToMerge.FReplaceByText;
+      FOriginalSelStart := TaskToMerge.FOriginalSelStart;
+      FSelStart := TaskToMerge.FSelStart;
+      FMerged := True;
+      Result := True;
+      Exit;
+    end;
+
+    // Backward deletion
+    if (Length(TaskToMerge.FOriginalText) = 1)
+      and (TaskToMerge.FReplaceStart = (FReplaceStart - Length(FOriginalText)))
+      and ((Length(FOriginalText) = 1) or FMerged) then
+    begin
+      FOriginalText := TaskToMerge.FOriginalText + FOriginalText;
+      FMerged := True;
+      Result := True;
+      Exit;
+    end;
+
+    // Forward deletion
+    if (Length(TaskToMerge.FOriginalText) = 1)
+      and (TaskToMerge.FReplaceStart = FReplaceStart)
+      and ((Length(FOriginalText) = 1) or FMerged) then
+    begin
+      FOriginalText := FOriginalText + TaskToMerge.FOriginalText;
+      FOriginalSelStart := TaskToMerge.FOriginalSelStart;
+      FSelStart := TaskToMerge.FSelStart;
+      FMerged := True;
+      Result := True;
+      Exit;
+    end;
+
+  end;
 end;
 
 function TUndoableTextTask.GetMemSize : Integer;
