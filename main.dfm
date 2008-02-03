@@ -1228,6 +1228,7 @@ object MainForm: TMainForm
         Style = psOwnerDraw
         Width = 400
       end>
+    SizeGrip = False
     OnDrawPanel = TntStatusBar1DrawPanel
   end
   object TntMainMenu1: TTntMainMenu

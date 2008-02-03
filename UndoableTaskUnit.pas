@@ -23,14 +23,21 @@ unit UndoableTaskUnit;
 interface
 
 type
-  TUndoableTask = class
+  TUndoableTask = class(TObject)
   public
     procedure DoTask; virtual; abstract;
     function GetName : WideString; virtual; abstract;
+    function Merge(UndoableTask : TUndoableTask) : Boolean; virtual;
     procedure UndoTask; virtual; abstract;
   end;
 
 implementation
+
+function TUndoableTask.Merge(UndoableTask : TUndoableTask) : Boolean;
+begin
+  // Nothing to merge by default
+  Result := False;
+end;
 
 end.
  
