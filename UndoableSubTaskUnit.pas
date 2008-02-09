@@ -114,7 +114,7 @@ type
     procedure SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
   end;
 
-  TMergeType = (mtNormal, mtDialog);
+  TMergeType = (mtNormal, mtDialog, mtOneLine);
   TMergeRange = (mrWithPrevious, mrWithNext, mrSelected);
   TUndoableMergeTask = class(TUndoableTaskIndexed)
   private

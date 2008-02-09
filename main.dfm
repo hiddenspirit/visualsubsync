@@ -2167,6 +2167,11 @@ object MainForm: TMainForm
       Caption = 'Fix selected errors'
       OnExecute = ActionFixSelectedErrorsExecute
     end
+    object ActionMergeOnOneLine: TTntAction
+      Tag = 1
+      Caption = 'Merge on 1 line'
+      OnExecute = ActionMergeOnOneLineExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia

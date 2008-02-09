@@ -353,6 +353,7 @@ type
     pmiSubListMergeDialog: TTntMenuItem;
     TntButton1: TTntButton;
     TntButton2: TTntButton;
+    ActionMergeOnOneLine: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -526,6 +527,7 @@ type
     procedure ActionFixSelectedErrorsExecute(Sender: TObject);
     procedure TntButton1Click(Sender: TObject);
     procedure TntButton2Click(Sender: TObject);
+    procedure ActionMergeOnOneLineExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -3097,6 +3099,7 @@ var UndoableMergeTask : TUndoableMergeTask;
     SubRange : TSubtitleRange;
 begin
   UndoableMergeTask := TUndoableMergeTask.Create;
+  UndoableMergeTask.SetData(-1, MergeType);
 
   if (MergeRange = mrSelected) then
   begin
@@ -6720,8 +6723,11 @@ begin
   FirstRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
   if (MergeType = mtDialog) then
     AccuText := '- ' + FirstRange.Text
+  else if (MergeType = mtOneLine) then
+    AccuText := TrimRight(FirstRange.Text)
   else
     AccuText := FirstRange.Text;
+
   LastStopTime := FirstRange.StopTime;
   for i := Low(FIndexes) + 1 to High(FIndexes) do
   begin
@@ -6729,6 +6735,8 @@ begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[idx]);
     if (MergeType = mtDialog) then
       AccuText := AccuText + CRLF + '- ' + SubRange.Text
+    else if (MergeType = mtOneLine) then
+      AccuText := TrimRight(AccuText) + ' ' + TrimLeft(SubRange.Text)
     else
       AccuText := AccuText + CRLF + SubRange.Text;
     LastStopTime := Max(LastStopTime, SubRange.StopTime);
@@ -7396,6 +7404,16 @@ begin
 
     SubRange.Free;
     MemStream.Free;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionMergeOnOneLineExecute(Sender: TObject);
+begin
+  if (vtvSubsList.SelectedCount > 1) then
+  begin
+    Merge(mtOneLine, mrSelected);
   end;
 end;
 
