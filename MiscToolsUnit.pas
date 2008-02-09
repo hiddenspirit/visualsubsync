@@ -76,7 +76,7 @@ type
   procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
   function StripTags(const Text : WideString) : WideString;
 
-  function WideIsAbsolutePath(const Path : WideString) : Boolean;  
+  function WideIsAbsolutePath(const Path : WideString) : Boolean;
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
   function WideResolveRelativePath(const BaseName, DestName : WideString) : WideString;
 
@@ -104,6 +104,11 @@ type
 
   function BinarySearch(IntArray : TIntegerDynArray; Value : Integer;
     Backward : Boolean = False) : Integer;
+
+  procedure SaveToStreamWS(Stream : TStream; Value : WideString);
+  procedure LoadFromStreamWS(Stream : TStream; out Value : WideString);
+  procedure SaveToStreamInt(Stream : TStream; Value : Integer);
+  procedure LoadFromStreamInt(Stream : TStream; out Value : Integer);
 
 implementation
 
@@ -1172,6 +1177,37 @@ begin
     Result := Max
   else
     Result := Min;
+end;
+
+// -----------------------------------------------------------------------------
+
+
+procedure SaveToStreamWS(Stream : TStream; Value : WideString);
+var SizeOfString : Integer;
+begin
+  SizeOfString := Length(Value);
+  // Write the length of the WideString
+  Stream.WriteBuffer(SizeOfString, SizeOf(SizeOfString));
+  // Write the data
+  Stream.WriteBuffer(Value[1], SizeOfString * SizeOf(WideChar));
+end;
+
+procedure LoadFromStreamWS(Stream : TStream; out Value : WideString);
+var SizeOfString : Integer;
+begin
+  Stream.ReadBuffer(SizeOfString, SizeOf(SizeOfString));
+  SetLength(Value, SizeOfString);
+  Stream.ReadBuffer(Value[1], SizeOfString * SizeOf(WideChar));
+end;
+
+procedure SaveToStreamInt(Stream : TStream; Value : Integer);
+begin
+  Stream.WriteBuffer(Value, SizeOf(Value));
+end;
+
+procedure LoadFromStreamInt(Stream : TStream; out Value : Integer);
+begin
+  Stream.ReadBuffer(Value, SizeOf(Value));
 end;
 
 // -----------------------------------------------------------------------------

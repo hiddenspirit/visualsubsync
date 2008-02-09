@@ -1075,6 +1075,24 @@ object MainForm: TMainForm
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
+        object TntButton1: TTntButton
+          Left = 0
+          Top = 0
+          Width = 33
+          Height = 25
+          Caption = 'TntButton1'
+          TabOrder = 0
+          OnClick = TntButton1Click
+        end
+        object TntButton2: TTntButton
+          Left = 40
+          Top = 0
+          Width = 33
+          Height = 25
+          Caption = 'TntButton2'
+          TabOrder = 1
+          OnClick = TntButton2Click
+        end
       end
       object PanelTimeSelView: TPanel
         Left = 366
