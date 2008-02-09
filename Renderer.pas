@@ -67,6 +67,7 @@ type
     FAutoInsertCustomVSFilter : Boolean;
     FHCustomVSFilterInst : THandle;
     FCustomVSFilterIntallOk : Boolean;
+    FROTID : Integer;
 
     function FGetStart : Int64;
     function FGetStop : Int64;
@@ -433,6 +434,37 @@ begin
   end;
 end;
 
+// -----------------------------------------------------------------------------
+
+function AddToRot(Graph: IFilterGraph; out dwRegister : Integer): HRESULT;
+var Moniker : IMoniker;
+    ROT : IRunningObjectTable;
+    wsz : WideString;
+begin
+  Result := GetRunningObjectTable(0, ROT);
+  if Failed(Result) then
+    Exit;
+  wsz := Format('FilterGraph %p pid %x',[Pointer(Graph), GetCurrentProcessId()]);
+  Result  := CreateItemMoniker('!', PWideChar(wsz), Moniker);
+  if Failed(Result) then
+    Exit;
+  Result := ROT.Register(0, Graph, Moniker, dwRegister);
+  Moniker := nil;
+end;
+
+// -----------------------------------------------------------------------------
+
+function RemoveFromRot(dwRegister: Integer): HRESULT;
+var ROT: IRunningObjectTable;
+begin
+  Result := GetRunningObjectTable(0, ROT);
+  if Failed(Result) then
+    Exit;
+  Result := ROT.Revoke(dwRegister);
+  ROT := nil;
+end;
+
+
 //==============================================================================
 
 procedure TRenderer.UpdatePlayRange(Start, Stop : Cardinal);
@@ -467,6 +499,7 @@ begin
   FCustomVSFilterIntallOk := False;
   FAutoInsertCustomVSFilter := False;
   FHCustomVSFilterInst := 0;
+  FROTID := 0;
 
   InitializeCriticalSection(FStartStopAccessCS);
 end;
@@ -572,6 +605,8 @@ begin
       CoTaskMemFree(VSFilterVendorInfo);
     end;
   end;
+
+  {AddToRot(FGraphBuilder, FROTID);}
 
   SetRate(100);
 end;
@@ -972,6 +1007,11 @@ end;
 
 procedure TDShowRenderer.Close;
 begin
+  if (FROTID <> 0) then
+  begin
+    RemoveFromRot(FROTID);
+    FROTID := 0;
+  end;
   FIsOpen := False;
   if Assigned(FMediaControl) then FMediaControl.Stop;
   SetDisplayWindow(0);
