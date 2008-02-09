@@ -23,7 +23,7 @@ unit SubStructUnit;
 
 interface
 
-uses WAVDisplayerUnit, VirtualTrees, GlobalUnit;
+uses WAVDisplayerUnit, VirtualTrees, GlobalUnit, Classes;
 
 type
   TDelayShiftType = (dstBothTime, dstStartTimeOnly, dstStopTimeOnly);
@@ -44,6 +44,8 @@ type
     Node : PVirtualNode; // TSubtitleRange and tree node are linked both way
 
     procedure Assign(const Range : TRange); override;
+    procedure SaveToStream(Stream : TStream);
+    procedure LoadFromStream(Stream : TStream);
   end;
 
   TSubtitleRangeFactory = class(TRangeFactory)
@@ -56,9 +58,21 @@ type
     function GetFieldValue(Name : string; var Found : Boolean) : string; override;
   end;
 
+  function Sub2SrtString(SubRange : TSubtitleRange) : WideString;  
+
 implementation
 
-uses MiscToolsUnit, SysUtils;
+uses MiscToolsUnit, SysUtils, TntSysUtils;
+
+
+// -----------------------------------------------------------------------------
+
+function Sub2SrtString(SubRange : TSubtitleRange) : WideString;
+begin
+  Result := IntToStr(SubRange.Node.Index + 1) + CRLF +
+    TimeMsToString(SubRange.StartTime,',') + ' --> ' + TimeMsToString(SubRange.StopTime,',') + CRLF +
+    Subrange.Text;
+end;
 
 //==============================================================================
 
@@ -77,6 +91,37 @@ begin
   Self.VertMarg := SubRange.VertMarg;
   Self.Style := SubRange.Style;
 end;
+
+procedure TSubtitleRange.SaveToStream(Stream : TStream);
+begin
+  inherited SaveToStream(Stream);
+  
+  SaveToStreamWS(Stream, Self.Text);
+  SaveToStreamWS(Stream, Self.Effect);
+  SaveToStreamWS(Stream, Self.Layer);
+  SaveToStreamWS(Stream, Self.Marked);
+  SaveToStreamWS(Stream, Self.Actor);
+  SaveToStreamWS(Stream, Self.RightMarg);
+  SaveToStreamWS(Stream, Self.LeftMarg);
+  SaveToStreamWS(Stream, Self.VertMarg);
+  SaveToStreamWS(Stream, Self.Style);
+end;
+
+procedure TSubtitleRange.LoadFromStream(Stream : TStream);
+begin
+  inherited LoadFromStream(Stream);
+
+  LoadFromStreamWS(Stream, Self.Text);
+  LoadFromStreamWS(Stream, Self.Effect);
+  LoadFromStreamWS(Stream, Self.Layer);
+  LoadFromStreamWS(Stream, Self.Marked);
+  LoadFromStreamWS(Stream, Self.Actor);
+  LoadFromStreamWS(Stream, Self.RightMarg);
+  LoadFromStreamWS(Stream, Self.LeftMarg);
+  LoadFromStreamWS(Stream, Self.VertMarg);
+  LoadFromStreamWS(Stream, Self.Style);
+end;
+
 
 function TSubtitleRangeFactory.CreateRange : TRange;
 begin

@@ -351,6 +351,8 @@ type
     ActionMergeDialog: TTntAction;
     ActionFixSelectedErrors: TTntAction;
     pmiSubListMergeDialog: TTntMenuItem;
+    TntButton1: TTntButton;
+    TntButton2: TTntButton;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -522,6 +524,8 @@ type
     procedure ActionMergeWithNextExecute(Sender: TObject);
     procedure ActionMergeDialogExecute(Sender: TObject);
     procedure ActionFixSelectedErrorsExecute(Sender: TObject);
+    procedure TntButton1Click(Sender: TObject);
+    procedure TntButton2Click(Sender: TObject);
    
   private
     { Private declarations }
@@ -569,6 +573,8 @@ type
     StartupVisibleExtraColumns : string;
     StartupColumnsPosition : string;
 
+    VSSClipBoardFORMAT : Cardinal;
+
     procedure InitVTV;
     procedure InitVTVExtraColumns;
     procedure EnableControl(Enable : Boolean);
@@ -584,7 +590,7 @@ type
       EventType : TPeakFileCreationEventType; Param : Integer);
     procedure CurrentProjectOnDirtyChange(Sender : TObject);
     procedure CurrentProjectOnDirtySet(Sender: TObject);
-    
+
     procedure FullSortTreeAndSubList;
 
     procedure OnRecentMenuItemClick(Sender : TObject);
@@ -721,7 +727,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, RegExpr;
+  SceneChangeUnit, RegExpr, TntClipBrd;
 
 {$R *.dfm}
 
@@ -764,6 +770,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
     CustomMemo : TTntRichEditCustomUndo;
 begin
+  VSSClipBoardFORMAT := RegisterClipboardFormat(PChar('CF_VisualSubSync'));
+
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
   CustomMemo.Parent := MemoSubtitleText.Parent;
   CustomMemo.Font.Assign(MemoSubtitleText.Font);
@@ -4411,6 +4419,7 @@ begin
       WAVDisplayer.SelMode := smCoolEdit;
   end;
   WAVDisplayer.SnappingEnabled := ConfigObject.EnableMouseSnapping;
+  WAVDisplayer.EnableMouseAntiOverlapping := ConfigObject.EnableMouseAntiOverlapping;
 end;
 
 //------------------------------------------------------------------------------
@@ -7300,6 +7309,93 @@ begin
   if (vtvSubsList.SelectedCount > 1) then
   begin
     Merge(mtDialog, mrSelected);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TntButton1Click(Sender: TObject);
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+    Msg : WideString;
+    SubtitleRange : TSubtitleRange;
+    MemStream : TMemoryStream;
+
+    MemHandle : THandle;
+    MemPointer : Pointer;
+begin
+  if (vtvSubsList.SelectedCount <= 0) then
+    Exit;
+
+  // TODO : http://delphi.about.com/od/windowsshellapi/a/clipboard_spy_3.htm
+  // http://www.delphipages.com/news/detaildocs.cfm?ID=145
+  // http://homepage2.nifty.com/Mr_XRAY/Halbow/Notes/N014.html
+
+  // TODO : write header ? stream version ?
+
+  MemStream := TMemoryStream.Create;
+  SaveToStreamInt(MemStream, vtvSubsList.SelectedCount);
+  Node := vtvSubsList.GetFirstSelected;
+  while Assigned(Node) do
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    SubtitleRange := NodeData.Range;
+    Msg := Msg + Sub2SrtString(SubtitleRange) + CRLF + CRLF;
+    SubtitleRange.SaveToStream(MemStream);
+    Node := vtvSubsList.GetNextSelected(Node);
+  end;
+  if (Length(Msg) > 0) then
+  begin
+    TntClipboard.Open;
+    try
+      TntClipboard.Clear;
+      // Set text format data
+      TntClipboard.AsWideText := Trim(Msg);
+      // Set custom format data
+      MemHandle := GlobalAlloc(GMEM_DDESHARE or GMEM_MOVEABLE, MemStream.Size);
+      MemPointer := GlobalLock(MemHandle);
+      MemStream.Position := 0;
+      MemStream.ReadBuffer(MemPointer^, MemStream.Size);
+      TntClipboard.SetAsHandle(VSSClipBoardFORMAT, MemHandle);
+      GlobalUnLock(MemHandle);
+    finally
+      TntClipboard.Close;
+    end;
+  end;
+  MemStream.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.TntButton2Click(Sender: TObject);
+var MemHandle : THandle;
+    MemPointer : Pointer;
+    MemStream : TMemoryStream;
+
+    SubCount, i : Integer;
+    SubRange : TSubtitleRange;
+begin
+  //
+  if TntClipboard.HasFormat(VSSClipBoardFORMAT) then
+  begin
+    MemStream := TMemoryStream.Create;
+    TntClipboard.Open;
+    MemHandle := TntClipboard.GetAsHandle(VSSClipBoardFORMAT);
+    MemPointer := GlobalLock(MemHandle);
+    MemStream.WriteBuffer(MemPointer^, GlobalSize(MemHandle));
+    GlobalUnlock(MemHandle);
+    TntClipboard.Close;
+
+    MemStream.Position := 0;
+    LoadFromStreamInt(MemStream, SubCount);
+    SubRange := TSubtitleRange.Create;
+    for i := 0 to SubCount-1 do
+    begin
+      SubRange.LoadFromStream(MemStream);
+    end;
+
+    SubRange.Free;
+    MemStream.Free;
   end;
 end;
 

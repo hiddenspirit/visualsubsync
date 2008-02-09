@@ -47,6 +47,9 @@ type
     SubTime : TIntegerDynArray;
 
     procedure Assign(const Range : TRange); virtual;
+    procedure SaveToStream(Stream : TStream); virtual;
+    procedure LoadFromStream(Stream : TStream); virtual;
+
     procedure AddSubTime(const NewTime : Integer);
     procedure ClearSubTimes;
     procedure DelSubTimeAt(const Idx : Integer);
@@ -538,6 +541,19 @@ begin
   begin
     Self.SubTime[i] := Range.SubTime[i];
   end;
+end;
+
+
+procedure TRange.SaveToStream(Stream : TStream);
+begin
+  SaveToStreamInt(Stream, StartTime);
+  SaveToStreamInt(Stream, StopTime);
+end;
+
+procedure TRange.LoadFromStream(Stream : TStream);
+begin
+  LoadFromStreamInt(Stream, StartTime);
+  LoadFromStreamInt(Stream, StopTime);
 end;
 
 // -----------------------------------------------------------------------------
@@ -1043,7 +1059,7 @@ begin
   FMinBlankInfo1 := TMinBlankInfo.Create;
   FMinBlankInfo2 := TMinBlankInfo.Create;
   FSnappingEnabled := True;
-  FEnableMouseAntiOverlapping := True;
+  FEnableMouseAntiOverlapping := False;
   
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
