@@ -105,8 +105,15 @@ end;
 // -----------------------------------------------------------------------------
 
 function TDelayForm.GetDelayInMs : Integer;
+var unlocalizedText : string;
 begin
-  Result := TimeStringToMs(meDelay.EditText);
+  // Force text to use the following format
+  // 123456789012
+  // 00:00:00.000
+  unlocalizedText := meDelay.EditText;
+  unlocalizedText[3] := ':';
+  unlocalizedText[6] := ':';
+  Result := TimeStringToMs(unlocalizedText);
   if rgType.ItemIndex = 1 then
     Result := -Result;
 end;
@@ -114,8 +121,13 @@ end;
 // -----------------------------------------------------------------------------
 
 procedure TDelayForm.SetDelayInMS(DelayInMs : Integer);
+var localizedText : string;
 begin
-  meDelay.Text := TimeMsToString(DelayInMs);
+  // Convert to localized text
+  localizedText := TimeMsToString(DelayInMs);
+  localizedText[3] := TimeSeparator;
+  localizedText[6] := TimeSeparator;
+  meDelay.Text := localizedText;
 end;
 
 // -----------------------------------------------------------------------------
