@@ -189,6 +189,7 @@ var
   _var: Pointer;    // Used when a var param needs to be appended (needvar = true)
   _dbl: Double;
   needvar: Boolean;
+  strlist : array of TBridgeString;
 begin
 	tmpv := argv;
 	Dec(tmpv, 2); // access argv[-2] to get the |this| value
@@ -249,6 +250,8 @@ begin
       JSTYPE_STRING:
         begin
           str := JS_GetStringChars(JS_ValueToString(cx, val));
+          SetLength(strlist, Length(strlist) + 1);
+          strlist[Length(strlist) - 1] := str;
           parm^.obj := PBridgeChar(str);
         end;
       JSTYPE_BOOLEAN:
@@ -262,6 +265,8 @@ begin
           if (jscls^.flags and JSCLASS_HAS_PRIVATE = 0) or (parm^.obj = nil) then
           begin
             str := JS_GetStringChars(JS_ValueToString(cx, val));
+            SetLength(strlist, Length(strlist) + 1);
+            strlist[Length(strlist) - 1] := str;
             parm^.obj := PBridgeChar(str);
           end;
         end;
@@ -347,6 +352,7 @@ begin
   end;
 
   SetLength(arglist, 0);
+  SetLength(strlist, 0);
   Result := JS_TRUE;
 end;
 

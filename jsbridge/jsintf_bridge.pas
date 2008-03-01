@@ -320,6 +320,7 @@ var
   _obj: TObject;
   _jsobj: PJSObject;
   needvar: Boolean;
+  strlist : array of TBridgeString; // Copy the string parameter in this array so it's no freed
 begin
   rval^ := JSVAL_NULL;
 
@@ -380,6 +381,8 @@ begin
       JSTYPE_STRING:
         begin
           str := JS_GetStringChars(JS_ValueToString(cx, val));
+          SetLength(strlist, Length(strlist) + 1);
+          strlist[Length(strlist) - 1] := str;
           parm^.obj := PBridgeChar(str);
         end;
       JSTYPE_BOOLEAN:
@@ -393,6 +396,8 @@ begin
           if (jscls^.flags and JSCLASS_HAS_PRIVATE = 0) or (parm^.obj = nil) then
           begin
             str := JS_GetStringChars(JS_ValueToString(cx, val));
+            SetLength(strlist, Length(strlist) + 1);
+            strlist[Length(strlist) - 1] := str;
             parm^.obj := PBridgeChar(str);
           end;
         end;
@@ -492,6 +497,7 @@ begin
   end;
 
   SetLength(arglist, 0);
+  SetLength(strlist, 0);
   Result := JS_TRUE;
 end;
 
