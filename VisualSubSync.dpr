@@ -4,6 +4,7 @@ uses
   //FastMM4,
   Windows,
   Forms,
+  TntSystem,
   main in 'main.pas' {MainForm},
   WAVDisplayerUnit in 'WAVDisplayerUnit.pas',
   WAVFileUnit in 'WAVFileUnit.pas',
@@ -44,6 +45,9 @@ uses
 
 begin
   Application.Initialize;
+  // Fix ANSI handling (using the thread code page doesn't work correctly on some system)
+  // e.g.: Tnt is broken when loading an ANSI file through TTntStringList.LoadFromFile is doesn't use the righ code page
+  TntSystem.InstallTntSystemUpdates([tsFixImplicitCodePage]);
   Application.Title := 'VisualSubSync';
   Application.CreateForm(TMainForm, MainForm);
   Application.CreateForm(TProjectForm, ProjectForm);
