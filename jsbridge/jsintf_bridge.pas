@@ -383,22 +383,36 @@ begin
           str := JS_GetStringChars(JS_ValueToString(cx, val));
           SetLength(strlist, Length(strlist) + 1);
           strlist[Length(strlist) - 1] := str;
-          parm^.obj := PBridgeChar(str);
+          parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
         end;
       JSTYPE_BOOLEAN:
         parm^.bool := JSValToBoolean(val);
       JSTYPE_OBJECT:
         begin
-          jscls := JS_GetClass(Pointer(val));
-          if (jscls^.flags and JSCLASS_HAS_PRIVATE = JSCLASS_HAS_PRIVATE) then
-            parm^.obj := JS_GetPrivate(cx, Pointer(val));
-
-          if (jscls^.flags and JSCLASS_HAS_PRIVATE = 0) or (parm^.obj = nil) then
+          if (val = 0) then
           begin
-            str := JS_GetStringChars(JS_ValueToString(cx, val));
-            SetLength(strlist, Length(strlist) + 1);
-            strlist[Length(strlist) - 1] := str;
-            parm^.obj := PBridgeChar(str);
+            parm^.int := 0;
+          end
+          else
+          begin
+            jscls := JS_GetClass(Pointer(val));
+            if (jscls^.flags and JSCLASS_HAS_PRIVATE = JSCLASS_HAS_PRIVATE) then
+            begin
+              if (TJSObject(JSValToObject(val)) is TJSObject)  then
+              begin
+                parm^.obj := GetDelphiObject(cx, Pointer(val));
+              end else begin
+                parm^.obj := JS_GetPrivate(cx, Pointer(val));
+              end;
+            end;
+
+            if (jscls^.flags and JSCLASS_HAS_PRIVATE = 0) or (parm^.obj = nil) then
+            begin
+              str := JS_GetStringChars(JS_ValueToString(cx, val));
+              SetLength(strlist, Length(strlist) + 1);
+              strlist[Length(strlist) - 1] := str;
+              parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
+            end;
           end;
         end;
     end;
