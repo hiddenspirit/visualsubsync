@@ -48,7 +48,7 @@ type
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
   TTagType = (ttItalic, ttBold, ttUnderline, ttColor, ttSize);
 
-  TMainForm = class(TTntForm)
+  TMainForm = class(TTntForm, TVSSCoreEngineIntf)
     TntMainMenu1: TTntMainMenu;
     MenuItemFile: TTntMenuItem;
     MenuItemNewProject: TTntMenuItem;
@@ -648,11 +648,21 @@ type
     procedure UpdateStatusBar;
     procedure OnJsSetStatusBarText(const Msg : WideString);
 
+    procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
+    procedure OnJavascriptAction(Sender : TObject);
+    function GetFirstSelected : TSubtitleRange;
+    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetFirst : TSubtitleRange;
+    function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+
+
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
     procedure ClearStack(Stack : TObjectStack);
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
+
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -750,21 +760,10 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 // TODO : Rework project handling which is a bit messy ATM
 // TODO : Separate subtitle file loading/saving, stats according to format into a new classes
 
-
 //------------------------------------------------------------------------------
 
 // TODO : auto clear karaoke timing that are out of subtitle bound ???
 // TODO : update documentation (timing button)
-
-{
-lovechange:
--
-> 2eme: Ce serait sympa que tu puisse rajouter des boutons dans
-> l'interface principale pour les balise "italique", "placement de
-> texte" (8 balise en faites puisque en bas centré est déja par défaut.
-> Je pense qu'il y a la place juste en dessus du graph audio et
-> pré-visualisation vidéo.
-}
 
 //==============================================================================
 
@@ -890,6 +889,10 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   StartStopServer(True);
+  if Assigned(g_VSSCoreWrapper) then
+  begin
+    g_VSSCoreWrapper.SetVSSCoreEngine(nil);
+  end;
   FreeAndNil(GeneralJSPlugin);
   FreeAndNil(AudioOnlyRenderer);
   FreeAndNil(VideoRenderer);
@@ -1254,6 +1257,12 @@ begin
   g_VSSCoreWrapper.Set_STYLE_COL_IDX(STYLE_COL_INDEX);
   g_VSSCoreWrapper.Set_TEXT_COL_IDX(TEXT_COL_INDEX);
   g_VSSCoreWrapper.Set_LAST_CORE_COL_IDX(LAST_CORE_COL_INDEX);
+
+  g_VSSCoreWrapper.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+  g_VSSCoreWrapper.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+  g_VSSCoreWrapper.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
+
+  g_VSSCoreWrapper.SetVSSCoreEngine(Self);
 
   GeneralJSPlugin := TSimpleJavascriptWrapper.Create;
   GeneralJSPlugin.CoreColumnsCount := COLUMN_COUNT;
@@ -2546,7 +2555,8 @@ begin
       CurrentProject.IsUTF8 := True;
     end;
     SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
-    VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+    if VideoRenderer.IsOpen then
+      VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
   end;
   SaveProject(CurrentProject, False);
 end;
@@ -2721,7 +2731,7 @@ begin
         SaveProject(CurrentProject, False);
       end;
 
-      if (VideoHasChanged or SubtitleFileHasChanged) then
+      if (VideoHasChanged or SubtitleFileHasChanged) and (VideoRenderer.IsOpen) then
       begin
         VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
       end;
@@ -4576,6 +4586,7 @@ var JSPEnum : TJavaScriptPluginEnumerator;
     JPlugin : TJavaScriptPlugin;
     JSPluginInfo : TJSPluginInfo;
     i : integer;
+    ResultMsg : WideString;
     SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
     NodeData : PTreeData;
     Node : PVirtualNode;
@@ -4622,7 +4633,11 @@ begin
         else
           SubRangeNext := nil;
 
-        JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+        ResultMsg := JPlugin.HasError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+        if (ResultMsg <> '') then
+        begin
+          JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+        end;
         Node := vtvSubsList.GetNextSelected(Node);
       end;
 
@@ -4675,6 +4690,7 @@ end;
 procedure TMainForm.vtvSubsListFocusChanged(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex);
 var NodeData: PTreeData;
+    SelLen, SelStart : Integer;
 begin
   if (Node <> nil) then
   begin
@@ -6264,8 +6280,12 @@ var TmpDstFilename : WideString;
 begin
   // TODO : Clean old files in temp directory
   
-  if DisableVideoUpdatePreview or (Trim(CurrentProject.SubtitlesFile) = '') then
+  if DisableVideoUpdatePreview
+     or (Trim(CurrentProject.SubtitlesFile) = '')
+     or (not VideoRenderer.IsOpen) then
+  begin
     Exit;
+  end;
 
   // Save current file as tmp file, reload subtitle if loaded
   StartTime := GetTickCount;
@@ -7322,15 +7342,18 @@ end;
 
 //------------------------------------------------------------------------------
 
+const CopyPasteStreamVersion = 1;
+
 procedure TMainForm.TntButton1Click(Sender: TObject);
 var Node : PVirtualNode;
     NodeData : PTreeData;
     Msg : WideString;
     SubtitleRange : TSubtitleRange;
     MemStream : TMemoryStream;
-
+    toto : TTntEDitCOpy;
     MemHandle : THandle;
     MemPointer : Pointer;
+
 begin
   if (vtvSubsList.SelectedCount <= 0) then
     Exit;
@@ -7339,9 +7362,8 @@ begin
   // http://www.delphipages.com/news/detaildocs.cfm?ID=145
   // http://homepage2.nifty.com/Mr_XRAY/Halbow/Notes/N014.html
 
-  // TODO : write header ? stream version ?
-
   MemStream := TMemoryStream.Create;
+  SaveToStreamInt(MemStream, CopyPasteStreamVersion);
   SaveToStreamInt(MemStream, vtvSubsList.SelectedCount);
   Node := vtvSubsList.GetFirstSelected;
   while Assigned(Node) do
@@ -7380,7 +7402,7 @@ var MemHandle : THandle;
     MemPointer : Pointer;
     MemStream : TMemoryStream;
 
-    SubCount, i : Integer;
+    StreamVersion, SubCount, i : Integer;
     SubRange : TSubtitleRange;
 begin
   //
@@ -7395,14 +7417,21 @@ begin
     TntClipboard.Close;
 
     MemStream.Position := 0;
-    LoadFromStreamInt(MemStream, SubCount);
-    SubRange := TSubtitleRange.Create;
-    for i := 0 to SubCount-1 do
+    LoadFromStreamInt(MemStream, StreamVersion);
+    if (StreamVersion = CopyPasteStreamVersion) then
     begin
-      SubRange.LoadFromStream(MemStream);
+      // Load each sub
+      LoadFromStreamInt(MemStream, SubCount);
+      SubRange := TSubtitleRange.Create;
+      for i := 0 to SubCount-1 do
+      begin
+        SubRange.LoadFromStream(MemStream);
+        // TODO : really add subtitle / sort / undo
+        AddSubtitle(SubRange);
+        
+      end;
+      SubRange.Free;
     end;
-
-    SubRange.Free;
     MemStream.Free;
   end;
 end;
@@ -7418,10 +7447,133 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.OnJavascriptAction(Sender : TObject);
+var JsAction : TJavascriptAction;
+    SubtitleRange : TSubtitleRange;
+    NodeData : PTreeData;
+    SelStart, SelLength : Integer;
+begin
+  if (Sender is TJavascriptAction) then
+  begin
+    JsAction := (Sender as TJavascriptAction);
+
+    UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
+
+    GeneralJSPlugin.CallJSFunction(JsAction.JSFunctionName);
+
+    if (UndoableMultiChangeTask.GetCount > 0) then
+    begin
+      PushUndoableTask(UndoableMultiChangeTask);
+      // Do not free the task, it's on the stack now
+      UndoableMultiChangeTask := nil;
+    end
+    else
+    begin
+      FreeAndNil(UndoableMultiChangeTask);
+    end;
+
+    // Update MemoSubtitleText if changed
+    if Assigned(vtvSubsList.FocusedNode) then
+    begin
+      NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+      SubtitleRange := NodeData.Range;
+      if (MemoSubtitleText.Text <> SubtitleRange.Text) then
+      begin
+        SelStart := MemoSubtitleText.SelStart;
+        SelLength := MemoSubtitleText.SelLength;
+
+        vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+        MemoSubtitleText.SelStart := SelStart;
+        MemoSubtitleText.SelLength := SelLength;
+      end;
+    end;
+    // Update subtitle list and wavdisplay
+    vtvSubsList.Repaint;
+    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
+var JSAction : TJavascriptAction;
+begin
+  JSAction := TJavascriptAction.Create(TntActionList1);
+  JSAction.Caption := ACaption;
+  JSAction.Name := 'JS_' + AName;
+  JSAction.JSFunctionName := AName;
+  JSAction.ShortCut := TextToShortCut(ADefaultShortcut);
+  JSAction.Tag := 1;
+  JSAction.OnExecute := OnJavascriptAction;
+  JSAction.ActionList := TntActionList1;
+end;
+
+function TMainForm.GetFirst : TSubtitleRange;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  Node := vtvSubsList.GetFirst;
+  if Assigned(Node) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Result := NodeData.Range;
+  end else begin
+    Result := nil;
+  end;
+end;
+
+function TMainForm.GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  Node := vtvSubsList.GetNext(SubtitleRange.Node);
+  if Assigned(Node) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Result := NodeData.Range;
+  end else begin
+    Result := nil;
+  end;
+end;
+
+
+function TMainForm.GetFirstSelected : TSubtitleRange;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  Node := vtvSubsList.GetFirstSelected;
+  if Assigned(Node) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Result := NodeData.Range;
+  end else begin
+    Result := nil;
+  end;
+end;
+
+function TMainForm.GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  Node := vtvSubsList.GetNextSelected(SubtitleRange.Node);
+  if Assigned(Node) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Result := NodeData.Range;
+  end else begin
+    Result := nil;
+  end;
+end;
+
+
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
 {
+
 TODO UNDO:
 undo text pipe text modification (modifiy, clear, load)
 
@@ -7435,7 +7587,6 @@ ScriptLog('todo = ' + VSSCore);
 ScriptLog('VSSCore = ' + VSSCore.abc);
 
 
-TODO : group undo actions (keyboard)
 TODO : convert tag when converting format
 
 TODO : test wav extraction with divx installed

@@ -28,7 +28,7 @@ uses WAVDisplayerUnit, VirtualTrees, GlobalUnit, Classes;
 type
   TDelayShiftType = (dstBothTime, dstStartTimeOnly, dstStopTimeOnly);
   TDelayApplyToType = (dattAll, dattSelected, dattFromCursor);
-  
+
   TSubtitleRange = class(TRange)
     Text : WideString;
 
@@ -44,8 +44,8 @@ type
     Node : PVirtualNode; // TSubtitleRange and tree node are linked both way
 
     procedure Assign(const Range : TRange); override;
-    procedure SaveToStream(Stream : TStream);
-    procedure LoadFromStream(Stream : TStream);
+    procedure SaveToStream(Stream : TStream); override;
+    procedure LoadFromStream(Stream : TStream); override;
   end;
 
   TSubtitleRangeFactory = class(TRangeFactory)
@@ -57,6 +57,16 @@ type
     SubRange : TSubtitleRange;
     function GetFieldValue(Name : string; var Found : Boolean) : string; override;
   end;
+
+  TVSSCoreEngineIntf = interface(IInterface)
+    procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
+
+    function GetFirst : TSubtitleRange;
+    function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+
+    function GetFirstSelected : TSubtitleRange;
+    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+  end;  
 
   function Sub2SrtString(SubRange : TSubtitleRange) : WideString;  
 
