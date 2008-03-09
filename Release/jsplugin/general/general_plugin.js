@@ -191,3 +191,28 @@ VSSPlugin = {
   }
   
 };
+
+// ---------------------------------------------------------------------------
+
+function JSActionTest() {
+  ScriptLog('subtitle count = ' + VSSCore.GetSubtitlesCount());
+  var subtitleAt0 = VSSCore.GetSubtitleAt(0);
+  ScriptLog('at 0 = ' + ((subtitleAt0 != null) ? subtitleAt0.Text : 'null'));
+  
+  var firstSubtitle = VSSCore.GetFirst();
+  ScriptLog('first = ' + ((firstSubtitle != null) ? firstSubtitle.Text : 'null'));
+
+  var nextSubtitle = VSSCore.GetNext(firstSubtitle);
+  ScriptLog('next = ' + ((nextSubtitle != null) ? nextSubtitle.Text : 'null'));
+  
+  var selectedCursor = VSSCore.GetFirstSelected();
+  while (selectedCursor != null) {
+    ScriptLog('selected = (' + selectedCursor.Index + ') ' + selectedCursor.Text);
+    selectedCursor = VSSCore.GetNextSelected(selectedCursor);
+  }
+
+}
+
+VSSCore.RegisterJavascriptAction('JSActionTest', 'A javascript test action', 'Ctrl+M');
+
+// ---------------------------------------------------------------------------
