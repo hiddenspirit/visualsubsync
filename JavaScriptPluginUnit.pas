@@ -23,7 +23,7 @@ unit JavaScriptPluginUnit;
 
 interface
 
-uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types, Contnrs;
+uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types, Contnrs, TntActnList;
 
 type
 {$TYPEINFO ON}
@@ -45,6 +45,7 @@ type
     FOnChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
     FOnChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
     FSubtitleRange : TSubtitleRange;
+    function GetIndex : Integer;
     function GetStart : Integer;
     function GetStop : Integer;
     function GetText : WideString;
@@ -54,10 +55,12 @@ type
     procedure SetText(Value : WideString);
     procedure SetSubtitle(Value : TSubtitleRange);
   public
+    constructor Create;
     property OnChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnChangeStart write FOnChangeStart;
     property OnChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnChangeStop write FOnChangeStop;
     property OnChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnChangeText write FOnChangeText;
   published
+    property Index : Integer read GetIndex;
     property Start : Integer read GetStart write SetStart;
     property Stop : Integer read GetStop write SetStop;
     property Text : WideString read GetText write SetText;
@@ -104,7 +107,22 @@ type
     FMinimumBlank : Integer;
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
+
+    FSubRangeWrapperPool : array[0..9] of TSubtitleRangeJSWrapper;
+    FSubRangeWrapperPoolIndex : Integer;
+
+    FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
+    FOnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
+    FOnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
+
+    FVSSCoreEngine : TVSSCoreEngineIntf;
+
+    function MakeWrappedSub(SubtitleRange : TSubtitleRange) : TSubtitleRangeJSWrapper;
+
   public
+    constructor Create;
+    destructor Destroy; override;
+    
     procedure Set_INDEX_COL_IDX(Value : Integer);
     procedure Set_START_COL_IDX(Value : Integer);
     procedure Set_STOP_COL_IDX(Value : Integer);
@@ -116,7 +134,32 @@ type
     procedure SetMinimumDuration(Value : Integer);
     procedure SetMinimumBlank(Value : Integer);
 
+    procedure RegisterJS(JSParent : TJSObject);
+
+    procedure SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
+    procedure SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+    procedure SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
+
+    procedure SetVSSCoreEngine(VSSCoreEngine : TVSSCoreEngineIntf);
+
+    property OnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnSubtitleChangeStart write SetOnSubtitleChangeStartEvent;
+    property OnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnSubtitleChangeStop write SetOnSubtitleChangeStopEvent;
+    property OnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnSubtitleChangeText write SetOnSubtitleChangeTextEvent;
+    
   published
+    procedure RegisterJavascriptAction(AName : WideString;
+      ACaption : WideString; ADefaultShortcut : WideString);
+
+    function GetSubtitlesCount : Integer;
+    function GetSubtitleAt(Index : Integer) : TSubtitleRangeJSWrapper;
+
+    function GetFirst : TSubtitleRangeJSWrapper;
+    function GetNext(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+
+    function GetFirstSelected : TSubtitleRangeJSWrapper;
+    function GetNextSelected(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+
+
     property INDEX_COL_IDX : Integer read FINDEX_COL_IDX;
     property START_COL_IDX : Integer read FSTART_COL_IDX;
     property STOP_COL_IDX : Integer read FSTOP_COL_IDX;
@@ -169,6 +212,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function LoadScript(Filename : WideString) : Boolean;
+    procedure CallJSFunction(JSFunctionName : WideString);    
 
     property Filename : WideString read FFilename;
     property LastErrorMsg : WideString read FLastErrorMsg;
@@ -176,6 +220,7 @@ type
     property OnJSPluginError : TJSPluginNotifyEvent read FOnJSPluginError write FOnJSPluginError;
   end;
 
+  // Error plugin
   TJavaScriptPlugin = class(TBaseJavascriptPlugin)
   private
     FHasErrorFunc, FFixErrorFunc : TJSFunction;
@@ -224,6 +269,7 @@ type
     property OnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnSubtitleChangeText write SetOnSubtitleChangeTextEvent;
   end;
 
+  // General plugin
   TSimpleJavascriptWrapper = class(TBaseJavascriptPlugin)
   private
     FNotifySubtitleModificationFunc : TJSFunction;
@@ -299,6 +345,13 @@ type
     function GetPluginByFilename(Filename : WideString) : TJavaScriptPlugin;
   end;
 
+  TJavascriptAction = class(TTntAction)
+  private
+    FJSFunctionName : WideString;
+  public
+    property JSFunctionName : WideString read FJSFunctionName write FJSFunctionName;
+  end;
+
   function GetParamValueAsWideString(pParam : PJSPluginParam) : WideString;
   procedure SetParamValueAsWideString(pParam : PJSPluginParam; Value : WideString);
   function JSColorToTColor(RGBColor : Integer) : TColor;
@@ -309,7 +362,7 @@ var
 
 implementation
 
-uses SysUtils, Windows, WAVDisplayerUnit, MiscToolsUnit;
+uses SysUtils, Windows, WAVDisplayerUnit, MiscToolsUnit, GlobalUnit;
 
 //------------------------------------------------------------------------------
 
@@ -398,6 +451,24 @@ begin
 end;
 
 // =============================================================================
+
+constructor TSubtitleRangeJSWrapper.Create;
+begin
+  FStrippedText := '';
+  FStrippedTextProcessed := False;
+  FSubtitleRange := nil;
+  FOnChangeStart := nil;
+  FOnChangeStop := nil;
+  FOnChangeText := nil;
+end;
+
+function TSubtitleRangeJSWrapper.GetIndex : Integer;
+begin
+  if Assigned(FSubtitleRange.Node) then
+    Result := FSubtitleRange.Node.Index + 1
+  else
+    Result := -1
+end;
 
 function TSubtitleRangeJSWrapper.GetStart : Integer;
 begin
@@ -526,7 +597,7 @@ end;
 procedure TBaseJavascriptPlugin.PreInitScript;
 begin
   // VSSCore
-  FEngine.Global.AddNativeObject(g_VSSCoreWrapper, 'VSSCore');
+  g_VSSCoreWrapper.RegisterJS(FEngine.Global);
 end;
 
 //------------------------------------------------------------------------------
@@ -597,6 +668,13 @@ function TBaseJavascriptPlugin.LoadScript(Filename : WideString) : Boolean;
 begin
   FFilename := Filename;
   Result := InternalLoadScript(Filename);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TBaseJavascriptPlugin.CallJSFunction(JSFunctionName : WideString);
+begin
+  FEngine.Global.Evaluate(JSFunctionName + '()');
 end;
 
 // =============================================================================
@@ -1405,6 +1483,35 @@ end;
 
 //==============================================================================
 
+constructor TVSSCoreWrapper.Create;
+var i : Integer;
+begin
+  inherited Create;
+
+  for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+  begin
+    FSubRangeWrapperPool[i] := TSubtitleRangeJSWrapper.Create;
+  end;
+  FSubRangeWrapperPoolIndex := 0;
+end;
+
+destructor TVSSCoreWrapper.Destroy;
+var i : Integer;
+begin
+  for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+  begin
+    FreeAndNil(FSubRangeWrapperPool[i]);
+  end;
+  FVSSCoreEngine := nil;
+end;
+
+function TVSSCoreWrapper.MakeWrappedSub(SubtitleRange : TSubtitleRange) : TSubtitleRangeJSWrapper;
+begin
+  Result := FSubRangeWrapperPool[FSubRangeWrapperPoolIndex];
+  FSubRangeWrapperPoolIndex := (FSubRangeWrapperPoolIndex + 1) mod Length(FSubRangeWrapperPool);
+  Result.SetSubtitle(SubtitleRange);
+end;
+
 procedure TVSSCoreWrapper.Set_INDEX_COL_IDX(Value : Integer);
 begin
   FINDEX_COL_IDX := Value;
@@ -1448,6 +1555,140 @@ end;
 procedure TVSSCoreWrapper.SetMinimumBlank(Value : Integer);
 begin
   FMinimumBlank := Value;
+end;
+
+procedure TVSSCoreWrapper.RegisterJS(JSParent : TJSObject);
+var VSSCoreJSObj : TJSObject;
+    i : Integer;
+begin
+  VSSCoreJSObj := JSParent.AddNativeObject(Self, 'VSSCore');
+  VSSCoreJSObj.SetMethodInfo('RegisterJavascriptAction', 3, rtNone);
+  VSSCoreJSObj.SetMethodInfo('GetSubtitlesCount', 0, rtInteger);
+  VSSCoreJSObj.SetMethodInfo('GetSubtitleAt', 1, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetFirst', 0, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetNext', 1, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetFirstSelected', 0, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetNextSelected', 1, rtObject);
+
+  for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+  begin
+    JSParent.AddNativeObject(FSubRangeWrapperPool[i],'');
+  end;
+end;
+
+procedure TVSSCoreWrapper.SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
+var i : Integer;
+begin
+  if (@Value <> @FOnSubtitleChangeStart) then
+  begin
+    FOnSubtitleChangeStart := Value;
+    for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+    begin
+      FSubRangeWrapperPool[i].FOnChangeStart := Value;
+    end;
+  end;
+end;
+
+procedure TVSSCoreWrapper.SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+var i : Integer;
+begin
+  if (@Value <> @FOnSubtitleChangeStop) then
+  begin
+    FOnSubtitleChangeStop := Value;
+    for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+    begin
+      FSubRangeWrapperPool[i].FOnChangeStop := Value;
+    end;
+  end;
+end;
+
+procedure TVSSCoreWrapper.SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
+var i : Integer;
+begin
+  if (@Value <> @FOnSubtitleChangeText) then
+  begin
+    FOnSubtitleChangeText := Value;
+    for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
+    begin
+      FSubRangeWrapperPool[i].FOnChangeText := Value;
+    end;
+  end;
+end;
+
+procedure TVSSCoreWrapper.SetVSSCoreEngine(VSSCoreEngine : TVSSCoreEngineIntf);
+begin
+  FVSSCoreEngine := VSSCoreEngine;
+end;
+
+procedure TVSSCoreWrapper.RegisterJavascriptAction(AName : WideString;
+  ACaption : WideString; ADefaultShortcut : WideString);
+begin
+  FVSSCoreEngine.RegisterJavascriptAction(AName, ACaption, ADefaultShortcut);
+end;
+
+function TVSSCoreWrapper.GetSubtitlesCount : Integer;
+begin
+  Result := g_GlobalContext.SubList.Count;
+end;
+
+function TVSSCoreWrapper.GetSubtitleAt(Index : Integer) : TSubtitleRangeJSWrapper;
+begin
+  if (Index < 0) or (Index >= g_GlobalContext.SubList.Count) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+  Result := MakeWrappedSub(TSubtitleRange(g_GlobalContext.SubList[Index]));
+end;
+
+function TVSSCoreWrapper.GetFirst : TSubtitleRangeJSWrapper;
+var SubtitleRange : TSubtitleRange;
+begin
+  Result := nil;
+  SubtitleRange := FVSSCoreEngine.GetFirst;
+  if Assigned(SubtitleRange) then
+  begin
+    Result := MakeWrappedSub(SubtitleRange);
+  end;
+end;
+
+function TVSSCoreWrapper.GetNext(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+var SubtitleRange : TSubtitleRange;
+begin
+  Result := nil;
+  if Assigned(Sub) and (Sub is TSubtitleRangeJSWrapper) then
+  begin
+    SubtitleRange := FVSSCoreEngine.GetNext(Sub.FSubtitleRange);
+    if Assigned(SubtitleRange) then
+    begin
+      Result := MakeWrappedSub(SubtitleRange);
+    end;
+  end;
+end;
+
+function TVSSCoreWrapper.GetFirstSelected : TSubtitleRangeJSWrapper;
+var SubtitleRange : TSubtitleRange;
+begin
+  Result := nil;
+  SubtitleRange := FVSSCoreEngine.GetFirstSelected;
+  if Assigned(SubtitleRange) then
+  begin
+    Result := MakeWrappedSub(SubtitleRange);
+  end;
+end;
+
+function TVSSCoreWrapper.GetNextSelected(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+var SubtitleRange : TSubtitleRange;
+begin
+  Result := nil;
+  if Assigned(Sub) and (Sub is TSubtitleRangeJSWrapper) then
+  begin
+    SubtitleRange := FVSSCoreEngine.GetNextSelected(Sub.FSubtitleRange);
+    if Assigned(SubtitleRange) then
+    begin
+      Result := MakeWrappedSub(SubtitleRange);
+    end;
+  end;
 end;
 
 //==============================================================================
