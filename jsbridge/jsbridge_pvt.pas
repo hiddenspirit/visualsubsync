@@ -252,7 +252,7 @@ begin
           str := JS_GetStringChars(JS_ValueToString(cx, val));
           SetLength(strlist, Length(strlist) + 1);
           strlist[Length(strlist) - 1] := str;
-          parm^.obj := PBridgeChar(str);
+          parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
         end;
       JSTYPE_BOOLEAN:
         parm^.bool := JSValToBoolean(val);
@@ -267,7 +267,7 @@ begin
             str := JS_GetStringChars(JS_ValueToString(cx, val));
             SetLength(strlist, Length(strlist) + 1);
             strlist[Length(strlist) - 1] := str;
-            parm^.obj := PBridgeChar(str);
+            parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
           end;
         end;
     end;
