@@ -193,7 +193,9 @@ type
 
     procedure AddPtr(const Ptr: Pointer);
     procedure AddVar(Obj: TJSBase);
-    function Compile(const Code: TBridgeString): PJSScript;
+    function Compile(const Code: TBridgeString; const Filename : TBridgeString = '';
+      const lineNo : Cardinal = 1): PJSScript;
+
     procedure DeleteClasses;
     procedure DeletePtrs;
     procedure DeleteVarList;
@@ -523,7 +525,8 @@ type
     constructor Create(const ACode: TBridgeString); overload;
     constructor Create(const ACode: TBridgeString; AEngine: TJSEngine); overload;
 
-    function Compile(AEngine: TJSEngine) : Boolean;
+    function Compile(AEngine: TJSEngine; const Filename: TBridgeString = '';
+      const lineNo: Cardinal = 1) : Boolean;
     function Execute(AEngine: TJSEngine) : Boolean; overload;
     function Execute(AEngine: TJSEngine; AScope: TJSObject) : Boolean; overload;
     procedure LoadCompiled(const AFile: TBridgeString; AEngine: TJSEngine);
@@ -679,12 +682,15 @@ begin
   Inc(FVarCount);
 end;
 
-function TJSEngine.Compile(const Code: TBridgeString): PJSScript;
+function TJSEngine.Compile(const Code: TBridgeString; const Filename : TBridgeString = '';
+  const lineNo : Cardinal = 1): PJSScript;
 begin
   {$IFNDEF JSUnicode}
-  Result := JS_CompileScript(fcx, FGlobal, PBridgeChar(Code), Length(Code), '', 0);
+  Result := JS_CompileScript(fcx, FGlobal, PBridgeChar(Code), Length(Code), PBridgeChar(Filename), lineNo);
   {$ELSE}
-  Result := JS_CompileUCScript(fcx, FGlobal, PBridgeChar(Code), Length(Code), '', 0);
+  // TODO : Unicode filename support in spydermonkey ?
+  Result := JS_CompileUCScript(fcx, FGlobal, PBridgeChar(Code), Length(Code),
+    PChar(String(Filename)), lineNo);
   {$ENDIF}
 end;
 
@@ -891,17 +897,29 @@ end;
 function TJSEngine.InternalCallName(const func: TBridgeString; obj: PJSObject; var args: array of TJSBase; rval: pjsval): Boolean;
 var
   myargs: TJSValArray;
-  i: Integer;
+  i, jsres: Integer;
+  myfunc : jsval;
+
 begin
   if (obj = nil) then
     obj := FGlobal;
 
+  Result := False;
   if (Length(args) = 0) then
+  begin
     {$IFNDEF JSUnicode}
     Result := (JS_CallFunctionName(fcx, obj, PBridgeChar(func), 0, nil, rval) = JS_TRUE)
     {$ELSE}
-    Result := (JS_CallUCFunctionName(fcx, obj, PBridgeChar(func), Length(func), 0, nil, rval) = JS_TRUE)
+    // TODO : test this (this is a try to avoid patching the dll)
+    jsres := JS_GetUCProperty(fcx, obj, PBridgeChar(func), Length(func), @myfunc);
+    if (jsres = JS_TRUE) and (myfunc <> 0) then
+    begin
+      Result := (JS_CallFunctionValue(fcx, obj, myfunc, 0, nil, rval) = JS_TRUE);
+    end;
+
+    //Result := (JS_CallUCFunctionName(fcx, obj, PBridgeChar(func), Length(func), 0, nil, rval) = JS_TRUE)
     {$ENDIF}
+  end
   else
   begin
     SetLength(myargs, Length(args));
@@ -911,10 +929,19 @@ begin
     {$IFNDEF JSUnicode}
     Result := (JS_CallFunctionName(fcx, obj, PBridgeChar(func), Length(myargs), @myargs[0], rval) = JS_TRUE);
     {$ELSE}
-    Result := (JS_CallUCFunctionName(fcx, obj, PBridgeChar(func), Length(func), Length(myargs), @myargs[0], rval) = JS_TRUE);
+    // TODO : test this (this is a try to avoid patching the dll)
+    jsres := JS_GetUCProperty(fcx, obj, PBridgeChar(func), Length(func), @myfunc);
+    if (jsres = JS_TRUE) and (myfunc <> 0) then
+    begin
+      Result := (JS_CallFunctionValue(fcx, obj, myfunc, Length(myargs), @myargs[0], rval) = JS_TRUE);
+    end;
+    
+    //Result := (JS_CallUCFunctionName(fcx, obj, PBridgeChar(func), Length(func), Length(myargs), @myargs[0], rval) = JS_TRUE);
     {$ENDIF}
     SetLength(myargs, 0);
   end;
+
+
 end;
 
 function TJSEngine.InternalExecute(Script: PJSScript): Boolean;
@@ -2590,9 +2617,10 @@ end;
 
 { TJSScript }
 
-function TJSScript.Compile(AEngine: TJSEngine) : Boolean;
+function TJSScript.Compile(AEngine: TJSEngine; const Filename: TBridgeString = '';
+  const lineNo: Cardinal = 1) : Boolean;
 begin
-  FScript := AEngine.Compile(FCode);
+  FScript := AEngine.Compile(FCode, Filename, lineNo);
   FCompiled := (FScript <> nil);
   Result := FCompiled;
 end;

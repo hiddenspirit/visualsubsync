@@ -102,7 +102,7 @@ function  GetParamName(cx: PJSContext; id: jsval): TBridgeString;
 
 implementation
 
-uses jsintf;
+uses jsintf, Windows;
 
 function IsArray(var val: jsval; arrcls: PJSClass): Boolean;
 var
