@@ -24,7 +24,17 @@ VSSCore.CpsTarget : Characters per second target
 VSSCore.MinimumDuration : Minimum subtitle duration
 VSSCore.MinimumBlank : Minimum blank between subtitles
 
+VSSCore.RegisterJavascriptAction(Name, Description, DefaultShortcut) : Register a javascript action
+VSSCore.GetSubCount() : Return the total number of subtitles
+VSSCore.GetSubAt(Index) : Return the subtitle at the specified index
+VSSCore.GetFirst() : Return the first subtitle
+VSSCore.GetNext(Subtitle) : Return the subtitle next to the specified one
+VSSCore.GetPrevious(Subtitle) : Return the subtitle previous to the specified one
+VSSCore.GetFirstSelected() : Return the first selected subtitle
+VSSCore.GetNextSelected(Subtitle) : Return the next selected subtitle after the specified one
 
+
+Subtitle.Index : Index of the subtitle
 Subtitle.Start : Start time in ms of the subtitle
 Subtitle.Stop : Stop time in ms of the subtitle
 Subtitle.Text : Subtitle's text
