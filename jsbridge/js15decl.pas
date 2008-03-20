@@ -84,10 +84,24 @@ const
   JS_MAP_GCROOT_REMOVE = 2;
 
   (* May be private *)
-  JSOPTION_STRICT = 0;
-  JSOPTION_WERROR = 1;
-  JSOPTION_VAROBJFIX = 2;
-  JSOPTION_PRIVATE_IS_NSISUPPORTS = 4;
+  JSOPTION_STRICT = 0; // warn on dubious practice
+  JSOPTION_WERROR = 1; // convert warning to error
+  JSOPTION_VAROBJFIX = 2; // make JS_EvaluateScript use the last object on its 'obj'
+                          // param's scope chain as the ECMA 'variables object'
+  JSOPTION_PRIVATE_IS_NSISUPPORTS = 4; // context private data points to an nsISupports subclass
+  JSOPTION_COMPILE_N_GO = 8; // caller of JS_Compile*Script promises to execute compiled
+                             // script once only; enables compile-time scope chain resolution of consts.
+  JSOPTION_ATLINE = 16;      // //@line number ["filename"] option supported for the XUL preprocessor and kindred beasts.
+  JSOPTION_XML = 32;         // EMCAScript for XML support: parse <!-- --> as a token,
+                             // not backward compatible with the comment-hiding hack used in HTML script tags.
+  JSOPTION_NATIVE_BRANCH_CALLBACK = 64; // the branch callback set by JS_SetBranchCallback may be
+                                        // called with a null script parameter, by native code that loops intensively
+  JSOPTION_DONT_REPORT_UNCAUGHT = 128;  // When returning from the outermost API call, prevent
+                                        // uncaught exceptions from being converted to error reports
+  JSOPTION_RELIMIT = 256; // Throw exception on any regular expression which
+                          // backtracks more than n^3 times, where n is length
+                          // of the input string
+  JSOPTION_ANONFUNFIX = 512; // Disallow function () {} in statement context per ECMA-262 Edition 3.
 
   (* Numeric equivalents of javascript versions *)
   JSVERSION_1_0 = 100;
@@ -578,7 +592,6 @@ function JS_BufferIsCompilableUnit(cx: PJSContext; obj: PJSObject; bytes: PChar;
 function JS_CallFunction(cx: PJSContext; obj: PJSObject; fun: PJSFunction; argc: uintN; argv: pjsval; rval: pjsval): JSBool; cdecl; external LibName;
 function JS_CallFunctionName(cx: PJSContext; obj: PJSObject; name: PChar; argc: uintN; argv: pjsval; rval: pjsval): JSBool; cdecl; external LibName;
 function JS_CallFunctionValue(cx: PJSContext; obj: PJSObject; fval: jsval; argc: uintN; argv: pjsval; rval: pjsval): JSBool; cdecl; external LibName;
-function JS_CallUCFunctionName(cx: PJSContext; obj: PJSObject; name: pjschar; namelen: size_t; argc: uintN; argv: pjsval; rval: pjsval): JSBool; cdecl; external LibName;
 function JS_CheckAccess(cx: PJSContext; obj: PJSObject; id: jsid; mode: JSAccessMode; vp: pjsval; attrsp: puintN): JSBool; cdecl; external LibName;
 function JS_CloneFunctionObject(cx: PJSContext; funobj: PJSObject; parent: PJSObject): PJSObject; cdecl; external LibName;
 function JS_CompareStrings(str1: PJSString; str2: PJSString): intN; cdecl; external LibName;
@@ -591,8 +604,6 @@ function JS_CompileScript(cx: PJSContext; obj: PJSObject; bytes: PChar; length: 
 function JS_CompileScriptForPrincipals(cx: PJSContext; obj: PJSObject; principals: PJSPrincipals; bytes: PChar; length: size_t; filename: PChar; lineno: uintN): PJSScript; cdecl; external LibName;
 function JS_CompileUCFunction(cx: PJSContext; obj: PJSObject; name: PChar; nargs: uintN; var argnames: PChar; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSFunction; cdecl; external LibName;
 function JS_CompileUCFunctionForPrincipals(cx: PJSContext; obj: PJSObject; principals: PJSPrincipals; name: PChar; nargs: uintN; var argnames: PChar; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSFunction; cdecl; external LibName;
-function JS_CompileUCFunctionUC(cx: PJSContext; obj: PJSObject; name: pjschar; namelen: size_t; nargs: uintN; var argnames: PChar; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSFunction; cdecl; external LibName;
-function JS_CompileUCFunctionForPrincipalsUC(cx: PJSContext; obj: PJSObject; principals: PJSPrincipals; name: pjschar; namelen: size_t; nargs: uintN; var argnames: PChar; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSFunction; cdecl; external LibName;
 function JS_CompileUCScript(cx: PJSContext; obj: PJSObject; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSScript; cdecl; external LibName;
 function JS_CompileUCScriptForPrincipals(cx: PJSContext; obj: PJSObject; principals: PJSPrincipals; chars: pjschar; length: size_t; filename: PChar; lineno: uintN): PJSScript; cdecl; external LibName;
 function JS_ConcatStrings(cx: PJSContext; left: PJSString; right: PJSString): PJSString; cdecl; external LibName;
@@ -877,6 +888,9 @@ procedure JS_SetDestroyScriptHook(rt: PJSRuntime; hook: JSDestroyScriptHook; cal
 procedure JS_SetFrameAnnotation(cx: PJSContext; fp: PJSStackFrame; annotation: Pointer); cdecl; external LibName;
 procedure JS_SetFrameReturnValue(cx: PJSContext; fp: PJSStackFrame; rval: jsval); cdecl; external LibName;
 procedure JS_SetNewScriptHookProc(rt: PJSRuntime; hook: JSNewScriptHook; callerdata: Pointer); cdecl; external LibName;
+
+(* New *)
+//function JS_ReportPendingException(cx: PJSContext): JSBool; cdecl; external LibName;
 
 (* Conversion routines *)
 function JSStringToString(str: PJSString): TBridgeString;
