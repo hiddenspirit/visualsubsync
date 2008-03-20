@@ -1,7 +1,7 @@
 program VisualSubSync;
 
 uses
-  //FastMM4,
+  FastMM4,
   Windows,
   Forms,
   TntSystem,
@@ -55,9 +55,9 @@ begin
   Application.CreateForm(TErrorReportForm, ErrorReportForm);
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
+  MainForm.InitGeneralJSPlugin;
   MainForm.LoadSettings;
   MainForm.FinishLoadSettings;
-  MainForm.InitGeneralJSPlugin;
   Application.ProcessMessages;
   MainForm.ProcessParams;
   Application.Run;

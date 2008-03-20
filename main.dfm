@@ -1505,6 +1505,9 @@ object MainForm: TMainForm
         end
       end
     end
+    object MenuItemJSTools: TTntMenuItem
+      Caption = 'JS Tools'
+    end
     object MenuItemHelpRoot: TTntMenuItem
       Caption = '?'
       SubMenuImages = ImageList1

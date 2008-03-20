@@ -61,9 +61,13 @@ type
   TVSSCoreEngineIntf = interface(IInterface)
     procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
 
+    function GetSubCount : Integer;
+        
     function GetFirst : TSubtitleRange;
     function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetPrevious(SubtitleRange : TSubtitleRange) : TSubtitleRange;
 
+    function GetSelectedCount : Integer;
     function GetFirstSelected : TSubtitleRange;
     function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
   end;  
