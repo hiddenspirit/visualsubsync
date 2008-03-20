@@ -83,6 +83,8 @@ function statusBarText(Sub) {
 
 // ---------------------------------------------------------------------------
 
+//var readingSpeed = new Array(5, 10, 13, 15, 23, 27, 31, 35);
+
 function getReadingSpeedAsColor(Sub) {
   var rs = getReadingSpeed(Sub);
   
@@ -194,9 +196,62 @@ VSSPlugin = {
 
 // ---------------------------------------------------------------------------
 
-function JSActionTest() {
-  ScriptLog('subtitle count = ' + VSSCore.GetSubtitlesCount());
-  var subtitleAt0 = VSSCore.GetSubtitleAt(0);
+var ReadingSpeedDef = [
+  { value: 5,  text: 'TOO SLOW!'},
+  { value: 10, text: 'Slow, acceptable.'},
+  { value: 13, text: 'A bit slow.'},
+  { value: 15, text: 'Good.'},
+  { value: 23, text: 'Perfect.'},
+  { value: 27, text: 'Good.'},
+  { value: 31, text: 'A bit fast.'},
+  { value: 35, text: 'TOO FAST!'}
+];
+
+function getReadingSpeedIndex(rs) {
+  for (var i = 0; i < ReadingSpeedDef.length; i++) {
+    if (rs < ReadingSpeedDef[i].value) {
+      return i;
+    }
+  }
+  return (ReadingSpeedDef.length - 1);
+}
+
+function JSAction_QuickStats() {
+  var subCount = VSSCore.GetSubCount();
+  ScriptLog('Subtitle count : ' + subCount);
+
+  // Table to store results
+  var rsArray = new Array(ReadingSpeedDef.length);
+  for (var i = 0; i < rsArray.length; i++) {
+    rsArray[i] = 0;
+  }
+  
+  // Iterate over all subtitles
+  /*
+  var sub = VSSCore.GetFirst();
+  while (sub != null) {
+    var rs = getReadingSpeed(sub);
+    var rsIdx = getReadingSpeedIndex(rs);
+    rsArray[rsIdx]++;
+    sub = VSSCore.GetNext(sub);
+  }*/
+  
+  for (var i = 0; i < subCount; i++) {
+    var sub = VSSCore.GetSubAt(i);
+    var rs = getReadingSpeed(sub);
+    var rsIdx = getReadingSpeedIndex(rs);
+    rsArray[rsIdx]++;
+  }
+  
+  // Display results
+  for (var i = 0; i < rsArray.length; i++) {
+    var rsCount = rsArray[i];
+    var rsCountPercent = (rsCount * 100) / subCount;
+    ScriptLog(ReadingSpeedDef[i].text + ' = ' + decimal1Round(rsCountPercent) + '% (' + rsCount + ')');
+  }
+  
+  /*
+  var subtitleAt0 = VSSCore.GetSubAt(0);
   ScriptLog('at 0 = ' + ((subtitleAt0 != null) ? subtitleAt0.Text : 'null'));
   
   var firstSubtitle = VSSCore.GetFirst();
@@ -210,9 +265,9 @@ function JSActionTest() {
     ScriptLog('selected = (' + selectedCursor.Index + ') ' + selectedCursor.Text);
     selectedCursor = VSSCore.GetNextSelected(selectedCursor);
   }
-
+  */
 }
 
-VSSCore.RegisterJavascriptAction('JSActionTest', 'A javascript test action', 'Ctrl+M');
+VSSCore.RegisterJavascriptAction('JSAction_QuickStats', 'Quick stats', 'Ctrl+M');
 
 // ---------------------------------------------------------------------------
