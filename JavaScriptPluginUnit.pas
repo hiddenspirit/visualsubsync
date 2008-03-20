@@ -108,7 +108,7 @@ type
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
 
-    FSubRangeWrapperPool : array[0..9] of TSubtitleRangeJSWrapper;
+    FSubRangeWrapperPool : array[0..19] of TSubtitleRangeJSWrapper;
     FSubRangeWrapperPoolIndex : Integer;
 
     FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
@@ -150,12 +150,14 @@ type
     procedure RegisterJavascriptAction(AName : WideString;
       ACaption : WideString; ADefaultShortcut : WideString);
 
-    function GetSubtitlesCount : Integer;
-    function GetSubtitleAt(Index : Integer) : TSubtitleRangeJSWrapper;
+    function GetSubCount : Integer;
+    function GetSubAt(Index : Integer) : TSubtitleRangeJSWrapper;
 
     function GetFirst : TSubtitleRangeJSWrapper;
     function GetNext(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+    function GetPrevious(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
 
+    function GetSelectedCount : Integer;
     function GetFirstSelected : TSubtitleRangeJSWrapper;
     function GetNextSelected(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
 
@@ -364,6 +366,11 @@ implementation
 
 uses SysUtils, Windows, WAVDisplayerUnit, MiscToolsUnit, GlobalUnit;
 
+function IsValidSubRange(Sub : TSubtitleRange) : Boolean;
+begin
+  Result := g_GlobalContext.SubList.IndexOf(Sub) <> -1;
+end;
+
 //------------------------------------------------------------------------------
 
 function GetParamValueAsWideString(pParam : PJSPluginParam) : WideString;
@@ -487,6 +494,14 @@ end;
 
 function TSubtitleRangeJSWrapper.GetStrippedText : WideString;
 begin
+  {
+  if not IsValidSubRange(FSubtitleRange) then
+  begin
+    OutputDebugString('moo2');
+    Exit;
+  end;
+  }
+
   if (FStrippedTextProcessed = False) then
   begin
     FStrippedText := StripTags(FSubtitleRange.Text);
@@ -563,12 +578,12 @@ var
 	ErrorTypeStr: WideString;
   CurrentFile : WideString;
 begin
-  if (report^.flags and JSREPORT_EXCEPTION <> 0) then
+  if JSReportIsException(report) then
   begin
 		ErrorTypeStr := 'Exception';
     FFatalError := True;
   end
-	else if (report^.flags and JSREPORT_WARNING <> 0) then
+	else if JSReportIsWarning(report) then
   begin
 		ErrorTypeStr := 'Warning';
     FFatalError := False;
@@ -586,8 +601,11 @@ begin
   begin
     CurrentFile := FFilename;
   end;
-	FLastErrorMsg := Format('%s in %s (Line %d) / %s',
-    [ErrorTypeStr, WideExtractFileName(CurrentFile), report^.lineno + 1, Msg]);
+	FLastErrorMsg := Format('%s in %s at line %d', [Msg, WideExtractFileName(CurrentFile), report^.lineno]);
+  if (report^.uclinebuf <> '') then
+  begin
+    FLastErrorMsg := FLastErrorMsg + CRLF + '-> ' + report^.uclinebuf;
+  end;
   if Assigned(FOnJSPluginError) then
     FOnJSPluginError(FLastErrorMsg);
 end;
@@ -617,7 +635,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TBaseJavascriptPlugin.InternalLoadScript(Filename : WideString) : Boolean;
-var FScript : TJSScript;
+var Script : TJSScript;
     PFilename : PWideString;
     CurrentFilePath : WideString;
 begin
@@ -640,24 +658,35 @@ begin
     Exit;
   end;
 
+  // Save the file name in a stack because spydermonkey doesn't support unicode filename
   New(PFilename);
   PFilename ^:= Filename;
   FLoadingStack.Push(PFilename);
 
-  FScript := TJSScript.Create;
-  FScript.LoadRaw(Filename);
-  FScript.Compile(FEngine); // try to compile the script
-  if FScript.Compiled then
+  Script := TJSScript.Create;
+  Script.LoadRaw(Filename);
+  Script.Compile(FEngine, Filename); // try to compile the script
+  if Script.Compiled then
   begin
     if not FPreInitDone then
     begin
       PreInitScript;
       FPreInitDone := True;
     end;
-    Result := FScript.Execute(FEngine);
+    Result := Script.Execute(FEngine);
+  end
+  else
+  begin
+    // There is probably a pending exception, try to report it now
+    if JS_IsExceptionPending(FEngine.Context) = JS_TRUE then
+    begin
+      // We need an updated DLL to do that
+      //JS_ReportPendingException(FEngine.Context);
+      // TODO
+    end
   end;
 
-  FScript.Free;
+  Script.Free;
   FLoadingStack.Pop;
   Dispose(PFilename);
 end;
@@ -673,8 +702,15 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TBaseJavascriptPlugin.CallJSFunction(JSFunctionName : WideString);
+var JSFunction : TJSFunction;
+    Dummy : Integer;
 begin
-  FEngine.Global.Evaluate(JSFunctionName + '()');
+  JSFunction := FEngine.Global.GetFunction(JSFunctionName);
+  if Assigned(JSFunction) then
+  begin
+    JSFunction.Call([], Dummy);
+    FreeAndNil(JSFunction);
+  end;
 end;
 
 // =============================================================================
@@ -1563,10 +1599,13 @@ var VSSCoreJSObj : TJSObject;
 begin
   VSSCoreJSObj := JSParent.AddNativeObject(Self, 'VSSCore');
   VSSCoreJSObj.SetMethodInfo('RegisterJavascriptAction', 3, rtNone);
-  VSSCoreJSObj.SetMethodInfo('GetSubtitlesCount', 0, rtInteger);
-  VSSCoreJSObj.SetMethodInfo('GetSubtitleAt', 1, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetSubCount', 0, rtInteger);
+  VSSCoreJSObj.SetMethodInfo('GetSubAt', 1, rtObject);
+
   VSSCoreJSObj.SetMethodInfo('GetFirst', 0, rtObject);
   VSSCoreJSObj.SetMethodInfo('GetNext', 1, rtObject);
+  VSSCoreJSObj.SetMethodInfo('GetPrevious', 1, rtObject);
+
   VSSCoreJSObj.SetMethodInfo('GetFirstSelected', 0, rtObject);
   VSSCoreJSObj.SetMethodInfo('GetNextSelected', 1, rtObject);
 
@@ -1626,12 +1665,12 @@ begin
   FVSSCoreEngine.RegisterJavascriptAction(AName, ACaption, ADefaultShortcut);
 end;
 
-function TVSSCoreWrapper.GetSubtitlesCount : Integer;
+function TVSSCoreWrapper.GetSubCount : Integer;
 begin
-  Result := g_GlobalContext.SubList.Count;
+  Result := FVSSCoreEngine.GetSubCount;
 end;
 
-function TVSSCoreWrapper.GetSubtitleAt(Index : Integer) : TSubtitleRangeJSWrapper;
+function TVSSCoreWrapper.GetSubAt(Index : Integer) : TSubtitleRangeJSWrapper;
 begin
   if (Index < 0) or (Index >= g_GlobalContext.SubList.Count) then
   begin
@@ -1664,6 +1703,25 @@ begin
       Result := MakeWrappedSub(SubtitleRange);
     end;
   end;
+end;
+
+function TVSSCoreWrapper.GetPrevious(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
+var SubtitleRange : TSubtitleRange;
+begin
+  Result := nil;
+  if Assigned(Sub) and (Sub is TSubtitleRangeJSWrapper) then
+  begin
+    SubtitleRange := FVSSCoreEngine.GetPrevious(Sub.FSubtitleRange);
+    if Assigned(SubtitleRange) then
+    begin
+      Result := MakeWrappedSub(SubtitleRange);
+    end;
+  end;
+end;
+
+function TVSSCoreWrapper.GetSelectedCount : Integer;
+begin
+  Result := FVSSCoreEngine.GetSelectedCount;
 end;
 
 function TVSSCoreWrapper.GetFirstSelected : TSubtitleRangeJSWrapper;

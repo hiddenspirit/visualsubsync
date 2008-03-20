@@ -354,6 +354,7 @@ type
     TntButton1: TTntButton;
     TntButton2: TTntButton;
     ActionMergeOnOneLine: TTntAction;
+    MenuItemJSTools: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -572,8 +573,6 @@ type
     PrefFormInitialized : Boolean;
 
     StartupShowVideo, StartupDetachVideo : Boolean;
-    StartupVisibleExtraColumns : string;
-    StartupColumnsPosition : string;
 
     VSSClipBoardFORMAT : Cardinal;
 
@@ -650,11 +649,13 @@ type
 
     procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
     procedure OnJavascriptAction(Sender : TObject);
-    function GetFirstSelected : TSubtitleRange;
-    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetSubCount : Integer;
     function GetFirst : TSubtitleRange;
     function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
-
+    function GetPrevious(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetSelectedCount : Integer;
+    function GetFirstSelected : TSubtitleRange;
+    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
 
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
@@ -807,7 +808,6 @@ begin
   MRUList := TMRUList.Create(MenuItemOpenRecentRoot);
   MRUList.OnRecentMenuItemClick := OnRecentMenuItemClick;
   ConfigObject := TConfigObject.Create;
-  ConfigObject.SetDefaultHotKeys(TntActionList1);
 
   ServerRootDir := ExtractFilePath(Application.ExeName);
   ServerRootDir := IncludeTrailingPathDelimiter(ServerRootDir) + 'web\';
@@ -1076,6 +1076,8 @@ procedure TMainForm.LoadSettings;
 var IniFile : TIniFile;
     IniFilename : WideString;
 begin
+  ConfigObject.SetDefaultHotKeys(TntActionList1);
+
   IniFilename := GetIniFilename;
   IniFile := TIniFile.Create(IniFilename);
   MRUList.LoadIni(IniFile, 'MRUList');
@@ -1100,8 +1102,6 @@ begin
   TntStatusBar1.Top := Maxint;
 
   tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
-  StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
-  StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
 
   StartupDetachVideo := IniFile.ReadBool('Windows', 'DetachedVideo', False);
   StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
@@ -1205,7 +1205,17 @@ var Column : TVirtualTreeColumn;
     i, NewPos : Integer;
     MenuItem : TTntMenuItem;
     VisibleExtraColumnsList, ColumnsPositionList : TStrings;
+
+    IniFile : TIniFile;
+    IniFilename : WideString;
+    StartupVisibleExtraColumns, StartupColumnsPosition : string;
 begin
+  IniFilename := GetIniFilename;
+  IniFile := TIniFile.Create(IniFilename);
+  StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
+  StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
+  IniFile.Free;
+
   VisibleExtraColumnsList := TStringList.Create;
   VisibleExtraColumnsList.CommaText := StartupVisibleExtraColumns;
 
@@ -7499,15 +7509,26 @@ end;
 
 procedure TMainForm.RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
 var JSAction : TJavascriptAction;
+    NewItem : TTntMenuItem;
 begin
   JSAction := TJavascriptAction.Create(TntActionList1);
-  JSAction.Caption := ACaption;
-  JSAction.Name := 'JS_' + AName;
+  JSAction.Caption := '[js] ' + ACaption;
+  JSAction.Name := AName;
   JSAction.JSFunctionName := AName;
   JSAction.ShortCut := TextToShortCut(ADefaultShortcut);
   JSAction.Tag := 1;
   JSAction.OnExecute := OnJavascriptAction;
   JSAction.ActionList := TntActionList1;
+
+  NewItem := TTntMenuItem.Create(Self);
+  NewItem.Action := JSAction;
+  NewItem.Caption := Tnt_WideStringReplace(NewItem.Caption, '[js] ', '', [rfReplaceAll]);
+  MenuItemJSTools.Add(NewItem);
+end;
+
+function TMainForm.GetSubCount : Integer;
+begin
+  Result := vtvSubsList.RootNodeCount;
 end;
 
 function TMainForm.GetFirst : TSubtitleRange;
@@ -7538,6 +7559,24 @@ begin
   end;
 end;
 
+function TMainForm.GetPrevious(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+var Node : PVirtualNode;
+    NodeData : PTreeData;
+begin
+  Node := vtvSubsList.GetPrevious(SubtitleRange.Node);
+  if Assigned(Node) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(Node);
+    Result := NodeData.Range;
+  end else begin
+    Result := nil;
+  end;
+end;
+
+function TMainForm.GetSelectedCount : Integer;
+begin
+  Result := vtvSubsList.SelectedCount;
+end;
 
 function TMainForm.GetFirstSelected : TSubtitleRange;
 var Node : PVirtualNode;

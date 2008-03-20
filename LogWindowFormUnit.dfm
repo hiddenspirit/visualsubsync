@@ -22,6 +22,12 @@ object LogForm: TLogForm
     Width = 497
     Height = 121
     Align = alClient
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Courier New'
+    Font.Style = []
+    ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 0
   end
