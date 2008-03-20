@@ -18,10 +18,14 @@ type
     procedure TestWideStringFind;
 
     procedure TestConvertSSAToSRT;
-    procedure TestConvertSRTToSSA;    
+    procedure TestConvertSRTToSSA;
+
+    procedure TestSaveLoadToStream;
   end;
 
 implementation
+
+uses Classes;
 
 procedure TMiscToolsTests.TestWideStringFind;
 begin
@@ -52,6 +56,29 @@ begin
   CheckEquals('{\i1}italic{\i0}', ConvertSRTToSSA('<i>italic</i>'), 'italic');
   CheckEquals('{\b1}bold{\b0}', ConvertSRTToSSA('<b>bold</b>'), 'bold');
   CheckEquals('{\u1}underlined{\u0}', ConvertSRTToSSA('<u>underlined</u>'), 'underlined');
+end;
+
+procedure TMiscToolsTests.TestSaveLoadToStream;
+var MemStream : TMemoryStream;
+    ValueWS, ResultValueWS : WideString;
+    EmptyWS, ResultEmptyWS : WideString;
+    ValueInt, ResultValueInt : Integer;
+begin
+  MemStream := TMemoryStream.Create;
+  ValueWS := 'toto';
+  EmptyWS := '';
+  ValueInt := 123;
+  SaveToStreamWS(MemStream, ValueWS);
+  SaveToStreamWS(MemStream, EmptyWS);
+  SaveToStreamInt(MemStream, ValueInt);
+  MemStream.Position := 0;
+  LoadFromStreamWS(MemStream, ResultValueWS);
+  LoadFromStreamWS(MemStream, ResultEmptyWS);
+  LoadFromStreamInt(MemStream, ResultValueInt);
+  CheckEquals(ValueWS, ResultValueWS, 'SaveLoadWS');
+  CheckEquals(EmptyWS, ResultEmptyWS, 'SaveLoadEmptyWS');
+  CheckEquals(ValueInt, ResultValueInt, 'SaveLoadInt');
+  MemStream.Free;
 end;
 
 initialization
