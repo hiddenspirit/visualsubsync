@@ -83,35 +83,6 @@ function statusBarText(Sub) {
 
 // ---------------------------------------------------------------------------
 
-//var readingSpeed = new Array(5, 10, 13, 15, 23, 27, 31, 35);
-
-function getReadingSpeedAsColor(Sub) {
-  var rs = getReadingSpeed(Sub);
-  
-  // Pure green hue = 120° (red = 0°, blue = 240°)
-  // Base color : 0x99FF99
-
-  if (rs < 5)       return 0x9999FF;  // 240° "TOO SLOW!"
-  else if (rs < 10) return 0x99CCFF;  // 210° "Slow, acceptable.";
-  else if (rs < 13) return 0x99FFFF;  // 180° "A bit slow.";
-  else if (rs < 15) return 0x99FFCC;  // 150° "Good."
-  else if (rs < 23) return 0x99FF99;  // 120° "Perfect.";
-  else if (rs < 27) return 0xCCFF99;  //  90° "Good.";
-  else if (rs < 31) return 0xFFFF99;  //  60° "A bit fast.";
-  else if (rs < 35) return 0xFFCC99;  //  30° "Fast, acceptable.";
-  else              return 0xFF9999;  //   0° "TOO FAST!";
-}
-
-// ---------------------------------------------------------------------------
-
-function getReadingSpeedAsText(Sub) {
-  var rs = getReadingSpeed(Sub);  
-  var rsRounded = decimal1Round(rs);
-  return '' + rsRounded;
-}
-
-// ---------------------------------------------------------------------------
-
 VSSPlugin = {
 
   // Called on subtitle modifications (time or text)
@@ -195,79 +166,9 @@ VSSPlugin = {
 };
 
 // ---------------------------------------------------------------------------
+// Load javascript actions
+// ---------------------------------------------------------------------------
 
-var ReadingSpeedDef = [
-  { value: 5,  text: 'TOO SLOW!'},
-  { value: 10, text: 'Slow, acceptable.'},
-  { value: 13, text: 'A bit slow.'},
-  { value: 15, text: 'Good.'},
-  { value: 23, text: 'Perfect.'},
-  { value: 27, text: 'Good.'},
-  { value: 31, text: 'A bit fast.'},
-  { value: 35, text: 'TOO FAST!'}
-];
-
-function getReadingSpeedIndex(rs) {
-  for (var i = 0; i < ReadingSpeedDef.length; i++) {
-    if (rs < ReadingSpeedDef[i].value) {
-      return i;
-    }
-  }
-  return (ReadingSpeedDef.length - 1);
-}
-
-function JSAction_QuickStats() {
-  var subCount = VSSCore.GetSubCount();
-  ScriptLog('Subtitle count : ' + subCount);
-
-  // Table to store results
-  var rsArray = new Array(ReadingSpeedDef.length);
-  for (var i = 0; i < rsArray.length; i++) {
-    rsArray[i] = 0;
-  }
-  
-  // Iterate over all subtitles
-  /*
-  var sub = VSSCore.GetFirst();
-  while (sub != null) {
-    var rs = getReadingSpeed(sub);
-    var rsIdx = getReadingSpeedIndex(rs);
-    rsArray[rsIdx]++;
-    sub = VSSCore.GetNext(sub);
-  }*/
-  
-  for (var i = 0; i < subCount; i++) {
-    var sub = VSSCore.GetSubAt(i);
-    var rs = getReadingSpeed(sub);
-    var rsIdx = getReadingSpeedIndex(rs);
-    rsArray[rsIdx]++;
-  }
-  
-  // Display results
-  for (var i = 0; i < rsArray.length; i++) {
-    var rsCount = rsArray[i];
-    var rsCountPercent = (rsCount * 100) / subCount;
-    ScriptLog(ReadingSpeedDef[i].text + ' = ' + decimal1Round(rsCountPercent) + '% (' + rsCount + ')');
-  }
-  
-  /*
-  var subtitleAt0 = VSSCore.GetSubAt(0);
-  ScriptLog('at 0 = ' + ((subtitleAt0 != null) ? subtitleAt0.Text : 'null'));
-  
-  var firstSubtitle = VSSCore.GetFirst();
-  ScriptLog('first = ' + ((firstSubtitle != null) ? firstSubtitle.Text : 'null'));
-
-  var nextSubtitle = VSSCore.GetNext(firstSubtitle);
-  ScriptLog('next = ' + ((nextSubtitle != null) ? nextSubtitle.Text : 'null'));
-  
-  var selectedCursor = VSSCore.GetFirstSelected();
-  while (selectedCursor != null) {
-    ScriptLog('selected = (' + selectedCursor.Index + ') ' + selectedCursor.Text);
-    selectedCursor = VSSCore.GetNextSelected(selectedCursor);
-  }
-  */
-}
-
-VSSCore.RegisterJavascriptAction('JSAction_QuickStats', 'Quick stats', 'Ctrl+M');
+LoadScript('action_*.js');
 
 // ---------------------------------------------------------------------------
