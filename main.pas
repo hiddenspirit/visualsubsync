@@ -4507,7 +4507,6 @@ begin
   CM := TCursorManager.Create(crHourGlass);
 
   LogForm.Clear;
-  LogForm.SilentLogMsg('');
   LogForm.SilentLogMsg('Starting error checking :');
 
   ErrorReportForm.Clear;

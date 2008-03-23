@@ -1013,10 +1013,13 @@ object MainForm: TMainForm
         Top = 52
         Width = 82
         Height = 15
+        Hint = 'Volume'
         Max = 100
+        ParentShowHint = False
         PageSize = 10
         Frequency = 10
         Position = 100
+        ShowHint = True
         TabOrder = 5
         ThumbLength = 10
         TickStyle = tsNone
