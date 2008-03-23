@@ -836,19 +836,19 @@ var
   end;
 
 begin
-  obj := JSValToObject(Eval('Date.prototype'));
+  JS_ValueToObject(fcx, Eval('Date.prototype'), obj);
   FDateClass := JS_GetClass(obj);
 
-  obj := JSValToObject(Eval('Array.prototype'));
+  JS_ValueToObject(fcx, Eval('Array.prototype'), obj);
   FArrayClass := JS_GetClass(obj);
 
-  obj := JSValToObject(Eval('Boolean.prototype'));
+  JS_ValueToObject(fcx, Eval('Boolean.prototype'), obj);
   FBooleanClass := JS_GetClass(obj);
 
-  obj := JSValToObject(Eval('String.prototype'));
+  JS_ValueToObject(fcx, Eval('String.prototype'), obj);
   FStringClass := JS_GetClass(obj);
 
-  obj := JSValToObject(Eval('Number.prototype'));
+  JS_ValueToObject(fcx, Eval('Number.prototype'), obj);
   FNumberClass := JS_GetClass(obj);
 end;
 
@@ -1345,12 +1345,13 @@ procedure TJSArray.AddJSValAt(Idx: Integer; val: jsval);
 var
   isnew: Boolean;
   obj: TJSObject;
+  pobj: PJSObject;
 begin
   isnew := (Idx >= 0) and (Idx >= Length(FValues));
 
   if (isnew) then
     case JS_TypeOfValue(FEngine.Context, val) of
-      JSTYPE_STRING: InternalAdd(FEngine.Declare(JSStringToString(JSValToJSString(val))), Idx);
+      JSTYPE_STRING: InternalAdd(FEngine.Declare(JSStringToString(JS_ValueToString(FEngine.Context, val))), Idx);
       JSTYPE_NUMBER:
         if (JSValIsInt(val)) then
           InternalAdd(FEngine.Declare(JSValToInt(val)), Idx)
@@ -1359,7 +1360,8 @@ begin
       JSTYPE_OBJECT:
         begin
           obj := FEngine.NewJSObject;
-          obj.JSObject := JSValToObject(val);
+          JS_ValueToObject(FEngine.Context, val, pobj);
+          obj.JSObject := pobj;
           InternalAdd(obj, Idx);
         end;
       JSTYPE_BOOLEAN:
@@ -1373,6 +1375,7 @@ procedure TJSArray.ConvertValue(Idx: Integer; val: jsval);
 var
   b: TJSBase;
   obj: TJSObject;
+  pobj : PJSObject;
 begin
   b := FValues[Idx];
 
@@ -1394,9 +1397,9 @@ begin
       end;
     JSTYPE_STRING:
       if (b is TJSString) then
-        TJSString(b).Value := JSStringToString(JSValToJSString(val))
+        TJSString(b).Value := JSStringToString(JS_ValueToString(FEngine.Context, val))
       else
-        InternalAdd(FEngine.Declare(JSStringToString(JSValToJSString(val))), Idx);
+        InternalAdd(FEngine.Declare(JSStringToString(JS_ValueToString(FEngine.Context, val))), Idx);
     JSTYPE_BOOLEAN:
       if (b is TJSBoolean) then
         TJSBoolean(b).Value := JSValToBoolean(val)
@@ -1404,11 +1407,15 @@ begin
         InternalAdd(FEngine.Declare(JSValToBoolean(val)), Idx);
     JSTYPE_OBJECT:
       if (b is TJSObject) then
-        TJSObject(b).JSObject := JSValToObject(val)
+      begin
+        JS_ValueToObject(FEngine.Context, val, pobj);
+        TJSObject(b).JSObject := pobj;
+      end
       else
       begin
         obj := FEngine.NewJSObject;
-        obj.JSObject := JSValToObject(val);
+        JS_ValueToObject(FEngine.Context, val, pobj);
+        obj.JSObject := pobj;
         InternalAdd(obj, Idx);
       end;
   end;
@@ -1914,6 +1921,7 @@ function TJSObject.ClassType(const Name: TBridgeString): JSClassType;
 var
   rval: jsval;
   cls: PJSClass;
+  pobj : PJSObject;
 begin
   {$IFNDEF JSUnicode}
   JS_LookupProperty(FEngine.Context, FJSObj, PBridgeChar(Name), @rval);
@@ -1922,7 +1930,8 @@ begin
   {$ENDIF}
   if (JS_TypeOfValue(FEngine.Context, rval) = JSTYPE_OBJECT) then
   begin
-    cls := JS_GetClass(JSValToObject(rval));
+    JS_ValueToObject(FEngine.Context, rval, pobj);
+    cls := JS_GetClass(pobj);
     Result := ctUnknownClass;
   end
   else

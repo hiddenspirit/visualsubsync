@@ -104,11 +104,13 @@ implementation
 
 uses jsintf, Windows;
 
-function IsArray(var val: jsval; arrcls: PJSClass): Boolean;
+function IsArray(cx: PJSContext; var val: jsval; arrcls: PJSClass): Boolean;
 var
   cls: PJSClass;
+  pobj : PJSObject;
 begin
-  cls := JS_GetClass(JSValToObject(val));
+  JS_ValueToObject(cx, val, pobj);
+  cls := JS_GetClass(pobj);
   if (cls <> nil) then
     Result := (cls = arrcls)
   else
@@ -398,7 +400,7 @@ begin
             jscls := JS_GetClass(Pointer(val));
             if (jscls^.flags and JSCLASS_HAS_PRIVATE = JSCLASS_HAS_PRIVATE) then
             begin
-              if (TJSObject(JSValToObject(val)) is TJSObject)  then
+              if (JS_ValueToObject(cx, val, _jsobj) = JS_TRUE)  then
               begin
                 parm^.obj := GetDelphiObject(cx, Pointer(val));
               end else begin
@@ -504,6 +506,7 @@ begin
         else if (_obj is TObject) then
         begin
           _jsobj := con.Engine.GetNativeObject(_obj);
+
           if (_jsobj <> nil) then
             rval^ := JSObjectToJSVal(_jsobj);
         end;
@@ -626,9 +629,9 @@ begin
       b := TJSBoolean.Create(JSValToBoolean(argv^), arr.Engine, '');
     JSTYPE_OBJECT:
       begin
-        if (IsArray(argv^, arr.Engine.ArrayClass)) then
+        if (IsArray(cx, argv^, arr.Engine.ArrayClass)) then
         begin
-          jsobj := JSValToObject(argv^);
+          JS_ValueToObject(cx, argv^, jsobj);
           JS_GetArrayLength(cx, jsobj, len);
           for i := 0 to len-1 do
           begin
@@ -637,7 +640,10 @@ begin
           end;
         end
         else
-          b := TJSObject.Create(JSValToObject(argv^), arr.Engine, '');
+        begin
+          JS_ValueToObject(cx, argv^, jsobj);
+          b := TJSObject.Create(jsobj, arr.Engine, '');
+        end;
       end;
   end;
   if (b <> nil) then
