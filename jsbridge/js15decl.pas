@@ -890,7 +890,7 @@ procedure JS_SetFrameReturnValue(cx: PJSContext; fp: PJSStackFrame; rval: jsval)
 procedure JS_SetNewScriptHookProc(rt: PJSRuntime; hook: JSNewScriptHook; callerdata: Pointer); cdecl; external LibName;
 
 (* New *)
-//function JS_ReportPendingException(cx: PJSContext): JSBool; cdecl; external LibName;
+function JS_ReportPendingException(cx: PJSContext): JSBool; cdecl; external LibName;
 
 (* Conversion routines *)
 function JSStringToString(str: PJSString): TBridgeString;
