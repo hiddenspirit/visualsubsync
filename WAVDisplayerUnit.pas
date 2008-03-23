@@ -256,6 +256,7 @@ type
     function SetMinBlankAt(TimeMs : Integer) : Boolean;
 
     function FindSnappingPoint(PosMs : Integer) : Integer;
+    function FindCorrectedSnappingPoint(PosMs : Integer) : Integer;
         
   protected
     procedure DblClick; override;
@@ -1700,7 +1701,7 @@ begin
     while (IdxBackward >= 0) and IsFilteredSceneChange(FSceneChangeList[IdxBackward]) do
     begin
       Dec(IdxBackward);
-    end;    
+    end;
     
     if (FSelectionOrigin = -1) then
     begin
@@ -1755,6 +1756,24 @@ begin
     end;
   end;
 end;
+
+function TWAVDisplayer.FindCorrectedSnappingPoint(PosMs : Integer) : Integer;
+begin
+  Result := FindSnappingPoint(PosMs);
+  if (Result = -1) or (not FEnableMouseAntiOverlapping) then
+  begin
+    Exit;
+  end;
+
+  // Do a correction here
+  if (FMinSelTime <> -1) and (Result < FMinSelTime) then
+    Result := FMinSelTime;
+
+  if (FMaxSelTime <> -1) and (Result > FMaxSelTime) then
+    Result := FMaxSelTime;
+end;
+
+
 
 //------------------------------------------------------------------------------
 
@@ -1813,9 +1832,10 @@ begin
     end;
     NewCursorPos := PixelToTime(X) + FPositionMs;
 
+    // Snapping
     if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) and (FSnappingEnabled) then
     begin
-      SnappingPos := FindSnappingPoint(NewCursorPos);
+      SnappingPos := FindCorrectedSnappingPoint(NewCursorPos);
       if (SnappingPos <> -1) then
       begin
         NewCursorPos := SnappingPos;
@@ -1962,6 +1982,7 @@ end;
 procedure TWAVDisplayer.MouseDownSSA(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer; var UpdateFlags : TUpdateViewFlags);
 var NewCursorPos : Integer;
+    SnappingPos : Integer;
 begin
   NewCursorPos := PixelToTime(X) + FPositionMs;
   if(FSelectedKaraokeIndex <> -1) then
@@ -1970,6 +1991,16 @@ begin
     FSelectedKaraokeRange := nil;
     if Assigned(FOnSelectedKaraokeRange) then
       FOnSelectedKaraokeRange(Self, nil);
+  end;
+
+  // Snapping
+  if (not (ssCtrl in Shift)) and (FSnappingEnabled) then
+  begin
+    SnappingPos := FindCorrectedSnappingPoint(NewCursorPos);
+    if (SnappingPos <> -1) then
+    begin
+      NewCursorPos := SnappingPos;
+    end
   end;
 
   if (ssLeft in Shift) then
@@ -2197,9 +2228,10 @@ begin
             Constrain(NewCursorPos, 0, FMaxSelTime);
           end;
 
+          // Snapping
           if (not (ssCtrl in Shift)) and (FDynamicEditMode <> demKaraoke) and (FSnappingEnabled) then
           begin
-            SnappingPos := FindSnappingPoint(NewCursorPos);
+            SnappingPos := FindCorrectedSnappingPoint(NewCursorPos);
             if (SnappingPos <> -1) then
             begin
               NewCursorPos := SnappingPos;
@@ -2270,6 +2302,17 @@ begin
         begin
           Constrain(X, 0, Width);
           NewCursorPos := PixelToTime(X) + FPositionMs;
+          
+          // Snapping
+          if (not (ssCtrl in Shift)) and (FSnappingEnabled) then
+          begin
+            SnappingPos := FindCorrectedSnappingPoint(NewCursorPos);
+            if (SnappingPos <> -1) then
+            begin
+              NewCursorPos := SnappingPos;
+            end
+          end;
+
           if (FCursorMs <> NewCursorPos) then
           begin
             FCursorMs := NewCursorPos;
