@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 //  VisualSubSync
 // -----------------------------------------------------------------------------
-//  Copyright (C) 2003-2007 Christophe Paris
+//  Copyright (C) 2003-2008 Christophe Paris
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ unit JavaScriptPluginUnit;
 
 interface
 
-uses Classes, js15decl, jsintf, SubStructUnit, TntSysUtils, Graphics, Types, Contnrs, TntActnList;
+uses Classes, js15decl, jsintf, SubStructUnit, TntClasses, TntSysUtils, Graphics, Types, Contnrs, TntActnList;
 
 type
 {$TYPEINFO ON}
@@ -108,7 +108,7 @@ type
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
 
-    FSubRangeWrapperPool : array[0..19] of TSubtitleRangeJSWrapper;
+    FSubRangeWrapperPool : array[0..9] of TSubtitleRangeJSWrapper;
     FSubRangeWrapperPoolIndex : Integer;
 
     FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
@@ -122,7 +122,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     procedure Set_INDEX_COL_IDX(Value : Integer);
     procedure Set_START_COL_IDX(Value : Integer);
     procedure Set_STOP_COL_IDX(Value : Integer);
@@ -145,7 +145,7 @@ type
     property OnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnSubtitleChangeStart write SetOnSubtitleChangeStartEvent;
     property OnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnSubtitleChangeStop write SetOnSubtitleChangeStopEvent;
     property OnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnSubtitleChangeText write SetOnSubtitleChangeTextEvent;
-    
+
   published
     procedure RegisterJavascriptAction(AName : WideString;
       ACaption : WideString; ADefaultShortcut : WideString);
@@ -200,8 +200,9 @@ type
     FVSSPluginObject : TJSObject;
     FFilename : WideString;
     FOnJSPluginError : TJSPluginNotifyEvent;
-    FLoadingStack : TStack;
+    FLoadingStack : TStack; // Needed for nested include stuff 
     FPreInitDone : Boolean;
+    FFilenames : TTntStringList; // To keep unicode filenames
 
     procedure OnJsError(eng : TJSEngine; cx: PJSContext; Msg: PChar;
       report: PJSErrorReport);
@@ -209,6 +210,7 @@ type
     // function called during the script loading just after compilation and before execution
     procedure PreInitScript; virtual;
     function InternalLoadScript(Filename : WideString) : Boolean;
+    function InternalLoadScripts(Filename : WideString) : Boolean;
     function GetCurrentLoadingFile : WideString;     
   public
     constructor Create;
@@ -411,13 +413,17 @@ function _JS_ScriptLog(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval: 
 var
   jseng: TJSEngine;
   jsplugin : TBaseJavascriptPlugin;
+  pstr : PJSString;
 begin
   if (argc = 1) then
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
     jsplugin := TBaseJavascriptPlugin(jseng.UserData);
     if Assigned(jsplugin.OnJSPluginError) then
-      jsplugin.OnJSPluginError(JSStringToString(JSValToJSString(argv^)));
+    begin
+      pstr := JS_ValueToString(cx, argv^);
+      jsplugin.OnJSPluginError(JSStringToString(pstr));
+    end;
   end;
   Result := JS_TRUE;
 end;
@@ -429,6 +435,7 @@ var
   jseng: TJSEngine;
   jsplugin : TSimpleJavascriptWrapper;
   Func : TJSPluginNotifyEvent;
+  pstr : PJSString;
 begin
   if (argc = 1) then
   begin
@@ -437,7 +444,8 @@ begin
     Func := jsplugin.OnJSPluginSetStatusBarText;
     if Assigned(Func) then
     begin
-      jsplugin.OnJSPluginSetStatusBarText(JSStringToString(JSValToJSString(argv^)));
+      pstr := JS_ValueToString(cx, argv^);
+      jsplugin.OnJSPluginSetStatusBarText(JSStringToString(pstr));
     end;
   end;
   Result := JS_TRUE;
@@ -447,12 +455,14 @@ function _JS_LoadScript(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval:
 var
   jseng: TJSEngine;
   jsplugin : TBaseJavascriptPlugin;
+  pstr : PJSString;  
 begin
   if (argc = 1) then
   begin
     jseng := TJSEngine(PEngineData(JS_GetContextPrivate(cx))^);
     jsplugin := TBaseJavascriptPlugin(jseng.UserData);
-    jsplugin.InternalLoadScript(JSStringToString(JSValToJSString(argv^)));
+    pstr := JS_ValueToString(cx, argv^);
+    jsplugin.InternalLoadScripts(JSStringToString(pstr));
   end;
   Result := JS_TRUE;
 end;
@@ -494,14 +504,6 @@ end;
 
 function TSubtitleRangeJSWrapper.GetStrippedText : WideString;
 begin
-  {
-  if not IsValidSubRange(FSubtitleRange) then
-  begin
-    OutputDebugString('moo2');
-    Exit;
-  end;
-  }
-
   if (FStrippedTextProcessed = False) then
   begin
     FStrippedText := StripTags(FSubtitleRange.Text);
@@ -545,6 +547,7 @@ procedure TSubtitleRangeJSWrapper.SetSubtitle(Value : TSubtitleRange);
 begin
   FSubtitleRange := Value;
   FStrippedTextProcessed := False;
+  FStrippedText := '';
 end;
 
 // =============================================================================
@@ -553,6 +556,7 @@ constructor TBaseJavascriptPlugin.Create;
 begin
   inherited Create;
   FLoadingStack := TStack.Create;
+  FFilenames := TTntStringList.Create;
   FPreInitDone := False;
   FEngine := TJSEngine.Create(256*1024);
   FEngine.OnJSError := OnJsError;
@@ -566,6 +570,7 @@ end;
 destructor TBaseJavascriptPlugin.Destroy;
 begin
   FEngine.Free;
+  FFilenames.Free;
   FLoadingStack.Free;
   inherited;
 end;
@@ -577,6 +582,7 @@ procedure TBaseJavascriptPlugin.OnJsError(eng : TJSEngine; cx: PJSContext;
 var
 	ErrorTypeStr: WideString;
   CurrentFile : WideString;
+  FileNameIndex : Integer;
 begin
   if JSReportIsException(report) then
   begin
@@ -593,7 +599,13 @@ begin
 		ErrorTypeStr := 'Error';
     FFatalError := True;
   end;
-  if (FLoadingStack.Count > 0) then
+
+  FileNameIndex := StrToIntDef(report^.filename, -1);
+  if (FileNameIndex >= 0) and (FileNameIndex < FFilenames.Count) then
+  begin
+    CurrentFile := FFilenames[FileNameIndex];
+  end
+  else if (FLoadingStack.Count > 0) then
   begin
     CurrentFile := PWideString(FLoadingStack.Peek)^;
   end
@@ -601,6 +613,7 @@ begin
   begin
     CurrentFile := FFilename;
   end;
+
 	FLastErrorMsg := Format('%s in %s at line %d', [Msg, WideExtractFileName(CurrentFile), report^.lineno]);
   if (report^.uclinebuf <> '') then
   begin
@@ -633,6 +646,44 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+function TBaseJavascriptPlugin.InternalLoadScripts(Filename : WideString) : Boolean;
+var CurrentFilePath : WideString;
+    FSearchPath : WideString;
+    FFindFileAttrs : Integer;
+    FSearchRec : TSearchRecW;
+begin
+  if (Pos('*', Filename) > 0) then
+  begin
+    // Check if Filename is an absolute path
+    if not WideIsAbsolutePath(Filename) then
+    begin
+      // Resolve path to be absolute
+      CurrentFilePath := WideExtractFilePath(GetCurrentLoadingFile);
+      Filename := WideResolveRelativePath(CurrentFilePath, Filename);
+    end;
+    FSearchPath := WideIncludeTrailingBackslash(WideExtractFilePath(Filename));
+    FFindFileAttrs := faAnyFile;
+    FSearchRec.FindHandle := INVALID_HANDLE_VALUE;
+
+    if (WideFindFirst(Filename, FFindFileAttrs, FSearchRec) <> 0) then
+      WideFindClose(FSearchRec)
+    else
+    begin
+      while (FSearchRec.FindHandle <> INVALID_HANDLE_VALUE) do
+      begin
+        InternalLoadScript(FSearchPath + FSearchRec.Name);
+        if (WideFindNext(FSearchRec) <> 0) then
+          WideFindClose(FSearchRec);
+      end;
+    end;
+
+    Result := True;    
+  end
+  else
+  begin
+    Result := InternalLoadScript(Filename);
+  end;
+end;
 
 function TBaseJavascriptPlugin.InternalLoadScript(Filename : WideString) : Boolean;
 var Script : TJSScript;
@@ -662,10 +713,12 @@ begin
   New(PFilename);
   PFilename ^:= Filename;
   FLoadingStack.Push(PFilename);
+  FFilenames.Add(Filename);
 
   Script := TJSScript.Create;
   Script.LoadRaw(Filename);
-  Script.Compile(FEngine, Filename); // try to compile the script
+  // try to compile the script, we pass the index of the filename to avoid unicode problems
+  Script.Compile(FEngine, IntToStr(FFilenames.Count-1));
   if Script.Compiled then
   begin
     if not FPreInitDone then
@@ -681,8 +734,7 @@ begin
     if JS_IsExceptionPending(FEngine.Context) = JS_TRUE then
     begin
       // We need an updated DLL to do that
-      //JS_ReportPendingException(FEngine.Context);
-      // TODO
+      JS_ReportPendingException(FEngine.Context);
     end
   end;
 
@@ -802,9 +854,9 @@ begin
 
   if FEngine.Global.GetProperty('VSSPlugin', FVSSPluginObject) then
   begin
-    FCurrentSubJS := FVSSPluginObject.AddNativeObject(FCurrentSub,'');
-    FPreviousSubJS := FVSSPluginObject.AddNativeObject(FPreviousSub,'');
-    FNextSubJS := FVSSPluginObject.AddNativeObject(FNextSub,'');
+    FCurrentSubJS := FVSSPluginObject.AddNativeObject(FCurrentSub, '__FCurrentSub');
+    FPreviousSubJS := FVSSPluginObject.AddNativeObject(FPreviousSub, '__FPreviousSub');
+    FNextSubJS := FVSSPluginObject.AddNativeObject(FNextSub, '__FNextSub');
     FHasErrorFunc := FVSSPluginObject.GetFunction('HasError');
     if FVSSPluginObject.IsFunction('FixError') then
       FFixErrorFunc := FVSSPluginObject.GetFunction('FixError');
@@ -1159,9 +1211,9 @@ begin
 
   if FEngine.Global.GetProperty('VSSPlugin', FVSSPluginObject) then
   begin
-    FCurrentSubJS := FVSSPluginObject.AddNativeObject(FCurrentSub,'');
-    FPreviousSubJS := FVSSPluginObject.AddNativeObject(FPreviousSub,'');
-    FNextSubJS := FVSSPluginObject.AddNativeObject(FNextSub,'');
+    FCurrentSubJS := FVSSPluginObject.AddNativeObject(FCurrentSub, '__FCurrentSub');
+    FPreviousSubJS := FVSSPluginObject.AddNativeObject(FPreviousSub, '__FPreviousSub');
+    FNextSubJS := FVSSPluginObject.AddNativeObject(FNextSub, '__FNextSub');
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
@@ -1611,7 +1663,9 @@ begin
 
   for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
   begin
-    JSParent.AddNativeObject(FSubRangeWrapperPool[i],'');
+    JSParent.AddNativeObject(FSubRangeWrapperPool[i],
+      // If we don't put a name here it will crash !!!
+      Format('__FSubRangeWrapperPool[%d]', [i]));
   end;
 end;
 
