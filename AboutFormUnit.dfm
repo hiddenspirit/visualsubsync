@@ -97,7 +97,7 @@ object AboutForm: TAboutForm
     Font.Style = []
     ParentFont = False
   end
-  object TntLabel5: TTntLabel
+  object lblVTV: TTntLabel
     Left = 8
     Top = 136
     Width = 217
@@ -125,7 +125,7 @@ object AboutForm: TAboutForm
     Font.Style = []
     ParentFont = False
   end
-  object TntLabel7: TTntLabel
+  object lblJS: TTntLabel
     Left = 8
     Top = 168
     Width = 273
