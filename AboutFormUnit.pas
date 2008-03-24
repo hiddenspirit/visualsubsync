@@ -37,9 +37,9 @@ type
     LabelVersion: TTntLabel;
     Bevel2: TBevel;
     TntLabel4: TTntLabel;
-    TntLabel5: TTntLabel;
+    lblVTV: TTntLabel;
     TntLabel6: TTntLabel;
-    TntLabel7: TTntLabel;
+    lblJS: TTntLabel;
     TntLabel8: TTntLabel;
     procedure bttOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -53,7 +53,7 @@ type
 
 implementation
 
-uses ShellAPI, MiscToolsUnit, GlobalUnit;
+uses ShellAPI, MiscToolsUnit, GlobalUnit, js15decl, VirtualTrees;
 
 {$R *.dfm}
 
@@ -65,6 +65,10 @@ end;
 procedure TAboutForm.FormCreate(Sender: TObject);
 begin
   LabelVersion.Caption := 'Version : ' + g_ApplicationVersion.VersionString;
+  lblVTV.Hint := VTVersion;
+  lblVTV.ShowHint := True;
+  lblJS.Hint := JS_GetImplementationVersion;
+  lblJS.ShowHint := True;
 end;
 
 procedure TAboutForm.TntLabel3Click(Sender: TObject);
