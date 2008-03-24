@@ -99,6 +99,7 @@ type
 
   function ConvertSSAToSRT(Src : WideString) : WideString;
   function ConvertSRTToSSA(Src : WideString) : WideString;
+  function ConvertNull(Src : WideString) : WideString;
 
   function SwapColor(Color : Integer) : Integer;
 
@@ -1140,6 +1141,11 @@ begin
   // Underline
   Result := Tnt_WideStringReplace(Result, '<u>', '{\u1}', [rfReplaceAll]);
   Result := Tnt_WideStringReplace(Result, '</u>', '{\u0}', [rfReplaceAll]);
+end;
+
+function ConvertNull(Src : WideString) : WideString;
+begin
+  Result := Src;
 end;
 
 // -----------------------------------------------------------------------------
