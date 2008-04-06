@@ -216,7 +216,8 @@ type
     constructor Create;
     destructor Destroy; override;
     function LoadScript(Filename : WideString) : Boolean;
-    procedure CallJSFunction(JSFunctionName : WideString);    
+    procedure CallJSFunction(JSFunctionName : WideString);
+    procedure Eval(Code : WideString);
 
     property Filename : WideString read FFilename;
     property LastErrorMsg : WideString read FLastErrorMsg;
@@ -351,9 +352,9 @@ type
 
   TJavascriptAction = class(TTntAction)
   private
-    FJSFunctionName : WideString;
+    FJSObjectName : WideString;
   public
-    property JSFunctionName : WideString read FJSFunctionName write FJSFunctionName;
+    property JSObjectName : WideString read FJSObjectName write FJSObjectName;
   end;
 
   function GetParamValueAsWideString(pParam : PJSPluginParam) : WideString;
@@ -763,6 +764,13 @@ begin
     JSFunction.Call([], Dummy);
     FreeAndNil(JSFunction);
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TBaseJavascriptPlugin.Eval(Code : WideString);
+begin
+  FEngine.Global.Evaluate(Code);
 end;
 
 // =============================================================================

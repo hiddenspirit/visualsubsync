@@ -740,7 +740,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, RegExpr, TntClipBrd;
+  SceneChangeUnit, RegExpr, TntClipBrd {$IFDEF TTRACE}, TraceTool{$ENDIF};
 
 {$R *.dfm}
 
@@ -772,6 +772,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
     CustomMemo : TTntRichEditCustomUndo;
 begin
+  {$IFDEF TTRACE}TTrace.Debug.EnterMethod('TMainForm.FormCreate');{$ENDIF}
+
   VSSClipBoardFORMAT := RegisterClipboardFormat(PChar('CF_VisualSubSync'));
 
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
@@ -882,12 +884,16 @@ begin
 
   StatusBarPrimaryText := '';
   StatusBarSecondaryText := '';
+
+  {$IFDEF TTRACE}TTrace.Debug.ExitMethod('TMainForm.FormCreate');{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  {$IFDEF TTRACE}TTrace.Debug.EnterMethod('TMainForm.FormDestroy');{$ENDIF}
+
   StartStopServer(True);
   if Assigned(g_VSSCoreWrapper) then
   begin
@@ -907,6 +913,8 @@ begin
   FreeAndNil(UndoStack);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
+
+  {$IFDEF TTRACE}TTrace.Debug.ExitMethod('TMainForm.FormDestroy');{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -4970,7 +4978,9 @@ begin
       else
       begin
         if (WAVDisplayer.GetPlayCursorPos > (ToggleStartSubtitleTime + 400)) then
+        begin
           AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
+        end;
       end;
       ToggleStartSubtitleTime := -1;
     end;
@@ -6015,18 +6025,34 @@ var NodeData : PTreeData;
     UpdateStop : Boolean;
 begin
   if not Assigned(vtvSubsList.FocusedNode) then
+  begin
+    {$IFDEF TTRACE}TTrace.Warning.Send('SetFocusedSubtitleStopTime', 'not Assigned(vtvSubsList.FocusedNode)');{$ENDIF}
     Exit;
+  end;
+
+  NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
 
   if WAVDisplayer.IsPlaying then
-    NewStopTime := WAVDisplayer.GetPlayCursorPos
+  begin
+    NewStopTime := WAVDisplayer.GetPlayCursorPos;
+    // When the system is slow the play cursor can hang for a while and NewStopTime can be
+    // strictly equal to the previous StartTime.
+    // The method would normally abort in this case (NewDuration <= 0) but we don't want that in timing mode.
+    if (NewStopTime = NodeData.Range.StartTime) then
+    begin
+      Inc(NewStopTime);
+    end;
+  end
   else
     NewStopTime := WAVDisplayer.GetCursorPos;
 
-  NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
   NewDuration := NewStopTime - NodeData.Range.StartTime;
 
   if (NewDuration <= 0) then
+  begin
+    {$IFDEF TTRACE}TTrace.Warning.Send('SetFocusedSubtitleStopTime', 'NewDuration <= 0');{$ENDIF}
     Exit;
+  end;
 
   UpdateStop := True;
   if KeepStopIfSuperiorToCPSTarget then
@@ -6051,7 +6077,9 @@ begin
   end;
 
   if Advance then
+  begin
     AdvanceToNextSubtitleAfterFocus;
+  end;
 
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
@@ -7487,7 +7515,8 @@ begin
 
     UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
 
-    GeneralJSPlugin.CallJSFunction(JsAction.JSFunctionName);
+    GeneralJSPlugin.Eval(JsAction.JSObjectName + '.onExecute();');
+    //GeneralJSPlugin.CallJSFunction(JsAction.JSFunctionName);
 
     if (UndoableMultiChangeTask.GetCount > 0) then
     begin
@@ -7531,7 +7560,7 @@ begin
   JSAction := TJavascriptAction.Create(TntActionList1);
   JSAction.Caption := '[js] ' + ACaption;
   JSAction.Name := AName;
-  JSAction.JSFunctionName := AName;
+  JSAction.JSObjectName := AName;
   JSAction.ShortCut := TextToShortCut(ADefaultShortcut);
   JSAction.Tag := 1;
   JSAction.OnExecute := OnJavascriptAction;
