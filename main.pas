@@ -37,6 +37,8 @@ uses
   DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
   UndoableTaskUnit, UndoableSubTaskUnit, Types;
 
+{.$DEFINE TTRACE}  
+
 type
   TTreeData = record
     Range: TSubtitleRange;
@@ -914,7 +916,10 @@ begin
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
 
-  {$IFDEF TTRACE}TTrace.Debug.ExitMethod('TMainForm.FormDestroy');{$ENDIF}
+  {$IFDEF TTRACE}
+  TTrace.Debug.ExitMethod('TMainForm.FormDestroy');
+  TTrace.Flush();
+  {$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -6923,6 +6928,11 @@ begin
   if (not TaskMerged) then
   begin
     UndoStack.Push(UndoableTask);
+  end
+  else
+  begin
+    // Free the undoable task it has been merged with the top task
+    UndoableTask.Free;
   end;
   ActionUndo.Enabled := True;
 end;
