@@ -58,6 +58,11 @@ type
     function GetFieldValue(Name : string; var Found : Boolean) : string; override;
   end;
 
+  TTreeData = record
+    Range: TSubtitleRange;
+  end;
+  PTreeData = ^TTreeData;  
+
   TVSSCoreEngineIntf = interface(IInterface)
     procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
 

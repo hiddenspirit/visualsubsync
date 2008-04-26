@@ -107,7 +107,7 @@ type
     destructor Destroy; override;
     procedure SetDefault;
     procedure SaveIni(IniFile : TIniFile);
-    procedure LoadIni(IniFile : TIniFile);
+    procedure LoadIni(IniFile : TIniFile; IsPresets : Boolean);
     procedure SetDefaultHotKeys(ActionList : TTntActionList);
     procedure UpdatePluginList;
     function GetJSPluginInfoByName(Name : WideString) : TJSPluginInfo;
@@ -662,7 +662,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TConfigObject.LoadIni(IniFile : TIniFile);
+procedure TConfigObject.LoadIni(IniFile : TIniFile; IsPresets : Boolean);
 var i, j : integer;
     HLID : THotkeyListItemData;
     JSPluginInfo : TJSPluginInfo;
@@ -680,8 +680,11 @@ begin
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
 
   // Web server
-  ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
-  EnableCompression := IniFile.ReadBool('WebServer','EnableCompression',EnableCompression);
+  if (not IsPresets) then
+  begin
+    ServerPort := IniFile.ReadInteger('WebServer','Port',ServerPort);
+    EnableCompression := IniFile.ReadBool('WebServer','EnableCompression',EnableCompression);
+  end;
 
   // Error plugin
   for i:=0 to ListJSPlugin.Count-1 do
@@ -740,14 +743,17 @@ begin
   MouseEnableSSATimingMode := IniFile.ReadBool('Mouse',
     'EnableSSATimingMode',MouseEnableSSATimingMode);
 
-  // Backup
-  EnableBackup := IniFile.ReadBool('Backup','EnableBackup',EnableBackup);
-  AutoBackupEvery := IniFile.ReadInteger('Backup','AutoBackupEvery',AutoBackupEvery);
-  AutoSaveWhenPlaying := IniFile.ReadBool('Backup','AutoSaveWhenPlaying',AutoSaveWhenPlaying);
+  if (not IsPresets) then
+  begin
+    // Backup
+    EnableBackup := IniFile.ReadBool('Backup','EnableBackup',EnableBackup);
+    AutoBackupEvery := IniFile.ReadInteger('Backup','AutoBackupEvery',AutoBackupEvery);
+    AutoSaveWhenPlaying := IniFile.ReadBool('Backup','AutoSaveWhenPlaying',AutoSaveWhenPlaying);
 
-  // Fonts
-  SubListFont := IniFile.ReadString('Fonts', 'SubList', SubListFont);
-  SubTextFont := IniFile.ReadString('Fonts', 'SubText', SubTextFont);
+    // Fonts
+    SubListFont := IniFile.ReadString('Fonts', 'SubList', SubListFont);
+    SubTextFont := IniFile.ReadString('Fonts', 'SubText', SubTextFont);
+  end;
 
   // WAV Display
   ShowSceneChange := IniFile.ReadBool('WAVDisplay', 'ShowSceneChange', ShowSceneChange);

@@ -40,11 +40,6 @@ uses
 {.$DEFINE TTRACE}  
 
 type
-  TTreeData = record
-    Range: TSubtitleRange;
-  end;
-  PTreeData = ^TTreeData;
-
   // -----
 
   TPlayingModeType = (pmtAll, pmtSelection, pmtSelectionStart, pmtSelectionEnd);
@@ -182,7 +177,6 @@ type
     pmiMemoSubCut: TTntMenuItem;
     pmiMemoSubPaste: TTntMenuItem;
     EditCut1: TTntEditCut;
-    EditCopy1: TTntEditCopy;
     EditPaste1: TTntEditPaste;
     EditSelectAll1: TTntEditSelectAll;
     EditDelete1: TTntEditDelete;
@@ -357,6 +351,10 @@ type
     TntButton2: TTntButton;
     ActionMergeOnOneLine: TTntAction;
     MenuItemJSTools: TTntMenuItem;
+    N20: TTntMenuItem;
+    ActionLoadPresets: TTntAction;
+    MenuItemLoadPresets: TTntMenuItem;
+    ActionCopy: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -531,6 +529,9 @@ type
     procedure TntButton1Click(Sender: TObject);
     procedure TntButton2Click(Sender: TObject);
     procedure ActionMergeOnOneLineExecute(Sender: TObject);
+    procedure ActionLoadPresetsExecute(Sender: TObject);
+    procedure ActionCopyExecute(Sender: TObject);
+    procedure ActionCopyUpdate(Sender: TObject);
    
   private
     { Private declarations }
@@ -575,8 +576,6 @@ type
     PrefFormInitialized : Boolean;
 
     StartupShowVideo, StartupDetachVideo : Boolean;
-
-    VSSClipBoardFORMAT : Cardinal;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -742,7 +741,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, RegExpr, TntClipBrd {$IFDEF TTRACE}, TraceTool{$ENDIF};
+  SceneChangeUnit, RegExpr, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
 
 {$R *.dfm}
 
@@ -775,8 +774,6 @@ var i : integer;
     CustomMemo : TTntRichEditCustomUndo;
 begin
   {$IFDEF TTRACE}TTrace.Debug.EnterMethod('TMainForm.FormCreate');{$ENDIF}
-
-  VSSClipBoardFORMAT := RegisterClipboardFormat(PChar('CF_VisualSubSync'));
 
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
   CustomMemo.Parent := MemoSubtitleText.Parent;
@@ -1093,12 +1090,15 @@ begin
 
   IniFilename := GetIniFilename;
   IniFile := TIniFile.Create(IniFilename);
+
   MRUList.LoadIni(IniFile, 'MRUList');
-  ConfigObject.LoadIni(IniFile);
-  SetShortcut(False);
+
+  ConfigObject.LoadIni(IniFile, False);
+  SetShortcut(IsTimingMode);
   ApplyMouseSettings;
   ApplyFontSettings;
   ApplyMiscSettings;
+
   LoadFormPosition(IniFile,MainForm);
   LoadFormPosition(IniFile,ErrorReportForm);
   LoadFormPosition(IniFile,SuggestionForm);
@@ -7407,98 +7407,16 @@ end;
 
 //------------------------------------------------------------------------------
 
-const CopyPasteStreamVersion = 1;
-
 procedure TMainForm.TntButton1Click(Sender: TObject);
-var Node : PVirtualNode;
-    NodeData : PTreeData;
-    Msg : WideString;
-    SubtitleRange : TSubtitleRange;
-    MemStream : TMemoryStream;
-    toto : TTntEDitCOpy;
-    MemHandle : THandle;
-    MemPointer : Pointer;
-
 begin
-  if (vtvSubsList.SelectedCount <= 0) then
-    Exit;
-
-  // TODO : http://delphi.about.com/od/windowsshellapi/a/clipboard_spy_3.htm
-  // http://www.delphipages.com/news/detaildocs.cfm?ID=145
-  // http://homepage2.nifty.com/Mr_XRAY/Halbow/Notes/N014.html
-
-  MemStream := TMemoryStream.Create;
-  SaveToStreamInt(MemStream, CopyPasteStreamVersion);
-  SaveToStreamInt(MemStream, vtvSubsList.SelectedCount);
-  Node := vtvSubsList.GetFirstSelected;
-  while Assigned(Node) do
-  begin
-    NodeData := vtvSubsList.GetNodeData(Node);
-    SubtitleRange := NodeData.Range;
-    Msg := Msg + Sub2SrtString(SubtitleRange) + CRLF + CRLF;
-    SubtitleRange.SaveToStream(MemStream);
-    Node := vtvSubsList.GetNextSelected(Node);
-  end;
-  if (Length(Msg) > 0) then
-  begin
-    TntClipboard.Open;
-    try
-      TntClipboard.Clear;
-      // Set text format data
-      TntClipboard.AsWideText := Trim(Msg);
-      // Set custom format data
-      MemHandle := GlobalAlloc(GMEM_DDESHARE or GMEM_MOVEABLE, MemStream.Size);
-      MemPointer := GlobalLock(MemHandle);
-      MemStream.Position := 0;
-      MemStream.ReadBuffer(MemPointer^, MemStream.Size);
-      TntClipboard.SetAsHandle(VSSClipBoardFORMAT, MemHandle);
-      GlobalUnLock(MemHandle);
-    finally
-      TntClipboard.Close;
-    end;
-  end;
-  MemStream.Free;
+  CopyVTVToClipboard(vtvSubsList);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.TntButton2Click(Sender: TObject);
-var MemHandle : THandle;
-    MemPointer : Pointer;
-    MemStream : TMemoryStream;
-
-    StreamVersion, SubCount, i : Integer;
-    SubRange : TSubtitleRange;
 begin
-  //
-  if TntClipboard.HasFormat(VSSClipBoardFORMAT) then
-  begin
-    MemStream := TMemoryStream.Create;
-    TntClipboard.Open;
-    MemHandle := TntClipboard.GetAsHandle(VSSClipBoardFORMAT);
-    MemPointer := GlobalLock(MemHandle);
-    MemStream.WriteBuffer(MemPointer^, GlobalSize(MemHandle));
-    GlobalUnlock(MemHandle);
-    TntClipboard.Close;
-
-    MemStream.Position := 0;
-    LoadFromStreamInt(MemStream, StreamVersion);
-    if (StreamVersion = CopyPasteStreamVersion) then
-    begin
-      // Load each sub
-      LoadFromStreamInt(MemStream, SubCount);
-      SubRange := TSubtitleRange.Create;
-      for i := 0 to SubCount-1 do
-      begin
-        SubRange.LoadFromStream(MemStream);
-        // TODO : really add subtitle / sort / undo
-        AddSubtitle(SubRange);
-        
-      end;
-      SubRange.Free;
-    end;
-    MemStream.Free;
-  end;
+  PasteClipboardToVTV(vtvSubsList);
 end;
 
 //------------------------------------------------------------------------------
@@ -7526,7 +7444,6 @@ begin
     UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
 
     GeneralJSPlugin.Eval(JsAction.JSObjectName + '.onExecute();');
-    //GeneralJSPlugin.CallJSFunction(JsAction.JSFunctionName);
 
     if (UndoableMultiChangeTask.GetCount > 0) then
     begin
@@ -7662,6 +7579,50 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLoadPresetsExecute(Sender: TObject);
+var IniFile : TIniFile;
+    IniFilename : WideString;
+begin
+  TntOpenDialog1.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
+  if not TntOpenDialog1.Execute then
+    Exit;
+  try
+    IniFile := TIniFile.Create(TntOpenDialog1.FileName);
+    ConfigObject.LoadIni(IniFile, True);
+    SetShortcut(IsTimingMode);
+    ApplyMouseSettings;
+    ApplyFontSettings;
+    ApplyMiscSettings;
+  finally
+    IniFile.Free;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionCopyExecute(Sender: TObject);
+var actCtrl : TWinControl;
+begin
+  actCtrl := Screen.ActiveControl;
+  if (actCtrl is TCustomEdit) then
+    TCustomEdit(actCtrl).CopyToClipboard
+  else if (actCtrl is TVirtualStringTree) then
+  begin
+    CopyVTVToClipboard(TVirtualStringTree(actCtrl));
+  end;
+end;
+
+
+//------------------------------------------------------------------------------
+procedure TMainForm.ActionCopyUpdate(Sender: TObject);
+var actCtrl : TWinControl;
+begin
+  actCtrl := Screen.ActiveControl;
+  ActionCopy.Enabled := ((actCtrl is TCustomEdit) and (TCustomEdit(actCtrl).SelLength > 0))
+    or ((actCtrl is TVirtualStringTree) and (TVirtualStringTree(actCtrl).SelectedCount > 0));
+end;
 
 //------------------------------------------------------------------------------
 end.

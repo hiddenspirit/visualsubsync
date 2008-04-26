@@ -1085,6 +1085,7 @@ object MainForm: TMainForm
           Height = 25
           Caption = 'TntButton1'
           TabOrder = 0
+          Visible = False
           OnClick = TntButton1Click
         end
         object TntButton2: TTntButton
@@ -1094,6 +1095,7 @@ object MainForm: TMainForm
           Height = 25
           Caption = 'TntButton2'
           TabOrder = 1
+          Visible = False
           OnClick = TntButton2Click
         end
       end
@@ -1299,6 +1301,13 @@ object MainForm: TMainForm
       object MenuItemExportToWAV: TTntMenuItem
         Action = ActionExportToWAV
         Caption = 'Export to WAV...'
+      end
+      object N20: TTntMenuItem
+        Caption = '-'
+      end
+      object MenuItemLoadPresets: TTntMenuItem
+        Action = ActionLoadPresets
+        Caption = 'Load presets...'
       end
       object N2: TTntMenuItem
         Caption = '-'
@@ -1729,13 +1738,6 @@ object MainForm: TMainForm
       Hint = 'Cut|Cuts the selection and puts it on the Clipboard'
       ImageIndex = 28
       ShortCut = 16472
-    end
-    object EditCopy1: TTntEditCopy
-      Category = 'Edit'
-      Caption = '&Copy'
-      Hint = 'Copy|Copies the selection and puts it on the Clipboard'
-      ImageIndex = 29
-      ShortCut = 16451
     end
     object EditPaste1: TTntEditPaste
       Category = 'Edit'
@@ -2177,6 +2179,18 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Merge on 1 line'
       OnExecute = ActionMergeOnOneLineExecute
+    end
+    object ActionLoadPresets: TTntAction
+      Caption = 'Load presets'
+      OnExecute = ActionLoadPresetsExecute
+    end
+    object ActionCopy: TTntAction
+      Caption = '&Copy'
+      Hint = 'Copy|Copies the selection and puts it on the Clipboard'
+      ImageIndex = 29
+      ShortCut = 16451
+      OnExecute = ActionCopyExecute
+      OnUpdate = ActionCopyUpdate
     end
   end
   object ImageList1: TImageList
@@ -4027,7 +4041,7 @@ object MainForm: TMainForm
       Action = EditCut1
     end
     object pmiMemoSubCopy: TTntMenuItem
-      Action = EditCopy1
+      Action = ActionCopy
     end
     object pmiMemoSubPaste: TTntMenuItem
       Action = EditPaste1
