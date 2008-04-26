@@ -35,11 +35,11 @@ uses
   StyleFormUnit in 'StyleFormUnit.pas' {StyleForm},
   SSAParserUnit in 'SSAParserUnit.pas',
   DirectVobsubInterface in 'DirectVobsubInterface.pas',
-  RGBHSLColorUnit in 'RGBHSLColorUnit.pas',
   TntRichEditCustomUndoUnit in 'TntRichEditCustomUndoUnit.pas',
   UndoableTaskUnit in 'UndoableTaskUnit.pas',
   UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas',
-  SceneChangeUnit in 'SceneChangeUnit.pas';
+  SceneChangeUnit in 'SceneChangeUnit.pas',
+  VSSClipboardUnit in 'VSSClipboardUnit.pas';
 
 {$R *.res}
 
