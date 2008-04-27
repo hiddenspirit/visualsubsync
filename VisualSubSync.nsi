@@ -3,7 +3,7 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.9.14"
+!define VERSION "0.9.15"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
@@ -40,10 +40,12 @@
 
 !define DIR_JSPLUGIN_GENERAL "jsplugin\general\"
 !define FILES_JSPLUGIN_GENERAL1 "general_plugin.js"
+!define FILES_JSPLUGIN_GENERAL2 "action_quick_stats.js"
 
 !define DIR_JSPLUGIN_COMMON "jsplugin\common\"
 !define FILES_JSPLUGIN_COMMON1 "tools.js"
 
+!define DIR_PRESETS "presets\"
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -133,8 +135,12 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${DIR_JSPLUGIN}${FILES_JSPLUGIN8}"
   SetOutPath "$INSTDIR\${DIR_JSPLUGIN_GENERAL}"
   File "${INPUT_PATH}${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL1}"
+  File "${INPUT_PATH}${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL2}"
   SetOutPath "$INSTDIR\${DIR_JSPLUGIN_COMMON}"
   File "${INPUT_PATH}${DIR_JSPLUGIN_COMMON}${FILES_JSPLUGIN_COMMON1}"
+  
+  ; Presets
+  SetOutPath "$INSTDIR\${DIR_PRESETS}"
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
@@ -197,6 +203,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${DIR_JSPLUGIN_COMMON}${FILES_JSPLUGIN_COMMON1}"
   RMDir "$INSTDIR\${DIR_JSPLUGIN_COMMON}"
   Delete "$INSTDIR\${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL1}"
+  Delete "$INSTDIR\${DIR_JSPLUGIN_GENERAL}${FILES_JSPLUGIN_GENERAL2}"
   RMDir "$INSTDIR\${DIR_JSPLUGIN_GENERAL}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN1}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN2}"
