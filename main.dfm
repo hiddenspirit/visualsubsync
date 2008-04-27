@@ -4137,4 +4137,9 @@ object MainForm: TMainForm
     Left = 192
     Top = 312
   end
+  object OpenDialogPresets: TTntOpenDialog
+    Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
+    Left = 8
+    Top = 72
+  end
 end
