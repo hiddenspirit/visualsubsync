@@ -9,14 +9,15 @@ function decimal1Round(avalue) {
 // ---------------------------------------------------------------------------
  
 var ReadingSpeedDef = [
-  { value: 5,  color: 0x9999FF, text: 'TOO SLOW!'},
-  { value: 10, color: 0x99CCFF, text: 'Slow, acceptable.'},
-  { value: 13, color: 0x99FFFF, text: 'A bit slow.'},
-  { value: 15, color: 0x99FFCC, text: 'Good.'},
-  { value: 23, color: 0x99FF99, text: 'Perfect.'},
-  { value: 27, color: 0xCCFF99, text: 'Good.'},
-  { value: 31, color: 0xFFFF99, text: 'A bit fast.'},
-  { value: 35, color: 0xFF9999, text: 'TOO FAST!'}
+  { value: 5,        color: 0x9999FF, text: 'TOO SLOW!'},
+  { value: 10,       color: 0x99CCFF, text: 'Slow, acceptable.'},
+  { value: 13,       color: 0x99FFFF, text: 'A bit slow.'},
+  { value: 15,       color: 0x99FFCC, text: 'Good.'},
+  { value: 23,       color: 0x99FF99, text: 'Perfect.'},
+  { value: 27,       color: 0xCCFF99, text: 'Good.'},
+  { value: 31,       color: 0xFFFF99, text: 'A bit fast.'},
+  { value: 35,       color: 0xFFCC99, text: 'Fast, acceptable.'},
+  { value: Infinity, color: 0xFF9999, text: 'TOO FAST!'}
 ];
 
 // Pure green hue = 120° (red = 0°, blue = 240°)
