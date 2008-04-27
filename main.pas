@@ -355,6 +355,7 @@ type
     ActionLoadPresets: TTntAction;
     MenuItemLoadPresets: TTntMenuItem;
     ActionCopy: TTntAction;
+    OpenDialogPresets: TTntOpenDialog;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -7585,11 +7586,11 @@ procedure TMainForm.ActionLoadPresetsExecute(Sender: TObject);
 var IniFile : TIniFile;
     IniFilename : WideString;
 begin
-  TntOpenDialog1.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
-  if not TntOpenDialog1.Execute then
+  OpenDialogPresets.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
+  if not OpenDialogPresets.Execute then
     Exit;
   try
-    IniFile := TIniFile.Create(TntOpenDialog1.FileName);
+    IniFile := TIniFile.Create(OpenDialogPresets.FileName);
     ConfigObject.LoadIni(IniFile, True);
     SetShortcut(IsTimingMode);
     ApplyMouseSettings;
