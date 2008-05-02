@@ -665,6 +665,9 @@ type
 
     procedure OnUndo(Sender: TTntRichEdit; UndoTask : TUndoableTask);
 
+    procedure LoadPresetFile(Filename : WideString);
+    procedure FillPresetsMenu;
+    procedure OnLoadPresetMenuItemClick(Sender: TObject);
 
   public
     { Public declarations }
@@ -884,6 +887,9 @@ begin
 
   StatusBarPrimaryText := '';
   StatusBarSecondaryText := '';
+
+  // Fill the presets menu
+  FillPresetsMenu;
 
   {$IFDEF TTRACE}TTrace.Debug.ExitMethod('TMainForm.FormCreate');{$ENDIF}
 end;
@@ -7582,15 +7588,12 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionLoadPresetsExecute(Sender: TObject);
+procedure TMainForm.LoadPresetFile(Filename : WideString);
 var IniFile : TIniFile;
     IniFilename : WideString;
 begin
-  OpenDialogPresets.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
-  if not OpenDialogPresets.Execute then
-    Exit;
   try
-    IniFile := TIniFile.Create(OpenDialogPresets.FileName);
+    IniFile := TIniFile.Create(FileName);
     ConfigObject.LoadIni(IniFile, True);
     SetShortcut(IsTimingMode);
     ApplyMouseSettings;
@@ -7599,6 +7602,18 @@ begin
   finally
     IniFile.Free;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLoadPresetsExecute(Sender: TObject);
+var IniFile : TIniFile;
+    IniFilename : WideString;
+begin
+  OpenDialogPresets.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
+  if not OpenDialogPresets.Execute then
+    Exit;
+  LoadPresetFile(OpenDialogPresets.FileName);
 end;
 
 //------------------------------------------------------------------------------
@@ -7617,12 +7632,72 @@ end;
 
 
 //------------------------------------------------------------------------------
+
 procedure TMainForm.ActionCopyUpdate(Sender: TObject);
 var actCtrl : TWinControl;
 begin
   actCtrl := Screen.ActiveControl;
   ActionCopy.Enabled := ((actCtrl is TCustomEdit) and (TCustomEdit(actCtrl).SelLength > 0))
     or ((actCtrl is TVirtualStringTree) and (TVirtualStringTree(actCtrl).SelectedCount > 0));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnLoadPresetMenuItemClick(Sender: TObject);
+var MenuItem : TTntMenuItem;
+begin
+  if (Sender is TTntMenuItem) then
+  begin
+    MenuItem := Sender as TTntMenuItem;
+    LoadPresetFile(g_PresetsPath + MenuItem.Caption);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.FillPresetsMenu;
+var FFindFileAttrs : Integer;
+    FSearchRec : TSearchRecW;
+    FileList : TTntStringList;
+    NewMenuItem : TTntMenuItem;
+    i : Integer;
+begin
+  FFindFileAttrs := faAnyFile;
+  FSearchRec.FindHandle := INVALID_HANDLE_VALUE;
+  FileList := TTntStringList.Create;
+
+  if (WideFindFirst(g_PresetsPath + '*.ini', FFindFileAttrs, FSearchRec) <> 0) then
+    WideFindClose(FSearchRec)
+  else
+  begin
+    while (FSearchRec.FindHandle <> INVALID_HANDLE_VALUE) do
+    begin
+      FileList.Add(FSearchRec.Name);
+      if (WideFindNext(FSearchRec) <> 0) then
+        WideFindClose(FSearchRec);
+    end;
+  end;
+
+  FileList.Sort;
+  
+  for i:=0 to FileList.Count-1 do
+  begin
+    NewMenuItem := TTntMenuItem.Create(MenuItemLoadPresets);
+    NewMenuItem.Caption := FileList[i];
+    NewMenuItem.OnClick := OnLoadPresetMenuItemClick;
+    MenuItemLoadPresets.Add(NewMenuItem);
+  end;
+  // Add special "Clear list" menu
+  NewMenuItem := TTntMenuItem.Create(MenuItemLoadPresets);
+  NewMenuItem.Caption := '-';
+  MenuItemLoadPresets.Add(NewMenuItem);
+
+  NewMenuItem := TTntMenuItem.Create(MenuItemLoadPresets);
+  NewMenuItem.Action := ActionLoadPresets;
+  NewMenuItem.Caption := 'Browse...';
+  MenuItemLoadPresets.Add(NewMenuItem);
+
+  FileList.Free;
 end;
 
 //------------------------------------------------------------------------------

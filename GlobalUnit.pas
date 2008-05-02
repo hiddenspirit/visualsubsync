@@ -51,6 +51,7 @@ var
   g_BackupDirectory : WideString;
   g_PluginPath : WideString;
   g_ApplicationPath : WideString;
+  g_PresetsPath : WideString;
 
 implementation
 
@@ -81,6 +82,7 @@ initialization
   g_BackupDirectory := g_ApplicationPath + 'Backup\';
   CheckBackupDirectory;
   g_PluginPath := g_ApplicationPath + 'jsplugin\';
+  g_PresetsPath := g_ApplicationPath + 'presets\';
   
 finalization
   g_WebRWSynchro.Free;
