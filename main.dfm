@@ -1306,7 +1306,6 @@ object MainForm: TMainForm
         Caption = '-'
       end
       object MenuItemLoadPresets: TTntMenuItem
-        Action = ActionLoadPresets
         Caption = 'Load presets...'
       end
       object N2: TTntMenuItem
