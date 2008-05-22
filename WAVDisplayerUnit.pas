@@ -2692,7 +2692,7 @@ begin
       Value := FPeakTab[i].Max;
       if (Value > MaxAbsoluteValue) then
         MaxAbsoluteValue := Value;
-      Value := Abs(FPeakTab[i].Min);
+      Value := -FPeakTab[i].Min;
       if (Value > MaxAbsoluteValue) then
         MaxAbsoluteValue := Value;
     end;
