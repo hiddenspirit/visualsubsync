@@ -17,7 +17,15 @@ All Rights Reserved.
 Contributor(s): -
 
 History:
-  Version 2.75 (2007-04-19):
+  Version 2.77 (2008-05-08)
+    - Fixed: LoadResString thread-safty caused memory leaks due to strings in threadvars
+
+  Version 2.76 (2008-05-07)
+    - Fixed: LoadResString supports switching resource DLLs
+    - Fixed: LoadResString is thread safe (each thread has its own cache)
+    - Added: TActionList memory overwrite fix
+
+  Version 2.75 (2008-04-19):
     - Updated: Windows Vista doesn't need the WideString optimization anymore
     - Fixed: Memory leak in WideString cache
 
@@ -109,7 +117,7 @@ implementation
 
 uses
   Windows, Messages, SysUtils, Classes, Contnrs, TypInfo,
-  {$IFDEF COMPILER6_UP} RtlConsts {$ELSE} Consts {$ENDIF},
+  {$IFDEF COMPILER6_UP} RtlConsts, ActnList {$ELSE} Consts {$ENDIF},
   {$IFDEF COMPILER10_UP} WideStrings, WideStrUtils, {$ENDIF}
   Controls;
 
@@ -143,6 +151,12 @@ type
 const
   RaiseLastOSError: procedure = RaiseLastWin32Error;
 {$ENDIF COMPILER5}
+
+{$IFNDEF COMPILER11_UP}
+type
+  INT_PTR = Integer;
+  DWORD_PTR = DWORD;
+{$ENDIF COMPILER11_UP}
 
 
 {------------------------------------------------------------------------------}
@@ -216,6 +230,7 @@ begin
     TInjectRec(Proc^).Jump := $E9;
     TInjectRec(Proc^).Offset := Integer(NewProc) - (Integer(Proc) + SizeOf(TInjectRec));
     VirtualProtectEx(GetCurrentProcess, Proc, SizeOf(TInjectRec), OldProtect, @OldProtect);
+    FlushInstructionCache(GetCurrentProcess, Proc, SizeOf(TInjectRec));
   end;
 end;
 
@@ -1324,7 +1339,7 @@ var
 begin
   if S <> nil then
   begin
-    Len := PInteger(Cardinal(S) - 4)^ div 2;
+    Len := PInteger(DWORD_PTR(S) - 4)^ div 2;
     if (Len > 0) and (Len <= MaxCachedWideStringSize) and WideStringCacheActive then
     begin
       NewNode(N);
@@ -1576,7 +1591,7 @@ begin
   begin
     if (P.Call = $E8) and (P.PopRet = $C35B5E5F) then
     begin
-      Result := Pointer(Integer(@P.PopRet) + Integer(P.Offset));
+      Result := Pointer(INT_PTR(@P.PopRet) + INT_PTR(P.Offset));
       if IsBadReadPtr(Result, 2) or (PWord(Result)^ <> $1087 {xchg [eax],edx}) then
         Result := nil;
       Exit;
@@ -2059,12 +2074,12 @@ begin
   List := FList; // remove one (object) memory access
   Item1 := @List^[Index1];
   Item2 := @List^[Index2];
-  Temp := Integer(Item1^.FString);
-  Integer(Item1^.FString) := Integer(Item2^.FString);
-  Integer(Item2^.FString) := Temp;
-  Temp := Integer(Item1^.FObject);
-  Integer(Item1^.FObject) := Integer(Item2^.FObject);
-  Integer(Item2^.FObject) := Temp;
+  Temp := INT_PTR(Item1^.FString);
+  INT_PTR(Item1^.FString) := INT_PTR(Item2^.FString);
+  INT_PTR(Item2^.FString) := Temp;
+  Temp := INT_PTR(Item1^.FObject);
+  INT_PTR(Item1^.FObject) := INT_PTR(Item2^.FObject);
+  INT_PTR(Item2^.FObject) := Temp;
 end;
 
 procedure TFastStringList.QuickSort(L, R: Integer; SCompare: TStringListSortCompare);
@@ -3104,7 +3119,7 @@ begin
   begin
     if (P[0] = $E8) and (P[2] = $FF) and (P[3] = $FF) and (P[4] = $FF) then
     begin
-      Result := Pointer(Integer(@P[5]) + PInteger(@P[1])^);
+      Result := Pointer(INT_PTR(@P[5]) + PInteger(@P[1])^);
       Exit;
     end;
     Inc(PByte(P));
@@ -3124,10 +3139,10 @@ begin
   begin
     if (P[0] = $E8) then
     begin
-      if Pointer(Integer(@P[5]) + PInteger(@P[1])^) = OrgProc then
+      if Pointer(INT_PTR(@P[5]) + PInteger(@P[1])^) = OrgProc then
       begin
         VirtualProtect(@P[1], 4, PAGE_EXECUTE_READWRITE, OldProtect);
-        PInteger(@P[1])^ := Integer(NewProc) - Integer(@P[5]);
+        PInteger(@P[1])^ := INT_PTR(NewProc) - INT_PTR(@P[5]);
         VirtualProtect(@P[1], 4, OldProtect, OldProtect);
         FlushInstructionCache(GetCurrentProcess, @P[1], 4);
         Exit;
@@ -3314,90 +3329,131 @@ begin
   end;
 end;
 
-
 type
   TResStringRecCache = record
     Res: PResStringRec;
-    S: string;
     Time: Cardinal;
     Identifier: Integer;
+    ResInst: HINST;
+    S: string;
   end;
 
+  PResStringRecCacheArray = ^TResStringRecCacheArray;
+  TResStringRecCacheArray = array[0..64 - 1] of TResStringRecCache;
+
 var
-  LastResStringRecs: array[0..64 - 1] of TResStringRecCache;
-  LastResStringModule: LongWord;
-  LastResModuleInst: LongWord;
+  LastResStringRecs: TResStringRecCacheArray;
+  LastResStringModule: HMODULE;
+  LastResModuleInst: HINST;
+  LoadResStringCacheCritSect: TRTLCriticalSection;
+
+function FindResourceModuleHInstance(Instance: HMODULE): HINST;
+var
+  CurModule: PLibModule;
+begin
+  CurModule := LibModuleList;
+  while CurModule <> nil do
+  begin
+    if (Instance = HMODULE(CurModule.Instance)) or
+       (Instance = HMODULE(CurModule.CodeInstance)) or
+       (Instance = HMODULE(CurModule.DataInstance)) then
+    begin
+      Result := HINST(CurModule.ResInstance);
+      Exit;
+    end;
+    CurModule := CurModule.Next;
+  end;
+  Result := Instance;
+end;
 
 function LoadResString(ResStringRec: PResStringRec): string;
 var
-  Buffer: array [0..4096 - 1] of Char;
-  Inst: LongWord;
+  Buffer: array[0..4096 - 1] of Char;
+  Inst: HMODULE;
   I, NewIndex: Integer;
-  P: PResStringRec;
   OldestTimeDiff, t, TimeDiff: Cardinal;
 begin
   if ResStringRec = nil then
     Exit;
   if ResStringRec.Identifier < 64*1024 then
   begin
-    { Find a cached item }
-    for I := 0 to High(LastResStringRecs) do
+    NewIndex := -1;
+
+{*} EnterCriticalSection(LoadResStringCacheCritSect);
+
+    { Find a cached item; small tight loop without inner jumping }
+    for I := Length(LastResStringRecs) downto 1 do // downto 1 is faster because the code can test or zero
+      if ResStringRec = LastResStringRecs[I - 1].Res then
+        Break;
+    if I > 0 then
     begin
-      P := LastResStringRecs[I].Res;
-      if ResStringRec = P then
+      Dec(I); // make it zero based
+      Inst := FindResourceModuleHInstance(HMODULE(ResStringRec.Module^));
+      if (Inst <> LastResStringRecs[I].ResInst) or { The resource module was exchanged }
+         (ResStringRec.Identifier <> LastResStringRecs[I].Identifier) then { Another module was loaded at the exact same address }
       begin
-        if P.Identifier <> ResStringRec.Identifier then
-        begin
-          { Another module must have be loaded to the exact same address }
-          LastResStringRecs[I].Res := nil;
-          LastResStringRecs[I].Time := 0;
-          Break;
-        end;
-        
+        LastResStringModule := HMODULE(ResStringRec.Module^);
+        LastResModuleInst := Inst;
+        LastResStringRecs[I].Res := nil;
+        LastResStringRecs[I].Time := 0;
+        NewIndex := I;
+      end
+      else
+      begin
         LastResStringRecs[I].Time := GetTickCount;
         Result := LastResStringRecs[I].S;
+{*}     LeaveCriticalSection(LoadResStringCacheCritSect);
         Exit;
       end;
     end;
 
     { Find the item that wasn't used for a long time }
-    NewIndex := 0;
     t := GetTickCount;
-    {$IFOPT R+}{$DEFINE OPT_R}{$ENDIF}
-    {$R-}
-    OldestTimeDiff := Cardinal(t - LastResStringRecs[0].Time);
-    for I := 1 to High(LastResStringRecs) do
+    if NewIndex = -1 then
     begin
-      if LastResStringRecs[I].Res = nil then
+      NewIndex := 0;
+      {$IFOPT R+}{$DEFINE OPT_R}{$ENDIF}
+      {$R-}
+      OldestTimeDiff := Cardinal(t - LastResStringRecs[High(LastResStringRecs)].Time);
+      for I := Length(LastResStringRecs) downto 1 do
       begin
-        NewIndex := I;
-        Break;
+        if LastResStringRecs[I - 1].Res = nil then
+        begin
+          NewIndex := I - 1;
+          Break;
+        end;
+        TimeDiff := Cardinal(t - LastResStringRecs[I - 1].Time);
+        if TimeDiff > OldestTimeDiff then
+        begin
+          NewIndex := I - 1;
+          OldestTimeDiff := TimeDiff;
+        end;
       end;
-      TimeDiff := Cardinal(t - LastResStringRecs[I].Time);
-      if TimeDiff > OldestTimeDiff then
-      begin
-        NewIndex := I;
-        OldestTimeDiff := TimeDiff;
-      end;
+      {$IFDEF OPT_R}{$R+}{$ENDIF}
     end;
-    {$IFDEF OPT_R}{$R+}{$ENDIF}
+
+    LastResStringRecs[NewIndex].Res := ResStringRec;
+    LastResStringRecs[NewIndex].Time := t;
+    LastResStringRecs[NewIndex].Identifier := ResStringRec.Identifier;
+
+{*} LeaveCriticalSection(LoadResStringCacheCritSect);
 
     { Single item cache for the resource module handle }
-    if LongWord(ResStringRec.Module^) = LastResStringModule then
+    if HMODULE(ResStringRec.Module^) = LastResStringModule then
       Inst := LastResModuleInst
     else
     begin
       LastResStringModule := ResStringRec.Module^;
-      Inst := FindResourceHInstance(LastResStringModule);
+      Inst := FindResourceHInstance(ResStringRec.Module^);
       LastResModuleInst := Inst;
     end;
+    LastResStringRecs[NewIndex].ResInst := Inst;
 
     SetString(Result, Buffer,
       LoadString(Inst, ResStringRec.Identifier, Buffer, SizeOf(Buffer)));
 
+    { "Time" is already set => item isn't modified }
     LastResStringRecs[NewIndex].S := Result;
-    LastResStringRecs[NewIndex].Res := ResStringRec;
-    LastResStringRecs[NewIndex].Time := t;
   end
   else
     Result := PChar(ResStringRec.Identifier);
@@ -3456,6 +3512,35 @@ begin
 end;
 {$ENDIF WMPAINT_HOOK}
 {$ENDIF ~DELPHI2007_UP}
+
+// VCL Bugfix
+{$IFDEF COMPILER6_UP} // Delphi 5 is also affected but RemoveAction() is private and can't be accessed
+type
+  TCustomActionListFix = class(TCustomActionList)
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  end;
+
+  TOpenCustomActionList = class(TCustomActionList);
+  //TOpenComponent = class(TComponent);
+
+procedure TCustomActionListFix.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  P: procedure(Instance: TComponent; AComponent: TComponent; Operation: TOperation);
+begin
+  { inherited: }
+  P := @TOpenComponent.Notification;
+  P(Self, AComponent, Operation);
+
+  if Operation = opRemove then
+  begin
+    if AComponent = Images then
+      Images := nil
+    else if {<*}not (csDestroying in ComponentState) and{*>} (AComponent is TContainedAction) then
+      RemoveAction(TContainedAction(AComponent));
+  end;
+end;
+{$ENDIF COMPILER6_UP}
 
 {------------------------------------------------------------------------------}
 { SysUtils optimizations                                                       }
@@ -3525,8 +3610,8 @@ initialization
 
   CodeRedirect(OrgLStrCmp, @_LStrCmp_LStrEqual);
   CodeRedirect(OrgWStrCmp, @_WStrCmp_WStrEqual);
-  CodeRedirect(GetLStrAsg, @_LStrAsg);
-  CodeRedirect(GetLStrLAsg, @_LStrLAsg);
+  //CodeRedirect(GetLStrAsg, @_LStrAsg);
+  //CodeRedirect(GetLStrLAsg, @_LStrLAsg);
 
   CodeRedirect(@SysUtils.AnsiCompareText, @FastAnsiCompareText);
   {$IFDEF COMPILER9_UP}
@@ -3569,7 +3654,7 @@ initialization
   CodeRedirect(@TOpenList.Last, @TFastList.Last);
   CodeRedirect(@TOpenList.Exchange, @TFastList.Exchange);
   CodeRedirect(@TOpenList.Sort, @TFastList.Sort);
-  InjectCode(@TOpenObjectList.Notify, @TObjectList_Notify, Cardinal(@TObjectList_NotifyEND) - Cardinal(@TObjectList_Notify));
+  InjectCode(@TOpenObjectList.Notify, @TObjectList_Notify, DWORD_PTR(@TObjectList_NotifyEND) - DWORD_PTR(@TObjectList_Notify));
   CodeRedirect(@TStringList.CustomSort, @TFastStringList.CustomSort);
 
   {$IFDEF COMPILER7_UP}
@@ -3621,11 +3706,12 @@ initialization
   CodeRedirect(GetActualAddr(GetSetEqAddr), @_SetEq);
   CodeRedirect(GetActualAddr(@System.LoadResourceModule), @LoadResourceModule);
   CodeRedirect(GetActualAddr(@System.LoadResString), @LoadResString);
+  InitializeCriticalSection(LoadResStringCacheCritSect);
 
 {------------------------------------------------------------------------------}
 { SysUtils optimizations                                                       }
 {------------------------------------------------------------------------------}
-  InjectCode(@SysUtils.IsLeapYear, @IsLeapYear, Cardinal(@IsLeapYear_END) + 3 - Cardinal(@IsLeapYear));
+  InjectCode(@SysUtils.IsLeapYear, @IsLeapYear, DWORD_PTR(@IsLeapYear_END) + 3 - DWORD_PTR(@IsLeapYear));
 
 {------------------------------------------------------------------------------}
 { VCL optimization                                                             }
@@ -3635,12 +3721,16 @@ initialization
   CodeRedirect(GetDynamicMethod(TWinControl, WM_PAINT), @WinControlWMPaint);
   {$ENDIF ~COMPILER10_UP}
   {$ENDIF WMPAINT_HOOK}
+  {$IFDEF COMPILER6_UP} // Delphi 5 is also affected but RemoveAction() is private and can't be accessed
+  CodeRedirect(@TOpenCustomActionList.Notification, @TCustomActionListFix.Notification);
+  {$ENDIF COMPILER6_UP}
 
-{$IFDEF CACHE_WIDESTRINGS}
 finalization
+  DeleteCriticalSection(LoadResStringCacheCritSect);
+  {$IFDEF CACHE_WIDESTRINGS}
   if Win32MajorVersion <= 5 then
     FiniWideStringOptimize;
-{$ENDIF CACHE_WIDESTRINGS}
+  {$ENDIF CACHE_WIDESTRINGS}
 
 end.
 
