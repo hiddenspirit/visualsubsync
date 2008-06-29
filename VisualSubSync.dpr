@@ -1,7 +1,6 @@
 program VisualSubSync;
 
 uses
-  FastMM4,
   Windows,
   Forms,
   TntSystem,
@@ -39,7 +38,8 @@ uses
   UndoableTaskUnit in 'UndoableTaskUnit.pas',
   UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas',
   SceneChangeUnit in 'SceneChangeUnit.pas',
-  VSSClipboardUnit in 'VSSClipboardUnit.pas';
+  VSSClipboardUnit in 'VSSClipboardUnit.pas',
+  TntNativeHintWindow in 'ThirdParty\TntNativeHintWindow.pas';
 
 {$R *.res}
 
