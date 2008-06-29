@@ -46,12 +46,14 @@ type
     FReplaceByText : WideString;
     
     FMerged : Boolean;
+    FDisableMerge : Boolean;
 
   public
     procedure DoTask; override;
     function GetName : WideString; override;
     function GetMemSize : Integer;
     function Merge(UndoableTask : TUndoableTask) : Boolean; override;
+    procedure DisableMerge;
     procedure UndoTask; override;
   end;
 
@@ -103,7 +105,8 @@ type
     constructor Create(AOwner: TComponent); override;
     procedure DisableWindowsUndo;
     procedure SaveSelectionInfo;
-    
+    function HasTextChanged : Boolean;
+
   published
     property UndoDisabled: Boolean read FUndoDisabled write FUndoDisabled;
     property OnUndo : TNotifyUndo read FOnUndo write FOnUndo;
@@ -170,6 +173,9 @@ begin
   // Restore selection
   FRichEdit.SelStart := FOriginalSelStart;
   FRichEdit.SelLength := FOriginalSelLength;
+
+  // Don't merge any more task after undo
+  DisableMerge;
 end;
 
 // -----------------------------------------------------------------------------
@@ -178,6 +184,9 @@ function TUndoableTextTask.Merge(UndoableTask : TUndoableTask) : Boolean;
 var TaskToMerge : TUndoableTextTask;
 begin
   Result := False;
+  if FDisableMerge then
+    Exit;
+
   // Merge 2 undoable tasks (for example insertion/deletion of 1 char)
   if (UndoableTask is TUndoableTextTask) then
   begin
@@ -190,7 +199,6 @@ begin
       and ((Length(FReplaceByText) = 1) or FMerged) then
     begin
       FReplaceByText := FReplaceByText + TaskToMerge.FReplaceByText;
-      FOriginalSelStart := TaskToMerge.FOriginalSelStart;
       FSelStart := TaskToMerge.FSelStart;
       FMerged := True;
       Result := True;
@@ -228,6 +236,11 @@ function TUndoableTextTask.GetMemSize : Integer;
 begin
   // TODO
   Result := 0;
+end;
+
+procedure TUndoableTextTask.DisableMerge;
+begin
+  FDisableMerge := True;
 end;
 
 // =============================================================================
@@ -429,19 +442,19 @@ end;
 procedure TTntRichEditCustomUndo.Change;
 var UndoTask : TUndoableTextTask;
 begin
-    if (FUndoDisabled = False) and Assigned(FOnUndo) and (Text <> FOldText) then
-    begin
-      // Make a very simple diff
-      UndoTask := TUndoableTextTask.Create;
-      DiffText(Text, FOldText, UndoTask);
-      UndoTask.FOriginalSelStart := FSelStartBeforeChange;
-      UndoTask.FOriginalSelLength := FSelLengthBeforeChange;
-      UndoTask.FSelStart := SelStart;
-      UndoTask.FSelLength := SelLength;
-      UndoTask.FRichEdit := Self;
-      FOnUndo(Self, UndoTask);
-    end;
-    FOldText := Text;
+  if (FUndoDisabled = False) and Assigned(FOnUndo) and (Text <> FOldText) then
+  begin
+    // Make a very simple diff
+    UndoTask := TUndoableTextTask.Create;
+    DiffText(Text, FOldText, UndoTask);
+    UndoTask.FOriginalSelStart := FSelStartBeforeChange;
+    UndoTask.FOriginalSelLength := FSelLengthBeforeChange;
+    UndoTask.FSelStart := SelStart;
+    UndoTask.FSelLength := SelLength;
+    UndoTask.FRichEdit := Self;
+    FOnUndo(Self, UndoTask);
+  end;
+  FOldText := Text;
   inherited;
 end;
 
@@ -476,6 +489,11 @@ begin
   // Save selection position
   FSelStartBeforeChange := SelStart;
   FSelLengthBeforeChange := SelLength;
+end;
+
+function TTntRichEditCustomUndo.HasTextChanged : Boolean;
+begin
+  Result := (FOldText <> Text);
 end;
 
 // -----------------------------------------------------------------------------

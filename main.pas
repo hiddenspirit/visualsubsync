@@ -542,7 +542,7 @@ type
     PeakCreationProgressForm : TPeakCreationProgressForm;
     AudioOnlyRenderer : TDShowRenderer;
     VideoRenderer : TDShowRenderer;
-    SearchNode : PVirtualNode;
+    SearchNodeIndex : Integer;
     SearchPos : Integer;
     OldAutoScrollIdx : Integer;
 
@@ -2010,8 +2010,21 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.MemoSubtitleTextSelectionChange(Sender: TObject);
+var TopTask : TUndoableTask;
 begin
   UpdateLinesCounter;
+
+  { TODO
+  OutputDebugString(PChar(BoolToStr(TTntRichEditCustomUndo(MemoSubtitleText).HasTextChanged, True)));
+  if (UndoStack.Count > 0) then
+  begin
+    TopTask := TUndoableTask(UndoStack.Peek);
+    if (TopTask is TUndoableSubTextTask) then
+    begin
+      TUndoableTextTask(TUndoableSubTextTask(TopTask).GetSubTask).DisableMerge;
+    end;
+  end;}
+  
 end;
 
 //------------------------------------------------------------------------------
@@ -2782,7 +2795,7 @@ end;
 
 procedure TMainForm.ResetFind;
 begin
-  SearchNode := nil;
+  SearchNodeIndex := -1;
   SearchPos := 1;
 end;
 
@@ -2844,7 +2857,9 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionFindNextExecute(Sender: TObject);
-var NodeData : PTreeData;
+var SearchNode : PVirtualNode;
+    SearchSub : TSubtitleRange;
+    NodeData : PTreeData;
     FindText : WideString;
     RegExp : TRegExpr;
     MatchLen : Integer;
@@ -2852,6 +2867,12 @@ begin
   FindText := FindForm.GetFindText;
   if Length(FindText) <= 0 then
     Exit;
+
+  SearchNode := nil;
+  if (SearchNodeIndex >= 0) and (SearchNodeIndex < WAVDisplayer.RangeList.Count) then
+  begin
+    SearchNode := TSubtitleRange(WAVDisplayer.RangeList[SearchNodeIndex]).Node;
+  end;
 
   if FindForm.FromCursor then
   begin
@@ -2869,6 +2890,7 @@ begin
   RegExp.Expression := FindText;  
   while (SearchNode <> nil) do
   begin
+    SearchNodeIndex := SearchNode.Index;
     NodeData := vtvSubsList.GetNodeData(SearchNode);
     MatchLen := Length(FindText);
     if FindForm.UseRegExp then
@@ -2903,6 +2925,7 @@ begin
     SearchPos := 1;
   end;
   RegExp.Free;
+  SearchNodeIndex := -1;
   ShowStatusBarMessage('No more items.');
 end;
 
@@ -2991,7 +3014,7 @@ var SelStart : Integer;
     NewText : WideString;
     RegExp : TRegExpr;
 begin
-  if (SearchNode = nil) then
+  if (SearchNodeIndex = -1) then
     Exit;
 
   // Save selection start position
@@ -3023,7 +3046,7 @@ end;
 
 function TMainForm.LastFindSucceded : Boolean;
 begin
-  Result := (SearchNode <> nil);
+  Result := (SearchNodeIndex <> -1);
 end;
 
 //------------------------------------------------------------------------------
@@ -3982,6 +4005,11 @@ begin
   end;
   // TODO improvement : use the previously calculated InsertPos
   WAVDisplayer.AddRange(NewRange);
+
+  // Update SearchNodeIndex (TODO : SearchPos)
+  if (SearchNodeIndex >= NewNode.Index) then
+    Inc(SearchNodeIndex);
+
   Result := NewNode;
 end;
 
@@ -6623,6 +6651,8 @@ begin
     g_WebRWSynchro.EndWrite;
   end;
 
+  // Update SearchNodeIndex  (TODO : SearchPos)  
+
   // Update indexes which have been changed during sorting
   for i := 0 to DelayedRangeList.Count-1 do
   begin
@@ -6651,6 +6681,12 @@ begin
       ErrorReportForm.DeleteError(SubtitleRange);
       vtvSubsList.DeleteNode(SubtitleRange.Node);
       WAVDisplayer.DeleteRangeAtIdx(Idx, False);
+
+      // Update SearchNodeIndex  (TODO : SearchPos)
+      if (SearchNodeIndex > Idx) then
+        Dec(SearchNodeIndex);
+      if (SearchNodeIndex >= Idx) then
+        SearchPos := 1;
     end;
     CurrentProject.IsDirty := True;
   finally
@@ -6709,11 +6745,12 @@ end;
 procedure TMainForm.RestoreSubtitles(List : TList);
 var i : integer;
     Range : TSubtitleRange;
+    Node : PVirtualNode;
 begin
   for i := List.Count-1 downto 0 do
   begin
     Range := List[i];
-    AddSubtitle(Range);
+    Node := AddSubtitle(Range);
   end;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
@@ -6747,6 +6784,8 @@ begin
   end;
   SubRange.StopTime := SplitTime1;
   NewSubRange.StartTime := SplitTime2;
+
+  // Update SearchIdx and SearchPos
 
   NewNode := vtvSubsList.InsertNode(SubRange.Node, amInsertAfter);
   NodeData := vtvSubsList.GetNodeData(NewNode);
