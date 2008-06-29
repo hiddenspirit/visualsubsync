@@ -67,6 +67,7 @@ type
   TUndoableDeleteTask = class(TUndoableTaskIndexed)
   private
     FDeletedSubs : TObjectList;
+    FSearchIdx : Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -74,6 +75,8 @@ type
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
+
+    procedure SetData(SearchIdx : Integer);
   end;
 
   TUndoableMultiAddTask = class(TUndoableTaskIndexed)
@@ -146,6 +149,7 @@ type
     procedure UndoTask; override;
 
     procedure SetData(Index : Integer; UndoableTextTask : TUndoableTask);
+    function GetSubTask : TUndoableTask;    
   end;
 
   TUndoableCompositeTask = class(TUndoableTask)
@@ -398,6 +402,11 @@ begin
   FDeletedSubs.Clear;
 end;
 
+procedure TUndoableDeleteTask.SetData(SearchIdx : Integer);
+begin
+  FSearchIdx := SearchIdx;
+end;
+
 //------------------------------------------------------------------------------
 
 procedure TUndoableSetTimeTask.DoTask;
@@ -526,6 +535,11 @@ begin
   begin
     FUndoableTextTask.Free;
   end
+end;
+
+function TUndoableSubTextTask.GetSubTask : TUndoableTask;
+begin
+  Result := FUndoableTextTask;
 end;
 
 procedure TUndoableSubTextTask.DoTask;
