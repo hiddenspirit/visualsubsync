@@ -15,6 +15,9 @@ VSSPlugin = {
   // Otherwise return an empty string.
   // Don't forget that PreviousSub and NextSub can be null
   HasError : function(CurrentSub, PreviousSub, NextSub) {
+    
+    // TODO : use SceneChange.FilterOffset
+    
     var subtitleContainsSceneChange = SceneChange.Contains(
       CurrentSub.Start - SceneChange.StartOffset,
       CurrentSub.Stop + SceneChange.StopOffset);
