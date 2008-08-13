@@ -5,8 +5,8 @@
 {*  Files:      d3dtypes.h d3dcaps.h d3d.h                                    *}
 {*  Content:    Direct3D8 include files                                       *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Modified: 19-Jan-2004                                                     *}
 {*                                                                            *}
@@ -15,7 +15,8 @@
 {*      Erik Unger, e-Mail: DelphiDirectX@next-reality.com                    *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi/                                        *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {******************************************************************************}
 {                                                                              }
@@ -5584,4 +5585,3 @@ end;
 
 {$ENDIF}
 end.
-

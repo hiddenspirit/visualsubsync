@@ -6,7 +6,7 @@
 {*  Content:    Direct3D8 include files                                       *}
 {*                                                                            *}
 {*  DirectX 8.1 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Modified: 19-Jan-2004                                                     *}
 {*                                                                            *}
@@ -17,7 +17,8 @@
 {*      Tim Baumgarten, e-Mail: ampaze@gmx.net                                *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {*  This File contains only Direct3D 8.x definitions.                         *}
 {*  If you want to use older versions of D3D use Direct3D.pas from Erik Unger *}

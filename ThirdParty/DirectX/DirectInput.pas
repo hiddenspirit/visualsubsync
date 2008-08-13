@@ -5,17 +5,18 @@
 {*  Files:      dinput.h                                                      *}
 {*  Content:    DirectInput include file                                      *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
-{*  Modified: 19-Jan-2004                                                     *}
+{*  Modified: 30-Nov-2004                                                     *}
 {*                                                                            *}
 {*  Compatible with :                                                         *}
 {*    DirectX 7.0 Object Pascal adaptation by                                 *}
 {*      Erik Unger, e-Mail: DelphiDirectX@next-reality.com                    *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {******************************************************************************}
 {                                                                              }
@@ -52,6 +53,7 @@
 // Possible input defines for this file, mapped to original C values:
 //   DIRECTINPUT_VERSION_8 : DIRECTINPUT_VERSION = 0x0800,
 //   DIRECTINPUT_VERSION_7 : DIRECTINPUT_VERSION = 0x0700,
+//   DIRECTINPUT_VERSION_6 : DIRECTINPUT_VERSION = 0x0600,
 //   DIRECTINPUT_VERSION_5b : DIRECTINPUT_VERSION = 0x05b2,
 //     - in this translation we don't support DirectInput 5.0a (0x050a) version
 //       - just straight 5.0b (0x05b2) one.
@@ -64,7 +66,7 @@
 //   DIRECTX9 equal to DIRECTINPUT_VERSION_8;
 //   DIRECTX8 equal to DIRECTINPUT_VERSION_8;
 //   DIRECTX7 equal to DIRECTINPUT_VERSION_7;
-//   DIRECTX6 equal to DIRECTINPUT_VERSION_5;
+//   DIRECTX6 equal to DIRECTINPUT_VERSION_6;
 //   DIRECTX5 equal to DIRECTINPUT_VERSION_5;
 //   DIRECTX3 equal to DIRECTINPUT_VERSION_3
 ///////////////////////////////////////////////////////////////////////////////
@@ -103,7 +105,7 @@ uses
   {$DEFINE DIRECTINPUT_VERSION_7}
 {$ENDIF}
 {$IFDEF DIRECTX6}
-  {$DEFINE DIRECTINPUT_VERSION_5}
+  {$DEFINE DIRECTINPUT_VERSION_6}
 {$ENDIF}
 {$IFDEF DIRECTX5}
   {$DEFINE DIRECTINPUT_VERSION_5}
@@ -132,13 +134,15 @@ const
   DIRECTINPUT_VERSION = $0800;
 {$ELSE}{$IFDEF DIRECTINPUT_VERSION_7}
   DIRECTINPUT_VERSION = $0700;
+{$ELSE}{$IFDEF DIRECTINPUT_VERSION_6}
+  DIRECTINPUT_VERSION = $0600;
 {$ELSE}{$IFDEF DIRECTINPUT_VERSION_5b}
   DIRECTINPUT_VERSION = $05b2;
 {$ELSE}{$IFDEF DIRECTINPUT_VERSION_5}
   DIRECTINPUT_VERSION = $0500;
 {$ELSE}{$IFDEF DIRECTINPUT_VERSION_3}
   DIRECTINPUT_VERSION = $0300;
-{$ENDIF}{$ENDIF}{$ENDIF}{$ENDIF}{$ENDIF}
+{$ENDIF}{$ENDIF}{$ENDIF}{$ENDIF}{$ENDIF}{$ENDIF}
   {$EXTERNALSYM DIRECTINPUT_VERSION}
 
 ////////////////////////////////////////////////////////////////////////
@@ -152,6 +156,9 @@ const
 {$IFDEF DIRECTINPUT_VERSION_5b}
   {$HPPEMIT '#define DIRECTINPUT_VERSION         0x05b2'}
 {$ENDIF}
+{$IFDEF DIRECTINPUT_VERSION_6}
+  {$HPPEMIT '#define DIRECTINPUT_VERSION         0x0600'}
+{$ENDIF}
 {$IFDEF DIRECTINPUT_VERSION_7}
   {$HPPEMIT '#define DIRECTINPUT_VERSION         0x0700'}
 {$ENDIF}
@@ -159,7 +166,6 @@ const
   {$HPPEMIT '#define DIRECTINPUT_VERSION         0x0800'}
 {$ENDIF}
 
-(*$NOINCLUDE DXTypes*)
 (*$HPPEMIT '#include "dinput.h"' *)
 (*$HPPEMIT '' *)
 
@@ -169,6 +175,9 @@ const
   {$DEFINE DIRECTINPUT_VERSION_7}
 {$ENDIF}
 {$IFDEF DIRECTINPUT_VERSION_7}
+  {$DEFINE DIRECTINPUT_VERSION_6}
+{$ENDIF}
+{$IFDEF DIRECTINPUT_VERSION_6}
   {$DEFINE DIRECTINPUT_VERSION_5b}
 {$ENDIF}
 {$IFDEF DIRECTINPUT_VERSION_5b}
@@ -1040,6 +1049,7 @@ const
   {$EXTERNALSYM DIDFT_ALIAS}
 {$ENDIF} (* DIRECTINPUT_VERSION >= 0x050a *)
   DIDFT_OPTIONAL          = $80000000;
+  {$EXTERNALSYM DIDFT_OPTIONAL}
 
 // #define DIDFT_ENUMCOLLECTION(n) ((WORD)(n) << 8)
 function DIDFT_ENUMCOLLECTION(n: Cardinal): Cardinal;
@@ -6469,7 +6479,7 @@ begin
     DirectInput8Lib:= LoadLibrary(DirectInput8Dll);
     if (DirectInput8Lib<>0) then
     begin
-      DirectInput8Create:= GetProcAddress(DirectInputLib, 'DirectInput8Create');
+      DirectInput8Create:= GetProcAddress(DirectInput8Lib, 'DirectInput8Create');
     end;
 
     WinMMLib:= LoadLibrary(WinMMDll);
@@ -6516,4 +6526,3 @@ finalization
   UnLoadDirectInput;
 {$ENDIF}
 end.
-

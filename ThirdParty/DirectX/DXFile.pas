@@ -5,8 +5,8 @@
 {*  File:       dxfile.h, rmxfguid.h, rmxftmpl.h                              *}
 {*  Content:    Interfaces to access Rendermorthics eXtensible file format    *}
 {*                                                                            *}
-{*  XFile Delphi adaptation by Alexey Barkovoy                                *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Modified: 10-Dec-2002                                                     *}
 {*                                                                            *}
@@ -15,7 +15,8 @@
 {*      Erik Unger, e-Mail: DelphiDirectX@next-reality.com                    *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi/                                        *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {*  This File contains interfaces to access Rendermorthics eXtensible file    *}
 {*  known as 'X-file'. Also this file contains GUID's and templates from      *}
