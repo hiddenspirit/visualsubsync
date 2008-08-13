@@ -6,7 +6,7 @@
 {*  Content:    DX7 to DX8 Direct3D aliases to aid porting DX7 apps to DX8    *}
 {*                                                                            *}
 {*  Direct3D 8.x Delphi adaptation by Alexey Barkovoy                         *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Modified: 16-Feb-2002                                                     *}
 {*                                                                            *}
@@ -15,8 +15,8 @@
 {*      Arne Schäpers, e-Mail: [look at www.delphi-jedi.org/DelphiGraphics/]  *}
 {*                                                                            *}
 {*  Lastest version can be downloaded from:                                   *}
-{*     http://clootie.narod.ru/DelphiGraphics/index.html                      *}
-{*     http://delphi-jedi.org                                                 *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {******************************************************************************}
 {                                                                              }

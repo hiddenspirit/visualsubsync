@@ -5,17 +5,18 @@
 {*  Files:      dsound.h                                                      *}
 {*  Content:    DirectSound include file                                      *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
-{*  Modified: 25-Feb-2004                                                     *}
+{*  Modified: 14-Apr-2007                                                     *}
 {*                                                                            *}
 {*  Compatible with :                                                         *}
 {*    DirectX 7.0 Object Pascal adaptation by                                 *}
 {*      Erik Unger, e-Mail: DelphiDirectX@next-reality.com                    *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://www.clootie.ru                                                   *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {******************************************************************************}
 {                                                                              }
@@ -44,6 +45,8 @@
 {                                                                              }
 {******************************************************************************}
 
+{$I DirectX.inc}
+
 unit DirectSound;
 
 interface
@@ -59,8 +62,6 @@ uses
  *  Content:    DirectSound include file
  *
  **************************************************************************)
-
-{$I DirectX.inc}
 
 ////////////////////////////////////////////////////////////////////////
 // Global level dynamic loading support
@@ -247,12 +248,6 @@ type
   TDSBcaps = _DSBCAPS;
 
 {$IFDEF DIRECTSOUND_VERSION_8} // #if DIRECTSOUND_VERSION >= 0x0800
-  {$IFDEF WIN64}
-  DWORD_PTR = Int64;
-  {$ELSE}
-  DWORD_PTR = DWORD;
-  {$ENDIF}
-
   PDSEffectDesc = ^TDSEffectDesc;
   _DSEFFECTDESC = packed record
     dwSize        : DWORD;
@@ -447,10 +442,10 @@ type
 
 
 type
-  PReferenceTime = ^TReferenceTime;
-  REFERENCE_TIME = LONGLONG;
+  REFERENCE_TIME = DXTypes.REFERENCE_TIME;
   {$EXTERNALSYM REFERENCE_TIME}
-  TReferenceTime = REFERENCE_TIME;
+  TReferenceTime = DXTypes.TReferenceTime;
+  PReferenceTime = DXTypes.PReferenceTime;
 
 type
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IReferenceClock);'}
@@ -736,7 +731,7 @@ type
     // IKsPropertySet methods
     function Get(const rguidPropSet: TGUID; ulId: ULONG; pInstanceData: Pointer; ulInstanceLength: ULONG; pPropertyData: Pointer; ulDataLength: ULONG; out pulBytesReturned: ULONG): HResult; stdcall;
     function _Set(const rguidPropSet: TGUID; ulId: ULONG; pInstanceData: Pointer; ulInstanceLength: ULONG; pPropertyData: Pointer; ulDataLength: ULONG): HResult; stdcall;
-    function QuerySupport(rguidPropSet: TGUID; ulId: ULONG; out pulTypeSupport: ULONG): HResult; stdcall;
+    function QuerySupport(const rguidPropSet: TGUID; ulId: ULONG; out pulTypeSupport: ULONG): HResult; stdcall;
   end;
 
   IID_IKsPropertySet = IKsPropertySet;
@@ -1666,10 +1661,20 @@ const
   {$EXTERNALSYM DSSPEAKER_STEREO}
   DSSPEAKER_SURROUND          = $00000005;
   {$EXTERNALSYM DSSPEAKER_SURROUND}
-  DSSPEAKER_5POINT1           = $00000006;
+  DSSPEAKER_5POINT1           = $00000006;  // obsolete 5.1 setting
   {$EXTERNALSYM DSSPEAKER_5POINT1}
-  DSSPEAKER_7POINT1           = $00000007;
+  DSSPEAKER_7POINT1           = $00000007;  // obsolete 7.1 setting
   {$EXTERNALSYM DSSPEAKER_7POINT1}
+  DSSPEAKER_7POINT1_SURROUND  = $00000008;  // correct 7.1 Home Theater setting
+  {$EXTERNALSYM DSSPEAKER_7POINT1_SURROUND}
+  DSSPEAKER_7POINT1_WIDE      = DSSPEAKER_7POINT1;
+  {$EXTERNALSYM DSSPEAKER_7POINT1_WIDE}
+//#if (DIRECTSOUND_VERSION >= 0x1000)
+  DSSPEAKER_5POINT1_SURROUND  = $00000009;  // correct 5.1 setting
+  {$EXTERNALSYM DSSPEAKER_5POINT1_SURROUND}
+  DSSPEAKER_5POINT1_BACK      = DSSPEAKER_5POINT1;
+  {$EXTERNALSYM DSSPEAKER_5POINT1_BACK}
+//#endif
 
   DSSPEAKER_GEOMETRY_MIN      = $00000005;  //   5 degrees
   {$EXTERNALSYM DSSPEAKER_GEOMETRY_MIN}
@@ -1721,6 +1726,12 @@ const
   {$EXTERNALSYM DSBCAPS_MUTE3DATMAXDISTANCE}
   DSBCAPS_LOCDEFER            = $00040000;
   {$EXTERNALSYM DSBCAPS_LOCDEFER}
+//#if (DIRECTSOUND_VERSION >= 0x1000)
+    // Force GetCurrentPosition() to return a buffer's true play position;
+    // unmodified by aids to enhance backward compatibility.
+    DSBCAPS_TRUEPLAYPOSITION    = $00080000;
+    {$EXTERNALSYM DSBCAPS_TRUEPLAYPOSITION}
+//#endif
 
   DSBPLAY_LOOPING             = $00000001;
   {$EXTERNALSYM DSBPLAY_LOOPING}
@@ -1783,6 +1794,9 @@ const
   {$EXTERNALSYM DSBSIZE_MAX}
   DSBSIZE_FX_MIN              = 150;  // NOTE: Milliseconds, not bytes
   {$EXTERNALSYM DSBSIZE_FX_MIN}
+
+  DSBNOTIFICATIONS_MAX        = 100000;
+  {$EXTERNALSYM DSBNOTIFICATIONS_MAX}
 
   DS3DMODE_NORMAL             = $00000000;
   {$EXTERNALSYM DS3DMODE_NORMAL}
@@ -2261,7 +2275,7 @@ function DirectSoundFullDuplexCreate8(pcGuidCaptureDevice, pcGuidRenderDevice: P
   const pcDSCBufferDesc: TDSCBufferDesc; const pcDSBufferDesc: TDSBufferDesc;
   hWnd: hWnd; dwLevel: DWORD; out ppDSFD: IDirectSoundFullDuplex8;
   out ppDSCBuffer8: IDirectSoundCaptureBuffer8; out ppDSBuffer8: IDirectSoundBuffer8;
-  pUnkOuter: IUnknown): HResult; stdcall; external DirectSoundDLL;
+  pUnkOuter: IUnknown): HResult; stdcall; external DirectSoundDLL name 'DirectSoundFullDuplexCreate';
 {$EXTERNALSYM DirectSoundFullDuplexCreate8}
 
 function GetDeviceID(pGuidSrc, pGuidDest: PGUID): HResult; stdcall; external DirectSoundDLL;
@@ -2403,4 +2417,3 @@ finalization
   UnLoadDirectSound;
 {$ENDIF}
 end.
-

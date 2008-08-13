@@ -5,13 +5,14 @@
 {*  Files:      dpaddr.h dplobby8.h dplay8.h dvoice.h                         *}
 {*  Content:    DirectPlay8 include files                                     *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
-{*  Modified: 19-Jan-2004                                                     *}
+{*  Modified: 22-Aug-2004                                                     *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
 {******************************************************************************}
 {                                                                              }
@@ -1627,7 +1628,7 @@ type
     function CancelAsyncOperation(hAsyncHandle: TDPNHandle; dwFlags: DWORD): HResult; stdcall;
     function GetSendQueueInfo(dpnid: TDPNID; pdwNumMsgs, pdwNumBytes: PDWORD; dwFlags: DWORD): HResult; stdcall;
     function GetApplicationDesc(pAppDescBuffer: PDPNApplicationDesc; var pcbDataSize: DWORD; dwFlags: DWORD): HResult; stdcall;
-    function GetServerInfo(pdpnPlayerInfo: PDPNPlayerInfo; pvAsyncContext: Pointer; phAsyncHandle: PDPNHandle; dwFlags: DWORD): HResult; stdcall;
+    function SetServerInfo(pdpnPlayerInfo: PDPNPlayerInfo; pvAsyncContext: Pointer; phAsyncHandle: PDPNHandle; dwFlags: DWORD): HResult; stdcall;
     function GetClientInfo(dpnid: TDPNID; pdpnPlayerInfo: PDPNPlayerInfo; pdwSize: PDWORD; dwFlags: DWORD): HResult; stdcall;
     function GetClientAddress(dpnid: TDPNID; out pAddress: IDirectPlay8Address; dwFlags: DWORD): HResult; stdcall;
     function GetLocalHostAddresses(out prgpAddress: IDirectPlay8Address; var pcAddress: DWORD; dwFlags: DWORD): HResult; stdcall;
@@ -3450,4 +3451,3 @@ begin
 end;
 
 end.
-

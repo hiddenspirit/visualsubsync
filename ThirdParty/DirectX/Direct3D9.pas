@@ -5,17 +5,15 @@
 {*  Files:      d3d9types.h d3d9caps.h d3d9.h                                 *}
 {*  Content:    Direct3D9 include files                                       *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
-{*                                                                            *}
-{*  Modified: 28-Jul-2004                                                     *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
-{*  This File contains only Direct3D 9.0 definitions.                         *}
-{*  If you want to use previous versions - use Direct3D.pas and Direct3D8.pas *}
-{*                                                                            *}
+{*----------------------------------------------------------------------------*}
+{*  $Id: Direct3D9.pas,v 1.13 2006/10/22 22:00:33 clootie Exp $ }
 {******************************************************************************}
 {                                                                              }
 { Obtained through: Joint Endeavour of Delphi Innovators (Project JEDI)        }
@@ -93,26 +91,26 @@ type
 // maps unsigned 8 bits/channel to D3DCOLOR
 // #define D3DCOLOR_ARGB(a,r,g,b) \
 //     ((D3DCOLOR)((((a)&0xff)<<24)|(((r)&0xff)<<16)|(((g)&0xff)<<8)|((b)&0xff)))
-function D3DCOLOR_ARGB(a,r,g,b: DWord): TD3DColor;
+function D3DCOLOR_ARGB(a,r,g,b: DWord): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_ARGB}
 // #define D3DCOLOR_RGBA(r,g,b,a) D3DCOLOR_ARGB(a,r,g,b)
-function D3DCOLOR_RGBA(r,g,b,a: DWord): TD3DColor;
+function D3DCOLOR_RGBA(r,g,b,a: DWord): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_RGBA}
 // #define D3DCOLOR_XRGB(r,g,b)   D3DCOLOR_ARGB(0xff,r,g,b)
-function D3DCOLOR_XRGB(r,g,b: DWord): TD3DColor;
+function D3DCOLOR_XRGB(r,g,b: DWord): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_XRGB}
 
 // #define D3DCOLOR_XYUV(y,u,v)   D3DCOLOR_ARGB(0xff,y,u,v)
-function D3DCOLOR_XYUV(y,u,v: DWord): TD3DColor;
+function D3DCOLOR_XYUV(y,u,v: DWord): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_XYUV}
 // #define D3DCOLOR_AYUV(a,y,u,v) D3DCOLOR_ARGB(a,y,u,v)
-function D3DCOLOR_AYUV(a,y,u,v: DWord): TD3DColor;
+function D3DCOLOR_AYUV(a,y,u,v: DWord): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_AYUV}
 
 // maps floating point channels (0.f to 1.f range) to D3DCOLOR
 // #define D3DCOLOR_COLORVALUE(r,g,b,a) \
 //     D3DCOLOR_RGBA((DWORD)((r)*255.f),(DWORD)((g)*255.f),(DWORD)((b)*255.f),(DWORD)((a)*255.f))
-function D3DCOLOR_COLORVALUE(r,g,b,a: Single): TD3DColor;
+function D3DCOLOR_COLORVALUE(r,g,b,a: Single): TD3DColor;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DCOLOR_COLORVALUE}
 
 type
@@ -385,6 +383,12 @@ const
   {$EXTERNALSYM D3DBLEND_BLENDFACTOR}
   D3DBLEND_INVBLENDFACTOR    = 15; (* Only supported if D3DPBLENDCAPS_BLENDFACTOR is on *)
   {$EXTERNALSYM D3DBLEND_INVBLENDFACTOR}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DBLEND_SRCCOLOR2         = 16;
+  {$EXTERNALSYM D3DBLEND_SRCCOLOR2}
+  D3DBLEND_INVSRCCOLOR2      = 17;
+  {$EXTERNALSYM D3DBLEND_INVSRCCOLOR2}
+{$ENDIF}
 
 type
   _D3DBLENDOP = {$IFDEF TYPE_IDENTITY}type {$ENDIF}DWord;
@@ -594,7 +598,7 @@ type
   TD3DTransformStateType = _D3DTRANSFORMSTATETYPE;
 
 // #define D3DTS_WORLDMATRIX(index) (D3DTRANSFORMSTATETYPE)(index + 256)
-function D3DTS_WORLDMATRIX(index: Byte): TD3DTransformStateType;
+function D3DTS_WORLDMATRIX(index: Byte): TD3DTransformStateType;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DTS_WORLDMATRIX}
 
 const
@@ -1295,6 +1299,10 @@ const
   {$EXTERNALSYM D3DTEXF_PYRAMIDALQUAD}
   D3DTEXF_GAUSSIANQUAD    = 7;    // 4-sample gaussian
   {$EXTERNALSYM D3DTEXF_GAUSSIANQUAD}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DTEXF_CONVOLUTIONMONO = 8;    // Convolution filter for monochrome textures
+  {$EXTERNALSYM D3DTEXF_CONVOLUTIONMONO}
+{$ENDIF}
 
 const
   { Bits for Flags in ProcessVertices call }
@@ -1523,6 +1531,14 @@ const
 const
   D3DDP_MAXTEXCOORD   = 8;
   {$EXTERNALSYM D3DDP_MAXTEXCOORD}
+
+//---------------------------------------------------------------------
+// Values for IDirect3DDevice9::SetStreamSourceFreq's Setting parameter
+//---------------------------------------------------------------------
+  D3DSTREAMSOURCE_INDEXEDDATA  = LongWord(1 shl 30);
+  {$EXTERNALSYM D3DSTREAMSOURCE_INDEXEDDATA}
+  D3DSTREAMSOURCE_INSTANCEDATA = LongWord(2 shl 30);
+  {$EXTERNALSYM D3DSTREAMSOURCE_INSTANCEDATA}
 
 
 //---------------------------------------------------------------------
@@ -2213,20 +2229,20 @@ const
 
 // pixel shader version token
 //#define D3DPS_VERSION(_Major,_Minor) (0xFFFF0000|((_Major)<<8)|(_Minor))
-function D3DPS_VERSION(_Major, _Minor: DWord): DWord;
+function D3DPS_VERSION(_Major, _Minor: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DPS_VERSION}
 
 // vertex shader version token
 //#define D3DVS_VERSION(_Major,_Minor) (0xFFFE0000|((_Major)<<8)|(_Minor))
-function D3DVS_VERSION(_Major, _Minor: DWord): DWord;
+function D3DVS_VERSION(_Major, _Minor: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DVS_VERSION}
 
 // extract major/minor from version cap
 //#define D3DSHADER_VERSION_MAJOR(_Version) (((_Version)>>8)&0xFF)
-function D3DSHADER_VERSION_MAJOR(_Version: DWord): DWord;
+function D3DSHADER_VERSION_MAJOR(_Version: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DSHADER_VERSION_MAJOR}
 //#define D3DSHADER_VERSION_MINOR(_Version) (((_Version)>>0)&0xFF)
-function D3DSHADER_VERSION_MINOR(_Version: DWord): DWord;
+function D3DSHADER_VERSION_MINOR(_Version: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DSHADER_VERSION_MINOR}
 
 const
@@ -2238,7 +2254,7 @@ const
 
 //#define D3DSHADER_COMMENT(_DWordSize) \
 //    ((((_DWordSize)<<D3DSI_COMMENTSIZE_SHIFT)&D3DSI_COMMENTSIZE_MASK)|D3DSIO_COMMENT)
-function D3DSHADER_COMMENT(_DWordSize: DWord) : DWord;
+function D3DSHADER_COMMENT(_DWordSize: DWord) : DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DSHADER_COMMENT}
 
 const
@@ -2371,16 +2387,16 @@ const
   {$EXTERNALSYM D3DFVF_TEXTUREFORMAT4}
 
 //#define D3DFVF_TEXCOORDSIZE3(CoordIndex) (D3DFVF_TEXTUREFORMAT3 << (CoordIndex*2 + 16))
-function D3DFVF_TEXCOORDSIZE3(CoordIndex: DWord): DWord;
+function D3DFVF_TEXCOORDSIZE3(CoordIndex: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DFVF_TEXCOORDSIZE3}
 //#define D3DFVF_TEXCOORDSIZE2(CoordIndex) (D3DFVF_TEXTUREFORMAT2)
-function D3DFVF_TEXCOORDSIZE2(CoordIndex: DWord): DWord;
+function D3DFVF_TEXCOORDSIZE2(CoordIndex: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DFVF_TEXCOORDSIZE2}
 //#define D3DFVF_TEXCOORDSIZE4(CoordIndex) (D3DFVF_TEXTUREFORMAT4 << (CoordIndex*2 + 16))
-function D3DFVF_TEXCOORDSIZE4(CoordIndex: DWord): DWord;
+function D3DFVF_TEXCOORDSIZE4(CoordIndex: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DFVF_TEXCOORDSIZE4}
 //#define D3DFVF_TEXCOORDSIZE1(CoordIndex) (D3DFVF_TEXTUREFORMAT1 << (CoordIndex*2 + 16))
-function D3DFVF_TEXCOORDSIZE1(CoordIndex: DWord): DWord;
+function D3DFVF_TEXCOORDSIZE1(CoordIndex: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM D3DFVF_TEXCOORDSIZE1}
 
 
@@ -2393,11 +2409,15 @@ type
     D3DDEVTYPE_INVALID_0,
     D3DDEVTYPE_HAL         {= 1},
     D3DDEVTYPE_REF         {= 2},
-    D3DDEVTYPE_SW          {= 3}
+    D3DDEVTYPE_SW          {= 3},
+
+    D3DDEVTYPE_NULLREF     {= 4}
   {$ELSE}
     D3DDEVTYPE_HAL         = 1,
     D3DDEVTYPE_REF         = 2,
-    D3DDEVTYPE_SW          = 3
+    D3DDEVTYPE_SW          = 3,
+
+    D3DDEVTYPE_NULLREF     = 4
   {$ENDIF}
   );
   {$EXTERNALSYM _D3DDEVTYPE}
@@ -2486,7 +2506,7 @@ type
 //    #define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
 //                ((DWORD)(BYTE)(ch0) | ((DWORD)(BYTE)(ch1) << 8) |       \
 //                ((DWORD)(BYTE)(ch2) << 16) | ((DWORD)(BYTE)(ch3) << 24 ))
-function MAKEFOURCC(ch0, ch1, ch2, ch3: Char): DWord;
+function MAKEFOURCC(ch0, ch1, ch2, ch3: Char): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM MAKEFOURCC}
 
 
@@ -2604,6 +2624,15 @@ const
   D3DFMT_D24FS8               = 83;
   {$EXTERNALSYM D3DFMT_D24FS8}
 
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  (* Z-Stencil formats valid for CPU access *)
+  D3DFMT_D32_LOCKABLE         = 84;
+  {$EXTERNALSYM D3DFMT_D32_LOCKABLE}
+  D3DFMT_S8_LOCKABLE          = 85;
+  {$EXTERNALSYM D3DFMT_S8_LOCKABLE}
+
+
+{$ENDIF}
 
   D3DFMT_L16                  = 81;
   {$EXTERNALSYM D3DFMT_L16}
@@ -2643,6 +2672,18 @@ const
 
   D3DFMT_CxV8U8               = 117;
   {$EXTERNALSYM D3DFMT_CxV8U8}
+
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  // Monochrome 1 bit per pixel format
+  D3DFMT_A1                   = 118;
+  {$EXTERNALSYM D3DFMT_A1}
+
+
+  // Binary format indicating that the data has no inherent type
+  D3DFMT_BINARYBUFFER         = 199;
+  {$EXTERNALSYM D3DFMT_BINARYBUFFER}
+
+{$ENDIF}
 
   // ATI - 3Dc/ATI2N texture format
   // D3DFMT_ATI2                 = MAKEFOURCC('A', 'T', 'I', '2'),
@@ -2723,6 +2764,13 @@ type
     D3DFMT_D32F_LOCKABLE        = 82,
     D3DFMT_D24FS8               = 83,
 
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+    (* Z-Stencil formats valid for CPU access *)
+    D3DFMT_D32_LOCKABLE         = 84,
+    D3DFMT_S8_LOCKABLE          = 85,
+
+
+{$ENDIF}
 
     D3DFMT_L16                  = 81,
 
@@ -2749,6 +2797,15 @@ type
 
     D3DFMT_CxV8U8               = 117,
 
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+    // Monochrome 1 bit per pixel format
+    D3DFMT_A1                   = 118,
+
+
+    // Binary format indicating that the data has no inherent type
+    D3DFMT_BINARYBUFFER         = 199,
+
+{$ENDIF}
 
     D3DFMT_FORCE_DWORD          = $7fffffff
   );
@@ -2861,6 +2918,13 @@ const
   {$EXTERNALSYM D3DPRESENTFLAG_DEVICECLIP}
   D3DPRESENTFLAG_VIDEO                = $00000010;
   {$EXTERNALSYM D3DPRESENTFLAG_VIDEO}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DPRESENTFLAG_NOAUTOROTATE         = $00000020;
+  {$EXTERNALSYM D3DPRESENTFLAG_NOAUTOROTATE}
+  D3DPRESENTFLAG_UNPRUNEDMODE         = $00000040;
+  {$EXTERNALSYM D3DPRESENTFLAG_UNPRUNEDMODE}
+
+{$ENDIF}
 
   { Gamma Ramp: Same as DX7 }
 
@@ -2898,7 +2962,7 @@ type
     D3DRTYPE_VOLUMETEXTURE          {=  4},
     D3DRTYPE_CUBETEXTURE            {=  5},
     D3DRTYPE_VERTEXBUFFER           {=  6},
-    D3DRTYPE_INDEXBUFFER            {=  7}
+    D3DRTYPE_INDEXBUFFER            {=  7}  //if this changes, change _D3DDEVINFO_RESOURCEMANAGER definition
   {$ELSE}
     D3DRTYPE_SURFACE                =  1,
     D3DRTYPE_VOLUME                 =  2,
@@ -2906,7 +2970,7 @@ type
     D3DRTYPE_VOLUMETEXTURE          =  4,
     D3DRTYPE_CUBETEXTURE            =  5,
     D3DRTYPE_VERTEXBUFFER           =  6,
-    D3DRTYPE_INDEXBUFFER            =  7
+    D3DRTYPE_INDEXBUFFER            =  7   //if this changes, change _D3DDEVINFO_RESOURCEMANAGER definition
   {$ENDIF}
   );
   {$EXTERNALSYM _D3DRESOURCETYPE}
@@ -2922,6 +2986,10 @@ const
   {$EXTERNALSYM D3DUSAGE_DEPTHSTENCIL}
   D3DUSAGE_DYNAMIC            = $00000200;
   {$EXTERNALSYM D3DUSAGE_DYNAMIC}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DUSAGE_NONSECURE          = $00800000;
+  {$EXTERNALSYM D3DUSAGE_NONSECURE}
+{$ENDIF}
 
   // When passed to CheckDeviceFormat, D3DUSAGE_AUTOGENMIPMAP may return
   // D3DOK_NOAUTOGEN if the device doesn't support autogeneration for that format.
@@ -2945,6 +3013,8 @@ const
   {$EXTERNALSYM D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING}
   D3DUSAGE_QUERY_VERTEXTEXTURE            = $00100000;
   {$EXTERNALSYM D3DUSAGE_QUERY_VERTEXTEXTURE}
+  D3DUSAGE_QUERY_WRAPANDMIP               = $00200000;
+  {$EXTERNALSYM D3DUSAGE_QUERY_WRAPANDMIP}
 
 
   { Usages for Vertex/Index buffers }
@@ -3231,6 +3301,24 @@ const
   {$EXTERNALSYM D3DQUERYTYPE_EVENT}
   D3DQUERYTYPE_OCCLUSION              = 9; { D3DISSUE_BEGIN, D3DISSUE_END }
   {$EXTERNALSYM D3DQUERYTYPE_OCCLUSION}
+  D3DQUERYTYPE_TIMESTAMP              = 10; { D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_TIMESTAMP}
+  D3DQUERYTYPE_TIMESTAMPDISJOINT      = 11; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_TIMESTAMPDISJOINT}
+  D3DQUERYTYPE_TIMESTAMPFREQ          = 12; { D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_TIMESTAMPFREQ}
+  D3DQUERYTYPE_PIPELINETIMINGS        = 13; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_PIPELINETIMINGS}
+  D3DQUERYTYPE_INTERFACETIMINGS       = 14; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_INTERFACETIMINGS}
+  D3DQUERYTYPE_VERTEXTIMINGS          = 15; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_VERTEXTIMINGS}
+  D3DQUERYTYPE_PIXELTIMINGS           = 16; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_PIXELTIMINGS}
+  D3DQUERYTYPE_BANDWIDTHTIMINGS       = 17; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_BANDWIDTHTIMINGS}
+  D3DQUERYTYPE_CACHEUTILIZATION       = 18; { D3DISSUE_BEGIN, D3DISSUE_END }
+  {$EXTERNALSYM D3DQUERYTYPE_CACHEUTILIZATION}
 type
   _D3DQUERYTYPE = {$IFDEF TYPE_IDENTITY}type {$ENDIF}DWord;
 {$ELSE}
@@ -3242,7 +3330,16 @@ type
     D3DQUERYTYPE_RESOURCEMANAGER        = 5, { D3DISSUE_END }
     D3DQUERYTYPE_VERTEXSTATS            = 6, { D3DISSUE_END }
     D3DQUERYTYPE_EVENT                  = 8, { D3DISSUE_END }
-    D3DQUERYTYPE_OCCLUSION              = 9  { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_OCCLUSION              = 9,  { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_TIMESTAMP              = 10, { D3DISSUE_END }
+    D3DQUERYTYPE_TIMESTAMPDISJOINT      = 11, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_TIMESTAMPFREQ          = 12, { D3DISSUE_END }
+    D3DQUERYTYPE_PIPELINETIMINGS        = 13, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_INTERFACETIMINGS       = 14, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_VERTEXTIMINGS          = 15, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_PIXELTIMINGS           = 16, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_BANDWIDTHTIMINGS       = 17, { D3DISSUE_BEGIN, D3DISSUE_END }
+    D3DQUERYTYPE_CACHEUTILIZATION       = 18  { D3DISSUE_BEGIN, D3DISSUE_END }
   );
   {$MINENUMSIZE 4} // Restores enums to be 4 byte in size
 {$ENDIF}
@@ -3292,7 +3389,11 @@ const
 type
   PD3DDevInfoResourceManager = ^TD3DDevInfoResourceManager;
   _D3DDEVINFO_RESOURCEMANAGER = packed record
+//#ifndef WOW64_ENUM_WORKAROUND
     stats: array [0..D3DRTYPECOUNT-1] of TD3DResourceStats;
+//#else
+//  stats: array[0..7] of TD3DResourceStats; 
+//#endif
   end;
   {$EXTERNALSYM _D3DDEVINFO_RESOURCEMANAGER}
   D3DDEVINFO_RESOURCEMANAGER = _D3DDEVINFO_RESOURCEMANAGER;
@@ -3321,6 +3422,181 @@ type
   {$EXTERNALSYM D3DDEVINFO_VCACHE}
   TD3DDevInfoVCache = _D3DDEVINFO_VCACHE;
 
+
+  PD3DDevInfoD3D9PipelineTimings = ^TD3DDevInfoD3D9PipelineTimings;
+  _D3DDEVINFO_D3D9PIPELINETIMINGS = packed record
+    VertexProcessingTimePercent: Single;
+    PixelProcessingTimePercent: Single;
+    OtherGPUProcessingTimePercent: Single;
+    GPUIdleTimePercent: Single;
+  end;
+  {$EXTERNALSYM _D3DDEVINFO_D3D9PIPELINETIMINGS}
+  D3DDEVINFO_D3D9PIPELINETIMINGS = _D3DDEVINFO_D3D9PIPELINETIMINGS;
+  {$EXTERNALSYM D3DDEVINFO_D3D9PIPELINETIMINGS}
+  TD3DDevInfoD3D9PipelineTimings = _D3DDEVINFO_D3D9PIPELINETIMINGS;
+
+  PD3DDevInfoD3D9InterfaceTimings = ^TD3DDevInfoD3D9InterfaceTimings;
+  _D3DDEVINFO_D3D9INTERFACETIMINGS = packed record
+    WaitingForGPUToUseApplicationResourceTimePercent: Single;
+    WaitingForGPUToAcceptMoreCommandsTimePercent: Single;
+    WaitingForGPUToStayWithinLatencyTimePercent: Single;
+    WaitingForGPUExclusiveResourceTimePercent: Single;
+    WaitingForGPUOtherTimePercent: Single;
+  end;
+  {$EXTERNALSYM _D3DDEVINFO_D3D9INTERFACETIMINGS}
+  D3DDEVINFO_D3D9INTERFACETIMINGS = _D3DDEVINFO_D3D9INTERFACETIMINGS;
+  {$EXTERNALSYM D3DDEVINFO_D3D9INTERFACETIMINGS}
+  TD3DDevInfoD3D9InterfaceTimings = _D3DDEVINFO_D3D9INTERFACETIMINGS;
+
+  PD3DDevInfoD3D9StageTimings = ^TD3DDevInfoD3D9StageTimings;
+  _D3DDEVINFO_D3D9STAGETIMINGS = packed record
+    MemoryProcessingPercent: Single;
+    ComputationProcessingPercent: Single;
+  end;
+  {$EXTERNALSYM _D3DDEVINFO_D3D9STAGETIMINGS}
+  D3DDEVINFO_D3D9STAGETIMINGS = _D3DDEVINFO_D3D9STAGETIMINGS;
+  {$EXTERNALSYM D3DDEVINFO_D3D9STAGETIMINGS}
+  TD3DDevInfoD3D9StageTimings = _D3DDEVINFO_D3D9STAGETIMINGS;
+
+  PD3DDevInfoD3D9BandwidthTimings = ^TD3DDevInfoD3D9BandwidthTimings;
+  _D3DDEVINFO_D3D9BANDWIDTHTIMINGS = packed record
+    MaxBandwidthUtilized: Single;
+    FrontEndUploadMemoryUtilizedPercent: Single;
+    VertexRateUtilizedPercent: Single;
+    TriangleSetupRateUtilizedPercent: Single;
+    FillRateUtilizedPercent: Single;
+  end;
+  {$EXTERNALSYM _D3DDEVINFO_D3D9BANDWIDTHTIMINGS}
+  D3DDEVINFO_D3D9BANDWIDTHTIMINGS = _D3DDEVINFO_D3D9BANDWIDTHTIMINGS;
+  {$EXTERNALSYM D3DDEVINFO_D3D9BANDWIDTHTIMINGS}
+  TD3DDevInfoD3D9BandwidthTimings = _D3DDEVINFO_D3D9BANDWIDTHTIMINGS;
+
+  PD3DDevInfoD3D9CacheUtilization = ^TD3DDevInfoD3D9CacheUtilization;
+  _D3DDEVINFO_D3D9CACHEUTILIZATION = packed record
+    TextureCacheHitRate: Single; // Percentage of cache hits
+    PostTransformVertexCacheHitRate: Single;
+  end;
+  {$EXTERNALSYM _D3DDEVINFO_D3D9CACHEUTILIZATION}
+  D3DDEVINFO_D3D9CACHEUTILIZATION = _D3DDEVINFO_D3D9CACHEUTILIZATION;
+  {$EXTERNALSYM D3DDEVINFO_D3D9CACHEUTILIZATION}
+  TD3DDevInfoD3D9CacheUtilization = _D3DDEVINFO_D3D9CACHEUTILIZATION;
+
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+
+  PD3DComposeRectsOp = ^TD3DComposeRectsOp;
+  _D3DCOMPOSERECTSOP =
+  (
+    D3DCOMPOSERECTS_INVALID_0,
+    D3DCOMPOSERECTS_COPY     {= 1},
+    D3DCOMPOSERECTS_OR       {= 2},
+    D3DCOMPOSERECTS_AND      {= 3},
+    D3DCOMPOSERECTS_NEG      {= 4}
+  );
+  {$EXTERNALSYM _D3DCOMPOSERECTSOP}
+  D3DCOMPOSERECTSOP = _D3DCOMPOSERECTSOP;
+  {$EXTERNALSYM D3DCOMPOSERECTSOP}
+  TD3DComposeRectsOp = _D3DCOMPOSERECTSOP;
+
+  PD3DComposeRectDesc = ^TD3DComposeRectDesc;
+  _D3DCOMPOSERECTDESC = record
+    X, Y: Word;           // Top-left coordinates of a rect in the source surface
+    Width, Height: Word;  // Dimensions of the rect
+  end;
+  {$EXTERNALSYM _D3DCOMPOSERECTDESC}
+  D3DCOMPOSERECTDESC = _D3DCOMPOSERECTDESC;
+  {$EXTERNALSYM D3DCOMPOSERECTDESC}
+  TD3DComposeRectDesc = _D3DCOMPOSERECTDESC;
+
+  PD3DComposeRectDestination = ^TD3DComposeRectDestination;
+  _D3DCOMPOSERECTDESTINATION = record
+    SrcRectIndex: Word;    // Index of D3DCOMPOSERECTDESC
+    Reserved: Word;        // For alignment
+    X, Y:  Smallint;       // Top-left coordinates of the rect in the destination surface
+  end;
+  {$EXTERNALSYM _D3DCOMPOSERECTDESTINATION}
+  D3DCOMPOSERECTDESTINATION = _D3DCOMPOSERECTDESTINATION;
+  {$EXTERNALSYM D3DCOMPOSERECTDESTINATION}
+  TD3DComposeRectDestination = _D3DCOMPOSERECTDESTINATION;
+
+const
+  D3DCOMPOSERECTS_MAXNUMRECTS = $FFFF;
+  {$EXTERNALSYM D3DCOMPOSERECTS_MAXNUMRECTS}
+  D3DCONVOLUTIONMONO_MAXWIDTH  = 7;
+  {$EXTERNALSYM D3DCONVOLUTIONMONO_MAXWIDTH}
+  D3DCONVOLUTIONMONO_MAXHEIGHT = D3DCONVOLUTIONMONO_MAXWIDTH;
+  {$EXTERNALSYM D3DCONVOLUTIONMONO_MAXHEIGHT}
+  D3DFMT_A1_SURFACE_MAXWIDTH  = 8192;
+  {$EXTERNALSYM D3DFMT_A1_SURFACE_MAXWIDTH}
+  D3DFMT_A1_SURFACE_MAXHEIGHT = 2048;
+  {$EXTERNALSYM D3DFMT_A1_SURFACE_MAXHEIGHT}
+
+
+type
+  PD3DPresentStats = ^TD3DPresentStats;
+  _D3DPRESENTSTATS = record
+    PresentCount: LongWord;
+    PresentRefreshCount: LongWord;
+    SyncRefreshCount: LongWord;
+    SyncQPCTime: LARGE_INTEGER;
+    SyncGPUTime: LARGE_INTEGER;
+  end;
+  {$EXTERNALSYM _D3DPRESENTSTATS}
+  D3DPRESENTSTATS = _D3DPRESENTSTATS;
+  {$EXTERNALSYM D3DPRESENTSTATS}
+  TD3DPresentStats = _D3DPRESENTSTATS;
+
+  PD3DScanlineOrdering = ^TD3DScanlineOrdering;
+  D3DSCANLINEORDERING = (
+    D3DSCANLINEORDERING_INVALID_0,
+    D3DSCANLINEORDERING_PROGRESSIVE                {= 1},
+    D3DSCANLINEORDERING_INTERLACED                 {= 2}
+  );
+  {$EXTERNALSYM D3DSCANLINEORDERING}
+  TD3DScanlineOrdering = D3DSCANLINEORDERING;
+
+
+  PD3DDisplayModeEx = ^TD3DDisplayModeEx;
+  D3DDISPLAYMODEEX = record
+    Size: LongWord;
+    Width: LongWord;
+    Height: LongWord;
+    RefreshRate: LongWord;
+    Format: TD3DFormat;
+    ScanLineOrdering: TD3DScanlineOrdering;
+  end;
+  {$EXTERNALSYM D3DDISPLAYMODEEX}
+  TD3DDisplayModeEx = D3DDISPLAYMODEEX;
+
+  PD3DDisplayModeFilter = ^TD3DDisplayModeFilter;
+  D3DDISPLAYMODEFILTER = record
+    Size: LongWord;
+    Format: TD3DFormat;
+    ScanLineOrdering: TD3DScanlineOrdering;
+  end;
+  {$EXTERNALSYM D3DDISPLAYMODEFILTER}
+  TD3DDisplayModeFilter = D3DDISPLAYMODEFILTER;
+
+
+  PD3DDisplayRotation = ^TD3DDisplayRotation;
+  D3DDISPLAYROTATION =
+  (
+  {$IFNDEF SUPPORTS_EXPL_ENUMS}
+    D3DDISPLAYROTATION_INVALID_0,
+    D3DDISPLAYROTATION_IDENTITY {= 1}, // No rotation.
+    D3DDISPLAYROTATION_90       {= 2}, // Rotated 90 degrees.
+    D3DDISPLAYROTATION_180      {= 3}, // Rotated 180 degrees.
+    D3DDISPLAYROTATION_270      {= 4}  // Rotated 270 degrees.
+  {$ELSE}
+    D3DDISPLAYROTATION_IDENTITY = 1, // No rotation.
+    D3DDISPLAYROTATION_90       = 2, // Rotated 90 degrees.
+    D3DDISPLAYROTATION_180      = 3, // Rotated 180 degrees.
+    D3DDISPLAYROTATION_270      = 4  // Rotated 270 degrees.
+  {$ENDIF}
+  );
+  {$EXTERNALSYM D3DDISPLAYROTATION}
+  TD3DDisplayRotation = D3DDISPLAYROTATION;
+
+{$ENDIF}
 
 
 
@@ -3537,6 +3813,10 @@ const
   {$EXTERNALSYM D3DCAPS2_DYNAMICTEXTURES}
   D3DCAPS2_CANAUTOGENMIPMAP     = $40000000;
   {$EXTERNALSYM D3DCAPS2_CANAUTOGENMIPMAP}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DCAPS2_CANSHARERESOURCE     = $80000000;
+  {$EXTERNALSYM D3DCAPS2_CANSHARERESOURCE}
+{$ENDIF}
 
   //
   // Caps3
@@ -3669,6 +3949,10 @@ const
   {$EXTERNALSYM D3DPMISCCAPS_MRTPOSTPIXELSHADERBLENDING}
   D3DPMISCCAPS_FOGVERTEXCLAMPED           = $00100000; { Device clamps fog blend factor per vertex }
   {$EXTERNALSYM D3DPMISCCAPS_FOGVERTEXCLAMPED}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DPMISCCAPS_POSTBLENDSRGBCONVERT       = $00200000; { Indicates device can perform conversion to sRGB after blending. }
+  {$EXTERNALSYM D3DPMISCCAPS_POSTBLENDSRGBCONVERT}
+{$ENDIF}
 
   //
   // LineCaps
@@ -3844,6 +4128,10 @@ const
   {$EXTERNALSYM D3DPTFILTERCAPS_MIPFPOINT}
   D3DPTFILTERCAPS_MIPFLINEAR            = $00020000;
   {$EXTERNALSYM D3DPTFILTERCAPS_MIPFLINEAR}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DPTFILTERCAPS_CONVOLUTIONMONO       = $00040000; { Min and Mag for the convolution mono filter }
+  {$EXTERNALSYM D3DPTFILTERCAPS_CONVOLUTIONMONO}
+{$ENDIF}
   D3DPTFILTERCAPS_MAGFPOINT             = $01000000; { Mag Filter }
   {$EXTERNALSYM D3DPTFILTERCAPS_MAGFPOINT}
   D3DPTFILTERCAPS_MAGFLINEAR            = $02000000;
@@ -4041,8 +4329,10 @@ const
  * (The number itself has no meaning.)*)
 
 const
-  D3D_SDK_VERSION = DWORD(31);
+  D3D_SDK_VERSION   = (32 or $80000000);
+  D3D9b_SDK_VERSION = (31 or $80000000);
   {$EXTERNALSYM D3D_SDK_VERSION}
+  {$EXTERNALSYM D3D9b_SDK_VERSION}
 
 type
   HMONITOR = THandle;
@@ -4055,6 +4345,9 @@ type
   // forward interfaces declaration
   IDirect3D9 = interface;
   IDirect3DDevice9 = interface;
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  IDirect3DDevice9Ex = interface;
+{$ENDIF}
   IDirect3DStateBlock9 = interface;
   IDirect3DVertexDeclaration9 = interface;
   IDirect3DVertexShader9 = interface;
@@ -4092,6 +4385,27 @@ type
     function GetAdapterMonitor(Adapter: LongWord): HMONITOR; stdcall;
     function CreateDevice(Adapter: LongWord; DeviceType: TD3DDevType; hFocusWindow: HWND; BehaviorFlags: DWord; pPresentationParameters: PD3DPresentParameters; out ppReturnedDeviceInterface: IDirect3DDevice9): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3D9Helper}
+  IDirect3D9Helper = class
+    (*** helper information ***)
+    szVersionString: PWideChar;
+  end;
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+
+
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3D9Ex);'}
+  {$EXTERNALSYM IDirect3D9Ex}
+  IDirect3D9Ex = interface(IDirect3D9)
+    ['{02177241-69FC-400C-8FF1-93A44DF6861D}']
+    (*** IDirect3D9Ex methods ***)
+    function GetAdapterModeCountEx(Adapter: LongWord; const pFilter: PD3DDisplayModeFilter): LongWord; stdcall;
+    function EnumAdapterModesEx(Adapter: LongWord; const pFilter: PD3DDisplayModeFilter; Mode: LongWord; pMode: PD3DDisplayModeEx): HResult; stdcall;
+    function GetAdapterDisplayModeEx(Adapter: LongWord; pMode: PD3DDisplayModeEx; pRotation: PD3DDisplayRotation): HResult; stdcall;
+    function CreateDeviceEx(Adapter: LongWord; DeviceType: TD3DDevType; hFocusWindow: HWND; BehaviorFlags: DWORD; pPresentationParameters: PD3DPresentParameters; pFullscreenDisplayMode: PD3DDisplayModeEx; out ppReturnedDeviceInterface: IDirect3DDevice9Ex): HResult; stdcall;
+    function GetAdapterLUID(Adapter: LongWord; pLUID: PLargeInteger{*LUID}): HResult; stdcall;
+  end;
+{$ENDIF}
 
 
 
@@ -4224,6 +4538,72 @@ type
     function CreateQuery(_Type: TD3DQueryType; out ppQuery: IDirect3DQuery9): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DDevice9Helper}
+  IDirect3DDevice9Helper = class
+    (*** helper information ***)
+    CreationParameters: TD3DDeviceCreationParameters;
+    PresentParameters: TD3DPresentParameters;
+    DisplayMode: TD3DDisplayMode;
+    Caps: TD3DCaps9;
+
+    AvailableTextureMem: LongWord;
+    SwapChains: LongWord;
+    Textures: LongWord;
+    VertexBuffers: LongWord;
+    IndexBuffers: LongWord;
+    VertexShaders: LongWord;
+    PixelShaders: LongWord;
+
+    Viewport: TD3DViewport9;
+    ProjectionMatrix: TD3DMatrix;
+    ViewMatrix: TD3DMatrix;
+    WorldMatrix: TD3DMatrix;
+    TextureMatrices: array[0..7] of TD3DMatrix;
+
+    FVF: DWORD;
+    VertexSize: LongWord;
+    VertexShaderVersion: DWORD;
+    PixelShaderVersion: DWORD;
+    SoftwareVertexProcessing: BOOL;
+
+    Material: TD3DMaterial9;
+    Lights: array[0..15] of  TD3DLight9;
+    LightsEnabled: array[0..15] of BOOL;
+
+    GammaRamp: TD3DGammaRamp;
+    ScissorRect: TRect;
+    DialogBoxMode: BOOL;
+  end;
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+
+
+  PIDirect3DResource9 = ^IDirect3DResource9;
+  {$EXTERNALSYM PIDirect3DResource9}
+
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DDevice9Ex);'}
+  {$EXTERNALSYM IDirect3DDevice9Ex}
+  IDirect3DDevice9Ex = interface(IDirect3DDevice9)
+    ['{B18B10CE-2649-405a-870F-95F777D4313A}']
+    (*** IDirect3DDevice9Ex methods ***)
+    function SetConvolutionMonoKernel(Width, Height: LongWord; rows, columns: PSingle): HResult; stdcall;
+    function ComposeRects(pSrc, pDst: IDirect3DSurface9; pSrcRectDescs: IDirect3DVertexBuffer9; NumRects: LongWord; pDstRectDescs: IDirect3DVertexBuffer9; Operation: TD3DComposeRectsOp; Xoffset, Yoffset: Integer): HResult; stdcall;
+    function PresentEx(const pSourceRect, pDestRect: PRect; hDestWindowOverride: HWND; const pDirtyRegion: PRgnData; dwFlags: DWORD): HResult; stdcall;
+    function GetGPUThreadPriority(out pPriority: Integer): HResult; stdcall;
+    function SetGPUThreadPriority(Priority: Integer): HResult; stdcall;
+    function WaitForVBlank(iSwapChain: LongWord): HResult; stdcall;
+    function CheckResourceResidency(pResourceArray: PIDirect3DResource9; NumResources: LongWord): HResult; stdcall;
+    function SetMaximumFrameLatency(MaxLatency: LongWord): HResult; stdcall;
+    function GetMaximumFrameLatency(out pMaxLatency: LongWord): HResult; stdcall;
+    function CheckDeviceState(hDestinationWindow: HWND): HResult; stdcall;
+    function CreateRenderTargetEx(Width, Height: LongWord; Format: TD3DFormat; MultiSample: TD3DMultiSampleType; MultisampleQuality: DWORD; Lockable: BOOL; out ppSurface: IDirect3DSurface9; pSharedHandle: PHandle; Usage: DWORD): HResult; stdcall;
+    function CreateOffscreenPlainSurfaceEx(Width, Height: LongWord; Format: TD3DFormat; Pool: TD3DPool; out ppSurface: IDirect3DSurface9; pSharedHandle: PHandle; Usage: DWORD): HResult; stdcall;
+    function CreateDepthStencilSurfaceEx(Width, Height: LongWord; Format: TD3DFormat; MultiSample: TD3DMultiSampleType; MultisampleQuality: DWORD; Discard: BOOL; out ppSurface: IDirect3DSurface9; pSharedHandle: PHandle; Usage: DWORD): HResult; stdcall;
+    function ResetEx(const pPresentationParameters: TD3DPresentParameters; const pFullscreenDisplayMode: TD3DDisplayModeEx): HResult; stdcall;
+    function GetDisplayModeEx(iSwapChain: LongWord; pMode: PD3DDisplayModeEx; pRotation: PD3DDisplayRotation): HResult; stdcall;
+  end;
+{$ENDIF}
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DStateBlock9);'}
   {$EXTERNALSYM IDirect3DStateBlock9}
@@ -4234,6 +4614,13 @@ type
     function Capture: HResult; stdcall;
     function Apply: HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DStateBlock9Helper}
+  IDirect3DStateBlock9Helper = class
+    (*** helper information ***)
+    CreationCallStack: PWideChar;
+  end;
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DSwapChain9);'}
@@ -4249,6 +4636,28 @@ type
     function GetDevice(out ppDevice: IDirect3DDevice9): HResult; stdcall;
     function GetPresentParameters(out pPresentationParameters: TD3DPresentParameters): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DSwapChain9Helper}
+  IDirect3DSwapChain9Helper = class
+    (*** helper information ***)
+    PresentParameters: TD3DPresentParameters;
+    DisplayMode: TD3DDisplayMode;
+    CreationCallStack: PWideChar;
+  end;
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+
+
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DSwapChain9Ex);'}
+  {$EXTERNALSYM IDirect3DSwapChain9Ex}
+  IDirect3DSwapChain9Ex = interface(IDirect3DSwapChain9)
+    ['{91886CAF-1C3D-4d2e-A0AB-3E4C7D8D3303}']
+    (*** IDirect3DSwapChain9Ex methods ***)
+    function GetLastPresentCount(out pLastPresentCount: LongWord): HResult; stdcall;
+    function GetPresentStats(out pPresentationStatistics: TD3DPresentStats): HResult; stdcall;
+    function GetDisplayModeEx(pMode: PD3DDisplayModeEx; pRotation: PD3DDisplayRotation): HResult; stdcall;
+  end;
+{$ENDIF}
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DResource9);'}
@@ -4276,6 +4685,13 @@ type
     function GetDeclaration(pElement: PD3DVertexElement9; out pNumElements: LongWord): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DVertexDeclaration9Helper}
+  IDirect3DVertexDeclaration9Helper = class
+    (*** helper information ***)
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DVertexShader9);'}
   {$EXTERNALSYM IDirect3DVertexShader9}
@@ -4286,6 +4702,14 @@ type
     function GetFunction(pData: Pointer; out pSizeOfData: LongWord): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DVertexShader9Helper}
+  IDirect3DVertexShader9Helper = class
+    (*** helper information ***)
+    Version: DWORD;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DPixelShader9);'}
   {$EXTERNALSYM IDirect3DPixelShader9}
@@ -4295,6 +4719,14 @@ type
     function GetDevice(out ppDevice: IDirect3DDevice9): HResult; stdcall;
     function GetFunction(pData: Pointer; out pSizeOfData: LongWord): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DPixelShader9Helper}
+  IDirect3DPixelShader9Helper = class
+    (*** helper information ***)
+    Version: DWORD;
+    CreationCallStack: PWideChar;
+  end;
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DBaseTexture9);'}
@@ -4307,7 +4739,7 @@ type
     function GetLevelCount: DWord; stdcall;
     function SetAutoGenFilterType(FilterType: TD3DTextureFilterType): HResult; stdcall;
     function GetAutoGenFilterType: TD3DTextureFilterType; stdcall;
-    procedure GenerateMipSubLevels;
+    procedure GenerateMipSubLevels; stdcall;
   end;
 
 
@@ -4323,6 +4755,24 @@ type
     function AddDirtyRect(pDirtyRect: PRect): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DTexture9Helper}
+  IDirect3DTexture9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Width: LongWord;
+    Height: LongWord;
+    Levels: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    Priority: DWORD;
+    LOD: DWORD;
+    FilterType: TD3DTextureFilterType;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DVolumeTexture9);'}
   {$EXTERNALSYM IDirect3DVolumeTexture9}
@@ -4335,6 +4785,25 @@ type
     function UnlockBox(Level: LongWord): HResult; stdcall;
     function AddDirtyBox(pDirtyBox: PD3DBox): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DVolumeTexture9Helper}
+  IDirect3DVolumeTexture9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Width: LongWord;
+    Height: LongWord;
+    Depth: LongWord;
+    Levels: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    Priority: DWORD;
+    LOD: DWORD;
+    FilterType: TD3DTextureFilterType;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DCubeTexture9);'}
@@ -4349,6 +4818,25 @@ type
     function AddDirtyRect(FaceType: TD3DCubeMapFaces; pDirtyRect: PRect): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DCubeTexture9Helper}
+  IDirect3DCubeTexture9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Width: LongWord;
+    Height: LongWord;
+    Depth: LongWord;
+    Levels: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    Priority: DWORD;
+    LOD: DWORD;
+    FilterType: TD3DTextureFilterType;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DVertexBuffer9);'}
   {$EXTERNALSYM IDirect3DVertexBuffer9}
@@ -4360,6 +4848,20 @@ type
     function GetDesc(out pDesc: TD3DVertexBufferDesc): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DVertexBuffer9Helper}
+  IDirect3DVertexBuffer9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Length: LongWord;
+    Usage: DWORD;
+    FVF: DWORD;
+    Pool: TD3DPool;
+    Priority: DWORD;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DIndexBuffer9);'}
   {$EXTERNALSYM IDirect3DIndexBuffer9}
@@ -4370,6 +4872,20 @@ type
     function Unlock: HResult; stdcall;
     function GetDesc(out pDesc: TD3DIndexBufferDesc): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DIndexBuffer9Helper}
+  IDirect3DIndexBuffer9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Length: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    Priority: DWORD;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DSurface9);'}
@@ -4384,6 +4900,24 @@ type
     function GetDC(out phdc: HDC): HResult; stdcall;
     function ReleaseDC(hdc: HDC): HResult; stdcall;
   end;
+
+  {$EXTERNALSYM IDirect3DSurface9Helper}
+  IDirect3DSurface9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Width: LongWord;
+    Height: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    MultiSampleType: TD3DMultiSampleType;
+    MultiSampleQuality: DWORD;
+    Priority: DWORD;
+    LockCount: LongWord;
+    DCCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
 
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DVolume9);'}
@@ -4401,6 +4935,21 @@ type
     function UnlockBox: HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DVolume9Helper}
+  IDirect3DVolume9Helper = class
+    (*** helper information ***)
+    Name: PWideChar;
+    Width: LongWord;
+    Height: LongWord;
+    Depth: LongWord;
+    Usage: DWORD;
+    Format: TD3DFormat;
+    Pool: TD3DPool;
+    LockCount: LongWord;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
   {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDirect3DQuery9);'}
   {$EXTERNALSYM IDirect3DQuery9}
@@ -4414,6 +4963,15 @@ type
     function GetData(pData: Pointer; dwSize: DWORD; dwGetDataFlags: DWORD): HResult; stdcall;
   end;
 
+  {$EXTERNALSYM IDirect3DQuery9Helper}
+  IDirect3DQuery9Helper = class
+    (*** helper information ***)
+    _Type: TD3DQueryType;
+    DataSize: DWORD;
+    CreationCallStack: PWideChar;
+  end;
+
+
 
 
 (*
@@ -4422,8 +4980,16 @@ type
 type
   IID_IDirect3D9              = IDirect3D9;
   {$EXTERNALSYM IID_IDirect3D9}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  IID_IDirect3D9Ex            = IDirect3D9Ex;
+  {$EXTERNALSYM IID_IDirect3D9Ex}
+{$ENDIF}
   IID_IDirect3DDevice9        = IDirect3DDevice9;
   {$EXTERNALSYM IID_IDirect3DDevice9}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  IID_IDirect3DDevice9Ex      = IDirect3DDevice9Ex;
+  {$EXTERNALSYM IID_IDirect3DDevice9Ex}
+{$ENDIF}
   IID_IDirect3DResource9      = IDirect3DResource9;
   {$EXTERNALSYM IID_IDirect3DResource9}
   IID_IDirect3DBaseTexture9   = IDirect3DBaseTexture9;
@@ -4444,6 +5010,10 @@ type
   {$EXTERNALSYM IID_IDirect3DVolume9}
   IID_IDirect3DSwapChain9     = IDirect3DSwapChain9;
   {$EXTERNALSYM IID_IDirect3DSwapChain9}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  IID_IDirect3DSwapChain9Ex   = IDirect3DSwapChain9Ex;
+  {$EXTERNALSYM IID_IDirect3DSwapChain9Ex}
+{$ENDIF}
   IID_IDirect3DVertexDeclaration9 = IDirect3DVertexDeclaration9;
   {$EXTERNALSYM IID_IDirect3DVertexDeclaration9}
   IID_IDirect3DVertexShader9  = IDirect3DVertexShader9;
@@ -4454,6 +5024,9 @@ type
   {$EXTERNALSYM IID_IDirect3DStateBlock9}
   IID_IDirect3DQuery9         = IDirect3DQuery9;
   {$EXTERNALSYM IID_IDirect3DQuery9}
+const
+  IID_HelperName : TGUID = '{E4A36723-FDFE-4b22-B146-3C04C07F4CC8}';
+  {$EXTERNALSYM IID_HelperName}
 
 
 
@@ -4494,6 +5067,30 @@ const
   {$EXTERNALSYM D3DCREATE_DISABLE_DRIVER_MANAGEMENT}
   D3DCREATE_ADAPTERGROUP_DEVICE           = $00000200;
   {$EXTERNALSYM D3DCREATE_ADAPTERGROUP_DEVICE}
+  D3DCREATE_DISABLE_DRIVER_MANAGEMENT_EX  = $00000400;
+  {$EXTERNALSYM D3DCREATE_DISABLE_DRIVER_MANAGEMENT_EX}
+
+  // This flag causes the D3D runtime not to alter the focus
+  // window in any way. Use with caution- the burden of supporting
+  // focus management events (alt-tab, etc.) falls on the
+  // application, and appropriate responses (switching display
+  // mode, etc.) should be coded.
+  D3DCREATE_NOWINDOWCHANGES               = $00000800;
+  {$EXTERNALSYM D3DCREATE_NOWINDOWCHANGES}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  // Disable multithreading for software vertex processing
+  D3DCREATE_DISABLE_PSGP_THREADING        = $00002000;
+  {$EXTERNALSYM D3DCREATE_DISABLE_PSGP_THREADING}
+  // This flag enables present statistics on device.
+  D3DCREATE_ENABLE_PRESENTSTATS           = $00004000;
+  {$EXTERNALSYM D3DCREATE_ENABLE_PRESENTSTATS}
+  // This flag disables printscreen support in the runtime for this device
+  D3DCREATE_DISABLE_PRINTSCREEN           = $00008000;
+  {$EXTERNALSYM D3DCREATE_DISABLE_PRINTSCREEN}
+
+  D3DCREATE_SCREENSAVER                   = $10000000;
+  {$EXTERNALSYM D3DCREATE_SCREENSAVER}
+{$ENDIF}
 
 
 (****************************************************************************
@@ -4511,8 +5108,20 @@ const
  *
  ****************************************************************************)
 
-  D3DENUM_WHQL_LEVEL                       = $00000002;
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+(*
+ * The D3DENUM_WHQL_LEVEL value has been retired for this and future versions.
+ * See the DirectX SDK for sample code on discovering driver signatures.
+ *)
+
+(* NO_DRIVERVERSION will not fill out the DriverVersion field, nor will the
+   DriverVersion be incorporated into the DeviceIdentifier GUID. WINNT only *)
+  D3DENUM_NO_DRIVERVERSION                = $00000004;
+  {$EXTERNALSYM D3DENUM_NO_DRIVERVERSION}
+{$ELSE}
+  D3DENUM_WHQL_LEVEL                      = $00000002;
   {$EXTERNALSYM D3DENUM_WHQL_LEVEL}
+{$ENDIF}
 
 (****************************************************************************
  *
@@ -4523,6 +5132,17 @@ const
   D3DPRESENT_BACK_BUFFERS_MAX             = 3;
   {$EXTERNALSYM D3DPRESENT_BACK_BUFFERS_MAX}
 
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+(****************************************************************************
+ *
+ * Maximum number of back-buffers supported when apps use CreateDeviceEx
+ *
+ ****************************************************************************)
+
+  D3DPRESENT_BACK_BUFFERS_MAX_EX          = 30;
+  {$EXTERNALSYM D3DPRESENT_BACK_BUFFERS_MAX_EX}
+
+{$ENDIF}
 (****************************************************************************
  *
  * Flags for IDirect3DDevice9::SetGammaRamp
@@ -4553,6 +5173,12 @@ const
   {$EXTERNALSYM D3DPRESENT_DONOTWAIT}
   D3DPRESENT_LINEAR_CONTENT              = $00000002;
   {$EXTERNALSYM D3DPRESENT_LINEAR_CONTENT}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  D3DPRESENT_DONOTFLIP                   = $00000004;
+  {$EXTERNALSYM D3DPRESENT_DONOTFLIP}
+  D3DPRESENT_FLIPRESTART                 = $00000008;
+  {$EXTERNALSYM D3DPRESENT_FLIPRESTART}
+{$ENDIF}
 
 (****************************************************************************
  *
@@ -4569,10 +5195,10 @@ const
   {$EXTERNALSYM _FACD3D}
 
 //#define MAKE_D3DHRESULT( code )  MAKE_HRESULT( 1, _FACD3D, code )
-function MAKE_D3DHRESULT(Code: DWord): DWord;
+function MAKE_D3DHRESULT(Code: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM MAKE_D3DHRESULT}
 //#define MAKE_D3DSTATUS( code )  MAKE_HRESULT( 0, _FACD3D, code )
-function MAKE_D3DSTATUS(Code: DWord): DWord;
+function MAKE_D3DSTATUS(Code: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM MAKE_D3DSTATUS}
 
 const
@@ -4630,8 +5256,26 @@ const
   {$EXTERNALSYM D3DERR_DRIVERINVALIDCALL}
   D3DERR_WASSTILLDRAWING                  = HResult(MAKE_D3DHRESULT_R or 540);
   {$EXTERNALSYM D3DERR_WASSTILLDRAWING}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+
+
+  D3DERR_DEVICEREMOVED                    = HResult(MAKE_D3DHRESULT_R or 2160);
+  {$EXTERNALSYM D3DERR_DEVICEREMOVED}
+{$ENDIF}
   D3DOK_NOAUTOGEN                         = HResult(MAKE_D3DSTATUS_R or 2159);
   {$EXTERNALSYM D3DOK_NOAUTOGEN}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+  S_NOT_RESIDENT                          = HResult(MAKE_D3DSTATUS_R or 2165);
+  {$EXTERNALSYM S_NOT_RESIDENT}
+  S_RESIDENT_IN_SHARED_MEMORY             = HResult(MAKE_D3DSTATUS_R or 2166);
+  {$EXTERNALSYM S_RESIDENT_IN_SHARED_MEMORY}
+  S_PRESENT_MODE_CHANGED                  = HResult(MAKE_D3DSTATUS_R or 2167);
+  {$EXTERNALSYM S_PRESENT_MODE_CHANGED}
+  S_PRESENT_OCCLUDED                      = HResult(MAKE_D3DSTATUS_R or 2168);
+  {$EXTERNALSYM S_PRESENT_OCCLUDED}
+  D3DERR_DEVICEHUNG                       = HResult(MAKE_D3DHRESULT_R or 2164);
+  {$EXTERNALSYM D3DERR_DEVICEHUNG}
+{$ENDIF}
 
 
 
@@ -4657,9 +5301,15 @@ const
 {$IFDEF DIRECT3D9_DYNAMIC_LINK}
 type
   TDirect3DCreate9 = function (SDKVersion: LongWord): Pointer; stdcall;
+  {$IFDEF DIRECT3D_VERSION_9_VISTA}
+  TDirect3DCreate9Ex = function (SDKVersion: LongWord; out d3d9ex: IDirect3D9Ex): HRESULT; stdcall;
+  {$ENDIF}
 
 var
   _Direct3DCreate9: TDirect3DCreate9 = nil;
+  {$IFDEF DIRECT3D_VERSION_9_VISTA}
+  Direct3DCreate9Ex: TDirect3DCreate9Ex = nil;
+  {$ENDIF}
 
 {$ELSE}
 function _Direct3DCreate9(SDKVersion: LongWord): Pointer; stdcall;
@@ -4667,7 +5317,32 @@ function _Direct3DCreate9(SDKVersion: LongWord): Pointer; stdcall;
 
 function Direct3DCreate9(SDKVersion: LongWord): IDirect3D9; stdcall;
 {$EXTERNALSYM Direct3DCreate9}
+{$IFNDEF DIRECT3D9_DYNAMIC_LINK}
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+function Direct3DCreate9Ex(SDKVersion: LongWord; out d3d9ex: IDirect3D9Ex): HRESULT; stdcall;
+{$EXTERNALSYM Direct3DCreate9Ex}
+{$ENDIF}
+{$ENDIF}
 
+(*
+ * Stubs for graphics profiling.
+ *)
+
+function D3DPERF_BeginEvent(col: TD3DColor; wszName: PWideChar): Integer; stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_BeginEvent}
+function D3DPERF_EndEvent: Integer; stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_EndEvent}
+procedure D3DPERF_SetMarker(col: TD3DColor; wszName: PWideChar); stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_SetMarker}
+procedure D3DPERF_SetRegion(col: TD3DColor; wszName: PWideChar); stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_SetRegion}
+function D3DPERF_QueryRepeatFrame: BOOL; stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_QueryRepeatFrame}
+
+procedure D3DPERF_SetOptions(dwOptions: DWORD); stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_SetOptions}
+function D3DPERF_GetStatus: DWORD; stdcall; external Direct3D9dll;
+{$EXTERNALSYM D3DPERF_GetStatus}
 
 
 //********************************************************************
@@ -4876,6 +5551,7 @@ end;
 function LoadDirect3D9: Boolean;
 const
   ProcName = 'Direct3DCreate9';
+  ProcNameEx = 'Direct3DCreate9Ex';
 begin
   Result:= Direct3D9Loaded;
   if (not Result) then
@@ -4886,6 +5562,10 @@ begin
       _Direct3DCreate9:= GetProcAddress(Direct3D9Lib, ProcName);
       Result:= Assigned(_Direct3DCreate9);
       if not Result then UnLoadDirect3D9;
+      {$IFDEF DIRECT3D_VERSION_9_VISTA}
+      
+      Direct3DCreate9Ex:= GetProcAddress(Direct3D9Lib, ProcNameEx);
+      {$ENDIF}
     end;
   end;
 end;
@@ -4906,9 +5586,12 @@ begin // Stub function for static linking
 end;
 
 function _Direct3DCreate9(SDKVersion: LongWord): Pointer; external Direct3D9dll name 'Direct3DCreate9';
+{$IFDEF DIRECT3D_VERSION_9_VISTA}
+function Direct3DCreate9Ex(SDKVersion: LongWord; out d3d9ex: IDirect3D9Ex): HRESULT; stdcall; external Direct3D9dll;
+{$ENDIF}
 {$ENDIF}
 
-function Direct3DCreate9(SDKVersion: LongWord): IDirect3D9;
+function Direct3DCreate9(SDKVersion: LongWord): IDirect3D9; stdcall;
 begin
 {$IFDEF DIRECT3D9_DYNAMIC_LINK}
 {$IFDEF DIRECT3D9_DYNAMIC_LINK_EXPLICIT}
@@ -4929,4 +5612,3 @@ finalization
   UnLoadDirect3D9;
 {$ENDIF}
 end.
-

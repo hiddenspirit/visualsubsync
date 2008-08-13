@@ -6,21 +6,20 @@
 {*              dmusicc.h dmusici.h dmusicf.h dmusbuff.h                      *}
 {*  Content:    DirectMusic include files                                     *}
 {*                                                                            *}
-{*  DirectX 9.0 Delphi adaptation by Alexey Barkovoy                          *}
-{*  E-Mail: clootie@ixbt.com                                                  *}
-{*                                                                            *}
-{*  Modified: 25-Feb-2004                                                     *}
+{*  DirectX 9.0 Delphi / FreePascal adaptation by Alexey Barkovoy             *}
+{*  E-Mail: directx@clootie.ru                                                *}
 {*                                                                            *}
 {*  Based upon :                                                              *}
 {*    DirectX 7.0 Delphi adaptation by Erik Unger                             *}
 {*    DirectX 8.0 Delphi adaptation by Ivo Steinmann                          *}
 {*                                                                            *}
 {*  Latest version can be downloaded from:                                    *}
-{*     http://clootie.narod.ru/delphi                                         *}
+{*    http://clootie.ru                                                       *}
+{*    http://sourceforge.net/projects/delphi-dx9sdk                           *}
 {*                                                                            *}
+{*----------------------------------------------------------------------------*}
+{*  $Id: DirectMusic.pas,v 1.5 2006/10/24 19:58:49 clootie Exp $ }
 {******************************************************************************}
-{                                                                              }
-{ Obtained through: Joint Endeavour of Delphi Innovators (Project JEDI)        }
 {                                                                              }
 { The contents of this file are used with permission, subject to the Mozilla   }
 { Public License Version 1.1 (the "License"); you may not use this file except }
@@ -47,6 +46,7 @@
 
 {$I DirectX.inc}
 {$MINENUMSIZE 1}
+{$ALIGN ON}
 
 unit DirectMusic;
 
@@ -66,7 +66,7 @@ interface
 {$NOINCLUDE ActiveX}
 
 uses
-  Windows, MMSystem, ActiveX, DirectSound;
+  Windows, MMSystem, ActiveX, DXTypes, DirectSound;
 
 (*==========================================================================;
 //
@@ -244,7 +244,7 @@ const
 
 type
   PDLSID = ^TDLSID;
-  _DLSID = packed record
+  _DLSID = record
     ulData1: Cardinal;
     usData2: Word;
     usData3: Word;
@@ -256,7 +256,7 @@ type
   TDLSID= _DLSID;
 
   PDLSVersion = ^TDLSVersion;
-  _DLSVERSION = packed record
+  _DLSVERSION = record
     dwVersionMS: DWORD;
     dwVersionLS: DWORD;
   end;
@@ -266,7 +266,7 @@ type
   TDLSVersion = _DLSVERSION;
 
   PConnection = ^TConnection;
-  _CONNECTION = packed record
+  _CONNECTION = record
     usSource: Word;
     usControl: Word;
     usDestination: Word;
@@ -281,7 +281,7 @@ type
   // Level 1 Articulation Data
 
   PConnectionList = ^TConnectionList;
-  _CONNECTIONLIST = packed record
+  _CONNECTIONLIST = record
     cbSize: Cardinal;            // size of the connection list structure
     cConnections: Cardinal;      // count of connections in the list
   end;
@@ -296,7 +296,7 @@ type
 ////////////////////////////////////////////////////////////////////////(*)
 
   PRGNRange = ^TRGNRange;
-  _RGNRANGE = packed record
+  _RGNRANGE = record
     usLow: Word;
     usHigh: Word;
   end;
@@ -311,7 +311,7 @@ const
 
 type
   PMIDILocale = ^TMIDILocale;
-  _MIDILOCALE = packed record
+  _MIDILOCALE = record
     ulBank: Cardinal;
     ulInstrument: Cardinal;
   end;
@@ -331,7 +331,7 @@ const
 
 type
   PRGNHeader = ^TRGNHeader;
-  _RGNHEADER = packed record
+  _RGNHEADER = record
     RangeKey: TRGNRange;          // Key range
     RangeVelocity: TRGNRange;     // Velocity Range
     fusOptions: Word;             // Synthesis options for this range
@@ -345,7 +345,7 @@ type
   TRGNHeader = _RGNHEADER;
 
   PInstHeader = ^TInstHeader;
-  _INSTHEADER = packed record
+  _INSTHEADER = record
     cRegions: Cardinal;          // Count of regions in this instrument
     Locale: TMIDILocale;         // Intended MIDI locale of this instrument
   end;
@@ -355,7 +355,7 @@ type
   TInstHeader = _INSTHEADER;
 
   PDLSHeader = ^TDLSHeader;
-  _DLSHEADER = packed record
+  _DLSHEADER = record
     cInstruments: Cardinal;      // Count of instruments in the collection
   end;
   {$EXTERNALSYM _DLSHEADER}
@@ -382,7 +382,7 @@ const
 
 type
   PWaveLink = ^TWaveLink;
-  _WAVELINK = packed record // any paths or links are stored right after struct
+  _WAVELINK = record // any paths or links are stored right after struct
     fusOptions: Word;       // options flags for this wave
     usPhaseGroup: Word;     // Phase grouping for locking channels
     ulChannel: Cardinal;    // channel placement
@@ -399,7 +399,7 @@ const
 
 type
   PPoolCUE = ^TPoolCUE;
-  _POOLCUE = packed record
+  _POOLCUE = record
     ulOffset:    Cardinal;       // Offset to the entry in the list
   end;
   {$EXTERNALSYM _POOLCUE}
@@ -408,7 +408,7 @@ type
   TPoolCUE = _POOLCUE;
 
   PPoolTable = ^TPoolTable;
-  _POOLTABLE = packed record
+  _POOLTABLE = record
     cbSize: Cardinal;            // size of the pool table structure
     cCues: Cardinal;             // count of cues in the list
   end;
@@ -430,7 +430,7 @@ const
 
 type
   PWSMPL = ^TWSMPL;
-  _rwsmp = packed record
+  _rwsmp = record
     cbSize: Cardinal;
     usUnityNote: Word;            // MIDI Unity Playback Note
     sFineTune: SmallInt;          // Fine Tune in log tuning
@@ -454,7 +454,7 @@ const
 
 type
   PWLoop = ^TWLoop;
-  _rloop = packed record
+  _rloop = record
     cbSize: Cardinal;
     ulType: Cardinal;              // Loop Type
     ulStart: Cardinal;             // Start of loop in samples
@@ -678,15 +678,15 @@ type
   {$EXTERNALSYM PERCENT}
 
 
-  PReferenceTime = ^TReferenceTime;
-  REFERENCE_TIME = LONGLONG;
+  REFERENCE_TIME = DXTypes.REFERENCE_TIME;
   {$EXTERNALSYM REFERENCE_TIME}
-  TReferenceTime = REFERENCE_TIME;
+  TReferenceTime = DXTypes.TReferenceTime;
+  PReferenceTime = DXTypes.PReferenceTime;
   PReference_Time = PReferenceTime;
   TReference_Time = TReferenceTime;
 
   PDMusDownloadInfo = ^TDMusDownloadInfo;
-  _DMUS_DOWNLOADINFO = packed record
+  _DMUS_DOWNLOADINFO = record
     dwDLType: DWORD;                     // Instrument or Wave
     dwDLId: DWORD;                       // Unique identifier to tag this download.
     dwNumOffsetTableEntries: DWORD;      // Number of index in the offset address table.
@@ -724,7 +724,7 @@ const
 
 type
   PDMusOffsetTable = ^TDMusOffsetTable;
-  _DMUS_OFFSETTABLE = packed record
+  _DMUS_OFFSETTABLE = record
     ulOffsetTable: array[0..DMUS_DEFAULT_SIZE_OFFSETTABLE - 1] of Cardinal;
   end;
   {$EXTERNALSYM _DMUS_OFFSETTABLE}
@@ -733,7 +733,7 @@ type
   TDMusOffsetTable = _DMUS_OFFSETTABLE;
 
   PDMusInstrument = ^TDMusInstrument;
-  _DMUS_INSTRUMENT = packed record
+  _DMUS_INSTRUMENT = record
     ulPatch: Cardinal;
     ulFirstRegionIdx: Cardinal;
     ulGlobalArtIdx: Cardinal;         // If zero the instrument does not have an articulation
@@ -747,7 +747,7 @@ type
   TDMusInstrument = _DMUS_INSTRUMENT;
 
   PDMusRegion = ^TDMusRegion;
-  _DMUS_REGION = packed record
+  _DMUS_REGION = record
     RangeKey: TRGNRange;
     RangeVelocity: TRGNRange;
     fusOptions: Word;
@@ -765,7 +765,7 @@ type
   TDMusRegion = _DMUS_REGION;
 
   PDMusLFOParams = ^TDMusLFOParams;
-  _DMUS_LFOPARAMS = packed record
+  _DMUS_LFOPARAMS = record
     pcFrequency: PCENT;
     tcDelay: TCENT;
     gcVolumeScale: GCENT;
@@ -779,7 +779,7 @@ type
   TDMusLFOParams = _DMUS_LFOPARAMS;
 
   PDMusVEGParams = ^TDMusVEGParams;
-  _DMUS_VEGPARAMS = packed record
+  _DMUS_VEGPARAMS = record
     tcAttack: TCENT;
     tcDecay: TCENT;
     ptSustain: PERCENT;
@@ -793,7 +793,7 @@ type
   TDMusVEGParams = _DMUS_VEGPARAMS;
 
   PDMusPEGParams = ^TDMusPEGParams;
-  _DMUS_PEGPARAMS = packed record
+  _DMUS_PEGPARAMS = record
     tcAttack: TCENT;
     tcDecay: TCENT;
     ptSustain: PERCENT;
@@ -808,7 +808,7 @@ type
   TDMusPEGParams = _DMUS_PEGPARAMS;
 
   PDMusMSCParams = ^TDMusMSCParams;
-  _DMUS_MSCPARAMS = packed record
+  _DMUS_MSCPARAMS = record
     ptDefaultPan: PERCENT;
   end;
   {$EXTERNALSYM _DMUS_MSCPARAMS}
@@ -817,7 +817,7 @@ type
   TDMusMSCParams = _DMUS_MSCPARAMS;
 
   PDMusArticParams = ^TDMusArticParams;
-  _DMUS_ARTICPARAMS = packed record
+  _DMUS_ARTICPARAMS = record
     LFO: TDMusLFOParams;
     VolEG: TDMusVEGParams;
     PitchEG: TDMusPEGParams;
@@ -829,7 +829,7 @@ type
   TDMusArticParams = _DMUS_ARTICPARAMS;
 
   PDMusArticulation = ^TDMusArticulation;
-  _DMUS_ARTICULATION = packed record (* Articulation chunk for DMUS_DOWNLOADINFO_INSTRUMENT format. *)
+  _DMUS_ARTICULATION = record (* Articulation chunk for DMUS_DOWNLOADINFO_INSTRUMENT format. *)
     ulArt1Idx: Cardinal;              // DLS Level 1 articulation chunk
     ulFirstExtCkIdx: Cardinal;        // 3rd party extenstion chunks associated with the articulation
   end;
@@ -839,7 +839,7 @@ type
   TDMusArticulation = _DMUS_ARTICULATION;
 
   PDMusArticulation2 = ^TDMusArticulation2;
-  _DMUS_ARTICULATION2 = packed record (* Articulation chunk for DMUS_DOWNLOADINFO_INSTRUMENT2 format. *)
+  _DMUS_ARTICULATION2 = record (* Articulation chunk for DMUS_DOWNLOADINFO_INSTRUMENT2 format. *)
     ulArtIdx: Cardinal;               (* DLS Level 1/2 articulation chunk *)
     ulFirstExtCkIdx: Cardinal;        (* 3rd party extenstion chunks associated with the articulation *)
     ulNextArtIdx: Cardinal;           (* Additional articulation chunks *)
@@ -857,7 +857,7 @@ type
   (*  The actual number is determined by cbSize of struct _DMUS_EXTENSIONCHUNK *)
 
   PDMusExtensionChunk = ^TDMusExtensionChunk;
-  _DMUS_EXTENSIONCHUNK = packed record
+  _DMUS_EXTENSIONCHUNK = record
     cbSize: Cardinal;                      (*  Size of extension chunk  *)
     ulNextExtCkIdx: Cardinal;              (*  If zero no more 3rd party entenstion chunks *)
     ExtCkID: FOURCC;
@@ -871,7 +871,7 @@ type
   (*  The actual number is determined by cbSize of struct _DMUS_COPYRIGHT *)
 
   PDMusCopyright = ^TDMusCopyright;
-  _DMUS_COPYRIGHT = packed record
+  _DMUS_COPYRIGHT = record
     cbSize: Cardinal;                             (*  Size of copyright information *)
     byCopyright: array[0..DMUS_MIN_DATA_SIZE-1] of Byte;    (*  The actual number that follows is determined by cbSize *)
   end;
@@ -881,7 +881,7 @@ type
   TDMusCopyright = _DMUS_COPYRIGHT;
 
   PDMusWaveData = ^TDMusWaveData;
-  _DMUS_WAVEDATA = packed record
+  _DMUS_WAVEDATA = record
     cbSize:           Cardinal;
     byData: array[0..DMUS_MIN_DATA_SIZE-1] of Byte;
   end;
@@ -891,7 +891,7 @@ type
   TDMusWaveData = _DMUS_WAVEDATA;
 
   PDMusWave = ^TDMusWave;
-  _DMUS_WAVE = packed record
+  _DMUS_WAVE = record
     ulFirstExtCkIdx: Cardinal;    (* If zero no 3rd party entenstion chunks associated with the wave *)
     ulCopyrightIdx: Cardinal;     (* If zero no Copyright information associated with the wave *)
     ulWaveDataIdx: Cardinal;      (* Location of actual wave data. *)
@@ -903,7 +903,7 @@ type
   TDMusWave = _DMUS_WAVE;
 
   PDMusNoteRange = ^TDMusNoteRange;
-  _DMUS_NOTERANGE = packed record
+  _DMUS_NOTERANGE = record
     dwLowNote: DWORD;  (* Sets the low note for the range of MIDI note events to which the instrument responds.*)
     dwHighNote: DWORD; (* Sets the high note for the range of MIDI note events to which the instrument responds.*)
   end;
@@ -913,7 +913,7 @@ type
   TDMusNoteRange = _DMUS_NOTERANGE;
 
   PDMusWaveArtDL = ^TDMusWaveArtDL;
-  _DMUS_WAVEARTDL = packed record
+  _DMUS_WAVEARTDL = record
     ulDownloadIdIdx: Cardinal;    (* Download ID's of each buffer *)
     ulBus: Cardinal;              (* Playback bus *)
     ulBuffers: Cardinal;          (* Buffers *)
@@ -926,7 +926,7 @@ type
   TDMusWaveArtDL = _DMUS_WAVEARTDL;
 
   PDMusWaveDL = ^TDMusWaveDL;
-  _DMUS_WAVEDL = packed record
+  _DMUS_WAVEDL = record
     cbWaveData: Cardinal;         (* Bytes of wave data *)
   end;
   {$EXTERNALSYM _DMUS_WAVEDL}
@@ -953,10 +953,10 @@ const
   {$EXTERNALSYM DMUS_ERRBASE}
 
 // #define MAKE_DMHRESULTSUCCESS(code)     MAKE_HRESULT(0, FACILITY_DIRECTMUSIC, (DMUS_ERRBASE + (code)))
-function MAKE_DMHRESULTSUCCESS(Code: DWord): DWord;
+function MAKE_DMHRESULTSUCCESS(Code: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM MAKE_DMHRESULTSUCCESS}
 // #define MAKE_DMHRESULTERROR(code)       MAKE_HRESULT(1, FACILITY_DIRECTMUSIC, (DMUS_ERRBASE + (code)))
-function MAKE_DMHRESULTERROR(Code: DWord): DWord;
+function MAKE_DMHRESULTERROR(Code: DWord): DWord;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM MAKE_DMHRESULTERROR}
 
 
@@ -1937,7 +1937,7 @@ const
 
 type
   PDMusBufferDesc = ^TDMusBufferDesc;
-  _DMUS_BUFFERDESC = packed record
+  _DMUS_BUFFERDESC = record
     dwSize: DWORD;
     dwFlags: DWORD;
     guidBufferFormat: TGUID;
@@ -1984,7 +1984,7 @@ const
   {$EXTERNALSYM DMUS_PC_GSINHARDWARE}
   DMUS_PC_XGINHARDWARE     = ($00000040);   // XG sound set is built in.
   {$EXTERNALSYM DMUS_PC_XGINHARDWARE}
-  DMUS_PC_DIRECTSOUND      = ($00000080);   // Connects to DirectSound via a DSound buffer.
+  DMUS_PC_DIRECTSOUND      = ($00000080);   // Connects to DirectSound via a DirectSound buffer.
   {$EXTERNALSYM DMUS_PC_DIRECTSOUND}
   DMUS_PC_SHAREABLE        = ($00000100);   // Synth can be actively shared by multiple apps at once.
   {$EXTERNALSYM DMUS_PC_SHAREABLE}
@@ -2001,7 +2001,7 @@ const
 
 type
   PDMusPortCaps = ^TDMusPortCaps;
-  _DMUS_PORTCAPS = packed record
+  _DMUS_PORTCAPS = record
     dwSize: DWORD;
     dwFlags: DWORD;
     guidPort: TGUID;
@@ -2050,7 +2050,7 @@ const
 
 type
   PDMusPortParams7 = ^TDMusPortParams7;
-  _DMUS_PORTPARAMS = packed record
+  _DMUS_PORTPARAMS = record
     dwSize: DWORD;
     dwValidParams: DWORD;
     dwVoices: DWORD;
@@ -2066,7 +2066,7 @@ type
   TDMusPortParams7 = _DMUS_PORTPARAMS;
 
   PDMusPortParams8 = ^TDMusPortParams8;
-  _DMUS_PORTPARAMS8 = packed record
+  _DMUS_PORTPARAMS8 = record
     dwSize: DWORD;
     dwValidParams: DWORD;
     dwVoices: DWORD;
@@ -2083,7 +2083,7 @@ type
   TDMusPortParams8 = _DMUS_PORTPARAMS8;
 
 const
-  DMUS_PORT_FEATURE_AUDIOPATH     = $00000001; // Supports audiopath connection to DSound buffers.
+  DMUS_PORT_FEATURE_AUDIOPATH     = $00000001; // Supports audiopath connection to DirectSound buffers.
   {$EXTERNALSYM DMUS_PORT_FEATURE_AUDIOPATH}
   DMUS_PORT_FEATURE_STREAMING     = $00000002; // Supports streaming waves through the synth.
   {$EXTERNALSYM DMUS_PORT_FEATURE_STREAMING}
@@ -2096,7 +2096,7 @@ type
   PDMusPortParams = PDMusPortParams8;
 
   PDMusSynthStats = ^TDMusSynthStats;
-  _DMUS_SYNTHSTATS = packed record
+  _DMUS_SYNTHSTATS = record
     dwSize: DWORD;             (* Size in bytes of the structure *)
     dwValidStats: DWORD;       (* Flags indicating which fields below are valid. *)
     dwVoices: DWORD;           (* Average number of voices playing. *)
@@ -2112,7 +2112,7 @@ type
   TDMusSynthStats = _DMUS_SYNTHSTATS;
 
   PDMusSynthStats8 = ^TDMusSynthStats8;
-  _DMUS_SYNTHSTATS8 = packed record
+  _DMUS_SYNTHSTATS8 = record
     dwSize: DWORD;             (* Size in bytes of the structure *)
     dwValidStats: DWORD;       (* Flags indicating which fields below are valid. *)
     dwVoices: DWORD;           (* Average number of voices playing. *)
@@ -2147,7 +2147,7 @@ const
 
 type
   PDMusWavesReverbParams = ^TDMusWavesReverbParams;
-  _DMUS_WAVES_REVERB_PARAMS = packed record
+  _DMUS_WAVES_REVERB_PARAMS = record
     fInGain: Single;     (* Input gain in dB (to avoid output overflows) *)
     fReverbMix: Single;  (* Reverb mix in dB. 0dB means 100% wet reverb (no direct signal)
                             Negative values gives less wet signal.
@@ -2185,7 +2185,7 @@ const
 
 type
   PDMusClockInfo7 = ^TDMusClockInfo7;
-  _DMUS_CLOCKINFO7 = packed record
+  _DMUS_CLOCKINFO7 = record
     dwSize: DWORD;
     ctType: TDMusClockType;
     guidClock: TGUID;          // Identifies this time source
@@ -2197,7 +2197,7 @@ type
   TDMusClockInfo7 = _DMUS_CLOCKINFO7;
 
   PDMusClockInfo8 = ^TDMusClockInfo8;
-  _DMUS_CLOCKINFO8 = packed record
+  _DMUS_CLOCKINFO8 = record
     dwSize: DWORD;
     ctType: TDMusClockType;
     guidClock: TGUID;          // Identifies this time source
@@ -2268,7 +2268,7 @@ const
   {$EXTERNALSYM DSBUSID_LAST_SPKR_LOC}
 
 // #define DSBUSID_IS_SPKR_LOC(id) ( ((id) >= DSBUSID_FIRST_SPKR_LOC) && ((id) <= DSBUSID_LAST_SPKR_LOC) )
-function DSBUSID_IS_SPKR_LOC(id: Integer): Boolean;
+function DSBUSID_IS_SPKR_LOC(id: Integer): Boolean;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM DSBUSID_IS_SPKR_LOC}
 
 const
@@ -2651,7 +2651,7 @@ const
  * Property Query GUID_DMUS_PROP_INSTRUMENT2 - Support new INSTRUMENT2 download format
  * Property Query GUID_DMUS_PROP_XG_Capable  - Support minimum requirements of XG
  * Property Query GUID_DMUS_PROP_GS_Capable  - Support minimum requirements of GS
- * Property Query GUID_DMUS_PROP_SynthSink_DSOUND - Synthsink talks to DSound
+ * Property Query GUID_DMUS_PROP_SynthSink_DSOUND - Synthsink talks to DirectSound
  * Property Query GUID_DMUS_PROP_SynthSink_WAVE - Synthsink talks to Wave device
  *
  * Item 0: Supported
@@ -2949,7 +2949,7 @@ const
 
 type
   PDMusAudioParams = ^TDMusAudioParams;
-  _DMUS_AUDIOPARAMS = packed record
+  _DMUS_AUDIOPARAMS = record
     dwSize: DWORD;             // Size of this structure.
     fInitNow: BOOL;            // If true, the sink and synth are created immediately and results returned in this structure.
     dwValidData: DWORD;        // Flags indicating which fields below are valid.
@@ -3173,7 +3173,7 @@ const
 
 type
   PDMusSubChord = ^TDMusSubChord;
-  _DMUS_SUBCHORD = packed record
+  _DMUS_SUBCHORD = record
     dwChordPattern: DWORD;     // Notes in the subchord
     dwScalePattern: DWORD;     // Notes in the scale
     dwInversionPoints: DWORD;  // Where inversions can occur
@@ -3187,7 +3187,7 @@ type
   TDMusSubChord = _DMUS_SUBCHORD;
 
   PDMusChordKey = ^TDMusChordKey;
-  _DMUS_CHORD_KEY = packed record
+  _DMUS_CHORD_KEY = record
     wszName: array [0..15] of WideChar;   // Name of the chord
     wMeasure: Word;           // Measure this falls on
     bBeat: Byte;              // Beat this falls on
@@ -3418,7 +3418,7 @@ const
 
 type
   PDMusVersion = ^TDMusVersion;
-  _DMUS_VERSION = packed record
+  _DMUS_VERSION = record
     dwVersionMS: DWORD;
     dwVersionLS: DWORD;
   end;
@@ -3430,7 +3430,7 @@ type
   // Time Signature structure, used by IDirectMusicStyle
   // Also used as a parameter for GetParam() and SetParam
   PDMusTimeSignature = ^TDMusTimeSignature;
-  _DMUS_TIMESIGNATURE = packed record
+  _DMUS_TIMESIGNATURE = record
     mtTime: TMusicTime;
     bBeatsPerMeasure: Byte;       (* beats per measure (top of time sig) *)
     bBeat: Byte;                  (* what note receives the beat (bottom of time sig.) *)
@@ -3443,7 +3443,7 @@ type
   TDMusTimeSignature = _DMUS_TIMESIGNATURE;
 
   PDMusValidStartParam = ^TDMusValidStartParam;
-  _DMUS_VALID_START_PARAM = packed record
+  _DMUS_VALID_START_PARAM = record
     mtTime: TMUSICTIME;                     (* Time of the first legal start
                                                point after (or including) the requested time.
                                                This is a returned value.
@@ -3455,7 +3455,7 @@ type
   TDMusValidStartParam = _DMUS_VALID_START_PARAM;
 
   PDMusPlayMarkerParam = ^TDMusPlayMarkerParam;
-  _DMUS_PLAY_MARKER_PARAM = packed record
+  _DMUS_PLAY_MARKER_PARAM = record
     mtTime: TMusicTime;                     (* Time of the first legal segment play
                                                marker before (or including) the requested time.
                                                This is a returned value.
@@ -3470,7 +3470,7 @@ type
 //      possibly use to describe a DirectMusic object.
 
   PDMusObjectDesc = ^TDMusObjectDesc;
-  _DMUS_OBJECTDESC = packed record
+  _DMUS_OBJECTDESC = record
     dwSize: DWORD;                 (* Size of this structure. *)
     dwValidData: DWORD;            (* Flags indicating which fields below are valid. *)
     guidObject: TGUID;             (* Unique ID for this object. *)
@@ -3522,7 +3522,7 @@ type
 (*      The DMUS_SCRIPT_ERRORINFO structure describes an error that occurred in a script.
         It is returned by methods in IDirectMusicScript. *)
   PDMusScriptErrorInfo = ^TDMusScriptErrorInfo;
-  _DMUS_SCRIPT_ERRORINFO = packed record
+  _DMUS_SCRIPT_ERRORINFO = record
     dwSize: DWORD; (* Size of this structure. *)
     hr: HRESULT;
     ulLineNumber: Cardinal;
@@ -3578,7 +3578,7 @@ type
   // Get/SetParam structs for commands
   // PARAM structures, used by GetParam() and SetParam()
   PDMusCommandParam = ^TDMusCommandParam;
-  _DMUS_COMMAND_PARAM = packed record
+  _DMUS_COMMAND_PARAM = record
     bCommand: Byte;
     bGrooveLevel: Byte;
     bGrooveRange: Byte;
@@ -3590,7 +3590,7 @@ type
   TDMusCommandParam = _DMUS_COMMAND_PARAM;
 
   PDMusCommandParam2 = ^TDMusCommandParam2;
-  _DMUS_COMMAND_PARAM_2 = packed record
+  _DMUS_COMMAND_PARAM_2 = record
     mtTime: TMusicTime;
     bCommand: Byte;
     bGrooveLevel: Byte;
@@ -3648,7 +3648,7 @@ type
 (* every DMUS_PMSG is based off of this structure. The Performance needs
    to access these members consistently in every PMSG that goes through it. *)
   PDMusPMsg = ^TDMusPMsg;
-  _DMUS_PMSG = packed record
+  _DMUS_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3674,7 +3674,7 @@ type
 
   (* DMUS_NOTE_PMSG *)
   PDMusNotePMsg = ^TDMusNotePMsg;
-  _DMUS_NOTE_PMSG = packed record
+  _DMUS_NOTE_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    // real time (in 100 nanosecond increments)
@@ -3716,7 +3716,7 @@ type
 
   (* DMUS_MIDI_PMSG *)
   PDMusMidiPMsg = ^TDMusMidiPMsg;
-  _DMUS_MIDI_PMSG = packed record
+  _DMUS_MIDI_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3747,7 +3747,7 @@ type
 
   (* DMUS_PATCH_PMSG *)
   PDMusPatchPMsg = ^TDMusPatchPMsg;
-  _DMUS_PATCH_PMSG = packed record
+  _DMUS_PATCH_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3778,7 +3778,7 @@ type
 
   (* DMUS_TRANSPOSE_PMSG *)
   PDMusTransposePMsg = ^TDMusTransposePMsg;
-  _DMUS_TRANSPOSE_PMSG = packed record
+  _DMUS_TRANSPOSE_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3808,7 +3808,7 @@ type
 
   (* DMUS_CHANNEL_PRIORITY_PMSG *)
   PDMusChannelPriorityPMsg = ^TDMusChannelPriorityPMsg;
-  _DMUS_CHANNEL_PRIORITY_PMSG = packed record
+  _DMUS_CHANNEL_PRIORITY_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3836,7 +3836,7 @@ type
 
   (* DMUS_TEMPO_PMSG *)
   PDMusTempoPMsg = ^TDMusTempoPMsg;
-  _DMUS_TEMPO_PMSG = packed record
+  _DMUS_TEMPO_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3864,7 +3864,7 @@ type
 
   (* DMUS_SYSEX_PMSG *)
   PDMusSysexPMsg = ^TDMusSysexPMsg;
-  _DMUS_SYSEX_PMSG = packed record
+  _DMUS_SYSEX_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3893,7 +3893,7 @@ type
 
   (* DMUS_CURVE_PMSG *)
   PDMusCurvePMsg = ^TDMusCurvePMsg;
-  _DMUS_CURVE_PMSG = packed record
+  _DMUS_CURVE_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3945,7 +3945,7 @@ type
 
   (* DMUS_TIMESIG_PMSG *)
   PDMusTimeSigPMsg = ^TDMusTimesigPMsg;
-  _DMUS_TIMESIG_PMSG = packed record
+  _DMUS_TIMESIG_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -3978,7 +3978,7 @@ type
 
   (* DMUS_NOTIFICATION_PMSG *)
   PDMusNotificationPMsg = ^TDMusNotificationPMsg;
-  _DMUS_NOTIFICATION_PMSG = packed record
+  _DMUS_NOTIFICATION_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -4009,7 +4009,7 @@ type
 
   (* DMUS_WAVE_PMSG *)
   PDMusWavePMsg = ^TDMusWavePMsg;
-  _DMUS_WAVE_PMSG = packed record
+  _DMUS_WAVE_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -4042,7 +4042,7 @@ type
 
   (* DMUS_LYRIC_PMSG *)
   PDMusLyricPMsg = ^TDMusLyricPMsg;
-  _DMUS_LYRIC_PMSG = packed record
+  _DMUS_LYRIC_PMSG = record
     (* begin DMUS_PMSG_PART *)
     dwSize: DWORD;
     rtTime: TReferenceTime;    (* real time (in 100 nanosecond increments) *)
@@ -4356,9 +4356,9 @@ type
     ['{679c4137-c62e-4147-b2b4-9d569acb254c}']
     (*  IDirectMusicPerformance8 *)
     function InitAudio(
-      ppDirectMusic: PIDirectMusic;                  // Optional DMusic pointer.
-      ppDirectSound: PIDirectSound;                  // Optional DSound pointer.
-      hWnd: hWnd;                                    // HWND for DSound.
+      ppDirectMusic: PIDirectMusic;                  // Optional DirectMusic pointer.
+      ppDirectSound: PIDirectSound;                  // Optional DirectSound pointer.
+      hWnd: hWnd;                                    // HWND for DirectSound.
       dwDefaultPathType,                             // Requested default audio path type, also optional.
       dwPChannelCount,                               // Number of PChannels, if default audio path to be created.
       dwFlags: DWORD;                                // DMUS_AUDIOF flags, if no pParams structure.
@@ -4704,7 +4704,7 @@ const
   {$EXTERNALSYM GUID_BandParam}
 
 type
-  _DMUS_BAND_PARAM = packed record
+  _DMUS_BAND_PARAM = record
     mtTimePhysical:  MUSIC_TIME; // Note: If this is a clock-time track, then this field is interpreted in the track's internal time format, which is the number of milliseconds after the beginning of playback.
     pBand: IDirectMusicBand;
   end;
@@ -4784,7 +4784,7 @@ const
 
 type
   PDMusVariationsParam = ^TDMusVariationsParam;
-  _DMUS_VARIATIONS_PARAM = packed record
+  _DMUS_VARIATIONS_PARAM = record
     dwPChannelsUsed: DWORD;  // number of PChannels in use
     padwPChannels: PDWORD;   // array of PChannels in use
     padwVariations: PDWORD;  // array of variations in effect for each PChannel
@@ -4954,7 +4954,7 @@ type
 
 
   PDMusIoSeqItem = ^TDMusIoSeqItem;
-  _DMUS_IO_SEQ_ITEM = packed record
+  _DMUS_IO_SEQ_ITEM = record
     mtTime: TMusicTime;
     mtDuration: TMusicTime;
     dwPChannel: DWORD;
@@ -4970,7 +4970,7 @@ type
 
 
   PDMusIoCurveItem = ^TDMusIoCurveItem;
-  _DMUS_IO_CURVE_ITEM = packed record
+  _DMUS_IO_CURVE_ITEM = record
     mtStart: TMusicTime;
     mtDuration: TMusicTime;
     mtResetDuration: TMusicTime;
@@ -4983,7 +4983,7 @@ type
     bCurveShape: Byte;
     bCCData: Byte;
     bFlags: Byte;
-    // Following was added for DX8.
+    // Following was added for DirectX8.
     wParamType: Word;      // RPN or NRPN parameter number.
     wMergeIndex: Word;     // Allows multiple parameters to be merged (pitchbend, volume, and expression.)
   end;
@@ -4994,7 +4994,7 @@ type
 
 
   PDMusIoTempoItem = ^TDMusIoTempoItem;
-  _DMUS_IO_TEMPO_ITEM = packed record
+  _DMUS_IO_TEMPO_ITEM = record
     lTime: TMusicTime;
     dblTempo: Double;
   end;
@@ -5005,7 +5005,7 @@ type
 
 
   PDMusIoSysExItem = ^TDMusIoSysExItem;
-  _DMUS_IO_SYSEX_ITEM = packed record
+  _DMUS_IO_SYSEX_ITEM = record
     mtTime: TMusicTime;
     dwPChannel: DWORD;
     dwSysExLength: DWORD;
@@ -5020,7 +5020,7 @@ type
   TDMusChordParam = DMUS_CHORD_PARAM;
   PDMusChordParam = ^TDMusChordParam;
 
-  _DMUS_RHYTHM_PARAM = packed record
+  _DMUS_RHYTHM_PARAM = record
     TimeSig:  TDMusTimeSignature;
     dwRhythmPattern: DWORD;
   end;
@@ -5031,7 +5031,7 @@ type
   PDMusRhythmParam = ^TDMusRhythmParam;
 
   PDMusTempoParam = ^TDMusTempoParam;
-  _DMUS_TEMPO_PARAM = packed record
+  _DMUS_TEMPO_PARAM = record
     mtTime:  TMusicTime;
     dblTempo: Double;
   end;
@@ -5041,7 +5041,7 @@ type
   TDMusTempoParam = _DMUS_TEMPO_PARAM;
 
   PDMusMuteParam = ^TDMusMuteParam;
-  _DMUS_MUTE_PARAM = packed record
+  _DMUS_MUTE_PARAM = record
     dwPChannel: DWORD;
     dwPChannelMap: DWORD;
     fMute: BOOL;
@@ -5161,7 +5161,7 @@ const
   {$EXTERNALSYM DMUS_PATTERNF_PERSIST_CONTROL}
 
 
-  (* These specify possible values for DMUS_IO_PATTERN.wEmbellishment (dx8) *)
+  (* These specify possible values for DMUS_IO_PATTERN.wEmbellishment (DirectX8) *)
   DMUS_EMBELLISHT_NORMAL          = 0;
   {$EXTERNALSYM DMUS_EMBELLISHT_NORMAL}
   DMUS_EMBELLISHT_FILL            = 1;
@@ -5177,7 +5177,7 @@ const
   DMUS_EMBELLISHT_ALL             = $FFFF;
   {$EXTERNALSYM DMUS_EMBELLISHT_ALL}
 type
-  (* These specify possible values for DMUS_IO_PATTERN.wEmbellishment (dx8) *)
+  (* These specify possible values for DMUS_IO_PATTERN.wEmbellishment (DirectX8) *)
   enumDMUS_EMBELLISHT_TYPES = Word; 
   DMUS_EMBELLISHT_TYPES = enumDMUS_EMBELLISHT_TYPES;
   {$EXTERNALSYM DMUS_EMBELLISHT_TYPES}
@@ -5191,7 +5191,7 @@ type
 {$ENDIF}
 
   (* These specify possible values for DMUS_IO_PARTREF.bRandomVariation
-   all but DMUS_VARIATIONT_SEQUENTIAL and DMUS_VARIATIONT_RANDOM are dx8. *)
+   all but DMUS_VARIATIONT_SEQUENTIAL and DMUS_VARIATIONT_RANDOM are DirectX8. *)
 {$IFDEF BYTE2_ALIGNMENT}{$MINENUMSIZE 2}{$ENDIF}
   enumDMUS_VARIATIONT_TYPES = (
     DMUS_VARIATIONT_SEQUENTIAL       {= 0}, (* Play sequential starting with variation 1. *)
@@ -5308,7 +5308,7 @@ type
     bVelRange: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};         (* Range to randomize velocity. *)
     bInversionID: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};      (* Identifies inversion group to which this note belongs *)
     bPlayModeFlags: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};    (* Can override part *)
-    (* Following exists only under DX8 and on *)
+    (* Following exists only under DirectX8 and on *)
     bNoteFlags: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};        (* values from DMUS_NOTEF_FLAGS *)
   end;
   {$EXTERNALSYM _DMUS_IO_STYLENOTE}
@@ -5331,7 +5331,7 @@ type
     bCCData: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};               (* CC# *)
     bFlags: {$IFDEF BYTE2_ALIGNMENT}Byte2{$ELSE}Byte{$ENDIF};                (* Bit 1=TRUE means to send nResetValue. Otherwise, don't.
                                     Other bits are reserved. *)
-    (*  Following was added for DX8. *)
+    (*  Following was added for DirectX8. *)
     wParamType: Word;            (* RPN or NRPN parameter number. *)
     wMergeIndex: Word;           (* Allows multiple parameters to be merged (pitchbend, volume, and expression.) *)
   end;
@@ -5552,9 +5552,9 @@ RIFF
 (* Chord and command file formats *)
 
 type
-  (* These specify possible values for DMUS_IO_COMMAND.bRepeatMode (dx8) *)
+  (* These specify possible values for DMUS_IO_COMMAND.bRepeatMode (DirectX8) *)
   enumDMUS_PATTERNT_TYPES = (
-    DMUS_PATTERNT_RANDOM           {= 0}, (* Play randomly. (dx7 behavior) *)
+    DMUS_PATTERNT_RANDOM           {= 0}, (* Play randomly. (DirectX7 behavior) *)
     DMUS_PATTERNT_REPEAT           {= 1}, (* Repeat last pattern. *)
     DMUS_PATTERNT_SEQUENTIAL       {= 2}, (* Play sequential starting with first matching pattern. *)
     DMUS_PATTERNT_RANDOM_START     {= 3}, (* Play sequential starting with a random pattern. *)
@@ -5579,7 +5579,7 @@ const
 
 type
   PDMusIoChord = ^TDMusIoChord;
-  _DMUS_IO_CHORD = packed record
+  _DMUS_IO_CHORD = record
     wszName: array[0..15] of WideChar; (* Name of the chord *)
     mtTime: TMusicTime;   (* Time of this chord *)
     wMeasure: Word;       (* Measure this falls on *)
@@ -5592,7 +5592,7 @@ type
   TDMusIoChord = _DMUS_IO_CHORD;
 
   PDMusIoSubChord = ^TDMusIoSubChord;
-  _DMUS_IO_SUBCHORD = packed record
+  _DMUS_IO_SUBCHORD = record
     dwChordPattern: DWORD;     (* Notes in the subchord *)
     dwScalePattern: DWORD;     (* Notes in the scale *)
     dwInversionPoints: DWORD;  (* Where inversions can occur *)
@@ -5606,7 +5606,7 @@ type
   TDMusIoSubChord = _DMUS_IO_SUBCHORD;
 
   PDMusIoCommand = ^TDMusIoCommand;
-  _DMUS_IO_COMMAND = packed record
+  _DMUS_IO_COMMAND = record
     mtTime: TMusicTime;   (* Time of this command *)
     wMeasure: Word;       (* Measure this falls on *)
     bBeat: Byte;          (* Beat this falls on *)
@@ -5675,7 +5675,7 @@ const
 type
   (* io type = recordures: *)
   PDMusIoToolHeader = ^TDMusIoToolHeader;
-  _DMUS_IO_TOOL_HEADER = packed record
+  _DMUS_IO_TOOL_HEADER = record
     guidClassID: TGUID;     (* Class id of tool. *)
     lIndex: Longint;        (* Position in graph. *)
     cPChannels: DWORD;      (* Number of items in channels array. *)
@@ -5750,7 +5750,7 @@ RIFF
     [<UNFO-list>]   // Name, author, copyright info., comments
     [<DMTG-form>]   // Optional ToolGraph
     [<pcsl-list>]   // Optional list of port configurations
-    [<dbfl-list>]...// Optional array of Dsound buffer descriptors
+    [<dbfl-list>]...// Optional array of DirectSound buffer descriptors
 )
 *)
 
@@ -5773,7 +5773,7 @@ RIFF
 
 type
   PDMusIoPortConfigHeader = ^TDMusIoPortConfigHeader;
-  _DMUS_IO_PORTCONFIG_HEADER = packed record
+  _DMUS_IO_PORTCONFIG_HEADER = record
     guidPort: TGUID;           (* GUID of requested port. *)
     dwPChannelBase: DWORD;     (* PChannel that this should start on. *)
     dwPChannelCount: DWORD;    (* How many channels. *)
@@ -5799,7 +5799,7 @@ const
 
 type
   PDMusIoPChannelToBufferHeader = ^TDMusIoPChannelToBufferHeader;
-  _DMUS_IO_PCHANNELTOBUFFER_HEADER = packed record
+  _DMUS_IO_PCHANNELTOBUFFER_HEADER = record
     dwPChannelBase:   DWORD;     (* PChannel that this should start on. *)
     dwPChannelCount:   DWORD;    (* How many PChannels. *)
     dwBufferCount:   DWORD;      (* How many buffers do these connect to. *)
@@ -5819,7 +5819,7 @@ type
 *)
 
   PDMusIoBufferAttributesHeader = ^TDMusIoBufferAttributesHeader;
-  _DMUS_IO_BUFFER_ATTRIBUTES_HEADER = packed record
+  _DMUS_IO_BUFFER_ATTRIBUTES_HEADER = record
     guidBufferID: TGUID;       (* Each buffer config has a unique ID. *)
     dwFlags: DWORD;            (* Various flags. *)
   end;
@@ -5850,7 +5850,7 @@ LIST
     'pcfl'          // List container for one port configuration.
     <pcfh-ck>       // Portconfig header chunk.
     <pprh-ck>       // Port params, to be used to create the port.
-    [<dbfl-list>]...// Optional array of Dsound buffer descriptors
+    [<dbfl-list>]...// Optional array of DirectSound buffer descriptors
     [<pchl-list>]   // Optional list of pchannel to buffer assignments
 
 )
@@ -5915,7 +5915,7 @@ const
 type
   (* io structures *)
   PDMusIoBandTrackHeader = ^TDMusIoBandTrackHeader;
-  _DMUS_IO_BAND_TRACK_HEADER = packed record
+  _DMUS_IO_BAND_TRACK_HEADER = record
     bAutoDownload: BOOL;     (* Determines if Auto-Download is enabled. *)
   end;
   {$EXTERNALSYM _DMUS_IO_BAND_TRACK_HEADER}
@@ -5924,7 +5924,7 @@ type
   TDMusIoBandTrackHeader = _DMUS_IO_BAND_TRACK_HEADER;
 
   PDMusIoBandItemHeader = ^TDMusIoBandItemHeader;
-  _DMUS_IO_BAND_ITEM_HEADER = packed record
+  _DMUS_IO_BAND_ITEM_HEADER = record
     lBandTime: TMusicTime;   (* Position in track list. *)
   end;
   {$EXTERNALSYM _DMUS_IO_BAND_ITEM_HEADER}
@@ -5933,7 +5933,7 @@ type
   TDMusIoBandItemHeader = _DMUS_IO_BAND_ITEM_HEADER;
 
   PDMusIoBandItemHeader2 = ^TDMusIoBandItemHeader2;
-  _DMUS_IO_BAND_ITEM_HEADER2 = packed record
+  _DMUS_IO_BAND_ITEM_HEADER2 = record
     lBandTimeLogical: TMusicTime;   (* Position in track list. Time in the music with which band change is associated. *)
     lBandTimePhysical: TMusicTime;  (* Precise time band change will take effect. Should be close to logical time. *)
   end;
@@ -6041,7 +6041,7 @@ const
 type
   (* io structures *)
   PDMusIoInstrument = ^TDMusIoInstrument;
-  _DMUS_IO_INSTRUMENT = packed record
+  _DMUS_IO_INSTRUMENT = record
     dwPatch: DWORD;            (* MSB, LSB and Program change to define instrument *)
     dwAssignPatch: DWORD;      (* MSB, LSB and Program change to assign to instrument when downloading *)
     dwNoteRanges: array[0..3] of DWORD; (* 128 bits; one for each MIDI note instrument needs to able to play *)
@@ -6113,7 +6113,7 @@ const
 
 type
   PDMusIoWaveHeader = ^TDMusIoWaveHeader;
-  _DMUS_IO_WAVE_HEADER = packed record
+  _DMUS_IO_WAVE_HEADER = record
     rtReadAhead: TReferenceTime; (* How far ahead in the stream wave data will be read (in REFERENCE_TIME).  Ignored for one-shot waves. *)
     dwFlags: DWORD;              (* Various flags, including whether this is a streaming wave and whether it can be invalidated. *)
   end;
@@ -6154,7 +6154,7 @@ const
 
 type
   PDMusIoWaveTrackHeader = ^TDMusIoWaveTrackHeader;
-  _DMUS_IO_WAVE_TRACK_HEADER = packed record
+  _DMUS_IO_WAVE_TRACK_HEADER = record
     lVolume: Longint;      (* Gain, in 1/100th of dB, to be applied to all waves.  Note:  All gain values should be negative. *)
     dwFlags: DWORD;        (* Flags, including whether this track syncs to a pattern track for its variations. *)
   end;
@@ -6164,7 +6164,7 @@ type
   TDMusIoWaveTrackHeader = _DMUS_IO_WAVE_TRACK_HEADER;
 
   PDMusIoWavePartHeader = ^TDMusIoWavePartHeader;
-  _DMUS_IO_WAVE_PART_HEADER = packed record
+  _DMUS_IO_WAVE_PART_HEADER = record
     lVolume: Longint;      (* Gain, in 1/100th of dB, to be applied to all waves in wave part.  Note:  All gain values should be negative. *)
     dwVariations: DWORD;   (* Variation mask for which of 32 variations *)
     dwPChannel: DWORD;     (* PChannel *)
@@ -6178,7 +6178,7 @@ type
   TDMusIoWavePartHeader = _DMUS_IO_WAVE_PART_HEADER;
 
   PDMusIoWaveItemHeader = ^TDMusIoWaveItemHeader;
-  _DMUS_IO_WAVE_ITEM_HEADER = packed record
+  _DMUS_IO_WAVE_ITEM_HEADER = record
     lVolume: Longint;               (* Gain, in 1/100th of dB.  Note:  All gain values should be negative. *)
     lPitch: Longint;                (* Pitch offset in 1/100th of a semitone. *)
     dwVariations: DWORD;            (* Variation flags for which of 32 variations this wave belongs to. *)
@@ -6268,7 +6268,7 @@ const
 
 type
   PDMusIoContainerHeader = ^TDMusIoContainerHeader;
-  _DMUS_IO_CONTAINER_HEADER = packed record
+  _DMUS_IO_CONTAINER_HEADER = record
     dwFlags: DWORD;        (* Flags. *)
   end;
   {$EXTERNALSYM _DMUS_IO_CONTAINER_HEADER}
@@ -6286,7 +6286,7 @@ const
 
 type
   PDMusIoContainedObjectHeader = ^TDMusIoContainedObjectHeader;
-  _DMUS_IO_CONTAINED_OBJECT_HEADER = packed record
+  _DMUS_IO_CONTAINED_OBJECT_HEADER = record
     guidClassID: TGUID;    (* Class id of object. *)
     dwFlags: DWORD;        (* Flags, for example DMUS_CONTAINED_OBJF_KEEP. *)
     ckid: FOURCC;          (* chunk ID of track's data chunk if 0 fccType valid. *)
@@ -6387,18 +6387,18 @@ const
 
 type
   PDMusIoSegmentHeader = ^TDMusIoSegmentHeader;
-  _DMUS_IO_SEGMENT_HEADER = packed record
+  _DMUS_IO_SEGMENT_HEADER = record
     dwRepeats: DWORD;           (* Number of repeats. By default, 0. *)
     mtLength: TMusicTime;       (* Length, in music time. *)
     mtPlayStart: TMusicTime;    (* Start of playback. By default, 0. *)
     mtLoopStart: TMusicTime;    (* Start of looping portion. By default, 0. *)
     mtLoopEnd: TMusicTime;      (* End of loop. Must be greater than dwPlayStart. Or, 0, indicating loop full segment. *)
     dwResolution: DWORD;        (* Default resolution. *)
-    // Following added for DX8:
+    // Following added for DirectX8:
     rtLength: TReferenceTime;   (* Length, in reference time (overrides music time length.) *)
     dwFlags: DWORD;
     dwReserved: DWORD;          (* Reserved. *)
-    // Added for DX9.
+    // Added for DirectX9:
     rtLoopStart: TReferenceTime; (* Clock time loop start. *)
     rtLoopEnd: TReferenceTime;   (* Clock time loop end. *)
     rtPlayStart: TReferenceTime; (* Start of playback in clock time. *) 
@@ -6416,7 +6416,7 @@ const
 
 type
   PDMusIoTrackHeader = ^TDMusIoTrackHeader;
-  _DMUS_IO_TRACK_HEADER = packed record
+  _DMUS_IO_TRACK_HEADER = record
     guidClassID: TGUID;    (* Class id of track. *)
     dwPosition: DWORD;     (* Position in track list. *)
     dwGroup: DWORD;        (* Group bits for track. *)
@@ -6428,12 +6428,12 @@ type
   {$EXTERNALSYM DMUS_IO_TRACK_HEADER}
   TDMusIoTrackHeader = _DMUS_IO_TRACK_HEADER;
 
-(*  Additional parameters for the track header chunk, introduced in DX8 and
+(*  Additional parameters for the track header chunk, introduced in DirectX8 and
     on, are stored in a separate chunk. *)
 
   PDMusIoTrackExtrasHeader = ^TDMusIoTrackExtrasHeader;
-  _DMUS_IO_TRACK_EXTRAS_HEADER = packed record
-    dwFlags: DWORD;        (* DX8 Added flags for control tracks. *)
+  _DMUS_IO_TRACK_EXTRAS_HEADER = record
+    dwFlags: DWORD;        (* DirectX8 Added flags for control tracks. *)
     dwPriority: DWORD;     (* Priority for composition. *)
   end;
   {$EXTERNALSYM _DMUS_IO_TRACK_EXTRAS_HEADER}
@@ -6501,7 +6501,7 @@ RIFF
     // <trkx-ck>            // Track flags chunk
     (
         'trkx'
-        <DMUS_IO_TRACK_EXTRAS_HEADER>  // DX8 Track flags header
+        <DMUS_IO_TRACK_EXTRAS_HEADER>  // DirectX8 Track flags header
     )
 *)
 
@@ -6525,7 +6525,7 @@ const
 
 type
   PDMusIoReference = ^TDMusIoReference;
-  _DMUS_IO_REFERENCE = packed record
+  _DMUS_IO_REFERENCE = record
     guidClassID: TGUID;    (* Class id is always required. *)
     dwValidData: DWORD;    (* Flags. *)
   end;
@@ -6678,7 +6678,7 @@ const
 type  
   // run time data structs
   PDMusIoChordMap = ^TDMusIoChordMap;
-  _DMUS_IO_CHORDMAP = packed record
+  _DMUS_IO_CHORDMAP = record
     wszLoadName: array[0..19] of WideChar;
     dwScalePattern: DWORD;
     dwFlags: DWORD;           // Various flags. Only lower 16 bits are significant.
@@ -6689,7 +6689,7 @@ type
   TDMusIoChordMap = _DMUS_IO_CHORDMAP;
 
   PDMusIoChordmapSubChord = ^TDMusIoChordmapSubChord;
-  _DMUS_IO_CHORDMAP_SUBCHORD = packed record
+  _DMUS_IO_CHORDMAP_SUBCHORD = record
     dwChordPattern: DWORD;
     dwScalePattern: DWORD;
     dwInvertPattern: DWORD;
@@ -6708,7 +6708,7 @@ type
   {$EXTERNALSYM DMUS_IO_PERS_SUBCHORD}
 
   PDMusIoChordEntry = ^TDMusIoChordEntry;
-  _DMUS_IO_CHORDENTRY = packed record
+  _DMUS_IO_CHORDENTRY = record
     dwFlags: DWORD;
     wConnectionID: Word;  // replaces runtime "pointer to this"
   end;
@@ -6718,7 +6718,7 @@ type
   TDMusIoChordEntry = _DMUS_IO_CHORDENTRY;
 
   PDMusIoNextChord = ^TDMusIoNextChord;
-  _DMUS_IO_NEXTCHORD = packed record
+  _DMUS_IO_NEXTCHORD = record
     dwFlags: DWORD;
     nWeight: Word;
     wMinBeats: Word;
@@ -6731,7 +6731,7 @@ type
   TDMusIoNextChord = _DMUS_IO_NEXTCHORD;
 
   PDMusIoChordMapSignPost = ^TDMusIoChordMapSignPost;
-  _DMUS_IO_CHORDMAP_SIGNPOST = packed record
+  _DMUS_IO_CHORDMAP_SIGNPOST = record
     dwChords: DWORD;   // 1bit per group
     dwFlags: DWORD;
   end;
@@ -6821,7 +6821,7 @@ type
   (* io structures: *)
 
   PDMusIoScriptHeader = ^TDMusIoScriptHeader;
-  _DMUS_IO_SCRIPT_HEADER = packed record
+  _DMUS_IO_SCRIPT_HEADER = record
     dwFlags: DWORD; // DMUS_SCRIPTIOF_ flags
   end;
   {$EXTERNALSYM _DMUS_IO_SCRIPT_HEADER}
@@ -6901,7 +6901,7 @@ const
 
 type
   PDMusIoSignPost = ^TDMusIoSignPost;
-  _DMUS_IO_SIGNPOST = packed record
+  _DMUS_IO_SIGNPOST = record
     mtTime: TMusicTime;
     dwChords: DWORD;
     wMeasure: Word;
@@ -6928,7 +6928,7 @@ const
 
 type
   PDMusIoMute = ^TDMusIoMute;
-  _DMUS_IO_MUTE = packed record
+  _DMUS_IO_MUTE = record
     mtTime: TMusicTime;
     dwPChannel: DWORD;
     dwPChannelMap: DWORD;
@@ -7074,7 +7074,7 @@ const
 
 type
   PDMusIoTimeSignatureItem = ^TDMusIoTimeSignatureItem;
-  _DMUS_IO_TIMESIGNATURE_ITEM = packed record
+  _DMUS_IO_TIMESIGNATURE_ITEM = record
     lTime: TMusicTime;
     bBeatsPerMeasure: Byte;   // beats per measure (top of time sig)
     bBeat: Byte;              // what note receives the beat (bottom of time sig.)
@@ -7086,7 +7086,7 @@ type
   {$EXTERNALSYM DMUS_IO_TIMESIGNATURE_ITEM}
   TDMusIoTimeSignatureItem = _DMUS_IO_TIMESIGNATURE_ITEM;
 
-(*  DX6 time signature track
+(*  DirectX6 time signature track
 
     'tims'
     (
@@ -7095,7 +7095,7 @@ type
     )
 *)
 
-(*  DX8 Time signature track. The track has been updated from DX7 to support a list of
+(*  DirectX8 Time signature track. The track has been updated from DirectX7 to support a list of
     RIFF chunks. This will allow the time signature track to expand in the future.
 *)
 
@@ -7120,7 +7120,7 @@ LIST
 
 *)
 
-(*  DX8 Marker track. This is used to store valid start points and other
+(*  DirectX8 Marker track. This is used to store valid start points and other
     flow control parameters that may come later. For example, if we want
     to implement more sophisticated looping and branching constructs, they
     would live in this track.
@@ -7137,7 +7137,7 @@ const
 type
   (* io structures *)
   PDMusIoValidStart = ^TDMusIoValidStart;
-  _DMUS_IO_VALID_START = packed record
+  _DMUS_IO_VALID_START = record
     mtTime: TMusicTime;      // Time of a legal start.
   end;
   {$EXTERNALSYM _DMUS_IO_VALID_START}
@@ -7146,7 +7146,7 @@ type
   TDMusIoValidStart = _DMUS_IO_VALID_START;
 
   PDMusIoPlayMarker = ^TDMusIoPlayMarker;
-  _DMUS_IO_PLAY_MARKER = packed record
+  _DMUS_IO_PLAY_MARKER = record
     mtTime: TMusicTime;      // Time of a next legal play point marker.
   end;
   {$EXTERNALSYM _DMUS_IO_PLAY_MARKER}
@@ -7196,7 +7196,7 @@ const
 type
   (* io structures *)
   PDMusIoSegmentTrackHeader = ^TDMusIoSegmentTrackHeader;
-  _DMUS_IO_SEGMENT_TRACK_HEADER = packed record
+  _DMUS_IO_SEGMENT_TRACK_HEADER = record
     dwFlags: DWORD; // Reserved leave as 0.
   end;
   {$EXTERNALSYM _DMUS_IO_SEGMENT_TRACK_HEADER}
@@ -7205,7 +7205,7 @@ type
   TDMusIoSegmentTrackHeader = _DMUS_IO_SEGMENT_TRACK_HEADER;
 
   PDMusIoSegmentItemHeader = ^TDMusIoSegmentItemHeader;
-  _DMUS_IO_SEGMENT_ITEM_HEADER = packed record
+  _DMUS_IO_SEGMENT_ITEM_HEADER = record
     lTimeLogical: TMusicTime;    // Position in track list. Time in the music with which the event is associated.
     lTimePhysical: TMusicTime;   // Precise time event will be triggered. Should be close to logical time.
     dwPlayFlags: DWORD;           // Flags for PlaySegment().
@@ -7288,7 +7288,7 @@ const
 
 type
   PDMusIoScriptTrackEventHeader = ^TDMusIoScriptTrackEventHeader;
-  _DMUS_IO_SCRIPTTRACK_EVENTHEADER = packed record
+  _DMUS_IO_SCRIPTTRACK_EVENTHEADER = record
     dwFlags: DWORD;              (* various bits ( see DMUS_IO_SCRIPTTRACKF_* ) *)
     lTimeLogical: TMusicTime;    (* Position in track list. Time in the music with which the event is associated. *)
     lTimePhysical: TMusicTime;   (* Precise time event will be triggered. Should be close to logical time. *)
@@ -7349,7 +7349,7 @@ const
 
 type
   PDMusIoLyricsTrackEventHeader = ^TDMusIoLyricStrackEventHeader;
-  _DMUS_IO_LYRICSTRACK_EVENTHEADER = packed record
+  _DMUS_IO_LYRICSTRACK_EVENTHEADER = record
     dwFlags: DWORD;              (* Reserved leave as 0. *)
     dwTimingFlags: DWORD;        (* Combination DMUS_PMSGF_TOOL_* flags.  Determines the precise timing of when the notification happens. Invalid with the flag DMUS_PMSGF_REFTIME, DMUS_PMSGF_MUSICTIME, DMUS_PMSGF_TOOL_FLUSH, or DMUS_PMSGF_LOCKTOREFTIME. *)
     lTimeLogical: TMusicTime;    (* Position in track list. Time in the music with which the event is associated. *)
@@ -7412,7 +7412,7 @@ const
 
 type
   PDMusIoParamControlTrackObjectHeader = ^TDMusIoParamControlTrackObjectHeader;
-  _DMUS_IO_PARAMCONTROLTRACK_OBJECTHEADER = packed record
+  _DMUS_IO_PARAMCONTROLTRACK_OBJECTHEADER = record
     dwFlags: DWORD;              (* Reserved.  Must be zero. *)
     guidTimeFormat: TGUID;        (* Time format to set the object to.  Must be GUID_TIME_REFERNCE or GUID_TIME_MUSIC from medparam.h. *)
     (* Path for finding the object. These fields correspond to the first five parameters of IDirectMusicSegmentState::GetObjectInPath. *)
@@ -7428,7 +7428,7 @@ type
   TDMusIoParamControlTrackObjectHeader = _DMUS_IO_PARAMCONTROLTRACK_OBJECTHEADER;
 
   PDMusIoParamControlTrackParamHeader = ^TDMusIoParamControlTrackParamHeader;
-  _DMUS_IO_PARAMCONTROLTRACK_PARAMHEADER = packed record
+  _DMUS_IO_PARAMCONTROLTRACK_PARAMHEADER = record
     dwFlags: DWORD;              (* Reserved.  Must be zero. *)
     dwIndex: DWORD;              (* Index number of the parameter on the object *)
   end;
@@ -7438,7 +7438,7 @@ type
   TDMusIoParamControlTrackParamHeader = _DMUS_IO_PARAMCONTROLTRACK_PARAMHEADER;
 
   PDMusIoParamControlTrackCurveInfo = ^TDMusIoParamControlTrackCurveInfo;
-  _DMUS_IO_PARAMCONTROLTRACK_CURVEINFO = packed record
+  _DMUS_IO_PARAMCONTROLTRACK_CURVEINFO = record
     mtStartTime: TMusicTime;
     mtEndTime: TMusicTime;
     fltStartValue: Single;
@@ -7517,7 +7517,7 @@ const
 
 type
   PDSoundIoDSBufferDesc = ^TDSoundIoDSBufferDesc;
-  _DSOUND_IO_DSBUFFERDESC = packed record
+  _DSOUND_IO_DSBUFFERDESC = record
     dwFlags: DWORD;        (* DirectSound buffer creation flags *)
     nChannels: Word;       (* No. of channels (rest of buffer format is determined by owning sink) *)
     lVolume: Longint;      (* Initial pan; only used if CTRLVOLUME is specified *)
@@ -7530,7 +7530,7 @@ type
   TDSoundIoDSBufferDesc = _DSOUND_IO_DSBUFFERDESC;
 
   PDSoundIoDSBusID = ^TDSoundIoDSBusID;
-  _DSOUND_IO_DSBUSID = packed record
+  _DSOUND_IO_DSBUSID = record
     busid: array[0..0] of DWORD;       (* Array size determined from chunk size *)
   end;
   {$EXTERNALSYM _DSOUND_IO_DSBUSID}
@@ -7539,7 +7539,7 @@ type
   TDSoundIoDSBusID = _DSOUND_IO_DSBUSID;
 
   PDSoundIo3D = ^TDSoundIo3D;
-  _DSOUND_IO_3D = packed record
+  _DSOUND_IO_3D = record
     guid3DAlgorithm: TGUID; (* GUID identifying the 3D algorithm to use (defined in dsound.h) *)
     ds3d: DS3DBUFFER;       (* Initial 3D parameters *)
   end;
@@ -7549,7 +7549,7 @@ type
   TDSoundIo3D = _DSOUND_IO_3D;
 
   PDSoundIoDXDMOHeader = ^TDSoundIoDXDMOHeader;
-  _DSOUND_IO_DXDMO_HEADER = packed record
+  _DSOUND_IO_DXDMO_HEADER = record
     dwEffectFlags: DWORD;  (* Effect creation flags - equivalent to DSEFFECTDESC::dwFlags *)
     guidDSFXClass: TGUID;   (* GUID identifying the effect to use - corresponds to a COM CLSID *)
     guidReserved: TGUID;    (* Reserved - must be the null GUID *)
@@ -7562,7 +7562,7 @@ type
   TDSoundIoDXDMOHeader = _DSOUND_IO_DXDMO_HEADER;
 
   PDSoundIoDXDMOData = ^TDSoundIoDXDMOData;
-  _DSOUND_IO_DXDMO_DATA= packed record
+  _DSOUND_IO_DXDMO_DATA= record
     data: array[0..0] of DWORD;      (* Array size determined by the DMO involved *)
   end;
   {$EXTERNALSYM _DSOUND_IO_DXDMO_DATA}
@@ -7663,7 +7663,7 @@ RIFF
 
 type
   PDMusEventHeader = ^TDMusEventHeader;
-  _DMUS_EVENTHEADER = packed record
+  _DMUS_EVENTHEADER = record
     cbEvent: DWORD;                (* Unrounded bytes in event *)
     dwChannelGroup: DWORD;         (* Channel group of event *)
     rtDelta: TReferenceTime;       (* Delta from start time of entire buffer *)
@@ -7681,10 +7681,10 @@ const
 (* The number of bytes to allocate for an event with 'cb' data bytes.
  *)
 // #define QWORD_ALIGN(x) (((x) + 7) & ~7)
-function QWORD_ALIGN(x: DWORD): DWORD;
+function QWORD_ALIGN(x: DWORD): DWORD;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM QWORD_ALIGN}
 // #define DMUS_EVENT_SIZE(cb) QWORD_ALIGN(sizeof(DMUS_EVENTHEADER) + cb)
-function DMUS_EVENT_SIZE(cb: DWORD): DWORD;
+function DMUS_EVENT_SIZE(cb: DWORD): DWORD;{$IFDEF SUPPORTS_INLINE} inline;{$ENDIF}
 {$EXTERNALSYM DMUS_EVENT_SIZE}
 
 

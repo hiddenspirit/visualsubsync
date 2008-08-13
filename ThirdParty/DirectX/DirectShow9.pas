@@ -27,10 +27,10 @@
       |   dmoimpl.h, ks.h, ksproxy.h, ksmedia.h, dmksctrl.h, bdamedia.h, |
       |   BDATIF.idl, AMVPE.idl, Mixerocx.idl, Mpeg2Data.idl,            |
       |   Mpeg2Structs.idl, Mpeg2Bits.h, Mpeg2Error.h, EDevCtrl.h,       |
-      |   sbe.idl, vmr9.idl                                              |
+      |   sbe.idl, vmr9.idl, iwstdec.h                                   |
       |                                                                  |
       | The original Pascal code is: DirectShow9.pas,                    |
-      |   released 01 Jun 2003.                                          |
+      |   released 01 Nov 2003.                                          |
       |                                                                  |
       | The initial developer of the Pascal code is Henri GOURVEST       |
       |   Email    : hgourvest@progdigy.com                              |
@@ -43,7 +43,11 @@
       |               Peter NEUMANN                                      |
       |               Alexey Barkovoy                                    |
       |               Wayne Sherman                                      |
-      |               Peter J. Haas (DSPack@pjh2.de)                     |
+      |               Peter J. Haas     <DSPack@pjh2.de>                 |
+      |               Andriy Nevhasymyy <a.n@email.com>                  |
+      |               Milenko Mitrovic  <dcoder@dsp-worx.de>             |
+      |               Michael Andersen  <michael@mechdata.dk>            |
+      |               Martin Offenwanger <coder@dsplayer.de              |
       |                                                                  |
       | Joint Endeavour of Delphi Innovators (Project JEDI)              |
       |                                                                  |
@@ -73,6 +77,14 @@
 {$ENDIF}
 
 unit DirectShow9;
+{$HPPEMIT '#if(DIRECT3D_VERSION > 0x0700)'}
+{$HPPEMIT 'typedef struct IDirect3D            *LPDIRECT3D;'}
+{$HPPEMIT 'typedef struct IDirect3DDevice      *LPDIRECT3DDEVICE;'}
+{$HPPEMIT 'typedef struct IDirect3D2           *LPDIRECT3D2;'}
+{$HPPEMIT 'typedef struct IDirect3DDevice2     *LPDIRECT3DDEVICE2;'}
+{$HPPEMIT 'typedef struct IDirect3DViewport    *LPDIRECT3DVIEWPORT;'}
+{$HPPEMIT '#endif'}
+
 {$HPPEMIT '#define __KS__'}
 {$HPPEMIT '#define __STREAMS__'}
 {$HPPEMIT '#include "comlite.h"'}
@@ -135,6 +147,7 @@ unit DirectShow9;
 {$HPPEMIT '#include "Mpeg2Error.h"'}
 {$HPPEMIT '#include "sbe.h"'}
 {$HPPEMIT '#include "vmr9.h"'}
+{$HPPEMIT '#include "iwstdec.h"'}
 
 interface
 
@@ -509,6 +522,8 @@ const
   {$EXTERNALSYM IID_IRegisterServiceProvider}
   IID_IAMDecoderCaps                  : TGUID = '{c0dff467-d499-4986-972b-e1d9090fa941}'; // XP
   {$EXTERNALSYM IID_IAMDecoderCaps}
+  IID_IAMCertifiedOutputProtection    : TGUID = '{6FEDED3E-0FF1-4901-A2F1-43F7012C8515}';
+  {$EXTERNALSYM IID_IAMCertifiedOutputProtection}
   IID_IAMClockSlave                   : TGUID = '{9FD52741-176D-4b36-8F51-CA8F933223BE}'; // XP
   {$EXTERNALSYM IID_IAMClockSlave}
   IID_IAMGraphBuilderCallback         : TGUID = '{4995f511-9ddb-4f12-bd3b-f04611807b79}'; // DX9
@@ -606,10 +621,10 @@ type
   {$EXTERNALSYM PIN_DIRECTION}
   TPinDirection = PIN_DIRECTION;
 
-  REFERENCE_TIME = {$IFDEF TYPE_IDENTITY}type {$ENDIF}int64;
+  REFERENCE_TIME = DirectSound.REFERENCE_TIME;
   {$EXTERNALSYM REFERENCE_TIME}
-  TReferenceTime = REFERENCE_TIME;
-  PReferenceTime = ^TReferenceTime;
+  TReferenceTime = DirectSound.TReferenceTime;
+  PReferenceTime = DirectSound.PReferenceTime;
 
   REFTIME = double;
   {$EXTERNALSYM REFTIME}
@@ -788,7 +803,7 @@ type
     function GetActualDataLength: Longint; stdcall;
     function SetActualDataLength(lLen: Longint): HResult; stdcall;
     function GetMediaType(out ppMediaType: PAMMediaType): HResult; stdcall;
-    function SetMediaType(var pMediaType: TAMMediaType): HResult; stdcall;
+    function SetMediaType(pMediaType: PAMMediaType): HResult; stdcall;
     function IsDiscontinuity: HResult; stdcall;
     function SetDiscontinuity(bDiscontinuity: BOOL): HResult; stdcall;
     function GetMediaTime(out pTimeStart, pTimeEnd: int64): HResult; stdcall;
@@ -1366,7 +1381,7 @@ type
     function ControlStream(pCategory, pType: PGUID; pFilter: IBaseFilter; pstart, pstop: PReferenceTime; wStartCookie, wStopCookie: WORD ): HResult; stdcall;
     function AllocCapFile(lpstr: PWCHAR; dwlSize: int64): HResult; stdcall;
     function CopyCaptureFile(lpwstrOld, lpwstrNew: PWCHAR; fAllowEscAbort: Integer; pCallback: IAMCopyCaptureFileProgress): HResult; stdcall;
-    function FindPin(pSource: IUnknown; pindir: TPINDIRECTION; const pCategory, pType: TGUID; fUnconnected: BOOL; num: integer; out ppPin: IPin): HResult; stdcall;
+    function FindPin(pSource: IUnknown; pindir: TPINDIRECTION; const pCategory, pType: PGUID; fUnconnected: BOOL; num: integer; out ppPin: IPin): HResult; stdcall;
   end;
 
   {$HPPEMIT 'typedef System::DelphiInterface<IAMCopyCaptureFileProgress> _di_IAMCopyCaptureFileProgress;'}
@@ -1410,8 +1425,10 @@ type
   IAsyncReader = interface(IUnknown)
     ['{56A868AA-0AD4-11CE-B03A-0020AF0BA770}']
     (*** IAsyncReader methods ***)
+    {nev: start}
     function RequestAllocator(pPreferred: IMemAllocator;
-        const pProps: TAllocatorProperties; out ppActual: IMemAllocator): HResult; stdcall;
+      pProps: PAllocatorProperties; out ppActual: IMemAllocator): HResult; stdcall;
+    {nev: end}
     function Request(pSample: IMediaSample; dwUser: DWORD): HResult; stdcall;
     function WaitForNext(dwTimeout: DWORD; out ppSample: IMediaSample;
         out pdwUser: DWORD): HResult; stdcall;
@@ -1945,7 +1962,7 @@ type
     ['{C6E13370-30AC-11d0-A18C-00A0C9118956}']
     (*** IAMCameraControl methods ***)
     function GetRange(Property_: TCameraControlProperty;
-        out pMin, pMax, pSteppingDelta, pDefault, pCapsFlags: Longint): HResult; stdcall;
+        out pMin, pMax, pSteppingDelta, pDefault: Longint; out pCapsFlags: TCameraControlFlags): HResult; stdcall;
     function Set_(Property_: TCameraControlProperty; lValue: Longint;
         Flags: TCameraControlFlags): HResult; stdcall;
     function Get(Property_: TCameraControlProperty; out lValue: Longint;
@@ -2507,8 +2524,10 @@ const
   {$EXTERNALSYM AM_PUSHSOURCECAPS_NOT_LIVE}
   AM_PUSHSOURCECAPS_PRIVATE_CLOCK	   = $4;
   {$EXTERNALSYM AM_PUSHSOURCECAPS_PRIVATE_CLOCK}
-  AM_PUSHSOURCEREQS_USE_STREAM_CLOCK = $00001;
+  AM_PUSHSOURCEREQS_USE_STREAM_CLOCK = $10000;
   {$EXTERNALSYM AM_PUSHSOURCEREQS_USE_STREAM_CLOCK}
+  AM_PUSHSOURCEREQS_USE_CLOCK_CHAIN = $20000;
+  {$EXTERNALSYM AM_PUSHSOURCEREQS_USE_CLOCK_CHAIN}
 
 type
   {$HPPEMIT 'typedef System::DelphiInterface<IAMLatency> _di_IAMLatency;'}
@@ -2890,7 +2909,9 @@ type
    ['{56a868fd-0ad4-11ce-b0a3-0020af0ba770}']
    (*** IAMFilterGraphCallback methods ***)
     // S_OK means rendering complete, S_FALSE means retry now.")
-    function UnableToRender(pPin: IPin): HResult; cdecl; // thiscall
+    // DCoder: thiscall fix. DON'T use ph1 and ph2, these are just placeholders
+    // to get the real address of pPin !!!
+    function UnableToRender(ph1, ph2: integer; pPin: IPin): HResult; // thiscall
   end;
 
 //------------------------------------------------------------------------------
@@ -3108,6 +3129,80 @@ type
     ['{c0dff467-d499-4986-972b-e1d9090fa941}']
     (*** IAMDecoderCaps methods ***)
     function GetDecoderCaps(dwCapIndex: DWORD; out lpdwCap: DWORD): HResult; stdcall;
+  end;
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// IAMCertifiedOutputProtection
+//
+///////////////////////////////////////////////////////////////////////////////
+
+  PAMCOPPSignature = ^TAMCOPPSignature;
+  AMCOPPSignature = packed record
+    Signature: array[0..255] of byte;
+  end;
+  {$EXTERNALSYM AMCOPPSignature}
+  TAMCOPPSignature = AMCOPPSignature;
+
+  AMCOPPCommand = packed record
+    macKDI: TGUID;             //   16 bytes
+    guidCommandID: TGUID;      //   16 bytes
+    dwSequence: DWORD;         //    4 bytes
+    cbSizeData: DWORD;         //    4 bytes
+    CommandData: array[0..4055] of byte;  // 4056 bytes (4056+4+4+16+16 = 4096)
+  end;
+  {$EXTERNALSYM AMCOPPCommand}
+  TAMCOPPCommand = AMCOPPCommand;
+  LPAMCOPPCommand = ^AMCOPPCommand;
+  {$EXTERNALSYM LPAMCOPPCommand}
+  PAMCOPPCommand = LPAMCOPPCommand;
+
+  AMCOPPStatusInput = packed record
+    rApp: TGUID;               //   16 bytes
+    guidStatusRequestID: TGUID;//   16 bytes
+    dwSequence: DWORD;         //    4 bytes
+    cbSizeData: DWORD;         //    4 bytes
+    StatusData: array[0..4055] of byte;   // 4056 bytes (4056+4+4+16+16 = 4096)
+  end;
+  {$EXTERNALSYM AMCOPPStatusInput}
+  TAMCOPPStatusInput = AMCOPPStatusInput;
+  LPAMCOPPStatusInput = ^AMCOPPStatusInput;
+  {$EXTERNALSYM LPAMCOPPStatusInput}
+  PAMCOPPStatusInput = LPAMCOPPStatusInput;
+
+  AMCOPPStatusOutput = packed record
+    macKDI: TGUID;             //   16 bytes
+    cbSizeData: DWORD;         //    4 bytes
+    COPPStatus: array[0..4075] of byte;   // 4076 bytes (4076+16+4 = 4096)
+  end;
+  {$EXTERNALSYM AMCOPPStatusOutput}
+  TAMCOPPStatusOutput = AMCOPPStatusOutput;
+  LPAMCOPPStatusOutput = ^AMCOPPStatusOutput;
+  {$EXTERNALSYM LPAMCOPPStatusOutput}
+  PAMCOPPStatusOutput = LPAMCOPPStatusOutput;
+
+  {$HPPEMIT 'typedef System::DelphiInterface<IAMCertifiedOutputProtection> _di_IAMCertifiedOutputProtection;'}
+  {$EXTERNALSYM IAMCertifiedOutputProtection}
+  IAMCertifiedOutputProtection = interface(IUnknown)
+  ['{6FEDED3E-0FF1-4901-A2F1-43F7012C8515}']
+    function KeyExchange(
+        pRandom: PGUID;             // 128-bit random number generated by Graphics Driver
+        var VarLenCertGH: PByte;    // Graphics Hardware certificate, memory released by CoTaskMemFree
+        pdwLengthCertGH: PDWORD     // Length of Graphics Hardware certificate
+    ): HRESULT; stdcall;
+
+    // Concatenation of 128-bit random data security session key,
+    // 128-bit random data integrity session key, 32-bit random
+    // starting status sequence number and 32-bit random starting
+    // command sequence number encrypted with the public key of
+    // the graphic hardware. This value is 2048 bits long.
+    function SessionSequenceStart(pSig: PAMCOPPSignature): HRESULT; stdcall;
+
+    function ProtectionCommand(cmd: PAMCOPPCommand): HRESULT; stdcall; // Encrypted command
+
+    function ProtectionStatus(
+      pStatusInput: PAMCOPPStatusInput;  // Encrypted Status request
+      pStatusOutput: PAMCOPPStatusOutput): HRESULT; stdcall;     // Encrypted Status results
   end;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3391,6 +3486,7 @@ type
   {$IFNDEF COMPILER6_UP}
   tagDVD_SUBPICTURE_LANG_EXT = {$IFDEF TYPE_IDENTITY}type {$ENDIF}LongWord;
   const
+    DVD_SP_EXT_NotSpecified               = 0;
     DVD_SP_EXT_Caption_Normal	            = 1;
     DVD_SP_EXT_Caption_Big	              = 2;
     DVD_SP_EXT_Caption_Children	          = 3;
@@ -3403,6 +3499,7 @@ type
     DVD_SP_EXT_DirectorComments_Children	= 15;
   {$ELSE}
   tagDVD_SUBPICTURE_LANG_EXT = (
+    DVD_SP_EXT_NotSpecified               = 0,
     DVD_SP_EXT_Caption_Normal	            = 1,
     DVD_SP_EXT_Caption_Big	              = 2,
     DVD_SP_EXT_Caption_Children	          = 3,
@@ -4421,14 +4518,16 @@ type
   VMRPresentationFlags = {$IFDEF TYPE_IDENTITY}type {$ENDIF} LongWord;
   {$EXTERNALSYM VMRPresentationFlags}
   const
-    VMRSample_SyncPoint       = $00000001;
+    VMRSample_SyncPoint        = $00000001;
     {$EXTERNALSYM VMRSample_SyncPoint}
-    VMRSample_Preroll         = $00000002;
+    VMRSample_Preroll          = $00000002;
     {$EXTERNALSYM VMRSample_Preroll}
-    VMRSample_Discontinuity   = $00000004;
+    VMRSample_Discontinuity    = $00000004;
     {$EXTERNALSYM VMRSample_Discontinuity}
-    VMRSample_TimeValid       = $00000008;
+    VMRSample_TimeValid        = $00000008;
     {$EXTERNALSYM VMRSample_TimeValid}
+    VMRSample_SrcDstRectsValid = $00000010;
+    {$EXTERNALSYM VMRSample_SrcDstRectsValid}
 
 
 type
@@ -4628,6 +4727,10 @@ const
   {$EXTERNALSYM MixerPref_NoDecimation}
   MixerPref_DecimateOutput	     = $2;
   {$EXTERNALSYM MixerPref_DecimateOutput}
+  MixerPref_ARAdjustXorY         = $4; // adjust the aspect ratio in x or y
+  {$EXTERNALSYM MixerPref_ARAdjustXorY}
+  MixerPref_DecimationReserved   = $8; // bits reserved for future use.
+  {$EXTERNALSYM MixerPref_DecimationReserved}
   MixerPref_DecimateMask	       = $f;
   {$EXTERNALSYM MixerPref_DecimateMask}
   MixerPref_BiLinearFiltering	   = $10;
@@ -4636,18 +4739,37 @@ const
   {$EXTERNALSYM MixerPref_PointFiltering}
   MixerPref_FilteringMask	       = $f0;
   {$EXTERNALSYM MixerPref_FilteringMask}
-  MixerPref_RenderTargetRGB	     = $100;
+  MixerPref_RenderTargetRGB      = $00000100; // Uses D3D to perform mixing
   {$EXTERNALSYM MixerPref_RenderTargetRGB}
-  MixerPref_RenderTargetYUV420	 = $200;
+  MixerPref_RenderTargetYUV      = $00001000; // Uses DXVA to perform mixing
+  {$EXTERNALSYM MixerPref_RenderTargetYUV}
+  MixerPref_RenderTargetYUV420   = $00000200; // Deprecated render target
   {$EXTERNALSYM MixerPref_RenderTargetYUV420}
-  MixerPref_RenderTargetYUV422	 = $400;
+  MixerPref_RenderTargetYUV422   = $00000400; // Deprecated render target
   {$EXTERNALSYM MixerPref_RenderTargetYUV422}
-  MixerPref_RenderTargetYUV444	 = $800;
+  MixerPref_RenderTargetYUV444   = $00000800; // Deprecated render target
   {$EXTERNALSYM MixerPref_RenderTargetYUV444}
-  MixerPref_RenderTargetReserved = $f000;
+  MixerPref_RenderTargetReserved = $0000E000; // 3 bits reserved for future use.
   {$EXTERNALSYM MixerPref_RenderTargetReserved}
   MixerPref_RenderTargetMask	   = $ff00;
   {$EXTERNALSYM MixerPref_RenderTargetMask}
+
+  //
+  // Dynamic changes that can be performed when the VMR's mixer is
+  // configured to use the YUV Render target (see MixerPref_RenderTargetYUV)
+  // These preferences can be applied while the graph is running and take effect
+  // when the next frame is composed by the mixer.
+  //
+  MixerPref_DynamicSwitchToBOB   = $00010000;
+  {$EXTERNALSYM MixerPref_DynamicSwitchToBOB}
+  MixerPref_DynamicDecimateBy2   = $00020000;
+  {$EXTERNALSYM MixerPref_DynamicDecimateBy2}
+
+  MixerPref_DynamicReserved      = $000C0000;
+  {$EXTERNALSYM MixerPref_DynamicReserved}
+  MixerPref_DynamicMask          = $000F0000;
+  {$EXTERNALSYM MixerPref_DynamicMask}
+
 
 type
   PNormalizedRect = ^TNormalizedRect;
@@ -8172,6 +8294,13 @@ const
   {$EXTERNALSYM AMCONTROL_PAD_TO_16x9}
 
 type
+  TVideoInfoHeader2ControlFlags = record
+     case byte of
+      0: (dwControlFlags : DWORD);   // use AMCONTROL_* defines, use this from now on
+      1: (dwReserved1    : DWORD);   // for backward compatiblity (was "must be 0";  connection rejected otherwise)
+  end;
+  {$EXTERNALSYM TVideoInfoHeader2ControlFlags}
+
   PVideoInfoHeader2 = ^TVideoInfoHeader2;
   tagVIDEOINFOHEADER2 = record
     rcSource: TRect;
@@ -8183,13 +8312,9 @@ type
     dwCopyProtectFlags: DWORD;       // use AMCOPYPROTECT_* defines. Reject connection if undefined bits are not 0
     dwPictAspectRatioX: DWORD;       // X dimension of picture aspect ratio, e.g. 16 for 16x9 display
     dwPictAspectRatioY: DWORD;       // Y dimension of picture aspect ratio, e.g.  9 for 16x9 display
-    case integer of
-    0: (dwControlFlags: DWORD;           // use AMCONTROL_* defines, use this from now on
-        dwReserved2: DWORD;              // must be 0; reject connection otherwise
-        bmiHeader: TBitmapInfoHeader);
-    1: (dwReserved1: DWORD ;              // for backward compatiblity (was "must be 0";  connection rejected otherwise)
-        dwReserved2_: DWORD;              // must be 0; reject connection otherwise
-        bmiHeader_: TBitmapInfoHeader);
+    ControlFlags: TVideoInfoHeader2ControlFlags;
+    dwReserved2: DWORD;              // must be 0; reject connection otherwise
+    bmiHeader: TBitmapInfoHeader;
   end;
   {$EXTERNALSYM tagVIDEOINFOHEADER2}
   VIDEOINFOHEADER2 = tagVIDEOINFOHEADER2;
@@ -8617,6 +8742,8 @@ const
   {$EXTERNALSYM VFW_E_DVD_OPERATION_INHIBITED}
   VFW_E_DVD_INVALIDDOMAIN                   = HResult($80040277);
   {$EXTERNALSYM VFW_E_DVD_INVALIDDOMAIN}
+  VFW_E_DVD_NO_BUTTON                       = Hresult($80040278);
+  {$EXTERNALSYM VFW_E_DVD_NO_BUTTON}
   VFW_E_DVD_GRAPHNOTREADY                   = HResult($80040279);
   {$EXTERNALSYM VFW_E_DVD_GRAPHNOTREADY}
   VFW_E_DVD_RENDERFAIL                      = HResult($8004027A);
@@ -8693,6 +8820,10 @@ const
   // VMR9 does not work with VPE-based hardware decoders.%0
   VFW_E_DVD_VMR9_INCOMPATIBLEDEC = HResult($8004029A);
   {$EXTERNALSYM VFW_E_DVD_VMR9_INCOMPATIBLEDEC}
+
+  // The current display device does not support Content Output Protection Protocol (COPP) H/W.%0
+  VFW_E_NO_COPP_HW = HRESULT($8004029B);
+  {$EXTERNALSYM VFW_E_NO_COPP_HW}
 
   E_PROP_SET_UNSUPPORTED                    = HResult($80070492);
   {$EXTERNALSYM E_PROP_SET_UNSUPPORTED}
@@ -8869,6 +9000,9 @@ const
   {$EXTERNALSYM ED_POWER_OFF}
   ED_POWER_STANDBY                       = ED_BASE+52;
   {$EXTERNALSYM ED_POWER_STANDBY}
+
+  ED_POWER_DEVICE_DEPENDENT              = ED_BASE+1033; // Power is on with limited functions
+  {$EXTERNALSYM ED_POWER_DEVICE_DEPENDENT}
 
   ED_ACTIVE                              = ED_BASE+53;
   {$EXTERNALSYM ED_ACTIVE}
@@ -9173,6 +9307,8 @@ const
   {$EXTERNALSYM ED_MEDIA_POSITION}
   ED_MEDIA_NEO                           = ED_BASE+531; // Mini digital tape for MPEG2TS signal
   {$EXTERNALSYM ED_MEDIA_NEO}
+  ED_MEDIA_MICROMV                       = ED_MEDIA_NEO;
+  {$EXTERNALSYM ED_MEDIA_MICROMV}
 
   ED_LINK_MODE                           = ED_BASE+530;
   {$EXTERNALSYM ED_LINK_MODE}
@@ -9540,8 +9676,18 @@ const
   ED_DEVTYPE_DVHS          =  ED_BASE+902;
   {$EXTERNALSYM ED_DEVTYPE_DVHS}
 
-  ED_DEVTYPE_UNKNOWN       =  ED_BASE+903;
+  ED_DEVTYPE_UNKNOWN        = ED_BASE+903;     // Driver cannot determine the device type
   {$EXTERNALSYM ED_DEVTYPE_UNKNOWN}
+
+  ED_DEVTYPE_CAMERA_STORAGE = ED_BASE+1034;    // Storage for digital still images, short video files, etc.
+  {$EXTERNALSYM ED_DEVTYPE_CAMERA_STORAGE}
+
+  ED_DEVTYPE_DTV            = ED_BASE+1035;    // DTV with serial bus interface
+  {$EXTERNALSYM ED_DEVTYPE_DTV}
+
+  ED_DEVTYPE_PC_VIRTUAL     = ED_BASE+1036;    // Emulated device (virtual) on a PC
+  {$EXTERNALSYM ED_DEVTYPE_PC_VIRTUAL}
+
 
 //
 // Unknownn capability
@@ -9552,7 +9698,8 @@ const
 
 
 //
-// Send RAW extenal device command via Get/SetTransportBasicParameters()
+// Send raw 1394/AVC extenal device command via GetTransportBasicParameters()
+// This is specifically for a 1394 AVC device connected with DEV_PORT_1394.
 //
   ED_RAW_EXT_DEV_CMD       =  ED_BASE+920;
   {$EXTERNALSYM ED_RAW_EXT_DEV_CMD}
@@ -9610,7 +9757,82 @@ const
   ED_MODE_REV_PLAY         =  ED_BASE+939;  // x1 speed reverse play
   {$EXTERNALSYM ED_MODE_REV_PLAY}
 
+//
+// Additional play modes (added post Windows XP)
+//
 
+  ED_MODE_PLAY_SLOW_FWD_6       = ED_BASE+1001;  // Slow forward
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_6}
+  ED_MODE_PLAY_SLOW_FWD_5       = ED_BASE+1002;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_5}
+  ED_MODE_PLAY_SLOW_FWD_4       = ED_BASE+1003;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_4}
+  ED_MODE_PLAY_SLOW_FWD_3       = ED_BASE+1004;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_3}
+  ED_MODE_PLAY_SLOW_FWD_2       = ED_BASE+1005;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_2}
+  ED_MODE_PLAY_SLOW_FWD_1       = ED_BASE+1006;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_1}
+
+  ED_MODE_PLAY_FAST_FWD_1       = ED_BASE+1007;  // Fast forward
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_1}
+  ED_MODE_PLAY_FAST_FWD_2       = ED_BASE+1008;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_2}
+  ED_MODE_PLAY_FAST_FWD_3       = ED_BASE+1009;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_3}
+  ED_MODE_PLAY_FAST_FWD_4       = ED_BASE+1010;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_4}
+  ED_MODE_PLAY_FAST_FWD_5       = ED_BASE+1011;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_5}
+  ED_MODE_PLAY_FAST_FWD_6       = ED_BASE+1012;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_6}
+
+  ED_MODE_PLAY_SLOW_REV_6       = ED_BASE+1013;  // Slow reverse
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_6}
+  ED_MODE_PLAY_SLOW_REV_5       = ED_BASE+1014;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_5}
+  ED_MODE_PLAY_SLOW_REV_4       = ED_BASE+1015;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_4}
+  ED_MODE_PLAY_SLOW_REV_3       = ED_BASE+1016;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_3}
+  ED_MODE_PLAY_SLOW_REV_2       = ED_BASE+1017;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_2}
+  ED_MODE_PLAY_SLOW_REV_1       = ED_BASE+1018;
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_1}
+
+  ED_MODE_PLAY_FAST_REV_1       = ED_BASE+1019;  // Fast reverse
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_1}
+  ED_MODE_PLAY_FAST_REV_2       = ED_BASE+1020;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_2}
+  ED_MODE_PLAY_FAST_REV_3       = ED_BASE+1021;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_3}
+  ED_MODE_PLAY_FAST_REV_4       = ED_BASE+1022;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_4}
+  ED_MODE_PLAY_FAST_REV_5       = ED_BASE+1023;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_5}
+  ED_MODE_PLAY_FAST_REV_6       = ED_BASE+1024;
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_6}
+
+  ED_MODE_REVERSE               = ED_MODE_REV_PLAY; // Same as Reverse playback
+  {$EXTERNALSYM ED_MODE_REVERSE}
+  ED_MODE_REVERSE_FREEZE        = ED_BASE+1025;    // Pause at reverse playback
+  {$EXTERNALSYM ED_MODE_REVERSE_FREEZE}
+
+  ED_MODE_PLAY_SLOW_FWD_X       = ED_BASE+1026;    // Possible response for a trick play
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_FWD_X}
+  ED_MODE_PLAY_FAST_FWD_X       = ED_BASE+1027;    // Possible response for a trick play
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_FWD_X}
+  ED_MODE_PLAY_SLOW_REV_X       = ED_BASE+1028;    // Possible response for a trick play
+  {$EXTERNALSYM ED_MODE_PLAY_SLOW_REV_X}
+  ED_MODE_PLAY_FAST_REV_X       = ED_BASE+1029;    // Possible response for a trick play
+  {$EXTERNALSYM ED_MODE_PLAY_FAST_REV_X}
+
+  ED_MODE_STOP_START            = ED_BASE+1030;    // Indicate stopping at the begin of a tape
+  {$EXTERNALSYM ED_MODE_STOP_START}
+  ED_MODE_STOP_END              = ED_BASE+1031;    // Indicate stopping at the end of a tape
+  {$EXTERNALSYM ED_MODE_STOP_END}
+  ED_MODE_STOP_EMERGENCY        = ED_BASE+1032;    // Indicate stopping due to an emergency
+  {$EXTERNALSYM ED_MODE_STOP_EMERGENCY}
 
 //
 // TRANSPOSRTBASIC: input and output signal
@@ -9651,6 +9873,21 @@ const
 
   ED_TRANSBASIC_SIGNAL_UNKNOWN   = ED_BASE+990;
   {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_UNKNOWN}
+
+  ED_TRANSBASIC_SIGNAL_525_60_DV25  = ED_BASE+991;
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_525_60_DV25}
+  ED_TRANSBASIC_SIGNAL_625_50_DV25  = ED_BASE+992;
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_625_50_DV25}
+
+  ED_TRANSBASIC_SIGNAL_525_60_DV50  = ED_BASE+993;
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_525_60_DV50}
+  ED_TRANSBASIC_SIGNAL_625_50_DV50  = ED_BASE+994;
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_625_50_DV50}
+
+  ED_TRANSBASIC_SIGNAL_HD_60_DVH1   = ED_BASE+995;  // DVCPRO 100: 1080i or 720p
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_HD_60_DVH1}
+  ED_TRANSBASIC_SIGNAL_HD_50_DVH1   = ED_BASE+996;  // DVCPRO 100: 1080i only
+  {$EXTERNALSYM ED_TRANSBASIC_SIGNAL_HD_50_DVH1}
 
 
 //
@@ -10978,6 +11215,10 @@ const
   {$EXTERNALSYM MEDIASUBTYPE_Line21_VBIRawData}
   MEDIASUBTYPE_TELETEXT : TGUID = '{F72A76E3-EB0A-11D0-ACE4-0000C0CC16BA}'; // MEDIASUBTYPE_TELETEXT
   {$EXTERNALSYM MEDIASUBTYPE_TELETEXT}
+  MEDIASUBTYPE_WSS : TGUID = '{2791D576-8E7A-466F-9E90-5D3F3083738B}';
+  {$EXTERNALSYM MEDIASUBTYPE_WSS}
+  MEDIASUBTYPE_VPS : TGUID = '{A1B3F620-9792-4d8d-81A4-86AF25772090}';
+  {$EXTERNALSYM MEDIASUBTYPE_VPS}
   MEDIASUBTYPE_DRM_Audio: TGUID = (D1:$00000009;D2:$0000;D3:$0010;D4:($80,$00,$00,$aa,$00,$38,$9b,$71));
   {$EXTERNALSYM MEDIASUBTYPE_DRM_Audio}
   MEDIASUBTYPE_IEEE_FLOAT: TGUID = (D1:$00000003;D2:$0000;D3:$0010;D4:($80,$00,$00,$aa,$00,$38,$9b,$71));
@@ -11691,6 +11932,15 @@ const
   {$EXTERNALSYM DXVA_ModeWMV9_Ai}
   DXVA_ModeWMV9_Bi  : TGUID = (D1:$1b81be93 ;D2:$a0c7; D3:$11d3; D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
   {$EXTERNALSYM DXVA_ModeWMV9_Bi}
+
+  DXVA_ModeWMV9_C   : TGUID = (D1:$1b81be94 ;D2:$a0c7; D3:$11d3; D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
+  {$EXTERNALSYM DXVA_ModeWMV9_C}
+  DXVA_ModeWMVA_A   : TGUID = (D1:$1b81be96 ;D2:$a0c7; D3:$11d3; D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
+  {$EXTERNALSYM DXVA_ModeWMVA_A}
+  DXVA_ModeWMVA_B   : TGUID = (D1:$1b81be97 ;D2:$a0c7; D3:$11d3; D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
+  {$EXTERNALSYM DXVA_ModeWMVA_B}
+  DXVA_ModeWMVA_C   : TGUID = (D1:$1b81be98 ;D2:$a0c7; D3:$11d3; D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
+  {$EXTERNALSYM DXVA_ModeWMVA_C}
 
   DXVA_NoEncrypt    : TGUID = (D1:$1b81beD0;D2:$a0c7;D3:$11d3;D4:($b9,$84,$00,$c0,$4f,$2e,$73,$c5));
   {$EXTERNALSYM DXVA_NoEncrypt}
@@ -12471,6 +12721,174 @@ type
 
 // -------------------------------------------------------------------------
 //
+// D3DFORMAT describes a pixel memory layout, DXVA sample format contains
+// additional information that describes how the pixels should be interpreted.
+//
+// -------------------------------------------------------------------------
+
+//#define DXVABit(__x) (1 << __x)
+const
+  DXVA_SampleFormatMask = $FF;   // 8 bits used for DXVA Sample format
+  {$EXTERNALSYM DXVA_SampleFormatMask}
+
+type
+  DXVA_SampleFormat = (
+    DXVA_SampleUnknown,
+    DXVA_SamplePreviousFrame,
+    DXVA_SampleProgressiveFrame,
+    DXVA_SampleFieldInterleavedEvenFirst,
+    DXVA_SampleFieldInterleavedOddFirst,
+    DXVA_SampleFieldSingleEven,
+    DXVA_SampleFieldSingleOdd,
+    DXVA_SampleSubStream
+  );
+  {$EXTERNALSYM DXVA_SampleFormat}
+  TDXVASampleFormat = DXVA_SampleFormat;
+
+//#define DXVA_ExtractSampleFormat(_sf) ((_sf) & (DXVA_SampleFormatMask))
+
+
+
+//#define DXVA_ExtractExtColorData(_sf, _Mask, _Shift) \
+//    (((_sf) >> (_Shift)) & (_Mask))
+
+const
+
+//#define DXVABitMask(__n) (~((~0) << __n))
+  DXVA_ExtColorData_ShiftBase  = 8;
+  {$EXTERNALSYM DXVA_ExtColorData_ShiftBase}
+//#define DXVAColorMask(__bits,__base) (DXVABitMask(__bits) << ( __base - DXVA_ExtColorData_ShiftBase))
+
+  // DXVA_VideoTransFuncShift = (DXVA_ExtColorData_ShiftBase + 19),
+  DXVA_VideoTransFuncShift = (DXVA_ExtColorData_ShiftBase + 19);
+  {$EXTERNALSYM DXVA_VideoTransFuncShift}
+  // DXVA_VideoTransFuncMask = DXVAColorMask(5, DXVA_VideoTransFuncShift),
+  DXVA_VideoTransFuncMask = (not((not 0) shl 5)) shl ( DXVA_VideoTransFuncShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_VideoTransFuncMask}
+
+type
+  DXVA_VideoTransferFunction = (
+    DXVA_VideoTransFunc_Unknown,
+    DXVA_VideoTransFunc_10,
+    DXVA_VideoTransFunc_18,
+    DXVA_VideoTransFunc_20,
+    DXVA_VideoTransFunc_22,
+    DXVA_VideoTransFunc_22_709,
+    DXVA_VideoTransFunc_22_240M,
+    DXVA_VideoTransFunc_22_8bit_sRGB,
+    DXVA_VideoTransFunc_28
+  );
+  {$EXTERNALSYM DXVA_VideoTransferFunction}
+  TDXVAVideoTransferFunction = DXVA_VideoTransferFunction;
+
+const
+
+
+  // DXVA_VideoPrimariesShift = (DXVA_ExtColorData_ShiftBase + 14),
+  DXVA_VideoPrimariesShift = (DXVA_ExtColorData_ShiftBase + 14);
+  {$EXTERNALSYM DXVA_VideoPrimariesShift}
+  // DXVA_VideoPrimariesMask = DXVAColorMask(5, DXVA_VideoPrimariesShift),
+  DXVA_VideoPrimariesMask = (not((not 0) shl 5)) shl ( DXVA_VideoPrimariesShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_VideoPrimariesMask}
+
+type
+  DXVA_VideoPrimaries = (
+    DXVA_VideoPrimaries_Unknown,
+    DXVA_VideoPrimaries_reserved,
+    DXVA_VideoPrimaries_BT709,
+    DXVA_VideoPrimaries_BT470_2_SysM,
+    DXVA_VideoPrimaries_BT470_2_SysBG,
+    DXVA_VideoPrimaries_SMPTE170M,
+    DXVA_VideoPrimaries_SMPTE240M,
+    DXVA_VideoPrimaries_EBU3213,
+    DXVA_VideoPrimaries_SMPTE_C
+  );
+  {$EXTERNALSYM DXVA_VideoPrimaries}
+  TDXVAVideoPrimaries = DXVA_VideoPrimaries;
+
+const
+
+  // DXVA_VideoLightingShift = (DXVA_ExtColorData_ShiftBase + 10),
+  DXVA_VideoLightingShift = (DXVA_ExtColorData_ShiftBase + 10);
+  {$EXTERNALSYM DXVA_VideoLightingShift}
+  // DXVA_VideoLightingMask = DXVAColorMask(4, DXVA_VideoLightingShift),
+  DXVA_VideoLightingMask = (not((not 0) shl 4)) shl ( DXVA_VideoLightingShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_VideoLightingMask}
+
+type
+  DXVA_VideoLighting = (
+    DXVA_VideoLighting_Unknown,
+    DXVA_VideoLighting_bright,
+    DXVA_VideoLighting_office,
+    DXVA_VideoLighting_dim,
+    DXVA_VideoLighting_dark
+  );
+  {$EXTERNALSYM DXVA_VideoLighting}
+  TDXVAVideoLighting = DXVA_VideoLighting;
+
+const
+  DXVA_VideoTransferMatrixShift = (DXVA_ExtColorData_ShiftBase + 7);
+  {$EXTERNALSYM DXVA_VideoTransferMatrixShift}
+  DXVA_VideoTransferMatrixMask = (not((not 0) shl 3)) shl (DXVA_VideoTransferMatrixShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_VideoTransferMatrixMask}
+
+type
+  DXVA_VideoTransferMatrix = (
+    DXVA_VideoTransferMatrix_Unknown,
+    DXVA_VideoTransferMatrix_BT709,
+    DXVA_VideoTransferMatrix_BT601,
+    DXVA_VideoTransferMatrix_SMPTE240M
+  );
+  {$EXTERNALSYM DXVA_VideoTransferMatrix}
+  TDXVAVideoTransferMatrix = DXVA_VideoTransferMatrix;
+
+const
+  DXVA_NominalRangeShift = (DXVA_ExtColorData_ShiftBase + 4);
+  {$EXTERNALSYM DXVA_NominalRangeShift}
+  DXVA_NominalRangeMask = (not((not 0) shl 3)) shl (DXVA_NominalRangeShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_NominalRangeMask}
+
+type
+  DXVA_NominalRange = (
+    DXVA_NominalRange_Unknown,
+    DXVA_NominalRange_Normal,
+    DXVA_NominalRange_Wide
+  );
+  {$EXTERNALSYM DXVA_NominalRange}
+  TDXVANominalRange = DXVA_NominalRange;
+
+  DXVA_VideoChromaSubsampling = LongWord;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling}
+const
+  DXVA_VideoChromaSubsamplingShift = (DXVA_ExtColorData_ShiftBase + 0);
+  {$EXTERNALSYM DXVA_VideoChromaSubsamplingShift}
+  DXVA_VideoChromaSubsamplingMask = (not((not 0) shl 4)) shl (DXVA_VideoChromaSubsamplingShift - DXVA_ExtColorData_ShiftBase);
+  {$EXTERNALSYM DXVA_VideoChromaSubsamplingMask}
+  DXVA_VideoChromaSubsampling_Unknown = 0;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling_Unknown}
+  DXVA_VideoChromaSubsampling_ProgressiveChroma = $8;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling_ProgressiveChroma}
+  DXVA_VideoChromaSubsampling_Horizontally_Cosited = $4;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling_Horizontally_Cosited}
+  DXVA_VideoChromaSubsampling_Vertically_Cosited = $2;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling_Vertically_Cosited}
+  DXVA_VideoChromaSubsampling_Vertically_AlignedChromaPlanes = $1;
+  {$EXTERNALSYM DXVA_VideoChromaSubsampling_Vertically_AlignedChromaPlanes}
+
+//typedef struct _DXVA_ExtendedFormat
+//{
+//    UINT                        SampleFormat : 8;           // See DXVA_SampleFormat
+//    UINT                        VideoChromaSubsampling : 4; // See DXVA_VideoChromaSubSampling
+//    DXVA_NominalRange           NominalRange : 3;           // See DXVA_NominalRange
+//    DXVA_VideoTransferMatrix    VideoTransferMatrix : 3;    // See DXVA_VideoTransferMatrix
+//    DXVA_VideoLighting          VideoLighting : 4;          // See DXVA_VideoLighting
+//    DXVA_VideoPrimaries         VideoPrimaries : 5;         // See DXVA_VideoPrimaries
+//    DXVA_VideoTransferFunction  VideoTransferFunction : 5;  // See DXVA_VideoTransferFunction
+//} DXVA_ExtendedFormat;
+
+
+// -------------------------------------------------------------------------
+//
 // The definitions that follow describe the video de-interlace interface
 // between the VMR and the graphics device driver.  This interface is not
 // accessable via the IAMVideoAccelerator interface.
@@ -12483,33 +12901,7 @@ const
   DXVA_DeinterlaceContainerDevice : TGUID = '{0e85cb93-3046-4ff0-aecc-d58cb5f035fd}';
   {$EXTERNALSYM DXVA_DeinterlaceContainerDevice}
 
-// -------------------------------------------------------------------------
-// data structures shared by User mode and Kernel mode.
-// -------------------------------------------------------------------------
 type
-  _DXVA_SampleFormat = (
-  {$IFNDEF COMPILER6_UP}
-    DXVA_Sample_INVALID0,
-    DXVA_SamplePreviousFrame,
-    DXVA_SampleProgressiveFrame,
-    DXVA_SampleFieldInterleavedEvenFirst,
-    DXVA_SampleFieldInterleavedOddFirst,
-    DXVA_SampleFieldSingleEven,
-    DXVA_SampleFieldSingleOdd
-  {$ELSE}
-    DXVA_SamplePreviousFrame             = 1,
-    DXVA_SampleProgressiveFrame          = 2,
-    DXVA_SampleFieldInterleavedEvenFirst = 3,
-    DXVA_SampleFieldInterleavedOddFirst  = 4,
-    DXVA_SampleFieldSingleEven           = 5,
-    DXVA_SampleFieldSingleOdd            = 6
-  {$ENDIF}
-  );
-  {$EXTERNALSYM _DXVA_SampleFormat}
-  DXVA_SampleFormat = _DXVA_SampleFormat;
-  {$EXTERNALSYM DXVA_SampleFormat}
-  TDXVASampleFormat = DXVA_SampleFormat;
-
   _DXVA_Frequency = record
     Numerator   : DWORD;
     Denominator : DWORD;
@@ -12524,7 +12916,7 @@ type
     Size            : DWORD;
     SampleWidth     : DWORD;
     SampleHeight    : DWORD;
-    SampleFormat    : TDXVASampleFormat;
+    SampleFormat    : DWORD; // also contains extend color data
     d3dFormat       : TD3DFORMAT;
     InputSampleFreq : TDXVAFrequency;
     OutputFrameFreq : TDXVAFrequency;
@@ -12551,6 +12943,14 @@ const
   {$EXTERNALSYM DXVA_VideoProcess_AlphaBlend}
   DXVA_VideoProcess_SubRects   = $0010;
   {$EXTERNALSYM DXVA_VideoProcess_SubRects}
+  DXVA_VideoProcess_SubStreams            = $0020;
+  {$EXTERNALSYM DXVA_VideoProcess_SubStreams}
+  DXVA_VideoProcess_SubStreamsExtended    = $0040;
+  {$EXTERNALSYM DXVA_VideoProcess_SubStreamsExtended}
+  DXVA_VideoProcess_YUV2RGBExtended       = $0080;
+  {$EXTERNALSYM DXVA_VideoProcess_YUV2RGBExtended}
+  DXVA_VideoProcess_AlphaBlendExtended    = $0100;
+  {$EXTERNALSYM DXVA_VideoProcess_AlphaBlendExtended}
 
 type
   DXVA_DeinterlaceTech = {$IFDEF TYPE_IDENTITY}type {$ENDIF} LongWord;
@@ -12566,17 +12966,14 @@ type
     DXVA_DeinterlaceTech_BOBLineReplicate       = $0001;
     {$EXTERNALSYM DXVA_DeinterlaceTech_BOBLineReplicate}
 
-
-    // the algorithm creates the missing lines by vertically stretching each
-    // video field by a factor of two.  Slight vertical adjustments are made to
-    // ensure that the resulting image does not "bob" up and down.
     // The algorithm creates the missing lines by vertically stretching each
-    // video field by a factor of two, for example by averaging two lines or
-    // using a [-1, 9, 9, -1]/16 filter across four lines.
-    // Slight vertical adjustments are made to ensure that the resulting image
-    // does not "bob" up and down.
+    // video field by a factor of two by averaging two lines
     DXVA_DeinterlaceTech_BOBVerticalStretch     = $0002;
     {$EXTERNALSYM DXVA_DeinterlaceTech_BOBVerticalStretch}
+
+    // or using a [-1, 9, 9, -1]/16 filter across four lines.
+    DXVA_DeinterlaceTech_BOBVerticalStretch4Tap = $0100;
+    {$EXTERNALSYM DXVA_DeinterlaceTech_BOBVerticalStretch4Tap}
 
     // the pixels in the missing line are recreated by a median filtering operation
     DXVA_DeinterlaceTech_MedianFiltering        = $0004;
@@ -12614,7 +13011,7 @@ type
   _DXVA_VideoSample = record
    rtStart         : TReferenceTime;
    rtEnd           : TReferenceTime;
-   SampleFormat    : TDXVASampleFormat;
+   SampleFormat    : TDXVASampleFormat; // only lower 8 bits used
    lpDDSSrcSurface : Pointer;
   end;
   {$EXTERNALSYM _DXVA_VideoSample}
@@ -12623,6 +13020,57 @@ type
   LPDXVA_VideoSample = ^DXVA_VideoSample;
   {$EXTERNALSYM LPDXVA_VideoSample}
   TDXVAVideoSample = _DXVA_VideoSample;
+
+
+// -------------------------------------------------------------------------
+// DeinterlaceBltEx declarations
+// -------------------------------------------------------------------------
+//
+type
+  DXVA_SampleFlags = LongWord;
+  {$EXTERNALSYM DXVA_SampleFlags}
+const
+  DXVA_SampleFlagsMask = (1 shl 3) or (1 shl 2) or (1 shl 1) or (1 shl 0);
+  {$EXTERNALSYM DXVA_SampleFlagsMask}
+  DXVA_SampleFlag_Palette_Changed   = $0001;
+  {$EXTERNALSYM DXVA_SampleFlag_Palette_Changed}
+  DXVA_SampleFlag_SrcRect_Changed   = $0002;
+  {$EXTERNALSYM DXVA_SampleFlag_SrcRect_Changed}
+  DXVA_SampleFlag_DstRect_Changed   = $0004;
+  {$EXTERNALSYM DXVA_SampleFlag_DstRect_Changed}
+  DXVA_SampleFlag_ColorData_Changed = $0008;
+  {$EXTERNALSYM DXVA_SampleFlag_ColorData_Changed}
+
+type
+  DXVA_DestinationFlags = LongWord;
+const
+  DXVA_DestinationFlagMask = (1 shl 3) or (1 shl 2) or (1 shl 1) or (1 shl 0);
+  {$EXTERNALSYM DXVA_DestinationFlagMask}
+  DXVA_DestinationFlag_Background_Changed = $0001;
+  {$EXTERNALSYM DXVA_DestinationFlag_Background_Changed}
+  DXVA_DestinationFlag_TargetRect_Changed = $0002;
+  {$EXTERNALSYM DXVA_DestinationFlag_TargetRect_Changed}
+  DXVA_DestinationFlag_ColorData_Changed  = $0004;
+  {$EXTERNALSYM DXVA_DestinationFlag_ColorData_Changed}
+  DXVA_DestinationFlag_Alpha_Changed      = $0008;
+  {$EXTERNALSYM DXVA_DestinationFlag_Alpha_Changed}
+
+type
+  PDXVAVideoSample2 = ^TDXVAVideoSample2;
+  DXVA_VideoSample2 = record
+    rtStart: REFERENCE_TIME;
+    rtEnd: REFERENCE_TIME;
+    SampleFormat: DWORD; // cast to DXVA_ExtendedFormat, or use Extract macros
+    SampleFlags: DWORD;
+    lpDDSSrcSurface: Pointer;
+    rcSrc: TRect;
+    rcDst: TRect;
+    Palette: array[0..15] of TDXVAAYUVsample2;
+  end;
+  {$EXTERNALSYM DXVA_VideoSample2}
+  LPDXVA_VideoSample2 = ^DXVA_VideoSample2;
+  {$EXTERNALSYM LPDXVA_VideoSample2}
+  TDXVAVideoSample2 = DXVA_VideoSample2;
 
   PDXVADeinterlaceCaps = ^TDXVADeinterlaceCaps;
   _DXVA_DeinterlaceCaps = record
@@ -12674,6 +13122,27 @@ const
   {$EXTERNALSYM DXVA_DeinterlaceBltFnCode}
   // lpInput => DXVA_DeinterlaceBlt*
   // lpOuput => NULL /* not currently used */
+
+type  
+  DXVA_DeinterlaceBltEx = record
+    Size: DWORD;
+    BackgroundColor   : DXVA_AYUVsample2;
+    rcTarget          : TRect;
+    rtTarget          : REFERENCE_TIME;
+    NumSourceSurfaces : DWORD;
+    Alpha             : Single;
+    Source            : array[0..MAX_DEINTERLACE_SURFACES-1] of DXVA_VideoSample2;
+    DestinationFormat : DWORD;
+    DestinationFlags  : DWORD;
+  end;
+  {$EXTERNALSYM DXVA_DeinterlaceBltEx}
+
+const
+  DXVA_DeinterlaceBltExFnCode = $02;
+  {$EXTERNALSYM DXVA_DeinterlaceBltExFnCode}
+// lpInput => DXVA_DeinterlaceBltEx*
+// lpOuput => NULL /* not currently used */
+
 
   MAX_DEINTERLACE_DEVICE_GUIDS = 32;
   {$EXTERNALSYM MAX_DEINTERLACE_DEVICE_GUIDS}
@@ -12819,6 +13288,432 @@ const
   {$EXTERNALSYM DXVA_ProcAmpControlBltFnCode}
   // lpInput => DXVA_ProcAmpControlBlt*
   // lpOuput => NULL /* not currently used */
+
+// -------------------------------------------------------------------------
+//
+// The definitions that follow describe the Certified Output Protection
+// Protocol between the VMR and the graphics device driver.  This interface
+// is not accessable via the IAMVideoAccelerator interface.
+//
+// -------------------------------------------------------------------------
+//
+
+const
+  DXVA_COPPDevice : TGUID = '{D2457ADD-8999-45ED-8A8A-D1AA047BA4D5}';
+  {$EXTERNALSYM DXVA_COPPDevice}
+
+
+// -------------------------------------------------------------------------
+// COPPGetCertificateLength
+// -------------------------------------------------------------------------
+  DXVA_COPPGetCertificateLengthFnCode = $01;
+  {$EXTERNALSYM DXVA_COPPGetCertificateLengthFnCode}
+// lpInput => NULL
+// lpOuput => DWORD*
+
+
+// -------------------------------------------------------------------------
+// COPPKeyExchange
+// -------------------------------------------------------------------------
+  DXVA_COPPKeyExchangeFnCode = $02;
+  {$EXTERNALSYM DXVA_COPPKeyExchangeFnCode}
+// lpInputData => NULL
+// lpOuputData => GUID*
+
+
+// -------------------------------------------------------------------------
+// COPPSequenceStart
+// -------------------------------------------------------------------------
+type
+  PDXVACOPPSignature = ^TDXVACOPPSignature;
+  DXVA_COPPSignature = record
+    Signature: array[0..255] of Char;
+  end;
+  {$EXTERNALSYM DXVA_COPPSignature}
+  LPDXVA_COPPSignature = ^DXVA_COPPSignature;
+  {$EXTERNALSYM LPDXVA_COPPSignature}
+  TDXVACOPPSignature = DXVA_COPPSignature;
+
+const  
+  DXVA_COPPSequenceStartFnCode = $03;
+  {$EXTERNALSYM DXVA_COPPSequenceStartFnCode}
+// lpInputData => DXVA_COPPSignature*
+// lpOuputData => NULL
+
+
+
+// -------------------------------------------------------------------------
+// COPPCommand
+// -------------------------------------------------------------------------
+type
+  PDXVACOPPCommand = ^TDXVACOPPCommand;
+  DXVA_COPPCommand = packed record
+    macKDI: TGUID;                //   16 bytes
+    guidCommandID: TGUID;         //   16 bytes
+    dwSequence: ULONG;            //    4 bytes
+    cbSizeData: ULONG;            //    4 bytes
+    CommandData: array[0..4055] of Char;  // 4056 bytes (4056+4+4+16+16 = 4096)
+  end;
+  {$EXTERNALSYM DXVA_COPPCommand}
+  LPDXVA_COPPCommand = ^DXVA_COPPCommand;
+  {$EXTERNALSYM LPDXVA_COPPCommand}
+  TDXVACOPPCommand = DXVA_COPPCommand;
+
+const
+  DXVA_COPPCommandFnCode = $04;
+  {$EXTERNALSYM DXVA_COPPCommandFnCode}
+// lpInputData => DXVA_COPPCommand*
+// lpOuputData => NULL
+
+  DXVA_COPPSetProtectionLevel : TGUID = '{9bb9327c-4eb5-4727-9f00-b42b0919c0da}';
+  {$EXTERNALSYM DXVA_COPPSetProtectionLevel}
+
+type
+  PDXVACOPPSetProtectionLevelCmdData = ^TDXVACOPPSetProtectionLevelCmdData;
+  DXVA_COPPSetProtectionLevelCmdData = packed record
+    ProtType: ULONG;
+    ProtLevel: ULONG;
+    ExtendedInfoChangeMask: ULONG;
+    ExtendedInfoData: ULONG;
+  end;
+  {$EXTERNALSYM DXVA_COPPSetProtectionLevelCmdData}
+  TDXVACOPPSetProtectionLevelCmdData = DXVA_COPPSetProtectionLevelCmdData;
+
+
+// Set the HDCP protection level - (0 - 1 DWORD, 4 bytes)
+
+  COPP_HDCP_Protection_Level = LongWord;
+  {$EXTERNALSYM COPP_HDCP_Protection_Level}
+const
+  COPP_HDCP_Level0    = 0;
+  {$EXTERNALSYM COPP_HDCP_Level0}
+  COPP_HDCP_LevelMin  = COPP_HDCP_Level0;
+  {$EXTERNALSYM COPP_HDCP_LevelMin}
+  COPP_HDCP_Level1    = 1;
+  {$EXTERNALSYM COPP_HDCP_Level1}
+  COPP_HDCP_LevelMax  = COPP_HDCP_Level1;
+  {$EXTERNALSYM COPP_HDCP_LevelMax}
+  COPP_HDCP_ForceDWORD = $7fffffff;
+  {$EXTERNALSYM COPP_HDCP_ForceDWORD}
+
+type
+  COPP_CGMSA_Protection_Level = LongWord;
+  {$EXTERNALSYM COPP_CGMSA_Protection_Level}
+const
+  COPP_CGMSA_Disabled = 0;
+  {$EXTERNALSYM COPP_CGMSA_Disabled}
+  COPP_CGMSA_LevelMin = COPP_CGMSA_Disabled;
+  {$EXTERNALSYM COPP_CGMSA_LevelMin}
+  COPP_CGMSA_CopyFreely = 1;
+  {$EXTERNALSYM COPP_CGMSA_CopyFreely}
+  COPP_CGMSA_CopyNoMore = 2;
+  {$EXTERNALSYM COPP_CGMSA_CopyNoMore}
+  COPP_CGMSA_CopyOneGeneration = 3;
+  {$EXTERNALSYM COPP_CGMSA_CopyOneGeneration}
+  COPP_CGMSA_CopyNever = 4;
+  {$EXTERNALSYM COPP_CGMSA_CopyNever}
+  COPP_CGMSA_RedistributionControlRequired = $08;
+  {$EXTERNALSYM COPP_CGMSA_RedistributionControlRequired}
+  COPP_CGMSA_LevelMax = (COPP_CGMSA_RedistributionControlRequired + COPP_CGMSA_CopyNever);
+  {$EXTERNALSYM COPP_CGMSA_LevelMax}
+  COPP_CGMSA_ForceDWORD = $7fffffff;
+  {$EXTERNALSYM COPP_CGMSA_ForceDWORD}
+
+type
+  COPP_ACP_Protection_Level = LongWord;
+  {$EXTERNALSYM COPP_ACP_Protection_Level}
+const
+  COPP_ACP_Level0     = 0;
+  {$EXTERNALSYM COPP_ACP_Level0}
+  COPP_ACP_LevelMin   = COPP_ACP_Level0;
+  {$EXTERNALSYM COPP_ACP_LevelMin}
+  COPP_ACP_Level1     = 1;
+  {$EXTERNALSYM COPP_ACP_Level1}
+  COPP_ACP_Level2     = 2;
+  {$EXTERNALSYM COPP_ACP_Level2}
+  COPP_ACP_Level3     = 3;
+  {$EXTERNALSYM COPP_ACP_Level3}
+  COPP_ACP_LevelMax   = COPP_ACP_Level3;
+  {$EXTERNALSYM COPP_ACP_LevelMax}
+  COPP_ACP_ForceDWORD = $7fffffff;
+  {$EXTERNALSYM COPP_ACP_ForceDWORD}
+
+  COPP_NoProtectionLevelAvailable = -1;
+  {$EXTERNALSYM COPP_NoProtectionLevelAvailable}
+  COPP_DefaultProtectionLevel = 0;
+  {$EXTERNALSYM COPP_DefaultProtectionLevel}
+
+
+//
+// Bit flags of possible protection types.  Note that it is possible to apply
+// different protection settings to a single connector.
+//
+  COPP_ProtectionType_Unknown      = $80000000;
+  {$EXTERNALSYM COPP_ProtectionType_Unknown}
+  COPP_ProtectionType_None         = $00000000;
+  {$EXTERNALSYM COPP_ProtectionType_None}
+  COPP_ProtectionType_HDCP         = $00000001;
+  {$EXTERNALSYM COPP_ProtectionType_HDCP}
+  COPP_ProtectionType_ACP          = $00000002;
+  {$EXTERNALSYM COPP_ProtectionType_ACP}
+  COPP_ProtectionType_CGMSA        = $00000004;
+  {$EXTERNALSYM COPP_ProtectionType_CGMSA}
+  COPP_ProtectionType_Mask         = $80000007;
+  {$EXTERNALSYM COPP_ProtectionType_Mask}
+  COPP_ProtectionType_Reserved     = $7FFFFFF8;
+  {$EXTERNALSYM COPP_ProtectionType_Reserved}
+
+  DXVA_COPPSetSignaling : TGUID = '{09A631A5-D684-4C60-8E4D-D3BB0F0BE3EE}';
+  {$EXTERNALSYM DXVA_COPPSetSignaling}
+
+type
+  DXVA_COPPSetSignalingCmdData = packed record
+    ActiveTVProtectionStandard: ULONG;           // See COPP_TVProtectionStandard
+    AspectRatioChangeMask1: ULONG;
+    AspectRatioData1: ULONG;                     // See COPP_ImageAspectRatio_EN300294 for ETSI EN 300 294 values
+    AspectRatioChangeMask2: ULONG;
+    AspectRatioData2: ULONG;
+    AspectRatioChangeMask3: ULONG;
+    AspectRatioData3: ULONG;
+    ExtendedInfoChangeMask: array[0..3] of ULONG;
+    ExtendedInfoData: array[0..3] of ULONG;
+    Reserved: ULONG;
+  end;
+  {$EXTERNALSYM DXVA_COPPSetSignalingCmdData}
+  TDXVACOPPSetSignalingCmdData = DXVA_COPPSetSignalingCmdData;
+
+// Add format enum and data enum
+  COPP_TVProtectionStandard = longword;
+  {$EXTERNALSYM COPP_TVProtectionStandard}
+const
+  COPP_ProtectionStandard_Unknown             = $80000000;
+  {$EXTERNALSYM COPP_ProtectionStandard_Unknown}
+  COPP_ProtectionStandard_None                = $00000000;
+  {$EXTERNALSYM COPP_ProtectionStandard_None}
+  COPP_ProtectionStandard_IEC61880_525i       = $00000001;
+  {$EXTERNALSYM COPP_ProtectionStandard_IEC61880_525i}
+  COPP_ProtectionStandard_IEC61880_2_525i     = $00000002;
+  {$EXTERNALSYM COPP_ProtectionStandard_IEC61880_2_525i}
+  COPP_ProtectionStandard_IEC62375_625p       = $00000004;
+  {$EXTERNALSYM COPP_ProtectionStandard_IEC62375_625p}
+  COPP_ProtectionStandard_EIA608B_525         = $00000008;
+  {$EXTERNALSYM COPP_ProtectionStandard_EIA608B_525}
+  COPP_ProtectionStandard_EN300294_625i       = $00000010;
+  {$EXTERNALSYM COPP_ProtectionStandard_EN300294_625i}
+  COPP_ProtectionStandard_CEA805A_TypeA_525p  = $00000020;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeA_525p}
+  COPP_ProtectionStandard_CEA805A_TypeA_750p  = $00000040;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeA_750p}
+  COPP_ProtectionStandard_CEA805A_TypeA_1125i = $00000080;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeA_1125i}
+  COPP_ProtectionStandard_CEA805A_TypeB_525p  = $00000100;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeB_525p}
+  COPP_ProtectionStandard_CEA805A_TypeB_750p  = $00000200;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeB_750p}
+  COPP_ProtectionStandard_CEA805A_TypeB_1125i = $00000400;
+  {$EXTERNALSYM COPP_ProtectionStandard_CEA805A_TypeB_1125i}
+  COPP_ProtectionStandard_ARIBTRB15_525i      = $00000800;
+  {$EXTERNALSYM COPP_ProtectionStandard_ARIBTRB15_525i}
+  COPP_ProtectionStandard_ARIBTRB15_525p      = $00001000;
+  {$EXTERNALSYM COPP_ProtectionStandard_ARIBTRB15_525p}
+  COPP_ProtectionStandard_ARIBTRB15_750p      = $00002000;
+  {$EXTERNALSYM COPP_ProtectionStandard_ARIBTRB15_750p}
+  COPP_ProtectionStandard_ARIBTRB15_1125i     = $00004000;
+  {$EXTERNALSYM COPP_ProtectionStandard_ARIBTRB15_1125i}
+  COPP_ProtectionStandard_Mask                = $80007FFF;
+  {$EXTERNALSYM COPP_ProtectionStandard_Mask}
+  COPP_ProtectionStandard_Reserved            = $7FFF8000;
+  {$EXTERNALSYM COPP_ProtectionStandard_Reserved}
+
+
+  COPP_ImageAspectRatio_EN300294_Mask         = $00000007;
+  {$EXTERNALSYM COPP_ImageAspectRatio_EN300294_Mask}
+
+type
+  COPP_ImageAspectRatio_EN300294 = (
+    COPP_AspectRatio_EN300294_FullFormat4by3,
+    COPP_AspectRatio_EN300294_Box14by9Center,
+    COPP_AspectRatio_EN300294_Box14by9Top,
+    COPP_AspectRatio_EN300294_Box16by9Center,
+    COPP_AspectRatio_EN300294_Box16by9Top,
+    COPP_AspectRatio_EN300294_BoxGT16by9Center,
+    COPP_AspectRatio_EN300294_FullFormat4by3ProtectedCenter,
+    COPP_AspectRatio_EN300294_FullFormat16by9Anamorphic
+  );
+  {$EXTERNALSYM COPP_ImageAspectRatio_EN300294}
+  TCOPPImageAspectRatioEN300294 = COPP_ImageAspectRatio_EN300294;
+
+// -------------------------------------------------------------------------
+// COPPQueryStatus
+// -------------------------------------------------------------------------
+type
+  PDXVACOPPStatusInput = ^TDXVACOPPStatusInput;
+  DXVA_COPPStatusInput = packed record
+    rApp                : TGUID;         //   16 bytes
+    guidStatusRequestID : TGUID;         //   16 bytes
+    dwSequence          : ULONG;         //    4 bytes
+    cbSizeData          : ULONG;         //    4 bytes
+    StatusData: array[0..4055] of char;  // 4056 bytes (4056+4+4+16+16 = 4096)
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusInput}
+  LPDXVA_COPPStatusInput = ^DXVA_COPPStatusInput;
+  {$EXTERNALSYM LPDXVA_COPPStatusInput}
+  TDXVACOPPStatusInput = DXVA_COPPStatusInput;
+
+  PDXVACOPPStatusOutput = ^TDXVACOPPStatusOutput;
+  DXVA_COPPStatusOutput = packed record
+    macKDI     : TGUID;         //   16 bytes
+    cbSizeData : ULONG;         //    4 bytes
+    COPPStatus : array[0..4075] of Char; // 4076 bytes (4076+16+4 = 4096)
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusOutput}
+  LPDXVA_COPPStatusOutput = ^DXVA_COPPStatusOutput;
+  {$EXTERNALSYM LPDXVA_COPPStatusOutput}
+  TDXVACOPPStatusOutput = DXVA_COPPStatusOutput;
+
+type
+  COPP_StatusFlags = (
+    COPP_StatusNormal,
+    COPP_LinkLost,
+    COPP_RenegotiationRequired
+  );
+  {$EXTERNALSYM COPP_StatusFlags}
+  TCOPPStatusFlags = COPP_StatusFlags;
+
+const
+  COPP_StatusFlagsReserved = $FFFFFFFC;
+  {$EXTERNALSYM COPP_StatusFlagsReserved}
+  
+type
+  PDXVACOPPStatusData = ^TDXVACOPPStatusData;
+  DXVA_COPPStatusData = packed record
+    rApp             : TGUID;
+    dwFlags          : ULONG; // See COPP_StatusFlags above
+    dwData           : ULONG;
+    ExtendedInfoValidMask : ULONG;
+    ExtendedInfoData : ULONG;
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusData}
+  TDXVACOPPStatusData = DXVA_COPPStatusData;
+
+  DXVA_COPPStatusDisplayData = packed record
+    rApp: TGUID;
+    dwFlags: ULONG;    // See COPP_StatusFlags above
+    DisplayWidth: ULONG;
+    DisplayHeight: ULONG;
+    Format: ULONG;     // also contains extended color data
+    d3dFormat: ULONG;
+    FreqNumerator: ULONG;
+    FreqDenominator: ULONG;
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusDisplayData}
+
+  COPP_StatusHDCPFlags    = LongWord;
+  {$EXTERNALSYM COPP_StatusHDCPFlags}
+const
+  COPP_HDCPRepeater       = $01;
+  {$EXTERNALSYM COPP_HDCPRepeater}
+  COPP_HDCPFlagsReserved  = $FFFFFFFE;
+  {$EXTERNALSYM COPP_HDCPFlagsReserved}
+
+type
+  PDXVACOPPStatusHDCPKeyData = ^TDXVACOPPStatusHDCPKeyData;
+  DXVA_COPPStatusHDCPKeyData = packed record
+    rApp: TGUID;
+    dwFlags: ULONG;        // See COPP_StatusFlags above
+    dwHDCPFlags: ULONG;    // See COPP_StatusHDCPFlags above
+    BKey: TGUID;           // Lower 40 bits
+    Reserved1: TGUID;
+    Reserved2: TGUID;
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusHDCPKeyData}
+  TDXVACOPPStatusHDCPKeyData = DXVA_COPPStatusHDCPKeyData;
+
+const
+  DXVA_COPPQueryStatusFnCode = $05;
+  {$EXTERNALSYM DXVA_COPPQueryStatusFnCode}
+// lpInputData => DXVA_COPPStatusInput*
+// lpOuputData => DXVA_COPPStatusOutput*
+
+
+//
+// Status GUID and enumerations
+//
+  DXVA_COPPQueryConnectorType: TGUID =  '{81d0bfd5-6afe-48c2-99c0-95a08f97c5da}';
+  {$EXTERNALSYM DXVA_COPPQueryConnectorType}
+
+const
+  COPP_ConnectorType_Unknown = -1;
+  {$EXTERNALSYM COPP_ConnectorType_Unknown}
+  COPP_ConnectorType_Internal = $80000000;   // can be combined with the other connector types
+  {$EXTERNALSYM COPP_ConnectorType_Internal}
+type
+  COPP_ConnectorType = (
+    COPP_ConnectorType_VGA,
+    COPP_ConnectorType_SVideo,
+    COPP_ConnectorType_CompositeVideo,
+    COPP_ConnectorType_ComponentVideo,
+    COPP_ConnectorType_DVI,
+    COPP_ConnectorType_HDMI,
+    COPP_ConnectorType_LVDS,
+    COPP_ConnectorType_TMDS,
+    COPP_ConnectorType_D_JPN
+  //COPP_ConnectorType_ForceDWORD = $7fffffff;  (* force 32-bit size enum *)
+  );
+  {$EXTERNALSYM COPP_ConnectorType}
+  TCOPPConnectorType = COPP_ConnectorType;
+  
+const
+  DXVA_COPPQueryProtectionType        : TGUID = '{38f2a801-9a6c-48bb-9107-b6696e6f1797}';
+  {$EXTERNALSYM DXVA_COPPQueryProtectionType}
+  DXVA_COPPQueryLocalProtectionLevel  : TGUID = '{b2075857-3eda-4d5d-88db-748f8c1a0549}';
+  {$EXTERNALSYM DXVA_COPPQueryLocalProtectionLevel}
+  DXVA_COPPQueryGlobalProtectionLevel : TGUID = '{1957210a-7766-452a-b99a-d27aed54f03a}';
+  {$EXTERNALSYM DXVA_COPPQueryGlobalProtectionLevel}
+  DXVA_COPPQueryDisplayData           : TGUID = '{d7bf1ba3-ad13-4f8e-af98-0dcb3ca204cc}';
+  {$EXTERNALSYM DXVA_COPPQueryDisplayData}
+  DXVA_COPPQueryHDCPKeyData           : TGUID = '{0db59d74-a992-492e-a0bd-c23fda564e00}';
+  {$EXTERNALSYM DXVA_COPPQueryHDCPKeyData}
+  DXVA_COPPQueryBusData               : TGUID = '{c6f4d673-6174-4184-8e35-f6db5200bcba}';
+  {$EXTERNALSYM DXVA_COPPQueryBusData}
+
+  COPP_BusType_Integrated = $80000000; // can be combined with the other bus types
+  {$EXTERNALSYM COPP_BusType_Integrated}
+
+type
+  COPP_BusType = (
+    COPP_BusType_Unknown,
+    COPP_BusType_PCI,
+    COPP_BusType_PCIX,
+    COPP_BusType_PCIExpress,
+    COPP_BusType_AGP
+    //COPP_BusType_ForceDWORD = 0x7fffffff  /* force 32-bit size enum */
+  );
+  {$EXTERNALSYM COPP_BusType}
+  TCOPPBusType = COPP_BusType;
+
+const
+  DXVA_COPPQuerySignaling : TGUID = '{6629A591-3B79-4CF3-924A-11E8E7811671}';
+  {$EXTERNALSYM DXVA_COPPQuerySignaling}
+
+type
+  DXVA_COPPStatusSignalingCmdData = packed record
+    rApp: TGUID;
+    dwFlags: ULONG;                                // See COPP_StatusFlags above
+    AvailableTVProtectionStandards: ULONG;         // See COPP_TVProtectionStandard
+    ActiveTVProtectionStandard: ULONG;             // See COPP_TVProtectionStandard
+    TVType: ULONG;
+    AspectRatioValidMask1: ULONG;
+    AspectRatioData1: ULONG;                       // See COPP_AspectRatio_EN300294 for ETSI EN 300 294 values
+    AspectRatioValidMask2: ULONG;
+    AspectRatioData2: ULONG;
+    AspectRatioValidMask3: ULONG;
+    AspectRatioData3: ULONG;
+    ExtendedInfoValidMask: array[0..3] of ULONG;
+    ExtendedInfoData: array[0..3] of ULONG;
+  end;
+  {$EXTERNALSYM DXVA_COPPStatusSignalingCmdData}
+  TDXVACOPPStatusSignalingCmdData = DXVA_COPPStatusSignalingCmdData;
 
 //------------------------------------------------------------------------------
 // File: AMVA.h
@@ -13246,11 +14141,21 @@ type
 //------------------------------------------------------------
 //  BDA Autodemodulate Property Set
 // {DDF15B12-BD25-11d2-9CA0-00C04F7971E0}
+const
+  KSPROPSETID_BdaAutodemodulate: TGuid = '{DDF15B12-BD25-11d2-9CA0-00C04F7971E0}';
+  {$EXTERNALSYM KSPROPSETID_BdaAutodemodulate}
+
+type
+  KSPROPERTY_BDA_AUTODEMODULATE = (
+    KSPROPERTY_BDA_AUTODEMODULATE_START {= 0},
+    KSPROPERTY_BDA_AUTODEMODULATE_STOP
+  );
+  {$EXTERNALSYM KSPROPERTY_BDA_AUTODEMODULATE}
 
 //------------------------------------------------------------
 //  BDA Table Section Property Set
 // {516B99C5-971C-4aaf-B3F3-D9FDA8A15E16}
-
+type
   PBDATableSection = ^TBDATableSection;
   _BDA_TABLE_SECTION = record
     ulPrimarySectionId   : ULONG;
@@ -13288,6 +14193,7 @@ type
   end;
   {$EXTERNALSYM PID_MAP}
   TPIDMap = PID_MAP;
+  PPIDMap = ^PID_MAP;
 
 
   PBDAPIDMap = ^TBDAPIDMap;
@@ -14596,7 +15502,7 @@ type
   IBroadcastEvent = interface(IUnknown)
     ['{3B21263F-26E8-489d-AAC4-924F7EFD9511}']
     (*** IBroadcastEvent methods ***)
-    function Fire(const EventID: TGUID ): HResult; stdcall;
+    function Fire(EventID: TGUID): HResult; stdcall;
   end;
 
 //------------------------------------------------------------------------------
@@ -15686,7 +16592,7 @@ type
     // for loading and saving programmatically
     // caller must call this in pre-sorted order, this time must be > all
     // previous times
-    function AddProp(Param: TDexterParam; var paValue: TDexterParam): HResult; stdcall;
+    function AddProp(Param: TDexterParam; var paValue: TDexterValue): HResult; stdcall;
     function GetProps(out pcParams: longint; out paParam: PDexterParam; out paValue: PDexterValue): HResult; stdcall;
     // after calling GetProps, you must call FreeProps to free resources
     function FreeProps(cParams: longint; var paParam: TDexterParam; var paValue: TDexterValue): HResult; stdcall;
@@ -17221,8 +18127,8 @@ type
     (*** IMediaBuffer methods ***)
     function SetLength(cbLength: DWORD): HResult; stdcall;
     function GetMaxLength(out pcbMaxLength: DWORD): HResult; stdcall;
-    function GetBufferAndLength(ppBuffer: Pointer; // not filled if NULL
-                                pcbLength: PDWORD  // not filled if NULL
+    function GetBufferAndLength(out ppBuffer: PByte; // not filled if NULL
+                                out pcbLength: DWORD    // not filled if NULL
                                 ): HResult; stdcall;
   end;
 
@@ -20102,15 +21008,20 @@ type
   // The WAVEFORMATEXTENSIBLE structure defines the format of waveform-audio data for formats having more than two channels.
   // This structure is part of the Platform SDK and is not declared in Dsound.h. It is included here for convenience.
   //
+  TWaveFormatExtensibleSamples = record
+     case byte of
+      0: (wValidBitsPerSample : Word);   // bits of precision
+      1: (wSamplesPerBlock    : Word);   // valid if wBitsPerSample = 0
+      2: (wReserved           : Word);   // If neither applies, set to zero.
+  end;
+  {$EXTERNALSYM TWaveFormatExtensibleSamples}
+
   PWaveFormatExtensible = ^TWaveFormatExtensible;
   WAVEFORMATEXTENSIBLE = record
     Format: TWaveFormatEx;
-    case byte of
-      0: (wValidBitsPerSample : Word;   // bits of precision
-          dwChannelMask       : DWORD;  // which channels are present in stream
-          SubFormat           : TGUID);
-      1: (wSamplesPerBlock    : Word);  // valid if wBitsPerSample = 0
-      2: (wReserved           : Word);  // If neither applies, set to zero.
+    Samples: TWaveFormatExtensibleSamples;
+    dwChannelMask       : DWORD;  // which channels are present in stream
+    SubFormat           : TGUID;
   end;
   {$EXTERNALSYM WAVEFORMATEXTENSIBLE}
   TWaveFormatExtensible = WAVEFORMATEXTENSIBLE;
@@ -20700,20 +21611,37 @@ const
   KSAUDIO_SPEAKER_STEREO   =       (SPEAKER_FRONT_LEFT           or SPEAKER_FRONT_RIGHT);
   {$EXTERNALSYM KSAUDIO_SPEAKER_STEREO}
   KSAUDIO_SPEAKER_QUAD     =       (SPEAKER_FRONT_LEFT           or SPEAKER_FRONT_RIGHT or
-  {$EXTERNALSYM KSAUDIO_SPEAKER_QUAD}
                                     SPEAKER_BACK_LEFT            or SPEAKER_BACK_RIGHT);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_QUAD}
   KSAUDIO_SPEAKER_SURROUND =       (SPEAKER_FRONT_LEFT           or SPEAKER_FRONT_RIGHT or
-  {$EXTERNALSYM KSAUDIO_SPEAKER_SURROUND}
                                     SPEAKER_FRONT_CENTER         or SPEAKER_BACK_CENTER);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_SURROUND}
   KSAUDIO_SPEAKER_5POINT1  =       (SPEAKER_FRONT_LEFT           or SPEAKER_FRONT_RIGHT or
-  {$EXTERNALSYM KSAUDIO_SPEAKER_5POINT1}
                                     SPEAKER_FRONT_CENTER         or SPEAKER_LOW_FREQUENCY or
                                     SPEAKER_BACK_LEFT            or SPEAKER_BACK_RIGHT);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_5POINT1}
   KSAUDIO_SPEAKER_7POINT1  =       (SPEAKER_FRONT_LEFT           or SPEAKER_FRONT_RIGHT or
-  {$EXTERNALSYM KSAUDIO_SPEAKER_7POINT1}
                                     SPEAKER_FRONT_CENTER         or SPEAKER_LOW_FREQUENCY or
                                     SPEAKER_BACK_LEFT            or SPEAKER_BACK_RIGHT or
                                     SPEAKER_FRONT_LEFT_OF_CENTER or SPEAKER_FRONT_RIGHT_OF_CENTER);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_7POINT1}
+  KSAUDIO_SPEAKER_5POINT1_SURROUND = (SPEAKER_FRONT_LEFT or SPEAKER_FRONT_RIGHT or
+                                      SPEAKER_FRONT_CENTER or SPEAKER_LOW_FREQUENCY or
+                                         SPEAKER_SIDE_LEFT  or SPEAKER_SIDE_RIGHT);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_5POINT1_SURROUND}
+  KSAUDIO_SPEAKER_7POINT1_SURROUND = (SPEAKER_FRONT_LEFT or SPEAKER_FRONT_RIGHT or
+                                         SPEAKER_FRONT_CENTER or SPEAKER_LOW_FREQUENCY or
+                                         SPEAKER_BACK_LEFT or SPEAKER_BACK_RIGHT or
+                                         SPEAKER_SIDE_LEFT or SPEAKER_SIDE_RIGHT);
+  {$EXTERNALSYM KSAUDIO_SPEAKER_7POINT1_SURROUND}
+// The following are obsolete 5.1 and 7.1 settings (they lack side speakers).  Note this means
+// that the default 5.1 and 7.1 settings (KSAUDIO_SPEAKER_5POINT1 and KSAUDIO_SPEAKER_7POINT1 are
+// similarly obsolete but are unchanged for compatibility reasons).
+  KSAUDIO_SPEAKER_5POINT1_BACK = KSAUDIO_SPEAKER_5POINT1;
+  {$EXTERNALSYM KSAUDIO_SPEAKER_5POINT1_BACK}
+  KSAUDIO_SPEAKER_7POINT1_WIDE = KSAUDIO_SPEAKER_7POINT1;
+  {$EXTERNALSYM KSAUDIO_SPEAKER_7POINT1_WIDE}
+
 
 // DVD Speaker Positions
   KSAUDIO_SPEAKER_GROUND_FRONT_LEFT   = SPEAKER_FRONT_LEFT;
@@ -21299,21 +22227,23 @@ const
 type
   KSPROPERTY_SYSAUDIO = (
     KSPROPERTY_SYSAUDIO_DEVICE_Invalid,
-    KSPROPERTY_SYSAUDIO_DEVICE_COUNT,
-    KSPROPERTY_SYSAUDIO_DEVICE_FRIENDLY_NAME,
-    KSPROPERTY_SYSAUDIO_DEVICE_INSTANCE,
-    KSPROPERTY_SYSAUDIO_DEVICE_INTERFACE_NAME,
-    KSPROPERTY_SYSAUDIO_SELECT_GRAPH,
-    KSPROPERTY_SYSAUDIO_CREATE_VIRTUAL_SOURCE,
-    KSPROPERTY_SYSAUDIO_DEVICE_DEFAULT,
-    KSPROPERTY_SYSAUDIO_ALWAYS_CREATE_VIRTUAL_SOURCE,
-    KSPROPERTY_SYSAUDIO_ADDREMOVE_LOCK,
-    KSPROPERTY_SYSAUDIO_ADDREMOVE_UNLOCK,
-    KSPROPERTY_SYSAUDIO_RENDER_PIN_INSTANCES,
-    KSPROPERTY_SYSAUDIO_RENDER_CONNECTION_INDEX,
-    KSPROPERTY_SYSAUDIO_CREATE_VIRTUAL_SOURCE_ONLY,
-    KSPROPERTY_SYSAUDIO_INSTANCE_INFO,
-    KSPROPERTY_SYSAUDIO_PREFERRED_DEVICE
+    KSPROPERTY_SYSAUDIO_DEVICE_COUNT,                   
+    KSPROPERTY_SYSAUDIO_DEVICE_FRIENDLY_NAME,           
+    KSPROPERTY_SYSAUDIO_DEVICE_INSTANCE,                
+    KSPROPERTY_SYSAUDIO_DEVICE_INTERFACE_NAME,          
+    KSPROPERTY_SYSAUDIO_SELECT_GRAPH,                   
+    KSPROPERTY_SYSAUDIO_CREATE_VIRTUAL_SOURCE,          
+    KSPROPERTY_SYSAUDIO_DEVICE_DEFAULT,                 
+    KSPROPERTY_SYSAUDIO_ALWAYS_CREATE_VIRTUAL_SOURCE,   
+    KSPROPERTY_SYSAUDIO_ADDREMOVE_LOCK,                 
+    KSPROPERTY_SYSAUDIO_ADDREMOVE_UNLOCK,               
+    KSPROPERTY_SYSAUDIO_RENDER_PIN_INSTANCES,           
+    KSPROPERTY_SYSAUDIO_RENDER_CONNECTION_INDEX,        
+    KSPROPERTY_SYSAUDIO_CREATE_VIRTUAL_SOURCE_ONLY,     
+    KSPROPERTY_SYSAUDIO_INSTANCE_INFO,                  
+    KSPROPERTY_SYSAUDIO_PREFERRED_DEVICE,                
+    KSPROPERTY_SYSAUDIO_COMPONENT_ID,                   
+    KSPROPERTY_SYSAUDIO_ADDREMOVE_GFX
   );
   {$EXTERNALSYM KSPROPERTY_SYSAUDIO}
   TKSPropertySysAudio = KSPROPERTY_SYSAUDIO;
@@ -23671,15 +24601,20 @@ const
 
 type
   KSPROPERTY_VIDCAP_VIDEOPROCAMP = (
-    KSPROPERTY_VIDEOPROCAMP_BRIGHTNESS,            // RW O
-    KSPROPERTY_VIDEOPROCAMP_CONTRAST,              // RW O
-    KSPROPERTY_VIDEOPROCAMP_HUE,                   // RW O
-    KSPROPERTY_VIDEOPROCAMP_SATURATION,            // RW O
-    KSPROPERTY_VIDEOPROCAMP_SHARPNESS,             // RW O
-    KSPROPERTY_VIDEOPROCAMP_GAMMA,                 // RW O
-    KSPROPERTY_VIDEOPROCAMP_COLORENABLE,           // RW O
-    KSPROPERTY_VIDEOPROCAMP_WHITEBALANCE,          // RW O
-    KSPROPERTY_VIDEOPROCAMP_BACKLIGHT_COMPENSATION // RW O
+    KSPROPERTY_VIDEOPROCAMP_BRIGHTNESS,              // RW O
+    KSPROPERTY_VIDEOPROCAMP_CONTRAST,                // RW O
+    KSPROPERTY_VIDEOPROCAMP_HUE,                     // RW O
+    KSPROPERTY_VIDEOPROCAMP_SATURATION,              // RW O
+    KSPROPERTY_VIDEOPROCAMP_SHARPNESS,               // RW O
+    KSPROPERTY_VIDEOPROCAMP_GAMMA,                   // RW O
+    KSPROPERTY_VIDEOPROCAMP_COLORENABLE,             // RW O
+    KSPROPERTY_VIDEOPROCAMP_WHITEBALANCE,            // RW O
+    KSPROPERTY_VIDEOPROCAMP_BACKLIGHT_COMPENSATION,  // RW O
+    KSPROPERTY_VIDEOPROCAMP_GAIN,                    // RW O
+    KSPROPERTY_VIDEOPROCAMP_DIGITAL_MULTIPLIER,      // RW O
+    KSPROPERTY_VIDEOPROCAMP_DIGITAL_MULTIPLIER_LIMIT,// RW O
+    KSPROPERTY_VIDEOPROCAMP_WHITEBALANCE_COMPONENT,  // RW O
+    KSPROPERTY_VIDEOPROCAMP_POWERLINE_FREQUENCY      // RW O
   );
   {$EXTERNALSYM KSPROPERTY_VIDCAP_VIDEOPROCAMP}
   TKSPropertyVidcapVideoProcAmp = KSPROPERTY_VIDCAP_VIDEOPROCAMP;
@@ -23696,6 +24631,44 @@ type
   {$EXTERNALSYM PKSPROPERTY_VIDEOPROCAMP_S}
   TKSPropertyVideoProcAmpS = KSPROPERTY_VIDEOPROCAMP_S;
 
+  PKSPropertyVideoProcAmpNodeS = ^TKSPropertyVideoProcAmpNodeS;
+  KSPROPERTY_VIDEOPROCAMP_NODE_S = packed record
+    NodeProperty: KSP_NODE;
+    Value: Integer;                        // Value to set or get
+    Flags: ULONG;                        // KSPROPERTY_VIDEOPROCAMP_FLAGS_*
+    Capabilities: ULONG;                 // KSPROPERTY_VIDEOPROCAMP_FLAGS_*
+  end;
+  {$EXTERNALSYM KSPROPERTY_VIDEOPROCAMP_NODE_S}
+  PKSPROPERTY_VIDEOPROCAMP_NODE_S = ^KSPROPERTY_VIDEOPROCAMP_NODE_S;
+  {$EXTERNALSYM PKSPROPERTY_VIDEOPROCAMP_NODE_S}
+  TKSPropertyVideoProcAmpNodeS = KSPROPERTY_VIDEOPROCAMP_NODE_S;
+
+  PKSPropertyVideoProcAmpS2 = ^TKSPropertyVideoProcAmpS2;
+  KSPROPERTY_VIDEOPROCAMP_S2 = packed record
+    Property_: KSPROPERTY;
+    Value1: Integer;
+    Flags: ULONG;
+    Capabilities: ULONG;
+    Value2: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_VIDEOPROCAMP_S2}
+  PKSPROPERTY_VIDEOPROCAMP_S2 = ^KSPROPERTY_VIDEOPROCAMP_S2;
+  {$EXTERNALSYM PKSPROPERTY_VIDEOPROCAMP_S2}
+  TKSPropertyVideoProcAmpS2 = KSPROPERTY_VIDEOPROCAMP_S2;
+
+  PKSPropertyVideoProcAmpNodeS2 = ^TKSPropertyVideoProcAmpNodeS2;
+  KSPROPERTY_VIDEOPROCAMP_NODE_S2 = packed record
+    NodeProperty: KSP_NODE;
+    Value1: Integer;
+    Flags: ULONG;
+    Capabilities: ULONG;
+    Value2: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_VIDEOPROCAMP_NODE_S2}
+  PKSPROPERTY_VIDEOPROCAMP_NODE_S2 = ^KSPROPERTY_VIDEOPROCAMP_NODE_S2;
+  {$EXTERNALSYM PKSPROPERTY_VIDEOPROCAMP_NODE_S2}
+  TKSPropertyVideoProcAmpNodeS2 = KSPROPERTY_VIDEOPROCAMP_NODE_S2;
+
 const
   KSPROPERTY_VIDEOPROCAMP_FLAGS_AUTO   = $0001;
   {$EXTERNALSYM KSPROPERTY_VIDEOPROCAMP_FLAGS_AUTO}
@@ -23704,6 +24677,47 @@ const
 
 //===========================================================================
 
+  PROPSETID_VIDCAP_SELECTOR : TGUID = '{1ABDAECA-68B6-4F83-9371-B413907C7B9F}';
+  {$EXTERNALSYM PROPSETID_VIDCAP_SELECTOR}
+
+type  
+  PKSPropertyVidCapSelector = ^TKSPropertyVidCapSelector;
+  KSPROPERTY_VIDCAP_SELECTOR = (
+    KSPROPERTY_SELECTOR_SOURCE_NODE_ID,              // RW
+    KSPROPERTY_SELECTOR_NUM_SOURCES                  // R
+  );
+  {$EXTERNALSYM KSPROPERTY_VIDCAP_SELECTOR}
+  PKSPROPERTY_VIDCAP_SELECTOR = ^KSPROPERTY_VIDCAP_SELECTOR;
+  {$EXTERNALSYM PKSPROPERTY_VIDCAP_SELECTOR}
+  TKSPropertyVidCapSelector = KSPROPERTY_VIDCAP_SELECTOR;
+
+  PKSPropertySelectorS = ^TKSPropertySelectorS;
+  KSPROPERTY_SELECTOR_S = packed record
+    Property_: KSPROPERTY;
+    Value: Integer;                        // Value to set or get
+    Flags: ULONG;
+    Capabilities: ULONG;
+  end;
+  {$EXTERNALSYM KSPROPERTY_SELECTOR_S}
+  PKSPROPERTY_SELECTOR_S = ^KSPROPERTY_SELECTOR_S;
+  {$EXTERNALSYM PKSPROPERTY_SELECTOR_S}
+  TKSPropertySelectorS = KSPROPERTY_SELECTOR_S;
+
+  PKSPropertySelectorNodeS = ^TKSPropertySelectorNodeS;
+  KSPROPERTY_SELECTOR_NODE_S = packed record
+    NodeProperty: KSP_NODE;
+    Value: Integer;                        // Value to set or get
+    Flags: ULONG;
+    Capabilities: ULONG;
+  end;
+  {$EXTERNALSYM KSPROPERTY_SELECTOR_NODE_S}
+  PKSPROPERTY_SELECTOR_NODE_S = ^KSPROPERTY_SELECTOR_NODE_S;
+  {$EXTERNALSYM PKSPROPERTY_SELECTOR_NODE_S}
+  TKSPropertySelectorNodeS = KSPROPERTY_SELECTOR_NODE_S;
+
+//===========================================================================
+
+const
   PROPSETID_TUNER : TGUID = '{6a2e0605-28e4-11d0-a18c-00a0c9118956}';
   {$EXTERNALSYM PROPSETID_TUNER}
 
@@ -23879,6 +24893,27 @@ type
 
 //===========================================================================
 
+// USB Video Class Definitions
+const
+  KSNODETYPE_VIDEO_STREAMING       : TGUID = '{DFF229E1-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_STREAMING}
+  KSNODETYPE_VIDEO_INPUT_TERMINAL  : TGUID = '{DFF229E2-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_INPUT_TERMINAL}
+  KSNODETYPE_VIDEO_OUTPUT_TERMINAL : TGUID = '{DFF229E3-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_OUTPUT_TERMINAL}
+  KSNODETYPE_VIDEO_SELECTOR        : TGUID = '{DFF229E4-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_SELECTOR}
+  KSNODETYPE_VIDEO_PROCESSING      : TGUID = '{DFF229E5-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_PROCESSING}
+  KSNODETYPE_VIDEO_CAMERA_TERMINAL : TGUID = '{DFF229E6-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_CAMERA_TERMINAL}
+  KSNODETYPE_VIDEO_INPUT_MTT       : TGUID = '{DFF229E7-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_INPUT_MTT}
+  KSNODETYPE_VIDEO_OUTPUT_MTT      : TGUID = '{DFF229E8-F70F-11D0-B917-00A0C9223196}';
+  {$EXTERNALSYM KSNODETYPE_VIDEO_OUTPUT_MTT}
+
+//===========================================================================
+
 const
   PROPSETID_VIDCAP_VIDEOENCODER : TGUID = '{6a2e0610-28e4-11d0-a18c-00a0c9118956}';
   {$EXTERNALSYM PROPSETID_VIDCAP_VIDEOENCODER}
@@ -23888,7 +24923,7 @@ type
     KSPROPERTY_VIDEOENCODER_CAPS,                       // R
     KSPROPERTY_VIDEOENCODER_STANDARD,                   // RW
     KSPROPERTY_VIDEOENCODER_COPYPROTECTION,             // RW O
-    KSPROPERTY_VIDEOENCODER_CC_ENABLE                  // RW O
+    KSPROPERTY_VIDEOENCODER_CC_ENABLE                   // RW O
   );
   {$EXTERNALSYM KSPROPERTY_VIDCAP_VIDEOENCODER}
   TKSPropertyVidCapVideoEncoder = KSPROPERTY_VIDCAP_VIDEOENCODER;
@@ -23990,7 +25025,19 @@ type
     KSPROPERTY_CAMERACONTROL_ZOOM,                      // RW O
     KSPROPERTY_CAMERACONTROL_EXPOSURE,                  // RW O
     KSPROPERTY_CAMERACONTROL_IRIS,                      // RW O
-    KSPROPERTY_CAMERACONTROL_FOCUS                      // RW O
+    KSPROPERTY_CAMERACONTROL_FOCUS,                     // RW O
+    KSPROPERTY_CAMERACONTROL_SCANMODE,                  // RW O
+    KSPROPERTY_CAMERACONTROL_PRIVACY,                   // RW O
+    KSPROPERTY_CAMERACONTROL_PANTILT,                   // RW O
+    KSPROPERTY_CAMERACONTROL_PAN_RELATIVE,              // RW O
+    KSPROPERTY_CAMERACONTROL_TILT_RELATIVE,             // RW O
+    KSPROPERTY_CAMERACONTROL_ROLL_RELATIVE,             // RW O
+    KSPROPERTY_CAMERACONTROL_ZOOM_RELATIVE,             // RW O
+    KSPROPERTY_CAMERACONTROL_EXPOSURE_RELATIVE,         // RW O
+    KSPROPERTY_CAMERACONTROL_IRIS_RELATIVE,             // RW O
+    KSPROPERTY_CAMERACONTROL_FOCUS_RELATIVE,            // RW O
+    KSPROPERTY_CAMERACONTROL_PANTILT_RELATIVE,          // RW O
+    KSPROPERTY_CAMERACONTROL_FOCAL_LENGTH
   );
   {$EXTERNALSYM KSPROPERTY_VIDCAP_CAMERACONTROL}
   TKSPropertyVidCapCameraControl = KSPROPERTY_VIDCAP_CAMERACONTROL;
@@ -24006,6 +25053,65 @@ type
   PKSPROPERTY_CAMERACONTROL_S = ^KSPROPERTY_CAMERACONTROL_S;
   {$EXTERNALSYM PKSPROPERTY_CAMERACONTROL_S}
   TKSPropertyCameraControlS = KSPROPERTY_CAMERACONTROL_S;
+
+  PKSPropertyCameraControlNodeS = ^TKSPropertyCameraControlNodeS;
+  KSPROPERTY_CAMERACONTROL_NODE_S = packed record
+    NodeProperty: KSP_NODE;
+    Value: Integer;                        // value to get or set
+    Flags: ULONG;                       // KSPROPERTY_CAMERACONTROL_FLAGS_*
+    Capabilities: ULONG;                // KSPROPERTY_CAMERACONTROL_FLAGS_*
+  end;
+  {$EXTERNALSYM KSPROPERTY_CAMERACONTROL_NODE_S}
+  PKSPROPERTY_CAMERACONTROL_NODE_S = ^KSPROPERTY_CAMERACONTROL_NODE_S;
+  {$EXTERNALSYM PKSPROPERTY_CAMERACONTROL_NODE_S}
+  TKSPropertyCameraControlNodeS = KSPROPERTY_CAMERACONTROL_NODE_S;
+
+  PKSPropertyCameraControlS2 = ^TKSPropertyCameraControlS2;
+  KSPROPERTY_CAMERACONTROL_S2 = packed record
+    Property_: KSPROPERTY;
+    Value1: Integer;
+    Flags: ULONG;
+    Capabilities: ULONG;
+    Value2: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_CAMERACONTROL_S2}
+  PKSPROPERTY_CAMERACONTROL_S2 = ^KSPROPERTY_CAMERACONTROL_S2;
+  {$EXTERNALSYM PKSPROPERTY_CAMERACONTROL_S2}
+  TKSPropertyCameraControlS2 = KSPROPERTY_CAMERACONTROL_S2;
+
+  PKSPropertyCameraControlNodeS2 = ^TKSPropertyCameraControlNodeS2;
+  KSPROPERTY_CAMERACONTROL_NODE_S2 = packed record
+    NodeProperty: KSP_NODE ;
+    Value1: Integer;
+    Flags: ULONG;
+    Capabilities: ULONG;
+    Value2: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_CAMERACONTROL_NODE_S2}
+  PKSPROPERTY_CAMERACONTROL_NODE_S2 = ^KSPROPERTY_CAMERACONTROL_NODE_S2;
+  {$EXTERNALSYM PKSPROPERTY_CAMERACONTROL_NODE_S2}
+  TKSPropertyCameraControlNodeS2 = KSPROPERTY_CAMERACONTROL_NODE_S2;
+
+  PKSPropertyCameraControlFocalLengthS = ^TKSPropertyCameraControlFocalLengthS;
+  KSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S = packed record
+    Property_: KSPROPERTY;
+    lOcularFocalLength: Integer;
+    lObjectiveFocalLengthMin: Integer;
+    lObjectiveFocalLengthMax: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S}
+  PKSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S = ^KSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S;
+  {$EXTERNALSYM PKSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S}
+  TKSPropertyCameraControlFocalLengthS = KSPROPERTY_CAMERACONTROL_FOCAL_LENGTH_S;
+
+  KSPROPERTY_CAMERACONTROL_NODE_FOCAL_LENGTH_S = packed record
+    NodeProperty: KSNODEPROPERTY;
+    lOcularFocalLength: Integer;
+    lObjectiveFocalLengthMin: Integer;
+    lObjectiveFocalLengthMax: Integer;
+  end;
+  {$EXTERNALSYM KSPROPERTY_CAMERACONTROL_NODE_FOCAL_LENGTH_S}
+  TKSPropertyCameraControlNodeFocalLengthS = KSPROPERTY_CAMERACONTROL_NODE_FOCAL_LENGTH_S;
 
 const
   KSPROPERTY_CAMERACONTROL_FLAGS_AUTO     = $0001;
@@ -24713,10 +25819,31 @@ const
 
 type
   KSEVENT_VIDCAPTOSTI = (
-    KSEVENT_VIDCAPTOSTI_EXT_TRIGGER
+    KSEVENT_VIDCAPTOSTI_EXT_TRIGGER,
+    KSEVENT_VIDCAP_AUTO_UPDATE,
+    KSEVENT_VIDCAP_SEARCH
   );
   {$EXTERNALSYM KSEVENT_VIDCAPTOSTI}
   TKSEventVidCapToSTI = KSEVENT_VIDCAPTOSTI;
+
+//
+// Extension Unit Properties
+//
+const
+  KSPROPERTY_EXTENSION_UNIT_PASS_THROUGH = $ffff;    // (RW)
+  {$EXTERNALSYM KSPROPERTY_EXTENSION_UNIT_PASS_THROUGH}
+
+type
+  PKSPropertyExtensionUnit = ^TKSPropertyExtensionUnit;
+  KSPROPERTY_EXTENSION_UNIT = (
+    KSPROPERTY_EXTENSION_UNIT_INFO,                  // (R)
+    KSPROPERTY_EXTENSION_UNIT_CONTROL                // (RW)
+  );
+  {$EXTERNALSYM KSPROPERTY_EXTENSION_UNIT}
+  PKSPROPERTY_EXTENSION_UNIT = ^KSPROPERTY_EXTENSION_UNIT;
+  {$EXTERNALSYM PKSPROPERTY_EXTENSION_UNIT}
+  TKSPropertyExtensionUnit = KSPROPERTY_EXTENSION_UNIT;
+
 
 //
 //  IVPVBINotify event notification
@@ -24858,12 +25985,12 @@ type
   IKsControl = interface(IUnknown)
     ['{28F54685-06FD-11D2-B27A-00A0C9223196}']
     (*** IKsControl methods ***)
-    procedure KsProperty(Property_: PKSPROPERTY; PropertyLength: ULONG; PropertyData: Pointer;
-                DataLength: ULONG; out BytesReturned: ULONG); stdcall;
-    procedure KsMethod(Method: PKSMETHOD; MethodLength: ULONG; MethodData: Pointer;
-                DataLength: ULONG; out BytesReturned: ULONG); stdcall;
-    procedure KsEvent({OPTIONAL}Event: PKSEVENT; EventLength: ULONG; EventData: Pointer;
-                DataLength: ULONG; out BytesReturned: ULONG); stdcall;
+    function KsProperty(Property_: PKSPROPERTY; PropertyLength: ULONG; PropertyData: Pointer;
+                DataLength: ULONG; out BytesReturned: ULONG): HResult; stdcall;
+    function KsMethod(Method: PKSMETHOD; MethodLength: ULONG; MethodData: Pointer;
+                DataLength: ULONG; out BytesReturned: ULONG): HResult; stdcall;
+    function KsEvent({OPTIONAL}Event: PKSEVENT; EventLength: ULONG; EventData: Pointer;
+                DataLength: ULONG; out BytesReturned: ULONG): HResult; stdcall;
   end;
 
 //------------------------------------------------------------------------------
@@ -25695,22 +26822,22 @@ type
     ['{79B56888-7FEA-4690-B45D-38FD3C7849BE}']
     (*** IBDA_Topology methods ***)
     function GetNodeTypes(var pulcNodeTypes: ULONG; ulcNodeTypesMax: ULONG;
-                var rgulNodeTypes: ULONG): HResult; stdcall;
+                rgulNodeTypes: PULONG): HResult; stdcall;
     function GetNodeDescriptors(var ulcNodeDescriptors: ULONG; ulcNodeDescriptorsMax: ULONG;
                 rgNodeDescriptors: PBDANodeDescriptor): HResult; stdcall;
     function GetNodeInterfaces(ulNodeType: ULONG; var pulcInterfaces: ULONG;
                 ulcInterfacesMax: ULONG; rgguidInterfaces: PGUID): HResult; stdcall;
     function GetPinTypes(var pulcPinTypes: ULONG; ulcPinTypesMax: ULONG;
-               var rgulPinTypes: ULONG): HResult; stdcall;
+               rgulPinTypes: PULONG): HResult; stdcall;
     function GetTemplateConnections(var pulcConnections: ULONG; ulcConnectionsMax: ULONG;
-               var rgConnections: TBDATemplateConnection): HResult; stdcall;
+               rgConnections: PBDATemplateConnection): HResult; stdcall;
     function CreatePin(ulPinType: ULONG; var pulPinId: ULONG): HResult; stdcall;
     function DeletePin(ulPinId: ULONG): HResult; stdcall;
     function SetMediaType(ulPinId :ULONG; pMediaType: PAMMediaType): HResult; stdcall;
     function SetMedium(ulPinId: ULONG; pMedium: PREGPINMEDIUM): HResult; stdcall;
     function CreateTopology(ulInputPinId, ulOutputPinId: ULONG): HResult; stdcall;
     function GetControlNode(ulInputPinId, ulOutputPinId, ulNodeType: ULONG;
-                ppControlNode: IUnknown): HResult; stdcall;
+                out ppControlNode: IUnknown): HResult; stdcall;
   end;
 
   {$HPPEMIT 'typedef System::DelphiInterface<IBDA_VoidTransform> _di_IBDA_VoidTransform;'}
@@ -25736,14 +26863,14 @@ type
   IBDA_FrequencyFilter = interface(IUnknown)
     ['{71985F47-1CA1-11d3-9CC8-00C04F7971E0}']
     (*** IBDA_FrequencyFilter methods ***)
-    function put_Autotune(pulTransponder: PULONG): HResult; stdcall;
-    function get_Autotune(pulTransponder: PULONG): HResult; stdcall;
-    function put_Frequency(pulFrequency: PULONG): HResult; stdcall;
-    function get_Frequency(pulFrequency: PULONG): HResult; stdcall;
-    function put_Polarity(pulPolarity: PULONG): HResult; stdcall;
-    function get_Polarity(pulPolarity: PULONG): HResult; stdcall;
-    function put_Range(pulRange: PULONG): HResult; stdcall;
-    function get_Range(pulRange: PULONG): HResult; stdcall;
+    function put_Autotune(pulTransponder: ULONG): HResult; stdcall;
+    function get_Autotune(out pulTransponder: ULONG): HResult; stdcall;
+    function put_Frequency(pulFrequency: ULONG): HResult; stdcall;
+    function get_Frequency(out pulFrequency: ULONG): HResult; stdcall;
+    function put_Polarity(pulPolarity: Polarisation): HResult; stdcall;
+    function get_Polarity(out pulPolarity: Polarisation): HResult; stdcall;
+    function put_Range(pulRange: ULONG): HResult; stdcall;
+    function get_Range(out pulRange: ULONG): HResult; stdcall;
     function put_Bandwidth(ulBandwidth: ULONG): HResult; stdcall;
     function get_Bandwidth(out pulBandwidth: ULONG): HResult; stdcall;
     function put_FrequencyMultiplier(ulMultiplier: ULONG): HResult; stdcall;
@@ -25826,8 +26953,8 @@ type
     function get_MulticastList(pulcbAddresses: PULONG; // 6*N
                                out ppbAddressList: PBYTE // Allocated by caller, must deallocate in callee with CoTaskMemFree()
                                ): HResult; stdcall;
-    function get_AdapterIPAddress(out pbstrBuffer: WideChar): HResult; stdcall;
-    function get_AdapterDescription(out pbstrBuffer: WideChar): HResult; stdcall;
+    function get_AdapterIPAddress(out pbstrBuffer: WideString): HResult; stdcall;
+    function get_AdapterDescription(out pbstrBuffer: WideString): HResult; stdcall;
   end;
 
   {$HPPEMIT 'typedef System::DelphiInterface<IEnumPIDMap> _di_IEnumPIDMap;'}
@@ -25835,7 +26962,7 @@ type
   IEnumPIDMap = interface(IUnknown)
     ['{afb6c2a2-2c41-11d3-8a60-0000f81e0e4a}']
     (*** IEnumPIDMap methods ***)
-    function Next(cRequest: ULONG; var pPIDMap: TPIDMap; out pcReceived: ULONG): HResult; stdcall;
+    function Next(cRequest: ULONG; PIDMap: PPIDMap; out pcReceived: ULONG): HResult; stdcall;
     function Skip(cRecords: ULONG): HResult; stdcall;
     function Reset: HResult; stdcall;
     function Clone(out ppIEnumPIDMap: IEnumPIDMap): HResult; stdcall;
@@ -25846,9 +26973,9 @@ type
   IMPEG2PIDMap = interface(IUnknown)
     ['{afb6c2a1-2c41-11d3-8a60-0000f81e0e4a}']
     (*** IMPEG2PIDMap methods ***)
-    function MapPID(culPID: ULONG; var pulPID: ULONG;
+    function MapPID(culPID: ULONG; pulPID: PULONG;
       MediaSampleContent: TMediaSampleContent): HResult; stdcall;
-    function UnmapPID(culPID: ULONG; var pulPID: ULONG): HResult; stdcall;
+    function UnmapPID(culPID: ULONG; pulPID: PULONG): HResult; stdcall;
     function EnumPIDMap(out pIEnumPIDMap: IEnumPIDMap): HResult; stdcall;
   end;
 
@@ -26143,7 +27270,7 @@ type
   IEnumTuneRequests = interface(IUnknown)
     ['{1993299C-CED6-4788-87A3-420067DCE0C7}']
     (*** IEnumTuneRequests methods ***)
-    function Next(celt: ULONG; out ppprop: ITuneRequest; out pcelt: ULONG): HResult;
+    function Next(celt: ULONG; out ppprop: ITuneRequest; out pcelt: ULONG): HResult; stdcall;
     function Skip(celt: ULONG): HResult; stdcall;
     function Reset: HResult; stdcall;
     function Clone(out ppenum: IEnumTuneRequests): HResult; stdcall;
@@ -26483,7 +27610,7 @@ type
   //  WORD Reserved  :  3;
   //  WORD ProgramId : 13;
   PPIDBits = ^TPIDBits;
-  PID_BITS = record
+  PID_BITS = packed record
     Bits: WORD;
   end;
   {$EXTERNALSYM PID_BITS}
@@ -26498,7 +27625,7 @@ type
   // WORD PrivateIndicator       :  1;
   // WORD SectionSyntaxIndicator :  1;
   PMPEGHeaderBits = ^TMPEGHeaderBits;
-  MPEG_HEADER_BITS = record
+  MPEG_HEADER_BITS = packed record
     Bits: WORD;
   end;
   {$EXTERNALSYM MPEG_HEADER_BITS}
@@ -26512,7 +27639,7 @@ type
   // BYTE VersionNumber        : 5;
   // BYTE Reserved             : 2;
   PMPEGHeaderVersionBits = ^TMPEGHeaderVersionBits;
-  MPEG_HEADER_VERSION_BITS = record
+  MPEG_HEADER_VERSION_BITS = packed record
     Bits: BYTE;
   end;
   {$EXTERNALSYM MPEG_HEADER_VERSION_BITS}
@@ -26563,7 +27690,7 @@ type
 
   // MPEG-2 TID Extension structure
   PTidExtension = ^TTidExtension;
-  TID_EXTENSION = record
+  TID_EXTENSION = packed record
     wTidExt: WORD;
     wCount : WORD;
   end;
@@ -26573,7 +27700,7 @@ type
   TTidExtension = TID_EXTENSION;
 
   // MPEG-2 packet "small" header structure
-  SECTION = record
+  SECTION = packed record
     TableId     : TID;
     Header      : TMPEGHeaderBits;
     SectionData : array[0..0] of BYTE; // Array size is Header.S.SectionLength
@@ -26585,7 +27712,7 @@ type
 
   // MPEG-2 packet "long" header structure
   PLongSection = ^TLongSection;
-  LONG_SECTION = record
+  LONG_SECTION = packed record
     TableId           : TID;
     Header            : TMPEGHeaderBits;
     TableIdExtension  : WORD;
@@ -26601,7 +27728,7 @@ type
 
   // DSM-CC packet header structure
   PDSMCCSection = ^TDSMCCSection;
-  DSMCC_SECTION = record
+  DSMCC_SECTION = packed record
     TableId               : TID;
     Header                : TMPEGHeaderBits;
     TableIdExtension      : WORD;
@@ -26624,7 +27751,7 @@ type
 
   // MPEG-2 request/response packets structures
   PMPEGRQSTPacket = ^TMPEGRQSTPacket;
-  MPEG_RQST_PACKET = record
+  MPEG_RQST_PACKET = packed record
     dwLength: DWORD;
     pSection: PSECTION;
   end;
@@ -26634,7 +27761,7 @@ type
   TMPEGRQSTPacket = MPEG_RQST_PACKET;
 
   PMPEGPacketList = ^TMPEGPacketList;
-  MPEG_PACKET_LIST = record
+  MPEG_PACKET_LIST = packed record
     wPacketCount : WORD              ;
     PacketList   : array[0..0] of PMPEG_RQST_PACKET; // Array size is wPacketCount;
   end;
@@ -26646,7 +27773,7 @@ type
   // DSM-CC request filter options
 
   PDSMCCFilterOptions = ^TDSMCCFilterOptions;
-  DSMCC_FILTER_OPTIONS = record
+  DSMCC_FILTER_OPTIONS = packed record
     fSpecifyProtocol       : BOOL;  // If true, Protocol should be set to desired value
     Protocol               : BYTE;
     fSpecifyType           : BOOL;  // If true, Type should be set to desired value
@@ -26677,7 +27804,7 @@ type
 
   // ATSC request filter options
   PATSCFilterOptions = ^TATSCFilterOptions;
-  ATSC_FILTER_OPTIONS = record
+  ATSC_FILTER_OPTIONS = packed record
     fSpecifyEtmId : BOOL;          // If true, EtmId should be set to desired value
     EtmId         : DWORD;
   end;
@@ -26687,7 +27814,7 @@ type
 
   // MPEG-2 request filter structure
   PMPEG2Filter = ^TMPEG2Filter;
-  MPEG2_FILTER = record
+  MPEG2_FILTER = packed record
     bVersionNumber           : BYTE; // Must be set to 1 or more to match filter definition
     wFilterSize              : WORD; // Size of total filter structure. Version 1 filter is 73 bytes.
     fUseRawFilteringBits     : BOOL; // If true, Filter and Mask fields should be set to desired value, all other
@@ -26721,7 +27848,7 @@ const
 type
   // Mpeg-2 Stream buffer structure
   PMPEGStreamBuffer = ^TMPEGStreamBuffer;
-  MPEG_STREAM_BUFFER = record
+  MPEG_STREAM_BUFFER = packed record
     hr               : HResult;
     dwDataBufferSize : DWORD;
     dwSizeOfDataRead : DWORD;
@@ -26734,7 +27861,7 @@ type
 
   // MPEG-2 Time and Date structures
   PMPEGTime = ^TMPEGTime;
-  MPEG_TIME = record
+  MPEG_TIME = packed record
     Hours   : BYTE; // Legal Range: 0 to 23
     Minutes : BYTE; // Legal Range: 0 to 59
     Seconds : BYTE; // Legal Range: 0 to 59
@@ -26746,7 +27873,7 @@ type
   {$EXTERNALSYM MPEG_DURATION}
 
   PMPEGDate = ^TMPEGDate;
-  MPEG_DATE = record
+  MPEG_DATE = packed record
    Date  : BYTE; // Legal Range: 1 to 31
    Month : BYTE; // Legal Range: 1 to 12
    Year  : WORD; // Legal Range: 1900 to 2100
@@ -26755,7 +27882,7 @@ type
   TMPEGDate = MPEG_DATE;
 
   PMPEGDateAndTime = ^TMPEGDateAndTime;
-  MPEG_DATE_AND_TIME = record
+  MPEG_DATE_AND_TIME = packed record
    D: TMPEGDate;
    T: TMPEGTime;
   end;
@@ -26770,7 +27897,7 @@ type
   {$EXTERNALSYM MPEG_CONTEXT_TYPE}
   TMPEGContextType = MPEG_CONTEXT_TYPE;
 
-  MPEG_BCS_DEMUX = record
+  MPEG_BCS_DEMUX = packed record
     AVMGraphId: DWORD;
   end;
   {$EXTERNALSYM MPEG_BCS_DEMUX}
@@ -26783,7 +27910,7 @@ type
   TMPEGWinsock = MPEG_WINSOCK;
 
   PMPEGContext = ^TMPEGContext;
-  MPEG_CONTEXT = record
+  MPEG_CONTEXT = packed record
     Type_ : TMPEGContextType;
     case byte of
       0: (Demux: TMPEGBCSDemux);
@@ -26810,7 +27937,7 @@ type
   TMPEGRequestType = MPEG_REQUEST_TYPE;
 
   PMPEGServiceRequest = ^TMPEGServiceRequest;
-  MPEG_SERVICE_REQUEST = record
+  MPEG_SERVICE_REQUEST = packed record
     Type_   : TMPEGRequestType;
     Context : TMPEGContext;
     Pid     : PID;
@@ -26824,7 +27951,7 @@ type
   TMPEGServiceRequest = MPEG_SERVICE_REQUEST;
 
   PMPEGServiceResponse = ^TMPEGServiceResponse;
-  MPEG_SERVICE_RESPONSE = record
+  MPEG_SERVICE_RESPONSE = packed record
     IPAddress : DWORD;
     Port      : WORD;
   end;
@@ -26835,7 +27962,7 @@ type
 
   // DSM-CC & MPE Query Results
   PDSMCCElement = ^TDSMCCElement;
-  DSMCC_ELEMENT = record
+  DSMCC_ELEMENT = packed record
     pid             : PID;
     bComponentTag   : BYTE;
     dwCarouselId    : DWORD;
@@ -26848,7 +27975,7 @@ type
   TDSMCCElement = DSMCC_ELEMENT;
 
   PMPEElement = ^TMPEElement;
-  MPE_ELEMENT = record
+  MPE_ELEMENT = packed record
     pid           : PID;
     bComponentTag : BYTE;
     pNext         : PMPEElement;
@@ -26860,7 +27987,7 @@ type
 
   // MPEG-2 Stream Filtering Structure
   PMPEGStreamFilter = ^TMPEGStreamFilter;
-  MPEG_STREAM_FILTER = record
+  MPEG_STREAM_FILTER = packed record
     wPidValue    : WORD;  // PID value
     dwFilterSize : DWORD; // size of filter in bits
     fCrcEnabled  : BOOL;  // enable/disable CRC check
@@ -27533,6 +28660,33 @@ type
   {$EXTERNALSYM PKSPROPERTY_EXTXPORT_S}
   TKSPropertyExtXPortS = KSPROPERTY_EXTXPORT_S;
 
+  PKSPropertyExtxportNodeS = ^TKSPropertyExtxportNodeS;
+  KSPROPERTY_EXTXPORT_NODE_S = packed record
+    NodeProperty: KSP_NODE;
+    case byte of
+      0: (Capabilities: ULONG);
+      1: (SignalMode: ULONG);
+      2: (LoadMedium: ULONG);
+      3: (MediumInfo: MEDIUM_INFO);
+      4: (XPrtState: TRANSPORT_STATE);
+      5: (Timecode: record
+            frame: byte;
+            second: byte;
+            minute: byte;
+            hour: byte;
+          end);
+      6: (dwTimecode: DWORD);
+      7: (dwAbsTrackNumber: DWORD);
+      8: (RawAVC: record
+            PayloadSize: ULONG;
+            Payload: array[0..511] of byte;
+        end);
+  end;
+  {$EXTERNALSYM KSPROPERTY_EXTXPORT_NODE_S}
+  PKSPROPERTY_EXTXPORT_NODE_S = KSPROPERTY_EXTXPORT_NODE_S;
+  {$EXTERNALSYM PKSPROPERTY_EXTXPORT_NODE_S}
+  TKSPropertyExtxportNodeS = KSPROPERTY_EXTXPORT_NODE_S;
+
 //---------------------------------------------------------
 // PROPSETID_TIMECODE
 //---------------------------------------------------------
@@ -27559,6 +28713,16 @@ type
   PKSPROPERTY_TIMECODE_S = ^KSPROPERTY_TIMECODE_S;
   {$EXTERNALSYM PKSPROPERTY_TIMECODE_S}
   TKSPropertyTimeCodeS = KSPROPERTY_TIMECODE_S;
+
+  PKSPropertyTimecodeNodeS = ^TKSPropertyTimecodeNodeS;
+  KSPROPERTY_TIMECODE_NODE_S = packed record
+    NodeProperty: KSP_NODE;
+    TimecodeSamp: TIMECODE_SAMPLE;
+  end;
+  {$EXTERNALSYM KSPROPERTY_TIMECODE_NODE_S}
+  PKSPROPERTY_TIMECODE_NODE_S = ^KSPROPERTY_TIMECODE_NODE_S;
+  {$EXTERNALSYM PKSPROPERTY_TIMECODE_NODE_S}
+  TKSPropertyTimecodeNodeS = PKSPROPERTY_TIMECODE_NODE_S;
 
 //---------------------------------------------------------
 //  External Device Command event notification
@@ -28359,6 +29523,8 @@ const
 
   IID_IVMRSurfaceAllocator9       : TGUID = '{8d5148ea-3f5d-46cf-9df1-d1b896eedb1f}';
   {$EXTERNALSYM IID_IVMRSurfaceAllocator9}
+  IID_IVMRSurfaceAllocatorEx9     : TGUID = '{6de9a68a-a928-4522-bf57-655ae3866456}';
+  {$EXTERNALSYM IID_IVMRSurfaceAllocatorEx9}
   IID_IVMRSurfaceAllocatorNotify9 : TGUID = '{dca3f5df-bb3a-4d03-bd81-84614bfbfa0c}';
   {$EXTERNALSYM IID_IVMRSurfaceAllocatorNotify9}
   IID_IVMRImagePresenter9         : TGUID = '{69188c61-12a3-40f0-8ffc-342e7b433fd7}';
@@ -28411,6 +29577,8 @@ type
     {$EXTERNALSYM VMR9Sample_Discontinuity}
     VMR9Sample_TimeValid       = $00000008;
     {$EXTERNALSYM VMR9Sample_TimeValid}
+    VMR9Sample_SrcDstRectsValid = $00000010;
+    {$EXTERNALSYM VMR9Sample_SrcDstRectsValid}
 
 
 type
@@ -28459,8 +29627,19 @@ type
     {$EXTERNALSYM VMR9AllocFlag_TextureSurface}
     VMR9AllocFlag_OffscreenSurface      = $0008;
     {$EXTERNALSYM VMR9AllocFlag_OffscreenSurface}
-    VMR9AllocFlag_UsageReserved         = $00F0;
+
+    //
+    // The following flag applies to YUV mixing mode only
+    // and indicates that VMR9's mixer can accept RGB formats
+    // as well as the specified YUV format.
+    // The allocator-present can switch between the two
+    // surface formats dynamically.
+    //
+    VMR9AllocFlag_RGBDynamicSwitch      = $0010;
+    {$EXTERNALSYM VMR9AllocFlag_RGBDynamicSwitch}
+    VMR9AllocFlag_UsageReserved         = $00E0;
     {$EXTERNALSYM VMR9AllocFlag_UsageReserved}
+
     VMR9AllocFlag_UsageMask             = $00FF;
     {$EXTERNALSYM VMR9AllocFlag_UsageMask}
 
@@ -28494,6 +29673,14 @@ type
     function GetSurface(dwUserID: DWORD; SurfaceIndex: DWORD; SurfaceFlags: DWORD;
       out lplpSurface: IDirect3DSurface9): HResult; stdcall;
     function AdviseNotify(lpIVMRSurfAllocNotify: IVMRSurfaceAllocatorNotify9): HResult; stdcall;
+  end;
+
+  {$HPPEMIT 'typedef System::DelphiInterface<IVMRSurfaceAllocatorEx9> _di_IVMRSurfaceAllocatorEx9;'}
+  {$EXTERNALSYM IVMRSurfaceAllocatorEx9}
+  IVMRSurfaceAllocatorEx9 = interface(IVMRSurfaceAllocator9)
+  ['{6DE9A68A-A928-4522-BF57-655AE3866456}']
+    function GetSurfaceEx(dwUserID: LongWord; SurfaceIndex, SurfaceFlags: DWORD;
+      out lplpSurface: IDirect3DSurface9; lprcDst: PRect): HRESULT; stdcall;
   end;
 
 //=====================================================================
@@ -28603,8 +29790,10 @@ type
     {$EXTERNALSYM MixerPref9_NoDecimation}
     MixerPref9_DecimateOutput           = $00000002; // decimate output by 2 in x & y
     {$EXTERNALSYM MixerPref9_DecimateOutput}
-    MixerPref9_DecimationReserved       = $0000000C; // bits reserved for future use.
-    {$EXTERNALSYM MixerPref9_DecimationReserved}
+    MixerPref9_ARAdjustXorY             = $00000004; // adjust the aspect ratio in x or y
+    {$EXTERNALSYM MixerPref9_ARAdjustXorY}
+    MixerPref9_NonSquareMixing          = $00000008; // assume AP can handle non-square mixing, avoids intermediate scales
+    {$EXTERNALSYM MixerPref9_NonSquareMixing}
     MixerPref9_DecimateMask             = $0000000F;
     {$EXTERNALSYM MixerPref9_DecimateMask}
 
@@ -28625,10 +29814,29 @@ type
 
     MixerPref9_RenderTargetRGB          = $00001000;
     {$EXTERNALSYM MixerPref9_RenderTargetRGB}
-    MixerPref9_RenderTargetReserved     = $000FE000; // bits reserved for future use.
+    MixerPref9_RenderTargetYUV          = $00002000; // Uses DXVA to perform mixing
+    {$EXTERNALSYM MixerPref9_RenderTargetYUV}
+    MixerPref9_RenderTargetReserved     = $000FC000; // bits reserved for future use.
     {$EXTERNALSYM MixerPref9_RenderTargetReserved}
     MixerPref9_RenderTargetMask         = $000FF000; // OR of all above flags
     {$EXTERNALSYM MixerPref9_RenderTargetMask}
+
+    //
+    // Dynamic changes that can be performed when the VMR's mixer is
+    // configured to use the YUV Render target (see MixerPref_RenderTargetYUV)
+    // These preferences can be applied while the graph is running and take effect
+    // when the next frame is composed by the mixer.
+    //
+    MixerPref9_DynamicSwitchToBOB       = $00100000;
+    {$EXTERNALSYM MixerPref9_DynamicSwitchToBOB}
+    MixerPref9_DynamicDecimateBy2       = $00200000;
+    {$EXTERNALSYM MixerPref9_DynamicDecimateBy2}
+
+    MixerPref9_DynamicReserved          = $00C00000;
+    {$EXTERNALSYM MixerPref9_DynamicReserved}
+    MixerPref9_DynamicMask              = $00F00000;
+    {$EXTERNALSYM MixerPref9_DynamicMask}
+
 
 type
 //  Normalized relative rectangle
@@ -29362,6 +30570,125 @@ type
   end;
 {$ENDIF}
 
+//------------------------------------------------------------------------------
+// File: iwstdec.h
+//
+// Desc: WST Decoder related definitions and interfaces for ActiveMovie
+//
+// Copyright (c) 1999 - 2001, Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------------------------
+// 
+type
+  PAM_WST_PAGE = ^TAM_WST_PAGE;
+  _AM_WST_PAGE = record
+    dwPageNr : DWORD;
+    dwSubPageNr : DWORD;
+    pucPageData : PByte;
+  end;
+  {$EXTERNALSYM _AM_WST_PAGE}
+  AM_WST_PAGE = _AM_WST_PAGE;
+  {$EXTERNALSYM AM_WST_PAGE}
+  TAM_WST_PAGE = _AM_WST_PAGE;
+
+  PAM_WST_LEVEL = ^TAM_WST_LEVEL;
+  _AM_WST_LEVEL = (
+    AM_WST_LEVEL_1_5
+  );
+  {$EXTERNALSYM _AM_WST_PAGE}
+  AM_WST_LEVEL = _AM_WST_LEVEL;
+  {$EXTERNALSYM AM_WST_LEVEL}
+  TAM_WST_LEVEL = _AM_WST_LEVEL;
+
+  PAM_WST_SERVICE = ^TAM_WST_SERVICE;
+  _AM_WST_SERVICE = (
+    AM_WST_SERVICE_None,
+    AM_WST_SERVICE_Text,
+    AM_WST_SERVICE_IDS,
+    AM_WST_SERVICE_Invalid
+  );
+  {$EXTERNALSYM _AM_WST_SERVICE}
+  AM_WST_SERVICE = _AM_WST_SERVICE;
+  {$EXTERNALSYM AM_WST_SERVICE}
+  TAM_WST_SERVICE = _AM_WST_SERVICE;
+
+  PAM_WST_STATE = ^TAM_WST_STATE;
+  _AM_WST_STATE = (
+    AM_WST_STATE_Off,
+    AM_WST_STATE_On
+  );
+  {$EXTERNALSYM _AM_WST_STATE}
+  AM_WST_STATE = _AM_WST_STATE;
+  {$EXTERNALSYM AM_WST_STATE}
+  TAM_WST_STATE = _AM_WST_STATE;
+
+  PAM_WST_STYLE = ^TAM_WST_STYLE;
+  _AM_WST_STYLE = (
+    AM_WST_STYLE_None,
+    AM_WST_STYLE_Invers
+  );
+  {$EXTERNALSYM _AM_WST_STYLE}
+  AM_WST_STYLE = _AM_WST_STYLE;
+  {$EXTERNALSYM AM_WST_STYLE}
+  TAM_WST_STYLE = _AM_WST_STYLE;
+
+  PAM_WST_DRAWBGMODE = ^TAM_WST_DRAWBGMODE;
+  _AM_WST_DRAWBGMODE = (
+    AM_WST_DRAWBGMODE_Opaque,
+    AM_WST_DRAWBGMODE_Transparent
+  );
+  {$EXTERNALSYM _AM_WST_DRAWBGMODE}
+  AM_WST_DRAWBGMODE = _AM_WST_DRAWBGMODE;
+  {$EXTERNALSYM AM_WST_DRAWBGMODE}
+  TAM_WST_DRAWBGMODE = _AM_WST_DRAWBGMODE;
+
+//
+//  WST Decoder standard COM interface
+//
+
+  {$HPPEMIT 'typedef System::DelphiInterface<IAMWstDecoder> _di_IAMWstDecoder;'}
+  {$EXTERNALSYM IAMWstDecoder}
+  IAMWstDecoder = interface(IUnknown)
+    ['{C056DE21-75C2-11d3-A184-00105AEF9F33}']
+    // Decoder options to be used by apps
+    // What is the decoder's level
+    function GetDecoderLevel(out lpLevel : TAM_WST_LEVEL) : HRESULT; stdcall;
+    //  function SetDecoderLevel(Level : TAM_WST_LEVEL) : HRESULT; stdcall;
+    // Which of the services is being currently used
+    function GetCurrentService(out lpService : TAM_WST_SERVICE) : HRESULT; stdcall;
+    //  function SetCurrentService(Service : AM_WST_SERVICE) : HRESULT; stdcall;
+    // Query/Set the service state (On/Off)
+    // supported state values are AM_WSTState_On and AM_WSTState_Off
+    function GetServiceState(out lpState : TAM_WST_STATE) : HRESULT; stdcall;
+    function SetServiceState(State : TAM_WST_STATE) : HRESULT; stdcall;
+    //
+    // Output options to be used by downstream filters
+    //
+    // What size, bitdepth etc should the output video be
+    function GetOutputFormat(out lpbmih : TBITMAPINFOHEADER) : HRESULT; stdcall;
+    // GetOutputFormat() method, if successful, returns
+    // 1.  S_FALSE if no output format has so far been defined by downstream filters
+    // 2.  S_OK if an output format has already been defined by downstream filters
+    function SetOutputFormat(lpbmi : PBITMAPINFO) : HRESULT; stdcall;
+    // Specify physical color to be used in colorkeying the background
+    // for overlay mixing
+    function GetBackgroundColor(out pdwPhysColor : DWORD) : HRESULT; stdcall;
+    function SetBackgroundColor(dwPhysColor : DWORD) : HRESULT; stdcall;
+    // Specify if whole output bitmap should be redrawn for each sample
+    function GetRedrawAlways(out lpbOption : BOOL) : HRESULT; stdcall;
+    function SetRedrawAlways(bOption : BOOL) : HRESULT; stdcall;
+    // Specify if the caption text background should be opaque/transparent
+    function GetDrawBackgroundMode(out lpMode : TAM_WST_DRAWBGMODE) : HRESULT; stdcall;
+    function SetDrawBackgroundMode(Mode : TAM_WST_DRAWBGMODE) : HRESULT; stdcall;
+    // supported mode values are AM_WST_DrawBGMode_Opaque and
+    // AM_WST_DrawBGMode_Transparent
+    function SetAnswerMode(bAnswer : BOOL) : HRESULT; stdcall;
+    function GetAnswerMode(out pbAnswer : BOOL) : HRESULT; stdcall;
+    function SetHoldPage(bHoldPage : BOOL) : HRESULT; stdcall;
+    function GetHoldPage(out pbHoldPage : BOOL) : HRESULT; stdcall;
+    function GetCurrentPage(out pWstPage : TAM_WST_PAGE) : HRESULT; stdcall;
+    function SetCurrentPage(WstPage : AM_WST_PAGE) : HRESULT; stdcall;
+  end;
+  
 implementation
 
 const
@@ -30720,19 +32047,3 @@ finalization
 {$ENDIF}
 
 end.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
