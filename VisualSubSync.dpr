@@ -37,9 +37,11 @@ uses
   TntRichEditCustomUndoUnit in 'TntRichEditCustomUndoUnit.pas',
   UndoableTaskUnit in 'UndoableTaskUnit.pas',
   UndoableSubTaskUnit in 'UndoableSubTaskUnit.pas',
+  MatroskaHelper in 'MatroskaHelper.pas',
   SceneChangeUnit in 'SceneChangeUnit.pas',
-  VSSClipboardUnit in 'VSSClipboardUnit.pas',
-  TntNativeHintWindow in 'ThirdParty\TntNativeHintWindow.pas';
+  GlobalUnit in 'GlobalUnit.pas',
+  SRTParserUnit in 'SRTParserUnit.pas',
+  SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm};
 
 {$R *.res}
 

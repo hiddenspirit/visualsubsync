@@ -347,7 +347,6 @@ type
     ActionMergeDialog: TTntAction;
     ActionFixSelectedErrors: TTntAction;
     pmiSubListMergeDialog: TTntMenuItem;
-    TntButton1: TTntButton;
     TntButton2: TTntButton;
     ActionMergeOnOneLine: TTntAction;
     MenuItemJSTools: TTntMenuItem;
@@ -356,6 +355,9 @@ type
     MenuItemLoadPresets: TTntMenuItem;
     ActionCopy: TTntAction;
     OpenDialogPresets: TTntOpenDialog;
+    ActionShowSilentZones: TTntAction;
+    Showsilentzones1: TTntMenuItem;
+    N21: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -527,12 +529,12 @@ type
     procedure ActionMergeWithNextExecute(Sender: TObject);
     procedure ActionMergeDialogExecute(Sender: TObject);
     procedure ActionFixSelectedErrorsExecute(Sender: TObject);
-    procedure TntButton1Click(Sender: TObject);
     procedure TntButton2Click(Sender: TObject);
     procedure ActionMergeOnOneLineExecute(Sender: TObject);
     procedure ActionLoadPresetsExecute(Sender: TObject);
     procedure ActionCopyExecute(Sender: TObject);
     procedure ActionCopyUpdate(Sender: TObject);
+    procedure ActionShowSilentZonesExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -720,6 +722,8 @@ type
     
     procedure InsertSceneChange(SrcSCArray : TIntegerDynArray);
     function DeleteSceneChange(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
+
+    procedure SetSelection(Start, Stop : Integer);
   end;
 
 const
@@ -745,7 +749,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, RegExpr, SRTParserUnit, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
+  SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
 
 {$R *.dfm}
 
@@ -2814,7 +2818,6 @@ end;
 
 procedure TMainForm.ActionFindNextExecute(Sender: TObject);
 var SearchNode : PVirtualNode;
-    SearchSub : TSubtitleRange;
     NodeData : PTreeData;
     FindText : WideString;
     RegExp : TRegExpr;
@@ -2908,7 +2911,7 @@ begin
   else
     Node := vtvSubsList.GetFirst;
 
-  MultiChangeTask := TUndoableMultiChangeTask.Create;    
+  MultiChangeTask := TUndoableMultiChangeTask.Create;
   RegExpr := TRegExpr.Create;
   RegExpr.ModifierI := (not FindForm.MatchCase);
   RegExpr.ModifierG := True;
@@ -3702,6 +3705,9 @@ begin
 
     AudioOnlyRenderer.Close;
     VideoRenderer.Close;
+
+    if Assigned(SilentZoneForm) then
+      SilentZoneForm.Clear;
 
     ClearStack(RedoStack);
     ClearStack(UndoStack);
@@ -4703,7 +4709,6 @@ end;
 procedure TMainForm.vtvSubsListFocusChanged(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex);
 var NodeData: PTreeData;
-    SelLen, SelStart : Integer;
 begin
   if (Node <> nil) then
   begin
@@ -7409,13 +7414,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.TntButton1Click(Sender: TObject);
-begin
-  CopyVTVToClipboard(vtvSubsList);
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.TntButton2Click(Sender: TObject);
 begin
   PasteClipboardToVTV(vtvSubsList);
@@ -7585,7 +7583,6 @@ end;
 
 procedure TMainForm.LoadPresetFile(Filename : WideString);
 var IniFile : TIniFile;
-    IniFilename : WideString;
 begin
   try
     IniFile := TIniFile.Create(FileName);
@@ -7602,8 +7599,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionLoadPresetsExecute(Sender: TObject);
-var IniFile : TIniFile;
-    IniFilename : WideString;
 begin
   OpenDialogPresets.Filter := 'Presets file|*.INI' + '|' + 'All files (*.*)|*.*';
   if not OpenDialogPresets.Execute then
@@ -7693,6 +7688,29 @@ begin
   MenuItemLoadPresets.Add(NewMenuItem);
 
   FileList.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SetSelection(Start, Stop : Integer);
+begin
+  WAVDisplayer.ClearSelection;
+  WAVDisplayer.Selection.StartTime := Start;
+  WAVDisplayer.Selection.StopTime := Stop;
+  WAVDisplayer.ZoomCenteredOn(Start + ((Stop - Start) div 2), 20000);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
+  WAVDisplayer.UpdateView([uvfRange]);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowSilentZonesExecute(Sender: TObject);
+var ZoneList : TList;
+begin
+  if (SilentZoneForm = nil) then
+    SilentZoneForm := TSilentZoneForm.Create(Self, WAVDisplayer);
+  SilentZoneForm.Visible := True;
+  SilentZoneForm.UpdateData;
 end;
 
 //------------------------------------------------------------------------------

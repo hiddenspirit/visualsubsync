@@ -1078,23 +1078,13 @@ object MainForm: TMainForm
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
-        object TntButton1: TTntButton
-          Left = 0
-          Top = 0
-          Width = 33
-          Height = 25
-          Caption = 'TntButton1'
-          TabOrder = 0
-          Visible = False
-          OnClick = TntButton1Click
-        end
         object TntButton2: TTntButton
-          Left = 40
+          Left = 8
           Top = 0
           Width = 33
           Height = 25
           Caption = 'TntButton2'
-          TabOrder = 1
+          TabOrder = 0
           Visible = False
           OnClick = TntButton2Click
         end
@@ -1448,6 +1438,12 @@ object MainForm: TMainForm
       end
       object MenuItemShowStopFrame: TTntMenuItem
         Action = ActionShowStopFrame
+      end
+      object N21: TTntMenuItem
+        Caption = '-'
+      end
+      object Showsilentzones1: TTntMenuItem
+        Action = ActionShowSilentZones
       end
       object N14: TTntMenuItem
         Caption = '-'
@@ -2190,6 +2186,10 @@ object MainForm: TMainForm
       ShortCut = 16451
       OnExecute = ActionCopyExecute
       OnUpdate = ActionCopyUpdate
+    end
+    object ActionShowSilentZones: TTntAction
+      Caption = 'Show silent zones'
+      OnExecute = ActionShowSilentZonesExecute
     end
   end
   object ImageList1: TImageList
