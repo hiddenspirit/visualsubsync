@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes, Graphics, Types;
+uses Classes, Graphics, Types, Richedit, TntComCtrls;
 
 type
   TFileVersion = class
@@ -108,6 +108,10 @@ type
   procedure LoadFromStreamWS(Stream : TStream; out Value : WideString);
   procedure SaveToStreamInt(Stream : TStream; Value : Integer);
   procedure LoadFromStreamInt(Stream : TStream; out Value : Integer);
+
+  // Some faster richedit function
+  procedure SetRESelection(RichEdit : TTntRichEdit; Start, Len : Integer);
+  procedure SetRESelectionColor(ARichEdit : TTntRichEdit; AColor : TColor);
 
 implementation
 
@@ -1199,6 +1203,26 @@ end;
 procedure LoadFromStreamInt(Stream : TStream; out Value : Integer);
 begin
   Stream.ReadBuffer(Value, SizeOf(Value));
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure SetRESelection(RichEdit : TTntRichEdit; Start, Len : Integer);
+var cr : CHARRANGE;
+begin
+  cr.cpMin := RichEdit.RawWin32CharPos(Start);
+  cr.cpMax := cr.cpMin + Len;
+  RichEdit.Perform(EM_EXSETSEL, 0, Longint(@(cr)));
+end;
+
+procedure SetRESelectionColor(ARichEdit : TTntRichEdit; AColor : TColor);
+var Format: CHARFORMAT2;
+begin
+  FillChar(Format, SizeOf(Format), 0);
+  Format.cbSize := SizeOf(Format);
+  Format.dwMask := CFM_COLOR;
+  Format.crTextColor := ColorToRGB(AColor);
+  ARichEdit.Perform(EM_SETCHARFORMAT, SCF_SELECTION, Longint(@Format));
 end;
 
 // -----------------------------------------------------------------------------

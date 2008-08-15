@@ -207,10 +207,13 @@ begin
 
     // Backward deletion
     if (Length(TaskToMerge.FOriginalText) = 1)
-      and (TaskToMerge.FReplaceStart = (FReplaceStart - Length(FOriginalText)))
+      and (Length(TaskToMerge.FReplaceByText) = 0)
+      and (TaskToMerge.FReplaceStart = (FReplaceStart - 1))
       and ((Length(FOriginalText) = 1) or FMerged) then
     begin
       FOriginalText := TaskToMerge.FOriginalText + FOriginalText;
+      FReplaceStart := TaskToMerge.FReplaceStart;
+      FSelStart := TaskToMerge.FSelStart;
       FMerged := True;
       Result := True;
       Exit;
@@ -218,12 +221,12 @@ begin
 
     // Forward deletion
     if (Length(TaskToMerge.FOriginalText) = 1)
+      and (Length(TaskToMerge.FReplaceByText) = 0)    
       and (TaskToMerge.FReplaceStart = FReplaceStart)
       and ((Length(FOriginalText) = 1) or FMerged) then
     begin
       FOriginalText := FOriginalText + TaskToMerge.FOriginalText;
-      FOriginalSelStart := TaskToMerge.FOriginalSelStart;
-      FSelStart := TaskToMerge.FSelStart;
+      FOriginalSelLength := FOriginalSelLength + TaskToMerge.FOriginalSelLength;
       FMerged := True;
       Result := True;
       Exit;

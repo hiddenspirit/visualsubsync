@@ -1942,8 +1942,9 @@ end;
 
 procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
-    i, j : Integer;
+    i, j, eventMask : Integer;
     WordArray : TWideStringDynArray;
+    WordColor : TColor;
 begin
   RichEdit.Tag := 0;
   savSelStart := RichEdit.SelStart;
@@ -1951,23 +1952,30 @@ begin
 
   TagSplit(RichEdit.Text, WordArray);
 
+  eventMask := RichEdit.Perform(EM_SETEVENTMASK, 0, 0);
+  
   RichEdit.Lines.BeginUpdate;
   j := 0;
   for i:=0 to Length(WordArray)-1 do
   begin
-    RichEdit.SelStart := j;
-    RichEdit.SelLength := Length(WordArray[i]);
+    SetRESelection(RichEdit, j, Length(WordArray[i]));
+
     if (i = (TagIndex*2)+1) then
-      RichEdit.SelAttributes.Color := clRed
+      WordColor := clRed
     else if (i mod 2) = 0 then
-      RichEdit.SelAttributes.Color := clWindowText
+      WordColor := clWindowText
     else
-      RichEdit.SelAttributes.Color := clGrayText;
+      WordColor := clGrayText;
+
+    SetRESelectionColor(RichEdit, WordColor);
+    
     Inc(j, Length(WordArray[i]));
   end;
-  RichEdit.SelStart := savSelStart;
-  RichEdit.SelLength := savSelLength;
+  SetRESelection(RichEdit, savSelStart, savSelLength);
+  
   RichEdit.Lines.EndUpdate;
+
+  RichEdit.Perform(EM_SETEVENTMASK, 0, eventMask);
 
   RichEdit.Tag := 1;
 end;
