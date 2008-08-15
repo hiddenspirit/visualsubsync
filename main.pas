@@ -745,7 +745,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, RegExpr, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
+  SceneChangeUnit, RegExpr, SRTParserUnit, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
 
 {$R *.dfm}
 
@@ -1714,16 +1714,12 @@ end;
 
 function TMainForm.LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
 var
-  S: WideString;
-  i, lineIndex : integer;
-  Start, Stop : Integer;
-  NextStart, NextStop : Integer;
-  SubText : WideString;
+  i : integer;
   NewRange : TRange;
   Node: PVirtualNode;
   NodeData: PTreeData;
-  AutoCorrectedFile : Boolean;
-  Source : TTntStringList;
+  SRTParser : TSRTParser;
+  SRTSub : TSRTSubtitle;
 begin
   Result := False;
   if not WideFileExists(Filename) then
@@ -1735,69 +1731,20 @@ begin
 
   SubtitleFileHeader := '';
   SubtitleFileFooter := '';
-
   WAVDisplayer.ClearRangeList;
-
-  Source := TTntStringList.Create;
-  Source.LoadFromFile(Filename);
-  IsUTF8 := (Source.LastFileCharSet <> csAnsi);
-
-  AutoCorrectedFile := False;
-  lineIndex := 0;
-
-  // Add a blank line because TTntStringList is eating the last line
-  // if it's blank. This is safe because we will trim the text later anyway.
-  Source.Add('');
-
-  // Skip lines until a timestamps line
-  while (lineIndex < Source.Count) do
+  
+  SRTParser := TSRTParser.Create;
+  SRTParser.Load(Filename);
+  IsUTF8 := SRTParser.IsUTF8;
+  for i := 0 to SRTParser.GetCount-1 do
   begin
-    S := Source[lineIndex];
-    Inc(lineIndex);
-    if IsTimeStampsLine(S, Start, Stop) then
-      Break;
+    SRTSub := SRTParser.GetAt(i);
+    NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
+    TSubtitleRange(NewRange).Text := SRTSub.Text;
+    if (EnableExperimentalKaraoke = True) then
+      NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
+    WAVDisplayer.RangeList.AddAtEnd(NewRange);
   end;
-
-  while (lineIndex < Source.Count) do
-  begin
-    // Copy text until a timestamps line
-    SubText := '';
-    while (lineIndex < Source.Count) do
-    begin
-      S := Source[lineIndex];
-      Inc(lineIndex);
-      if IsTimeStampsLine(S, NextStart, NextStop) then
-        Break;
-      SubText := SubText + Trim(S) + CRLF;
-    end;
-    SubText := TrimRight(SubText);
-    if (Start <> -1) and (Stop <> -1) then
-    begin
-      // Auto fix timestamp if this subtitle stop time is equal
-      // to next subtitle start time
-      if (Stop = NextStart) then
-      begin
-        AutoCorrectedFile := True;
-        Dec(Stop);
-      end;
-      // Remove the index line if any
-      i := RPos(CRLF, SubText);
-      if ((i > 0) and (StrToIntDef(Copy(SubText, i+2, MaxInt), -1) <> -1) and (lineIndex < Source.Count)) then
-      begin
-        Delete(SubText, i, MaxInt);
-      end;
-      NewRange := SubRangeFactory.CreateRangeSS(Start,Stop);
-      TSubtitleRange(NewRange).Text := Trim(SubText);
-
-      if (EnableExperimentalKaraoke = True) then
-        NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
-
-      WAVDisplayer.RangeList.AddAtEnd(NewRange);
-    end;
-    Start := NextStart;
-    Stop := NextStop;
-  end;
-  Source.Free;
   WAVDisplayer.RangeList.FullSort;
 
   vtvSubsList.Clear;
@@ -1809,8 +1756,9 @@ begin
     TSubtitleRange(WAVDisplayer.RangeList[i]).Node := Node;
   end;
   WAVDisplayer.UpdateView([uvfRange]);
-  if AutoCorrectedFile then
+  if SRTParser.AutoCorrectedFile then
     CurrentProject.IsDirty := True;
+  FreeAndNil(SRTParser);
   Result := True;
 end;
 
