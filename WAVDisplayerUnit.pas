@@ -106,6 +106,12 @@ type
 
   // ----------
 
+  TSilentRangeInfo = class
+    Start, Stop : Integer;
+    RmsSum : Double;
+    RmsCount : Integer;
+  end;
+
   TSelectionMode = (smCoolEdit, smSSA);
   TMouseWheelModifier = (mwmShift = Ord(ssShift), mwmAlt = Ord(ssAlt), mwmCtrl = Ord(ssCtrl), mwmNone);
 
@@ -312,6 +318,9 @@ type
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 
     procedure ClearRangeList;
+
+    procedure DetectSilentZone(List : TList; Threshold : Integer;
+      WinSizeMS : Integer);
 
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
@@ -2707,6 +2716,63 @@ begin
       FPeakTab[i].Min := Round(FPeakTab[i].Min * NormFactor);
     end;
     Result := True;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.DetectSilentZone(List : TList; Threshold : Integer;
+  WinSizeMS : Integer);
+var WinPeaks : Integer;
+    i, j : Integer;
+    SampleLen, PeakLen, Sum, Rms : Double;
+    Start, Stop : Int64;
+    SilentRange : TSilentRangeInfo;
+begin
+  SilentRange := nil;
+  SampleLen := (1.0 / FWavFormat.nSamplesPerSec);
+  PeakLen := SampleLen * FSamplesPerPeak;
+  WinPeaks := Ceil((WinSizeMS / 1000.0) / PeakLen);
+  i := 0;
+  j := 0;
+  Sum := 0;
+  while (i < FPeakTabSize) do
+  begin
+    Sum := Sum + (FPeakTab[i].Max * FPeakTab[i].Max);
+    if (j = (WinPeaks-1)) then
+    begin
+      Rms := Sqrt(Sum / j);
+      if (Rms < Threshold) then
+      begin
+        Start := Round((i - j) * PeakLen * 1000.0);
+        Stop := Round(i * PeakLen * 1000.0);
+        if Assigned(SilentRange) then
+        begin
+          // Simply increase previous zone
+          SilentRange.Stop := Stop;
+          SilentRange.RmsSum := SilentRange.RmsSum + Rms;
+          Inc(SilentRange.RmsCount);
+        end
+        else
+        begin
+          // Add new zone
+          SilentRange := TSilentRangeInfo.Create;
+          SilentRange.Start := Start;
+          SilentRange.Stop := Stop;
+          SilentRange.RmsSum := Rms;
+          SilentRange.RmsCount := 1;
+          List.Add(SilentRange);
+        end;
+      end
+      else
+      begin
+        SilentRange := nil;
+      end;
+      j := 0;
+      Sum := 0;
+    end;
+    Inc(j);
+    Inc(i);
   end;
 end;
 
