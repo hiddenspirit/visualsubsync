@@ -2188,6 +2188,7 @@ object MainForm: TMainForm
       OnUpdate = ActionCopyUpdate
     end
     object ActionShowSilentZones: TTntAction
+      Tag = 1
       Caption = 'Show silent zones'
       OnExecute = ActionShowSilentZonesExecute
     end

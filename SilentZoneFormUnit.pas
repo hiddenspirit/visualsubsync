@@ -4,7 +4,8 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, TntStdCtrls, ExtCtrls, TntExtCtrls, Contnrs, WAVDisplayerUnit;
+  Dialogs, StdCtrls, TntStdCtrls, ExtCtrls, TntExtCtrls, Contnrs, WAVDisplayerUnit,
+  ComCtrls, TntComCtrls;
 
 type
   TSilentZoneForm = class(TForm)
@@ -13,9 +14,11 @@ type
     edThreshold: TTntEdit;
     TntLabel1: TTntLabel;
     TntBevel1: TTntBevel;
-    bttUpdate: TTntButton;
     TntLabel2: TTntLabel;
     edDuration: TTntEdit;
+    udDuration: TTntUpDown;
+    udThreshold: TTntUpDown;
+    bttUpdate: TTntButton;
     procedure lbSilentZonesDblClick(Sender: TObject);
     procedure bttUpdateClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -99,12 +102,12 @@ end;
 
 function TSilentZoneForm.GetThreshold : Integer;
 begin
-  Result := StrToIntDef(edThreshold.Text, 300);
+  Result := udThreshold.Position;
 end;
 
 function TSilentZoneForm.GetDuration : Integer;
 begin
-  Result := StrToIntDef(edDuration.Text, 500);
+  Result := udDuration.Position;
 end;
 
 procedure TSilentZoneForm.bttUpdateClick(Sender: TObject);

@@ -54,7 +54,7 @@ object SilentZoneForm: TSilentZoneForm
       Caption = 'Threshold:'
     end
     object TntLabel2: TTntLabel
-      Left = 112
+      Left = 128
       Top = 20
       Width = 43
       Height = 13
@@ -65,26 +65,55 @@ object SilentZoneForm: TSilentZoneForm
       Top = 16
       Width = 41
       Height = 21
+      Hint = 'Threshold between 0 and 32767'
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 0
-      Text = '200'
-    end
-    object bttUpdate: TTntButton
-      Left = 228
-      Top = 16
-      Width = 59
-      Height = 25
-      Anchors = [akTop, akRight]
-      Caption = 'Update'
-      TabOrder = 1
-      OnClick = bttUpdateClick
+      Text = '100'
     end
     object edDuration: TTntEdit
-      Left = 160
+      Left = 176
       Top = 16
       Width = 41
       Height = 21
-      TabOrder = 2
+      Hint = 'Minimum duration of the silent zone in ms (100..9999)'
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 1
       Text = '500'
+    end
+    object udDuration: TTntUpDown
+      Left = 217
+      Top = 16
+      Width = 15
+      Height = 21
+      Associate = edDuration
+      Min = 100
+      Max = 9999
+      Increment = 100
+      Position = 500
+      TabOrder = 2
+    end
+    object udThreshold: TTntUpDown
+      Left = 105
+      Top = 16
+      Width = 15
+      Height = 21
+      Associate = edThreshold
+      Max = 32767
+      Increment = 10
+      Position = 100
+      TabOrder = 3
+    end
+    object bttUpdate: TTntButton
+      Left = 240
+      Top = 16
+      Width = 47
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'Update'
+      TabOrder = 4
+      OnClick = bttUpdateClick
     end
   end
 end
