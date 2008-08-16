@@ -41,7 +41,8 @@ uses
   SceneChangeUnit in 'SceneChangeUnit.pas',
   GlobalUnit in 'GlobalUnit.pas',
   SRTParserUnit in 'SRTParserUnit.pas',
-  SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm};
+  SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm},
+  LibHunspellUnit in 'LibHunspellUnit.pas';
 
 {$R *.res}
 

@@ -35,9 +35,7 @@ uses
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
   DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
-  UndoableTaskUnit, UndoableSubTaskUnit, Types;
-
-{.$DEFINE TTRACE}  
+  UndoableTaskUnit, UndoableSubTaskUnit, Types, LibHunspellUnit;
 
 type
   // -----
@@ -358,6 +356,8 @@ type
     ActionShowSilentZones: TTntAction;
     Showsilentzones1: TTntMenuItem;
     N21: TTntMenuItem;
+    ActionLiveSpellCheck: TTntAction;
+    SubMenuItemSpellcheck: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -535,6 +535,7 @@ type
     procedure ActionCopyExecute(Sender: TObject);
     procedure ActionCopyUpdate(Sender: TObject);
     procedure ActionShowSilentZonesExecute(Sender: TObject);
+    procedure ActionLiveSpellCheckExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -579,6 +580,9 @@ type
     PrefFormInitialized : Boolean;
 
     StartupShowVideo, StartupDetachVideo : Boolean;
+
+    FSpellChecker : THunspellChecker;
+    FLiveSpellMenuItem : TTntMenuItem;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -671,6 +675,8 @@ type
     procedure FillPresetsMenu;
     procedure OnLoadPresetMenuItemClick(Sender: TObject);
 
+    procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -719,11 +725,12 @@ type
     procedure ReplaceAllText;
     function LastFindSucceded : Boolean;
     procedure InitGeneralJSPlugin;
-    
+
     procedure InsertSceneChange(SrcSCArray : TIntegerDynArray);
     function DeleteSceneChange(StartTimeMs, StopTimeMs : Integer) : TIntegerDynArray;
 
     procedure SetSelection(Start, Stop : Integer);
+    procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
   end;
 
 const
@@ -749,7 +756,8 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, VSSClipboardUnit {$IFDEF TTRACE}, TraceTool{$ENDIF};
+  SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit,
+  VSSClipboardUnit;
 
 {$R *.dfm}
 
@@ -780,9 +788,8 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
 procedure TMainForm.FormCreate(Sender: TObject);
 var i : integer;
     CustomMemo : TTntRichEditCustomUndo;
+    MenuItem : TTntMenuItem;
 begin
-  {$IFDEF TTRACE}TTrace.Debug.EnterMethod('TMainForm.FormCreate');{$ENDIF}
-
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
   CustomMemo.Parent := MemoSubtitleText.Parent;
   CustomMemo.Font.Assign(MemoSubtitleText.Font);
@@ -892,18 +899,37 @@ begin
   StatusBarPrimaryText := '';
   StatusBarSecondaryText := '';
 
+  // Init spellchecker menu
+  FSpellChecker := THunspellChecker.Create;
+  FSpellChecker.FindDict(g_DictPath);
+  MenuItem := TTntMenuItem.Create(Self);
+  MenuItem.RadioItem := True;
+  MenuItem.Action := ActionLiveSpellCheck;
+  SubMenuItemSpellcheck.Add(MenuItem);
+  FLiveSpellMenuItem := MenuItem;
+  MenuItem := TTntMenuItem.Create(Self);
+  MenuItem.Caption := '-';
+  SubMenuItemSpellcheck.Add(MenuItem);
+  for i := 0 to FSpellChecker.GetDictCount-1 do
+  begin
+    MenuItem := TTntMenuItem.Create(Self);
+    MenuItem.GroupIndex := 1;
+    MenuItem.RadioItem := True;
+    MenuItem.AutoCheck := True;
+    MenuItem.Caption := FSpellChecker.GetDict(i);
+    MenuItem.Tag := i;
+    MenuItem.OnClick := OnSpellcheckLanguageMenuItemClick;
+    SubMenuItemSpellcheck.Add(MenuItem);
+  end;
+
   // Fill the presets menu
   FillPresetsMenu;
-
-  {$IFDEF TTRACE}TTrace.Debug.ExitMethod('TMainForm.FormCreate');{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
-  {$IFDEF TTRACE}TTrace.Debug.EnterMethod('TMainForm.FormDestroy');{$ENDIF}
-
   StartStopServer(True);
   if Assigned(g_VSSCoreWrapper) then
   begin
@@ -921,13 +947,9 @@ begin
   FreeAndNil(RedoStack);
   ClearStack(UndoStack);
   FreeAndNil(UndoStack);
+  FreeAndNil(FSpellChecker);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
-
-  {$IFDEF TTRACE}
-  TTrace.Debug.ExitMethod('TMainForm.FormDestroy');
-  TTrace.Flush();
-  {$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -1894,11 +1916,15 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
+procedure TMainForm.TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
     i, j, eventMask : Integer;
     WordArray : TWideStringDynArray;
     WordColor : TColor;
+    TextToSpell, AWord : WideString;
+    Offset : Integer;
+    SpellOk : Boolean;
+    WordInfo : TWordInfo;    
 begin
   RichEdit.Tag := 0;
   savSelStart := RichEdit.SelStart;
@@ -1912,6 +1938,7 @@ begin
 
   RichEdit.SelectAll;
   SetRESelectionColor(RichEdit, clWindowText);
+  SetReUnderline(RichEdit, False);
 
   j := 0;
   for i:=0 to Length(WordArray)-1 do
@@ -1927,6 +1954,27 @@ begin
     begin
       SetRESelection(RichEdit, j, Length(WordArray[i]));
       SetRESelectionColor(RichEdit, WordColor);
+    end
+    else
+    begin
+      // Spellcheck
+      if (FLiveSpellMenuItem.Checked and FSpellChecker.IsInitialized) then
+      begin
+        Offset := 1;
+        TextToSpell := WordArray[i];
+        while (Offset <= Length(TextToSpell)) do
+        begin
+          GetNextWordPos(Offset, TextToSpell, WordInfo);
+          AWord := Copy(TextToSpell, WordInfo.Position, WordInfo.Length);
+          SpellOk := ContainDigit(AWord) or IsUpperCase(AWord) or FSpellChecker.Spell(AWord);
+          if (not SpellOk) then
+          begin
+            SetRESelection(RichEdit, j + WordInfo.Position - 1, WordInfo.Length);
+            SetReUnderline(RichEdit, not SpellOk);
+          end;
+          Inc(Offset);
+        end;
+      end;
     end;
     
     Inc(j, Length(WordArray[i]));
@@ -6035,7 +6083,6 @@ var NodeData : PTreeData;
 begin
   if not Assigned(vtvSubsList.FocusedNode) then
   begin
-    {$IFDEF TTRACE}TTrace.Warning.Send('SetFocusedSubtitleStopTime', 'not Assigned(vtvSubsList.FocusedNode)');{$ENDIF}
     Exit;
   end;
 
@@ -6059,7 +6106,6 @@ begin
 
   if (NewDuration <= 0) then
   begin
-    {$IFDEF TTRACE}TTrace.Warning.Send('SetFocusedSubtitleStopTime', 'NewDuration <= 0');{$ENDIF}
     Exit;
   end;
 
@@ -7725,6 +7771,30 @@ begin
   end;
   SilentZoneForm.Visible := True;
   SilentZoneForm.UpdateData;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSpellcheckLanguageMenuItemClick(Sender: TObject);
+var CM : ICursorManager;
+begin
+  CM := TCursorManager.Create(crHourGlass);
+  FSpellChecker.Initialize((Sender as TMenuItem).Tag);
+  if (MemoSubtitleText.Tag = 1) then
+  begin
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionLiveSpellCheckExecute(Sender: TObject);
+begin
+  FLiveSpellMenuItem.Checked := not FLiveSpellMenuItem.Checked;
+  if (MemoSubtitleText.Tag = 1) then
+  begin
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;
 end;
 
 //------------------------------------------------------------------------------

@@ -1365,6 +1365,9 @@ object MainForm: TMainForm
           Caption = 'Preferences...'
         end
       end
+      object SubMenuItemSpellcheck: TTntMenuItem
+        Caption = 'Spell check'
+      end
       object MenuItemDelay: TTntMenuItem
         Action = ActionDelay
       end
@@ -2191,6 +2194,10 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Show silent zones'
       OnExecute = ActionShowSilentZonesExecute
+    end
+    object ActionLiveSpellCheck: TTntAction
+      Caption = 'Live spell check'
+      OnExecute = ActionLiveSpellCheckExecute
     end
   end
   object ImageList1: TImageList
