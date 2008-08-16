@@ -178,7 +178,7 @@ type
     EditPaste1: TTntEditPaste;
     EditSelectAll1: TTntEditSelectAll;
     EditDelete1: TTntEditDelete;
-    Undo1: TTntMenuItem;
+    pmiMemoSubUndo: TTntMenuItem;
     N9: TTntMenuItem;
     Delete1: TTntMenuItem;
     N10: TTntMenuItem;
@@ -536,6 +536,7 @@ type
     procedure ActionCopyUpdate(Sender: TObject);
     procedure ActionShowSilentZonesExecute(Sender: TObject);
     procedure ActionLiveSpellCheckExecute(Sender: TObject);
+    procedure MemoSubPopupMenuPopup(Sender: TObject);
    
   private
     { Private declarations }
@@ -907,9 +908,7 @@ begin
   MenuItem.Action := ActionLiveSpellCheck;
   SubMenuItemSpellcheck.Add(MenuItem);
   FLiveSpellMenuItem := MenuItem;
-  MenuItem := TTntMenuItem.Create(Self);
-  MenuItem.Caption := '-';
-  SubMenuItemSpellcheck.Add(MenuItem);
+  SubMenuItemSpellcheck.InsertNewLineAfter(FLiveSpellMenuItem);
   for i := 0 to FSpellChecker.GetDictCount-1 do
   begin
     MenuItem := TTntMenuItem.Create(Self);
@@ -7794,6 +7793,57 @@ begin
   if (MemoSubtitleText.Tag = 1) then
   begin
     TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.MemoSubPopupMenuPopup(Sender: TObject);
+var CharIndex : Integer;
+    P : TPoint;
+    AWord : WideString;
+    Suggestions: TTntStrings;
+    i: Integer;
+    mi : TTntMenuItem;
+    WordInfo : TWordInfo;
+begin
+  // Remove all old item before undo if any
+  while (MemoSubPopupMenu.Items[0] <> pmiMemoSubUndo) do
+  begin
+    MemoSubPopupMenu.Items.Delete(0);
+  end;
+  
+  if (not FLiveSpellMenuItem.Checked) or (not FSpellChecker.IsInitialized) then
+    Exit;
+
+  P := MemoSubPopupMenu.PopupPoint;
+  if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
+    Exit;
+  AWord := Copy(MemoSubtitleText.Text, WordInfo.Position + 1, WordInfo.Length);
+
+  if not FSpellChecker.Spell(AWord) then
+  begin
+    Suggestions := TTntStringList.Create;
+    FSpellChecker.Suggest(AWord, Suggestions);
+    for i := 0 to Suggestions.Count-1 do
+    begin
+      mi := TTntMenuItem.Create(Self);
+      mi.Caption := Suggestions[i];
+      // TODO : add replace handler
+      MemoSubPopupMenu.Items.Insert(i, mi);
+    end;
+    if (Suggestions.Count = 0) then
+    begin
+      mi := TTntMenuItem.Create(Self);
+      mi.Caption := 'No suggestions';
+      mi.Enabled := False;
+      MemoSubPopupMenu.Items.Insert(0, mi);
+    end;
+    Suggestions.Free;
+    if Assigned(mi) then
+    begin
+      MemoSubPopupMenu.Items.InsertNewLineAfter(mi);
+    end;
   end;
 end;
 

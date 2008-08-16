@@ -4036,9 +4036,10 @@ object MainForm: TMainForm
     Top = 480
   end
   object MemoSubPopupMenu: TTntPopupMenu
+    OnPopup = MemoSubPopupMenuPopup
     Left = 48
     Top = 467
-    object Undo1: TTntMenuItem
+    object pmiMemoSubUndo: TTntMenuItem
       Action = ActionUndo
     end
     object N9: TTntMenuItem
