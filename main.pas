@@ -1909,11 +1909,13 @@ begin
   eventMask := RichEdit.Perform(EM_SETEVENTMASK, 0, 0);
   
   RichEdit.Lines.BeginUpdate;
+
+  RichEdit.SelectAll;
+  SetRESelectionColor(RichEdit, clWindowText);
+
   j := 0;
   for i:=0 to Length(WordArray)-1 do
   begin
-    SetRESelection(RichEdit, j, Length(WordArray[i]));
-
     if (i = (TagIndex*2)+1) then
       WordColor := clRed
     else if (i mod 2) = 0 then
@@ -1921,7 +1923,11 @@ begin
     else
       WordColor := clGrayText;
 
-    SetRESelectionColor(RichEdit, WordColor);
+    if (WordColor <> clWindowText) then
+    begin
+      SetRESelection(RichEdit, j, Length(WordArray[i]));
+      SetRESelectionColor(RichEdit, WordColor);
+    end;
     
     Inc(j, Length(WordArray[i]));
   end;
