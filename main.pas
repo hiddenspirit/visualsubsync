@@ -1053,6 +1053,8 @@ begin
     SaveFormPosition(IniFile, FindForm);
     if PrefFormInitialized then
       SaveFormPosition(IniFile, PreferencesFormInstance);
+    if Assigned(SilentZoneForm) then
+      SaveFormPosition(IniFile, SilentZoneForm);
 
 
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
@@ -7706,9 +7708,15 @@ end;
 
 procedure TMainForm.ActionShowSilentZonesExecute(Sender: TObject);
 var ZoneList : TList;
+    IniFile : TIniFile;
 begin
   if (SilentZoneForm = nil) then
+  begin
     SilentZoneForm := TSilentZoneForm.Create(Self, WAVDisplayer);
+    IniFile := TIniFile.Create(GetIniFilename);
+    LoadFormPosition(IniFile, SilentZoneForm);
+    IniFile.Free;
+  end;
   SilentZoneForm.Visible := True;
   SilentZoneForm.UpdateData;
 end;
