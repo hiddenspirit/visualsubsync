@@ -112,6 +112,7 @@ type
   // Some faster richedit function
   procedure SetRESelection(RichEdit : TTntRichEdit; Start, Len : Integer);
   procedure SetRESelectionColor(ARichEdit : TTntRichEdit; AColor : TColor);
+  procedure SetReUnderline(ARichEdit: TTntRichEdit; Underline : Boolean);
 
 implementation
 
@@ -1223,6 +1224,41 @@ begin
   Format.dwMask := CFM_COLOR;
   Format.crTextColor := ColorToRGB(AColor);
   ARichEdit.Perform(EM_SETCHARFORMAT, SCF_SELECTION, Longint(@Format));
+end;
+
+// Underline styles
+const
+  CFU_UNDERLINETHICK = 9;
+  CFU_UNDERLINEWAVE = 8;
+  CFU_UNDERLINEDASHDOTDOT = 7;
+  CFU_UNDERLINEDASHDOT = 6;
+  CFU_UNDERLINEDASH = 5;
+  CFU_UNDERLINEDOTTED = 4;
+  CFU_UNDERLINE = 1;
+  CFU_UNDERLINENONE = 0;
+  
+procedure SetRECharFormat(ARichEdit: TTntRichEdit; AUnderlineType: Byte; AColor: Word);
+var
+  // The CHARFORMAT2 structure contains information about
+  // character formatting in a rich edit control.
+  Format: CHARFORMAT2;
+begin
+  FillChar(Format, SizeOf(Format), 0);
+  with Format do
+  begin
+    cbSize := SizeOf(Format);
+    dwMask := CFM_UNDERLINETYPE;
+    bUnderlineType := AUnderlineType or AColor;
+    ARichEdit.Perform(EM_SETCHARFORMAT, SCF_SELECTION, Longint(@Format));
+  end;
+end;
+
+procedure SetReUnderline(ARichEdit: TTntRichEdit; Underline : Boolean);
+begin
+  if (Underline) then
+    SetRECharFormat(ARichEdit, CFU_UNDERLINEWAVE, $50)
+  else
+    SetRECharFormat(ARichEdit, CFU_UNDERLINENONE, 0)
 end;
 
 // -----------------------------------------------------------------------------
