@@ -1284,9 +1284,8 @@ begin
   begin
     Column := vtvSubsList.Header.Columns.Add;
     Column.Text := GeneralJSPlugin.GetColumnTitle(LAST_CORE_COL_INDEX + 1 + i);
-    Column.Width := GeneralJSPlugin.GetColumnSize(LAST_CORE_COL_INDEX + 1 + i);;
-    Column.MinWidth := Column.Width;
-    Column.Options := Column.Options - [coAllowClick, coResizable];
+    Column.MinWidth := GeneralJSPlugin.GetColumnSize(LAST_CORE_COL_INDEX + 1 + i);
+    Column.Options := Column.Options - [coAllowClick];
     if (VisibleExtraColumnsList.IndexOf(Column.Text) = -1) then
     begin
       Column.Options := Column.Options - [coVisible];
@@ -7651,8 +7650,8 @@ end;
 procedure TMainForm.LoadPresetFile(Filename : WideString);
 var IniFile : TIniFile;
 begin
+  IniFile := TIniFile.Create(FileName);
   try
-    IniFile := TIniFile.Create(FileName);
     ConfigObject.LoadIni(IniFile, True);
     SetShortcut(IsTimingMode);
     ApplyMouseSettings;
@@ -7772,8 +7771,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowSilentZonesExecute(Sender: TObject);
-var ZoneList : TList;
-    IniFile : TIniFile;
+var IniFile : TIniFile;
 begin
   if (SilentZoneForm = nil) then
   begin
@@ -7813,8 +7811,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.MemoSubPopupMenuPopup(Sender: TObject);
-var CharIndex : Integer;
-    P : TPoint;
+var P : TPoint;
     AWord : WideString;
     Suggestions: TTntStrings;
     i: Integer;
@@ -7837,6 +7834,7 @@ begin
 
   if not FSpellChecker.Spell(AWord) then
   begin
+    mi := nil;
     Suggestions := TTntStringList.Create;
     FSpellChecker.Suggest(AWord, Suggestions);
     for i := 0 to Suggestions.Count-1 do
@@ -7865,9 +7863,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
-var MultiChangeTask : TUndoableMultiChangeTask;
-    ChangeSubData : TChangeSubData;
-    NewText : WideString;
+var NewText : WideString;
     P : TPoint;
     WordInfo : TWordInfo;
 begin
