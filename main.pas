@@ -677,6 +677,7 @@ type
     procedure OnLoadPresetMenuItemClick(Sender: TObject);
 
     procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
+    procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
 
   public
     { Public declarations }
@@ -7828,8 +7829,9 @@ begin
     for i := 0 to Suggestions.Count-1 do
     begin
       mi := TTntMenuItem.Create(Self);
+      mi.AutoHotkeys := maManual;
       mi.Caption := Suggestions[i];
-      // TODO : add replace handler
+      mi.OnClick := OnSpellcheckSuggestionMenuItemClick;
       MemoSubPopupMenu.Items.Insert(i, mi);
     end;
     if (Suggestions.Count = 0) then
@@ -7845,6 +7847,27 @@ begin
       MemoSubPopupMenu.Items.InsertNewLineAfter(mi);
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
+var MultiChangeTask : TUndoableMultiChangeTask;
+    ChangeSubData : TChangeSubData;
+    NewText : WideString;
+    P : TPoint;
+    WordInfo : TWordInfo;
+begin
+  P := MemoSubPopupMenu.PopupPoint;
+  if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
+    Exit;
+
+  NewText := Copy(MemoSubtitleText.Text, 1, WordInfo.Position) +
+    (Sender as TTntMenuItem).Caption + Copy(MemoSubtitleText.Text,
+    WordInfo.Position + WordInfo.Length, MaxInt);
+
+  MemoSubtitleText.Text := NewText;
+  CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------

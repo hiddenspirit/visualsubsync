@@ -4036,40 +4036,49 @@ object MainForm: TMainForm
     Top = 480
   end
   object MemoSubPopupMenu: TTntPopupMenu
+    AutoHotkeys = maManual
     OnPopup = MemoSubPopupMenuPopup
     Left = 48
     Top = 467
     object pmiMemoSubUndo: TTntMenuItem
       Action = ActionUndo
+      AutoHotkeys = maAutomatic
     end
     object N9: TTntMenuItem
       Caption = '-'
     end
     object pmiMemoSubCut: TTntMenuItem
       Action = EditCut1
+      AutoHotkeys = maAutomatic
     end
     object pmiMemoSubCopy: TTntMenuItem
       Action = ActionCopy
+      AutoHotkeys = maAutomatic
     end
     object pmiMemoSubPaste: TTntMenuItem
       Action = EditPaste1
+      AutoHotkeys = maAutomatic
     end
     object Delete1: TTntMenuItem
       Action = EditDelete1
+      AutoHotkeys = maAutomatic
     end
     object N10: TTntMenuItem
       Caption = '-'
     end
     object SelectAll1: TTntMenuItem
       Action = EditSelectAll1
+      AutoHotkeys = maAutomatic
     end
     object N18: TTntMenuItem
       Caption = '-'
     end
     object Italic1: TTntMenuItem
       Action = ActionTextItalic
+      AutoHotkeys = maAutomatic
     end
     object Otherstyle1: TTntMenuItem
+      AutoHotkeys = maAutomatic
       Caption = 'Other styles'
       object extinbold1: TTntMenuItem
         Action = ActionTextBold
