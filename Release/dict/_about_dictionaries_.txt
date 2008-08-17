@@ -1,0 +1,6 @@
+VisualSubSync uses dictionaries in Hunspell format, the same format as Firefox and OpenOffice.
+You can download dictionaries here: http://wiki.services.openoffice.org/wiki/Dictionaries
+
+Once you have downloaded a dictionary simply extract the archive in this directory.
+You should have at least 2 files a ".aff" and a ".dic".
+For example, for french you have fr_FR.aff and fr_FR.dic.
