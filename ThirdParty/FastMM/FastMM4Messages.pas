@@ -49,16 +49,6 @@ const
   CurrentAllocationNumberMsg = #13#10#13#10'The allocation number is: ';
   StackTraceAtFreeMsg = #13#10#13#10'Stack trace of when the block was previously freed (return addresses):';
   BlockErrorMsgTitle = 'Memory Error Detected';
-  {Virtual Method Called On Freed Object Errors}
-  StandardVirtualMethodNames: array[1 + vmtParent div 4 .. -1] of PChar = (
-    'SafeCallException',
-    'AfterConstruction',
-    'BeforeDestruction',
-    'Dispatch',
-    'DefaultHandler',
-    'NewInstance',
-    'FreeInstance',
-    'Destroy');
   VirtualMethodErrorHeader = 'FastMM has detected an attempt to call a virtual method on a freed object. An access violation will now be raised in order to abort the current operation.';
   InterfaceErrorHeader = 'FastMM has detected an attempt to use an interface of a freed object. An access violation will now be raised in order to abort the current operation.';
   BlockHeaderCorruptedNoHistoryMsg = ' Unfortunately the block header has been corrupted so no history is available.';
@@ -99,7 +89,8 @@ const
 {$endif}
     + ': ';
   BytesMessage = ' bytes: ';
-  StringBlockMessage = 'String';
+  AnsiStringBlockMessage = 'AnsiString';
+  UnicodeStringBlockMessage = 'UnicodeString';
   LeakMessageFooter = #13#10
 {$ifndef HideMemoryLeakHintMessage}
     + #13#10'Note: '
