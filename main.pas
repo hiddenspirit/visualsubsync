@@ -677,6 +677,7 @@ type
     procedure OnLoadPresetMenuItemClick(Sender: TObject);
 
     procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
+    procedure OnSpellcheckMoreDictMenuItemClick(Sender: TObject);
     procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
 
   public
@@ -758,7 +759,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   LogWindowFormUnit, CursorManager, FileCtrl, WAVFileUnit, PageProcessorUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
-  SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit,
+  SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
   VSSClipboardUnit;
 
 {$R *.dfm}
@@ -921,6 +922,18 @@ begin
     MenuItem.OnClick := OnSpellcheckLanguageMenuItemClick;
     SubMenuItemSpellcheck.Add(MenuItem);
   end;
+  if (FSpellChecker.GetDictCount = 0) then
+  begin
+    MenuItem := TTntMenuItem.Create(Self);
+    MenuItem.Caption := 'No dictionnary';
+    MenuItem.Enabled := False;
+    SubMenuItemSpellcheck.Add(MenuItem);
+  end;
+  SubMenuItemSpellcheck.InsertNewLineAfter(MenuItem);
+  MenuItem := TTntMenuItem.Create(Self);
+  MenuItem.Caption := 'Get more dictionaries';
+  MenuItem.OnClick := OnSpellcheckMoreDictMenuItemClick;
+  SubMenuItemSpellcheck.Add(MenuItem);
 
   // Fill the presets menu
   FillPresetsMenu;
@@ -7868,6 +7881,15 @@ begin
 
   MemoSubtitleText.Text := NewText;
   CurrentProject.IsDirty := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSpellcheckMoreDictMenuItemClick(Sender: TObject);
+begin
+  ShellExecute(Handle, 'open',
+    PAnsiChar('http://wiki.services.openoffice.org/wiki/Dictionaries'),
+    '', '', SW_SHOWNORMAL);
 end;
 
 //------------------------------------------------------------------------------
