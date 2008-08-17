@@ -3,7 +3,7 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.9.15"
+!define VERSION "0.9.16"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
@@ -11,6 +11,7 @@
 !define FILE2 "WavWriter.dll"
 !define FILE3 "js3215R.dll"
 !define FILE4 "VSSCustomVSFilter.dll"
+!define FILE5 "libhunspell.dll"
 
 !define DIR_WEB "web\"
 !define FILE_WEB1 "index.shtml"
@@ -46,6 +47,7 @@
 !define FILES_JSPLUGIN_COMMON1 "tools.js"
 
 !define DIR_PRESETS "presets\"
+!define DIR_DICT "dict\"
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -104,6 +106,7 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${FILE2}"
   File "${INPUT_PATH}${FILE3}"
   File "${INPUT_PATH}${FILE4}"
+  File "${INPUT_PATH}${FILE5}"
 
 	; Web files
   SetOutPath "$INSTDIR\${DIR_WEB}"
@@ -141,6 +144,9 @@ Section "Main (required)" SecMain
   
   ; Presets
   SetOutPath "$INSTDIR\${DIR_PRESETS}"
+
+  ; Dictionaries
+  SetOutPath "$INSTDIR\${DIR_DICT}"  
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
@@ -184,6 +190,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${FILE2}"
   Delete "$INSTDIR\${FILE3}"
   Delete "$INSTDIR\${FILE4}"
+  Delete "$INSTDIR\${FILE5}"
   
   ; Delete web files and directory if empty
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB1}"
@@ -214,6 +221,12 @@ Section "Uninstall"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN7}"
   Delete "$INSTDIR\${DIR_JSPLUGIN}${FILES_JSPLUGIN8}"
   RMDir "$INSTDIR\${DIR_JSPLUGIN}"
+  
+  ; Presets
+  RMDir "$INSTDIR\${DIR_PRESETS}"
+
+  ; Dictionaries
+  RMDir "$INSTDIR\${DIR_DICT}"
   
   ; Delete install directory if empty
   RMDir "$INSTDIR"
