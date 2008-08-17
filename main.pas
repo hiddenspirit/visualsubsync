@@ -910,7 +910,10 @@ begin
   MenuItem.Action := ActionLiveSpellCheck;
   SubMenuItemSpellcheck.Add(MenuItem);
   FLiveSpellMenuItem := MenuItem;
-  SubMenuItemSpellcheck.InsertNewLineAfter(FLiveSpellMenuItem);
+  FLiveSpellMenuItem.Checked := True;
+  MenuItem := TTntMenuItem.Create(Self);
+  MenuItem.Caption := cLineCaption;
+  SubMenuItemSpellcheck.Add(MenuItem);
   for i := 0 to FSpellChecker.GetDictCount-1 do
   begin
     MenuItem := TTntMenuItem.Create(Self);
@@ -929,7 +932,9 @@ begin
     MenuItem.Enabled := False;
     SubMenuItemSpellcheck.Add(MenuItem);
   end;
-  SubMenuItemSpellcheck.InsertNewLineAfter(MenuItem);
+  MenuItem := TTntMenuItem.Create(Self);
+  MenuItem.Caption := cLineCaption;
+  SubMenuItemSpellcheck.Add(MenuItem);
   MenuItem := TTntMenuItem.Create(Self);
   MenuItem.Caption := 'Get more dictionaries';
   MenuItem.OnClick := OnSpellcheckMoreDictMenuItemClick;
@@ -7855,7 +7860,10 @@ begin
     Suggestions.Free;
     if Assigned(mi) then
     begin
-      MemoSubPopupMenu.Items.InsertNewLineAfter(mi);
+      i := MemoSubPopupMenu.Items.IndexOf(mi) + 1;
+      mi := TTntMenuItem.Create(Self);
+      mi.Caption := cLineCaption;
+      MemoSubPopupMenu.Items.Insert(i, mi);
     end;
   end;
 end;
