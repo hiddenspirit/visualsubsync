@@ -6,7 +6,7 @@ object AboutForm: TAboutForm
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'About...'
-  ClientHeight = 241
+  ClientHeight = 265
   ClientWidth = 345
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -46,7 +46,7 @@ object AboutForm: TAboutForm
     Top = 72
     Width = 109
     Height = 14
-    Caption = 'Copyright 2003-2007'
+    Caption = 'Copyright 2003-2008'
   end
   object TntLabel3: TTntLabel
     Left = 8
@@ -78,7 +78,7 @@ object AboutForm: TAboutForm
   end
   object Bevel2: TBevel
     Left = 0
-    Top = 200
+    Top = 224
     Width = 345
     Height = 9
     Shape = bsBottomLine
@@ -153,9 +153,23 @@ object AboutForm: TAboutForm
     Font.Style = []
     ParentFont = False
   end
+  object TntLabel5: TTntLabel
+    Left = 8
+    Top = 200
+    Width = 273
+    Height = 14
+    AutoSize = False
+    Caption = '- Hunspell by L'#225'szl'#243' N'#233'meth'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
   object bttOk: TTntButton
     Left = 8
-    Top = 216
+    Top = 240
     Width = 329
     Height = 25
     Caption = 'OK'

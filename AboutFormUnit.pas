@@ -41,6 +41,7 @@ type
     TntLabel6: TTntLabel;
     lblJS: TTntLabel;
     TntLabel8: TTntLabel;
+    TntLabel5: TTntLabel;
     procedure bttOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TntLabel3Click(Sender: TObject);
