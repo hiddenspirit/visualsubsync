@@ -47,7 +47,10 @@
 !define FILES_JSPLUGIN_COMMON1 "tools.js"
 
 !define DIR_PRESETS "presets\"
+
 !define DIR_DICT "dict\"
+!define FILE_DICT1 "_about_dictionaries_.txt"
+
 
 !define UNINST_NAME "VisualSubSync-uninstall.exe"
 
@@ -146,7 +149,8 @@ Section "Main (required)" SecMain
   SetOutPath "$INSTDIR\${DIR_PRESETS}"
 
   ; Dictionaries
-  SetOutPath "$INSTDIR\${DIR_DICT}"  
+  SetOutPath "$INSTDIR\${DIR_DICT}"
+  File "${INPUT_PATH}${DIR_DICT}${FILE_DICT1}"
     
   ; Store install folder
   WriteRegStr HKCU "Software\VisualSubSync" "" $INSTDIR
@@ -226,6 +230,7 @@ Section "Uninstall"
   RMDir "$INSTDIR\${DIR_PRESETS}"
 
   ; Dictionaries
+  Delete "$INSTDIR\${DIR_DICT}${FILE_DICT1}"
   RMDir "$INSTDIR\${DIR_DICT}"
   
   ; Delete install directory if empty
