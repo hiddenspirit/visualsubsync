@@ -7710,7 +7710,7 @@ begin
   if (Sender is TTntMenuItem) then
   begin
     MenuItem := Sender as TTntMenuItem;
-    LoadPresetFile(g_PresetsPath + MenuItem.Caption);
+    LoadPresetFile(g_PresetsPath + MenuItem.Hint);
   end;
 end;
 
@@ -7744,7 +7744,9 @@ begin
   for i:=0 to FileList.Count-1 do
   begin
     NewMenuItem := TTntMenuItem.Create(MenuItemLoadPresets);
+    NewMenuItem.AutoHotkeys := maManual;
     NewMenuItem.Caption := FileList[i];
+    NewMenuItem.Hint := FileList[i];
     NewMenuItem.OnClick := OnLoadPresetMenuItemClick;
     MenuItemLoadPresets.Add(NewMenuItem);
   end;
@@ -7835,7 +7837,7 @@ begin
   P := MemoSubPopupMenu.PopupPoint;
   if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
     Exit;
-  AWord := Copy(MemoSubtitleText.Text, WordInfo.Position + 1, WordInfo.Length);
+  AWord := Copy(MemoSubtitleText.Text, WordInfo.Position, WordInfo.Length);
 
   if not FSpellChecker.Spell(AWord) then
   begin
@@ -7847,6 +7849,7 @@ begin
       mi := TTntMenuItem.Create(Self);
       mi.AutoHotkeys := maManual;
       mi.Caption := Suggestions[i];
+      mi.Hint := Suggestions[i];
       mi.OnClick := OnSpellcheckSuggestionMenuItemClick;
       MemoSubPopupMenu.Items.Insert(i, mi);
     end;
@@ -7871,19 +7874,16 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
-var NewText : WideString;
+var TextBegin, TextEnd : WideString;
     P : TPoint;
     WordInfo : TWordInfo;
 begin
   P := MemoSubPopupMenu.PopupPoint;
   if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
     Exit;
-
-  NewText := Copy(MemoSubtitleText.Text, 1, WordInfo.Position) +
-    (Sender as TTntMenuItem).Caption + Copy(MemoSubtitleText.Text,
-    WordInfo.Position + WordInfo.Length, MaxInt);
-
-  MemoSubtitleText.Text := NewText;
+  TextBegin := Copy(MemoSubtitleText.Text, 1, WordInfo.Position - 1);
+  TextEnd := Copy(MemoSubtitleText.Text, WordInfo.Position + WordInfo.Length, MaxInt);
+  MemoSubtitleText.Text := TextBegin + (Sender as TTntMenuItem).Hint + TextEnd;
   CurrentProject.IsDirty := True;
 end;
 

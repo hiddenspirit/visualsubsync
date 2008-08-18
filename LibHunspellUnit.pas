@@ -212,10 +212,10 @@ begin
   begin
     Dec(Index);
   end;
-  WordInfo.Position := Index;
+  WordInfo.Position := Index + 1;
   // Look forward
   Index := CursorIndex;
-  while (Index < Length(Text)) and (not IsWordDelimiter(Text[Index])) do
+  while (Index <= Length(Text)) and (not IsWordDelimiter(Text[Index])) do
   begin
     Inc(Index);
   end;
