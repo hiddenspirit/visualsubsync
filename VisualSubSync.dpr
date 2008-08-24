@@ -42,7 +42,8 @@ uses
   GlobalUnit in 'GlobalUnit.pas',
   SRTParserUnit in 'SRTParserUnit.pas',
   SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm},
-  LibHunspellUnit in 'LibHunspellUnit.pas';
+  LibHunspellUnit in 'LibHunspellUnit.pas',
+  BgThreadTaskUnit in 'BgThreadTaskUnit.pas';
 
 {$R *.res}
 
