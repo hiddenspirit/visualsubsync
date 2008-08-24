@@ -22,7 +22,7 @@ unit LibHunspellUnit;
 
 interface
 
-uses Windows, SysUtils, TntClasses, TntComCtrls;
+uses Windows, SysUtils, TntClasses, TntComCtrls, SyncObjs;
 
 // -----------------------------------------------------------------------------
 
@@ -92,6 +92,8 @@ type
     FDictCodePage : Cardinal;
     FDictList : TTntStringList;
     FDictListPath : WideString;
+    FInitCC : TCriticalSection;
+    FCurrentDictName : WideString;
 
   public
     constructor Create;
@@ -113,6 +115,9 @@ type
     procedure GetDict(List : TTntStrings); overload;
     function GetDictCount : Integer;
     function GetDict(Index : Integer) : WideString; overload;
+    function GetDictIdx(Name : WideString) : Integer; overload;
+
+    function GetCurrentDictName : WideString;
 
   end;
 
@@ -304,6 +309,9 @@ end;
 constructor THunspellChecker.Create;
 begin
   FDictList := TTntStringList.Create;
+  FInitCC := TCriticalSection.Create;
+  FCurrentDictName := '';
+  FHunspell := 0;
 end;
 
 // -----------------------------------------------------------------------------
@@ -311,12 +319,21 @@ end;
 function THunspellChecker.Initialize(DictAff, DictDic : WideString) : Boolean;
 begin
   Cleanup;
-  // TODO : Check for unicode filename support
-  FHunspell := Hunspell_create(PAnsiChar(string(DictAff)),
-    PAnsiChar(string((DictDic))));
-  FDictEncoding := Hunspell_get_dic_encoding(FHunspell);
-  FDictCodePage := GetDicoCodePage(FDictEncoding);
-  Result := (FHunspell <> 0);
+  FInitCC.Acquire;
+  try
+    // TODO : Check for unicode filename support
+    FHunspell := Hunspell_create(PAnsiChar(string(DictAff)),
+      PAnsiChar(string((DictDic))));
+    if (FHunspell <> 0) then
+    begin
+      FDictEncoding := Hunspell_get_dic_encoding(FHunspell);
+      FDictCodePage := GetDicoCodePage(FDictEncoding);
+      FCurrentDictName := WideExtractFileName(DictDic);
+    end;
+    Result := (FHunspell <> 0);
+  finally
+    FInitCC.Release;
+  end;
 end;
 
 function THunspellChecker.Initialize(DictIndex : Integer) : Boolean;
@@ -334,23 +351,37 @@ end;
 
 function THunspellChecker.IsInitialized : Boolean;
 begin
-  Result := (FHunspell <> 0);
+  FInitCC.Acquire;
+  try
+    Result := (FHunspell <> 0);
+  finally
+    FInitCC.Release;
+  end;
 end;
 
 procedure THunspellChecker.Cleanup;
 begin
-  if (FHunspell <> 0) then
-  begin
-    Hunspell_destroy(FHunspell);
-    FHunspell := 0;
+  FInitCC.Acquire;
+  try
+    if (FHunspell <> 0) then
+    begin
+      Hunspell_destroy(FHunspell);
+      FHunspell := 0;
+      FCurrentDictName := '';
+    end;
+  finally
+    FInitCC.Release;
   end;
 end;
 
 destructor THunspellChecker.Destroy;
 begin
   Cleanup;
-  FreeAndNil(FDictList);  
+  FreeAndNil(FInitCC);
+  FreeAndNil(FDictList);
 end;
+
+// -----------------------------------------------------------------------------
 
 function THunspellChecker.Spell(Word : WideString) : Boolean;
 var WordEncoded : string;
@@ -473,5 +504,16 @@ function THunspellChecker.GetDict(Index : Integer) : WideString;
 begin
   Result := FDictList.Strings[Index];
 end;
+
+function THunspellChecker.GetDictIdx(Name : WideString) : Integer;
+begin
+  Result := FDictList.IndexOf(Name);
+end;
+
+function THunspellChecker.GetCurrentDictName : WideString;
+begin
+  Result := FCurrentDictName;
+end;
+
 
 end.

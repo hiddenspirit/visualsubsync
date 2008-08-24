@@ -679,6 +679,8 @@ type
     procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
     procedure OnSpellcheckMoreDictMenuItemClick(Sender: TObject);
     procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
+    procedure OnLoadDictionnary(Sender: TObject);
+    procedure OnLoadDictionnaryTerminate(Sender: TObject);
 
   public
     { Public declarations }
@@ -734,6 +736,7 @@ type
 
     procedure SetSelection(Start, Stop : Integer);
     procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
+    procedure LoadDict(Idx : Integer);
   end;
 
 const
@@ -760,7 +763,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
   SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
-  VSSClipboardUnit;
+  VSSClipboardUnit, BgThreadTaskUnit;
 
 {$R *.dfm}
 
@@ -2368,6 +2371,13 @@ begin
       SelectNodeAtIndex(Idx - 1);
     end;
 
+    // ----- Load dictionnary ---
+    Idx := FSpellChecker.GetDictIdx(CurrentProject.Dictionnary);
+    if (Idx <> -1) then
+    begin
+      LoadDict(Idx);
+    end;
+
     UpdateVolume;
     EnableControl(True);
 
@@ -2443,6 +2453,8 @@ begin
     FocusedTimeMs := NodeData.Range.StartTime + ((NodeData.Range.StopTime - NodeData.Range.StartTime) div 2);
   end;
   ProjectFileIni.WriteInteger('VisualSubsync', 'FocusedTimeMs', FocusedTimeMs);
+
+  ProjectFileIni.WriteString('VisualSubsync', 'Dictionnary', FSpellChecker.GetCurrentDictName);
 
   ProjectFileIni.Free;
 end;
@@ -7793,15 +7805,74 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.OnSpellcheckLanguageMenuItemClick(Sender: TObject);
-var CM : ICursorManager;
+procedure TMainForm.OnLoadDictionnary(Sender: TObject);
+//var CM : ICursorManager;
 begin
-  CM := TCursorManager.Create(crHourGlass);
-  FSpellChecker.Initialize((Sender as TMenuItem).Tag);
+//  CM := TCursorManager.Create(crHourGlass);
+  FSpellChecker.Initialize((Sender as TBgThreadTask).Param);
+end;
+
+procedure TMainForm.OnLoadDictionnaryTerminate(Sender: TObject);
+var Event1, Event2 : TNotifyEvent;
+    i : Integer;
+begin
   if (MemoSubtitleText.Tag = 1) then
   begin
     TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
-  end;  
+  end;
+  
+  // Enable dictionnary loading menus
+  for i := 0 to SubMenuItemSpellcheck.Count-1 do
+  begin
+    Event1 := SubMenuItemSpellcheck.Items[i].OnClick;
+    Event2 := Self.OnSpellcheckLanguageMenuItemClick;
+    if (@Event1 = @Event2) then
+    begin
+      SubMenuItemSpellcheck.Items[i].Enabled := True;
+    end;
+  end;
+end;
+
+procedure TMainForm.LoadDict(Idx : Integer);
+var i : Integer;
+    BgThreadTask : TBgThreadTask;
+    Event1, Event2 : TNotifyEvent;
+begin
+  // First remove previous dictionnary from memory
+  FSpellChecker.Cleanup;
+
+  // Update display
+  if (MemoSubtitleText.Tag = 1) then
+  begin
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;
+
+  // Disable dictionnary loading menus
+  for i := 0 to SubMenuItemSpellcheck.Count-1 do
+  begin
+    Event1 := SubMenuItemSpellcheck.Items[i].OnClick;
+    Event2 := Self.OnSpellcheckLanguageMenuItemClick;
+    if (@Event1 = @Event2) then
+    begin
+      SubMenuItemSpellcheck.Items[i].Enabled := False;
+      if (SubMenuItemSpellcheck.Items[i].Tag = Idx) then
+      begin
+        SubMenuItemSpellcheck.Items[i].Checked := True;
+      end;
+    end;
+  end;
+
+  // Load new dictionnary in background
+  BgThreadTask := TBgThreadTask.Create(True, tpLowest);
+  BgThreadTask.OnExecute := OnLoadDictionnary;
+  BgThreadTask.OnTerminate := OnLoadDictionnaryTerminate;
+  BgThreadTask.Param := Idx;
+  BgThreadTask.Resume;
+end;
+
+procedure TMainForm.OnSpellcheckLanguageMenuItemClick(Sender: TObject);
+begin
+  LoadDict( (Sender as TMenuItem).Tag );
 end;
 
 //------------------------------------------------------------------------------
