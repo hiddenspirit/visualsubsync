@@ -43,7 +43,8 @@ uses
   SRTParserUnit in 'SRTParserUnit.pas',
   SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm},
   LibHunspellUnit in 'LibHunspellUnit.pas',
-  BgThreadTaskUnit in 'BgThreadTaskUnit.pas';
+  BgThreadTaskUnit in 'BgThreadTaskUnit.pas',
+  SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm};
 
 {$R *.res}
 
