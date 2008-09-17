@@ -94,6 +94,7 @@ type
     FDictListPath : WideString;
     FInitCC : TCriticalSection;
     FCurrentDictName : WideString;
+    FIgnoreList : TTntStringList;
 
   public
     constructor Create;
@@ -118,6 +119,8 @@ type
     function GetDictIdx(Name : WideString) : Integer; overload;
 
     function GetCurrentDictName : WideString;
+
+    procedure Ignore(Word : WideString);
 
   end;
 
@@ -309,6 +312,7 @@ end;
 constructor THunspellChecker.Create;
 begin
   FDictList := TTntStringList.Create;
+  FIgnoreList := TTntStringList.Create;
   FInitCC := TCriticalSection.Create;
   FCurrentDictName := '';
   FHunspell := 0;
@@ -378,6 +382,7 @@ destructor THunspellChecker.Destroy;
 begin
   Cleanup;
   FreeAndNil(FInitCC);
+  FreeAndNil(FIgnoreList);
   FreeAndNil(FDictList);
 end;
 
@@ -386,6 +391,11 @@ end;
 function THunspellChecker.Spell(Word : WideString) : Boolean;
 var WordEncoded : string;
 begin
+  if (FIgnoreList.IndexOf(Word) <> -1) then
+  begin
+    Result := True;
+    Exit;
+  end;
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Result := Hunspell_spell(FHunspell, PAnsiChar(WordEncoded)) <> 0;
 end;
@@ -515,5 +525,9 @@ begin
   Result := FCurrentDictName;
 end;
 
+procedure THunspellChecker.Ignore(Word : WideString);
+begin
+  FIgnoreList.Add(Word);            
+end;
 
 end.
