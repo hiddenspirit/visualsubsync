@@ -681,6 +681,8 @@ type
     procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
     procedure OnLoadDictionnary(Sender: TObject);
     procedure OnLoadDictionnaryTerminate(Sender: TObject);
+    procedure OnSpellcheckAddToDictionaryMenuItemClick(Sender: TObject);
+    procedure OnSpellcheckIgnoreMenuItemClick(Sender: TObject);
 
   public
     { Public declarations }
@@ -7892,7 +7894,7 @@ procedure TMainForm.MemoSubPopupMenuPopup(Sender: TObject);
 var P : TPoint;
     AWord : WideString;
     Suggestions: TTntStrings;
-    i: Integer;
+    i, j: Integer;
     mi : TTntMenuItem;
     WordInfo : TWordInfo;
 begin
@@ -7912,6 +7914,7 @@ begin
 
   if not FSpellChecker.Spell(AWord) then
   begin
+    j := 0;
     mi := nil;
     Suggestions := TTntStringList.Create;
     FSpellChecker.Suggest(AWord, Suggestions);
@@ -7923,21 +7926,35 @@ begin
       mi.Hint := Suggestions[i];
       mi.OnClick := OnSpellcheckSuggestionMenuItemClick;
       MemoSubPopupMenu.Items.Insert(i, mi);
+      Inc(j);
     end;
     if (Suggestions.Count = 0) then
     begin
       mi := TTntMenuItem.Create(Self);
-      mi.Caption := 'No suggestions';
+      mi.Caption := '(No suggestions)';
       mi.Enabled := False;
       MemoSubPopupMenu.Items.Insert(0, mi);
+      Inc(j);
     end;
     Suggestions.Free;
+    // Add to dictionary
+    mi := TTntMenuItem.Create(Self);
+    mi.Caption := 'Add to dictionary';
+    mi.OnClick := OnSpellcheckAddToDictionaryMenuItemClick;
+    MemoSubPopupMenu.Items.Insert(j, mi);
+    Inc(j);
+    // Ignore
+    mi := TTntMenuItem.Create(Self);
+    mi.Caption := 'Ignore';
+    mi.OnClick := OnSpellcheckIgnoreMenuItemClick;
+    MemoSubPopupMenu.Items.Insert(j, mi);
+    Inc(j);
     if Assigned(mi) then
     begin
-      i := MemoSubPopupMenu.Items.IndexOf(mi) + 1;
       mi := TTntMenuItem.Create(Self);
       mi.Caption := cLineCaption;
-      MemoSubPopupMenu.Items.Insert(i, mi);
+      MemoSubPopupMenu.Items.Insert(j, mi);
+      Inc(j);
     end;
   end;
 end;
@@ -7966,6 +7983,43 @@ begin
     PAnsiChar('http://wiki.services.openoffice.org/wiki/Dictionaries'),
     '', '', SW_SHOWNORMAL);
 end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSpellcheckAddToDictionaryMenuItemClick(Sender: TObject);
+var P : TPoint;
+    WordInfo : TWordInfo;
+    AWord : WideString;
+begin
+  P := MemoSubPopupMenu.PopupPoint;
+  if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
+    Exit;
+  AWord := Copy(MemoSubtitleText.Text, WordInfo.Position, WordInfo.Length);
+  FSpellChecker.Add(AWord);
+  if (MemoSubtitleText.Tag = 1) then
+  begin
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnSpellcheckIgnoreMenuItemClick(Sender: TObject);
+var P : TPoint;
+    WordInfo : TWordInfo;
+    AWord : WideString;
+begin
+  P := MemoSubPopupMenu.PopupPoint;
+  if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
+    Exit;
+  AWord := Copy(MemoSubtitleText.Text, WordInfo.Position, WordInfo.Length);
+  FSpellChecker.Ignore(AWord);
+  if (MemoSubtitleText.Tag = 1) then
+  begin
+    TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
+  end;
+end;
+
 
 //------------------------------------------------------------------------------
 end.
