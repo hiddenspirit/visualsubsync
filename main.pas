@@ -358,6 +358,12 @@ type
     N21: TTntMenuItem;
     ActionLiveSpellCheck: TTntAction;
     SubMenuItemSpellcheck: TTntMenuItem;
+    MenuItemLiveSpellcheck: TTntMenuItem;
+    N22: TTntMenuItem;
+    N23: TTntMenuItem;
+    MenuItemGetMoreDictionaries: TTntMenuItem;
+    ActionSpellCheck: TTntAction;
+    MenuItemSpellcheck: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -537,6 +543,8 @@ type
     procedure ActionShowSilentZonesExecute(Sender: TObject);
     procedure ActionLiveSpellCheckExecute(Sender: TObject);
     procedure MemoSubPopupMenuPopup(Sender: TObject);
+    procedure MenuItemGetMoreDictionariesClick(Sender: TObject);
+    procedure ActionSpellCheckExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -583,7 +591,6 @@ type
     StartupShowVideo, StartupDetachVideo : Boolean;
 
     FSpellChecker : THunspellChecker;
-    FLiveSpellMenuItem : TTntMenuItem;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -656,15 +663,7 @@ type
     procedure UpdateStatusBar;
     procedure OnJsSetStatusBarText(const Msg : WideString);
 
-    procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
     procedure OnJavascriptAction(Sender : TObject);
-    function GetSubCount : Integer;
-    function GetFirst : TSubtitleRange;
-    function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
-    function GetPrevious(SubtitleRange : TSubtitleRange) : TSubtitleRange;
-    function GetSelectedCount : Integer;
-    function GetFirstSelected : TSubtitleRange;
-    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
 
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
@@ -677,7 +676,6 @@ type
     procedure OnLoadPresetMenuItemClick(Sender: TObject);
 
     procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
-    procedure OnSpellcheckMoreDictMenuItemClick(Sender: TObject);
     procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
     procedure OnLoadDictionnary(Sender: TObject);
     procedure OnLoadDictionnaryTerminate(Sender: TObject);
@@ -739,6 +737,18 @@ type
     procedure SetSelection(Start, Stop : Integer);
     procedure TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
     procedure LoadDict(Idx : Integer);
+    function GetSpellChecker : THunspellChecker;
+
+    // TVSSCoreEngineIntf
+    procedure RegisterJavascriptAction(AName, ACaption, ADefaultShortcut : WideString);
+    function GetSubCount : Integer;
+    function GetFirst : TSubtitleRange;
+    function GetNext(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetPrevious(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetSelectedCount : Integer;
+    function GetFirstSelected : TSubtitleRange;
+    function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+    function GetAt(Index : Integer) : TSubtitleRange;    
   end;
 
 const
@@ -765,7 +775,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
   SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
-  VSSClipboardUnit, BgThreadTaskUnit;
+  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit;
 
 {$R *.dfm}
 
@@ -910,15 +920,6 @@ begin
   // Init spellchecker menu
   FSpellChecker := THunspellChecker.Create;
   FSpellChecker.FindDict(g_DictPath);
-  MenuItem := TTntMenuItem.Create(Self);
-  MenuItem.RadioItem := True;
-  MenuItem.Action := ActionLiveSpellCheck;
-  SubMenuItemSpellcheck.Add(MenuItem);
-  FLiveSpellMenuItem := MenuItem;
-  FLiveSpellMenuItem.Checked := True;
-  MenuItem := TTntMenuItem.Create(Self);
-  MenuItem.Caption := cLineCaption;
-  SubMenuItemSpellcheck.Add(MenuItem);
   for i := 0 to FSpellChecker.GetDictCount-1 do
   begin
     MenuItem := TTntMenuItem.Create(Self);
@@ -928,22 +929,17 @@ begin
     MenuItem.Caption := FSpellChecker.GetDict(i);
     MenuItem.Tag := i;
     MenuItem.OnClick := OnSpellcheckLanguageMenuItemClick;
-    SubMenuItemSpellcheck.Add(MenuItem);
+    SubMenuItemSpellcheck.Insert(
+      SubMenuItemSpellcheck.IndexOf(MenuItemLiveSpellcheck) + 2 + i, MenuItem);
   end;
   if (FSpellChecker.GetDictCount = 0) then
   begin
     MenuItem := TTntMenuItem.Create(Self);
     MenuItem.Caption := 'No dictionnary';
     MenuItem.Enabled := False;
-    SubMenuItemSpellcheck.Add(MenuItem);
+    SubMenuItemSpellcheck.Insert(
+      SubMenuItemSpellcheck.IndexOf(MenuItemLiveSpellcheck) + 2, MenuItem);
   end;
-  MenuItem := TTntMenuItem.Create(Self);
-  MenuItem.Caption := cLineCaption;
-  SubMenuItemSpellcheck.Add(MenuItem);
-  MenuItem := TTntMenuItem.Create(Self);
-  MenuItem.Caption := 'Get more dictionaries';
-  MenuItem.OnClick := OnSpellcheckMoreDictMenuItemClick;
-  SubMenuItemSpellcheck.Add(MenuItem);
 
   // Fill the presets menu
   FillPresetsMenu;
@@ -1980,7 +1976,7 @@ begin
     else
     begin
       // Spellcheck
-      if (FLiveSpellMenuItem.Checked and FSpellChecker.IsInitialized) then
+      if (MenuItemLiveSpellcheck.Checked and FSpellChecker.IsInitialized) then
       begin
         Offset := 1;
         TextToSpell := WordArray[i];
@@ -7881,7 +7877,7 @@ end;
 
 procedure TMainForm.ActionLiveSpellCheckExecute(Sender: TObject);
 begin
-  FLiveSpellMenuItem.Checked := not FLiveSpellMenuItem.Checked;
+  MenuItemLiveSpellcheck.Checked := not MenuItemLiveSpellcheck.Checked;
   if (MemoSubtitleText.Tag = 1) then
   begin
     TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
@@ -7903,8 +7899,8 @@ begin
   begin
     MemoSubPopupMenu.Items.Delete(0);
   end;
-  
-  if (not FLiveSpellMenuItem.Checked) or (not FSpellChecker.IsInitialized) then
+
+  if (not MenuItemLiveSpellcheck.Checked) or (not FSpellChecker.IsInitialized) then
     Exit;
 
   P := MemoSubPopupMenu.PopupPoint;
@@ -7939,13 +7935,13 @@ begin
     Suggestions.Free;
     // Add to dictionary
     mi := TTntMenuItem.Create(Self);
-    mi.Caption := 'Add to dictionary';
+    mi.Caption := '=> Add to dictionary';
     mi.OnClick := OnSpellcheckAddToDictionaryMenuItemClick;
     MemoSubPopupMenu.Items.Insert(j, mi);
     Inc(j);
     // Ignore
     mi := TTntMenuItem.Create(Self);
-    mi.Caption := 'Ignore';
+    mi.Caption := '=> Ignore';
     mi.OnClick := OnSpellcheckIgnoreMenuItemClick;
     MemoSubPopupMenu.Items.Insert(j, mi);
     Inc(j);
@@ -7977,15 +7973,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.OnSpellcheckMoreDictMenuItemClick(Sender: TObject);
-begin
-  ShellExecute(Handle, 'open',
-    PAnsiChar('http://wiki.services.openoffice.org/wiki/Dictionaries'),
-    '', '', SW_SHOWNORMAL);
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.OnSpellcheckAddToDictionaryMenuItemClick(Sender: TObject);
 var P : TPoint;
     WordInfo : TWordInfo;
@@ -7999,7 +7986,7 @@ begin
   if (MemoSubtitleText.Tag = 1) then
   begin
     TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
-  end;  
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -8020,6 +8007,43 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+
+procedure TMainForm.MenuItemGetMoreDictionariesClick(Sender: TObject);
+begin
+  ShellExecute(Handle, 'open',
+    PAnsiChar('http://wiki.services.openoffice.org/wiki/Dictionaries'),
+    '', '', SW_SHOWNORMAL);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSpellCheckExecute(Sender: TObject);
+var UndoableTask : TUndoableMultiChangeTask;
+begin
+  if (SpellCheckForm = nil) then
+  begin
+    SpellCheckForm := TSpellCheckForm.Create(Self);
+  end;
+  SpellCheckForm.ShowModal;
+
+  UndoableTask := SpellCheckForm.GetUndoableTask;
+  if Assigned(UndoableTask) and (UndoableTask.GetCount > 0) then
+  begin
+    PushUndoableTask(UndoableTask);
+    CurrentProject.IsDirty := True;
+    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.GetSpellChecker : THunspellChecker;
+begin
+  Result := FSpellChecker;
+end;
 
 //------------------------------------------------------------------------------
 end.
@@ -8038,9 +8062,6 @@ TODO : display karaoke sylables in wavdisplay
 
 ScriptLog('todo = ' + VSSCore);
 ScriptLog('VSSCore = ' + VSSCore.abc);
-
-
-TODO : convert tag when converting format
 
 TODO : test wav extraction with divx installed
 DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
