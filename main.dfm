@@ -1367,6 +1367,24 @@ object MainForm: TMainForm
       end
       object SubMenuItemSpellcheck: TTntMenuItem
         Caption = 'Spell check'
+        object MenuItemSpellcheck: TTntMenuItem
+          Action = ActionSpellCheck
+          Caption = 'Spell check...'
+        end
+        object MenuItemLiveSpellcheck: TTntMenuItem
+          Action = ActionLiveSpellCheck
+          Checked = True
+        end
+        object N22: TTntMenuItem
+          Caption = '-'
+        end
+        object N23: TTntMenuItem
+          Caption = '-'
+        end
+        object MenuItemGetMoreDictionaries: TTntMenuItem
+          Caption = 'Get more dictionaries'
+          OnClick = MenuItemGetMoreDictionariesClick
+        end
       end
       object MenuItemDelay: TTntMenuItem
         Action = ActionDelay
@@ -2198,6 +2216,10 @@ object MainForm: TMainForm
     object ActionLiveSpellCheck: TTntAction
       Caption = 'Live spell check'
       OnExecute = ActionLiveSpellCheckExecute
+    end
+    object ActionSpellCheck: TTntAction
+      Caption = 'Spell check'
+      OnExecute = ActionSpellCheckExecute
     end
   end
   object ImageList1: TImageList

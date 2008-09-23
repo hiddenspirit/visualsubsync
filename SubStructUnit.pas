@@ -75,6 +75,8 @@ type
     function GetSelectedCount : Integer;
     function GetFirstSelected : TSubtitleRange;
     function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
+
+    function GetAt(Index : Integer) : TSubtitleRange;
   end;  
 
   function Sub2SrtString(SubRange : TSubtitleRange) : WideString;  
