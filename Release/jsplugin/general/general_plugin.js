@@ -1,4 +1,4 @@
-// status bar display
+ï»¿// status bar display
 // thyresias <at> gmail.com (www.calorifix.net)
 // 20-Jan-2007  first version
 
@@ -12,7 +12,7 @@ var templateBarDS = null;
 var templateBarRS = null;
 
 function initBar(min, max) {
-    var bar = "·····················································";
+    var bar = "Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·";
     var length = max - min + 1;
     for (; bar.length < length ;)
       bar = bar + bar;
@@ -20,18 +20,18 @@ function initBar(min, max) {
 }
 
 function getBar(value, min, max, templateBar) {
-    // ~{|}[\]^_`:<=>-+!#%&‘’¡¤§«¬­¯°±´º»
+    // ~{|}[\]^_`:<=>-+!#%&â€˜â€™Â¡Â¤Â§Â«Â¬Â­Â¯Â°Â±Â´ÂºÂ»
     var iVal = Math.round(value);
-    // below min: *  ·························
+    // below min: *  Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·
     if (iVal < min)
-      return "«" + templateBar;
-    // above max: ·························  *
+      return "Â«" + templateBar;
+    // above max: Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·Â·  *
     else if (iVal > max)
-      return templateBar + "»";
+      return templateBar + "Â»";
     // in the range
     else {
       iVal = iVal - min;
-      return templateBar.substr(0, iVal-1) + "¦" + templateBar.substr(iVal+1);
+      return templateBar.substr(0, iVal-1) + "Â¦" + templateBar.substr(iVal+1);
     }
 }
 
