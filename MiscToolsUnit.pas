@@ -67,7 +67,7 @@ type
   procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
 
   function ReadLineStream(Stream : TStream; var s : string) : Boolean;
-  function RPos(const Substr: string; const S: string): Integer;
+  function RPos(const Substr, S: WideString): Integer;
 
   function Font2String(Font : TFont) : string;
   procedure String2Font(s : string; Font : TFont);
@@ -623,7 +623,7 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function RPos(const Substr: string; const S: string): Integer;
+function RPos(const Substr, S: WideString): Integer;
 var i,j : integer;
 begin
   i := Length(S);
