@@ -1,4 +1,4 @@
-// French typography
+ï»¿// French typography
 // (christophe.paris <at> free.fr)
 // thyresias <at> gmail.com (www.calorifix.net)
 // Nathbot
@@ -20,33 +20,33 @@ VSSPlugin = {
   //   - exception (optional) : if set to true the processing will stop on
   //     this rule and no replacement will be made (msg can be used for debugging)
   Rules : new Array(
-    { re : /[\t\v\f]+/mg, msg : "Caractère d'espacement interdit (Tab, VT, FF)", replaceby: " "},
-    { re : /^[ \u00A0\u2028\u2029]+/mg, msg : "Pas d'espace en début ligne", replaceby: ""},
+    { re : /[\t\v\f]+/mg, msg : "CaractÃ¨re d'espacement interdit (Tab, VT, FF)", replaceby: " "},
+    { re : /^[ \u00A0\u2028\u2029]+/mg, msg : "Pas d'espace en dÃ©but ligne", replaceby: ""},
     { re : /[ \u00A0\u2028\u2029]+$/mg, msg : "Pas d'espace en fin de ligne", replaceby: ""},
-    { re : /[ \u00A0\u2028\u2029]{2,}/mg, msg : "Pas plus d'un espace consécutif", replaceby: " "},
+    { re : /[ \u00A0\u2028\u2029]{2,}/mg, msg : "Pas plus d'un espace consÃ©cutif", replaceby: " "},
     { re : /([^-])\s+([.,])/mg, msg : "Pas d'espace avant '.' ou ','", replaceby: "$1$2"},
     { re : /(http:\/\/[^\s\)]+)/mg, msg : "Ignorer les points dans les URL (1)", replaceby: "[url1=$1]", exception: true},
     { re : /(\w)([?!:;]+)/mg, msg : "Un espace avant '?', ':', ';' ou '!' (1)", replaceby: "$1 $2"},
-    { re : /([?!:;]+)(\b)/mg, msg : "Un espace après '?', ':', ';' ou '!' (1)", replaceby: "$1 $2"},
+    { re : /([?!:;]+)(\b)/mg, msg : "Un espace aprÃ¨s '?', ':', ';' ou '!' (1)", replaceby: "$1 $2"},
     // { re : /[\f\t\u2028\u2029]+([?!:;]+)/mg, msg : "Un espace avant '?', ':', ';' ou '!' (2)", replaceby: " $1"},
-    { re : /^-(\S)/mg, msg : "Un espace après un '-' en début de ligne", replaceby: "- $1"},
+    { re : /^-(\S)/mg, msg : "Un espace aprÃ¨s un '-' en dÃ©but de ligne", replaceby: "- $1"},
     { re : /''/mg, msg : "Double apostrophe", replaceby: "\""},
-    { re : /(\s'\s)|(\s')|('\s)/mg, msg : "Pas d'espace avant et après une apostrophe", replaceby: "'"},
-    { re : /"(\w+)"(\w)/mg, msg : "Un espace après des guillemets", replaceby: "\"$1\" $2"},
+    { re : /(\s'\s)|(\s')|('\s)/mg, msg : "Pas d'espace avant et aprÃ¨s une apostrophe", replaceby: "'"},
+    { re : /"(\w+)"(\w)/mg, msg : "Un espace aprÃ¨s des guillemets", replaceby: "\"$1\" $2"},
     { re : /(\w)"(\w+)"/mg, msg : "Un espace avant des guillemets", replaceby: "$1 \"$2\""},
     { re : /^\.\.([^.])/mg, msg : "Signe de ponctuation invalide '..' (1)", replaceby: "...$1"},
     { re : /([^.])\.\.([^.])/mg, msg : "Signe de ponctuation invalide '..' (2)", replaceby: "$1...$2"},
     { re : /([^.])\.\.$/mg, msg : "Signe de ponctuation invalide '..' (3)", replaceby: "$1..."},
     { re : /\.{4,}/mg, msg : "Signe de ponctuation invalide '....'", replaceby: '...'},
-    { re : /\.{3}\b/mg, msg : "Un espace après '...'", replaceby: '... '},
+    { re : /\.{3}\b/mg, msg : "Un espace aprÃ¨s '...'", replaceby: '... '},
     { re : /(www.[^\s)]+)/mg, msg : "Ignorer les points dans les URL (2)", replaceby: "[url2=$1]", exception: true},
     { re : /\b(([A-Z]\.){2,})\B/mg, msg : "Ignorer les points dans les acronymes", replaceby: "[acro=$1]", exception: true},
-    //{ re : /([0-9]+[.,])\s+([0-9]+)/mg, msg : "Pas d'espace dans un nombres", replaceby: "$1$2"}, // fonctionne pas pour : "50, 75 kg à peu près."
-    { re : /(…)/mg, msg : "Points de suspension en un seul caractère", replaceby: "..."},
-    { re : /(’)/mg, msg : "Curly quote --> simple quote", replaceby: "'"},
+    //{ re : /([0-9]+[.,])\s+([0-9]+)/mg, msg : "Pas d'espace dans un nombres", replaceby: "$1$2"}, // fonctionne pas pour : "50, 75 kg Ã  peu prÃ¨s."
+    { re : /(â€¦)/mg, msg : "Points de suspension en un seul caractÃ¨re", replaceby: "..."},
+    { re : /([â€˜â€™])/mg, msg : "Curly quote --> simple quote", replaceby: "'"},
     { re : /[A-Z]{2,}[a-z]{2,}/mg, msg : "Erreur de majuscule"},
     { re : /([0-9]+[.,][0-9]+)/mg, msg : "Ignorer points et virgules dans les nombres", replaceby: "[nombre=$1]", exception: true},
-    { re : /([.,:])\b/mg, msg : "Un espace après un '.', ':' ou ','", replaceby: "$1 "}
+    { re : /([.,:])\b/mg, msg : "Un espace aprÃ¨s un '.', ':' ou ','", replaceby: "$1 "}
   ),
   
   // ----- HasError method called for each subtitle during the error checking -----
@@ -109,19 +109,19 @@ function TestHasError(SrcText, ExpectedResult) {
 }
 
 function TestPlugin() {
-  // { re : /[\t\v\f]+/mg, msg : "Caractère d'espacement interdit (Tab, VT, FF)", replaceby: " "},
+  // { re : /[\t\v\f]+/mg, msg : "CaractÃ¨re d'espacement interdit (Tab, VT, FF)", replaceby: " "},
   TestFixError("Pas de\ttabulation",
                "Pas de tabulation");
   
-  // { re : /^[ \u00A0\u2028\u2029]+/mg, msg : "Pas d'espace en début ligne", replaceby: ""},
-  TestFixError("1 espace\n en début de ligne.",
-               "1 espace\nen début de ligne.");
+  // { re : /^[ \u00A0\u2028\u2029]+/mg, msg : "Pas d'espace en dÃ©but ligne", replaceby: ""},
+  TestFixError("1 espace\n en dÃ©but de ligne.",
+               "1 espace\nen dÃ©but de ligne.");
 
-  TestFixError(" 1 espace\nen début de ligne.",
-               "1 espace\nen début de ligne.");
+  TestFixError(" 1 espace\nen dÃ©but de ligne.",
+               "1 espace\nen dÃ©but de ligne.");
 
-  TestFixError("1 espace\n \nen début de ligne.",
-               "1 espace\n\nen début de ligne.");
+  TestFixError("1 espace\n \nen dÃ©but de ligne.",
+               "1 espace\n\nen dÃ©but de ligne.");
 
   // { re : /[ \u00A0\u2028\u2029]+$/mg, msg : "Pas d'espace en fin de ligne", replaceby: ""},
   TestFixError("1 espace \nen fin de ligne.",
@@ -130,7 +130,7 @@ function TestPlugin() {
   TestFixError("1 espace\nen fin de ligne. ",
                "1 espace\nen fin de ligne.");
 
-  // { re : /[ \u00A0\u2028\u2029]{2,}/mg, msg : "Pas plus d'un espace consécutif", replaceby: " "},
+  // { re : /[ \u00A0\u2028\u2029]{2,}/mg, msg : "Pas plus d'un espace consÃ©cutif", replaceby: " "},
   TestFixError("2  espaces.",
                "2 espaces.");
 
@@ -155,31 +155,31 @@ function TestPlugin() {
   TestFixError("pas d'espace: avant deux-points",
                "pas d'espace : avant deux-points");
 
-  // { re : /([?!:;]+)(\b)/mg, msg : "Un espace après '?', ':', ';' ou '!' (1)", replaceby: "$1 $2"},
-  TestFixError("1 espace :après deux-points",
-               "1 espace : après deux-points");
+  // { re : /([?!:;]+)(\b)/mg, msg : "Un espace aprÃ¨s '?', ':', ';' ou '!' (1)", replaceby: "$1 $2"},
+  TestFixError("1 espace :aprÃ¨s deux-points",
+               "1 espace : aprÃ¨s deux-points");
                
-  TestFixError("1 espace après deux-points : ",
-               "1 espace après deux-points :");
+  TestFixError("1 espace aprÃ¨s deux-points : ",
+               "1 espace aprÃ¨s deux-points :");
   
-  // { re : /^-(\S)/mg, msg : "Un espace après un '-' en début de ligne", replaceby: "- $1"},
-  TestFixError("-1 espace après un tiret.",
-               "- 1 espace après un tiret.");
+  // { re : /^-(\S)/mg, msg : "Un espace aprÃ¨s un '-' en dÃ©but de ligne", replaceby: "- $1"},
+  TestFixError("-1 espace aprÃ¨s un tiret.",
+               "- 1 espace aprÃ¨s un tiret.");
                
   // { re : /''/mg, msg : "Double apostrophe", replaceby: "\""}
   TestFixError("Double ''apostrophe",
                "Double \"apostrophe");
 
-  // { re : /(\s'\s)|(\s')|('\s)/mg, msg : "Pas d'espace avant et après une apostrophe", replaceby: "'"},
+  // { re : /(\s'\s)|(\s')|('\s)/mg, msg : "Pas d'espace avant et aprÃ¨s une apostrophe", replaceby: "'"},
   TestFixError("Pas d 'espace avant une apostrophe.",
                "Pas d'espace avant une apostrophe.");
   
-  TestFixError("Pas d' espace après une apostrophe.",
-               "Pas d'espace après une apostrophe.");
+  TestFixError("Pas d' espace aprÃ¨s une apostrophe.",
+               "Pas d'espace aprÃ¨s une apostrophe.");
                
-  // { re : /"(\w+)"(\w)/mg, msg : "Un espace après des guillemets", replaceby: "\"$1\" $2"},
-  TestFixError("Pas d'espace \"après\"des guillemets.",
-               "Pas d'espace \"après\" des guillemets.");
+  // { re : /"(\w+)"(\w)/mg, msg : "Un espace aprÃ¨s des guillemets", replaceby: "\"$1\" $2"},
+  TestFixError("Pas d'espace \"aprÃ¨s\"des guillemets.",
+               "Pas d'espace \"aprÃ¨s\" des guillemets.");
 
   // { re : /(\w)"(\w+)"/mg, msg : "Un espace avant des guillemets", replaceby: "$1 \"$2\""},
   TestFixError("Pas d'espace\"avant\" des guillemets.",
@@ -201,9 +201,9 @@ function TestPlugin() {
   TestFixError("trop de points....",
                "trop de points...");
 
-  // { re : /\.{3}\b/mg, msg : "Un espace après '...'", replaceby: '... '},
-  TestFixError("espace après...points de suspension",
-               "espace après... points de suspension");
+  // { re : /\.{3}\b/mg, msg : "Un espace aprÃ¨s '...'", replaceby: '... '},
+  TestFixError("espace aprÃ¨s...points de suspension",
+               "espace aprÃ¨s... points de suspension");
                
   // { re : /(www.[^\s)]+)/mg, msg : "Ignorer les points dans les URL (2)", replaceby: "[url2=$1]", exception: true},
   TestFixError("www.visualsubsync.com",
@@ -213,12 +213,12 @@ function TestPlugin() {
   TestFixError("F.B.I.",
                "F.B.I.");
 
-  // { re : /(…)/mg, msg : "Points de suspension en un seul caractère", replaceby: "..."},               
-  TestFixError("Points de suspension…",
+  // { re : /(â€¦)/mg, msg : "Points de suspension en un seul caractÃ¨re", replaceby: "..."},               
+  TestFixError("Points de suspensionâ€¦",
                "Points de suspension...");
 
-  // { re : /(’)/mg, msg : "Curly quote --> Regular", replaceby: "'"}               
-  TestFixError("Curly ’quote’",
+  // { re : /([â€˜â€™])/mg, msg : "Curly quote --> simple quote", replaceby: "'"},
+  TestFixError("Curly â€˜quoteâ€™",
                "Curly 'quote'");
                
   // { re : /[A-Z]{2,}[a-z]{2,}/mg, msg : "Erreur de majuscule"}               
@@ -230,12 +230,12 @@ function TestPlugin() {
   TestFixError("10.3",
                "10.3");
   
-  // { re : /([.,:])\b/mg, msg : "Un espace après un '.', ':' ou ','", replaceby: "$1 "},
-  TestFixError("1 espace après.un point.",
-               "1 espace après. un point.");
+  // { re : /([.,:])\b/mg, msg : "Un espace aprÃ¨s un '.', ':' ou ','", replaceby: "$1 "},
+  TestFixError("1 espace aprÃ¨s.un point.",
+               "1 espace aprÃ¨s. un point.");
                
-  TestFixError("1 espace après :deux-points",
-               "1 espace après : deux-points");
+  TestFixError("1 espace aprÃ¨s :deux-points",
+               "1 espace aprÃ¨s : deux-points");
 
 }
 
