@@ -62,7 +62,7 @@ var Source : TTntStringList;
     S, SubText : WideString;
     Sub : TSRTSubtitle;
 begin
-  Source := TTntStringList.Create;
+  Source := MyTTntStringList.Create;
   Source.LoadFromFile(Filename);
   FIsUTF8 := (Source.LastFileCharSet <> csAnsi);
   FAutoCorrectedFile := False;
