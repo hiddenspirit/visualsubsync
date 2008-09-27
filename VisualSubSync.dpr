@@ -50,9 +50,12 @@ uses
 
 begin
   Application.Initialize;
+
   // Fix ANSI handling (using the thread code page doesn't work correctly on some system)
   // e.g.: Tnt is broken when loading an ANSI file through TTntStringList.LoadFromFile is doesn't use the righ code page
-  TntSystem.InstallTntSystemUpdates([tsFixImplicitCodePage]);
+  // TntSystem.InstallTntSystemUpdates([tsFixImplicitCodePage]);
+  // EDIT : this is breaking UTF-8 support, we do the conversion using GetACP (see WC2MB and MC2WC in MiscUnit)
+
   Application.Title := 'VisualSubSync';
   Application.CreateForm(TMainForm, MainForm);
   Application.CreateForm(TProjectForm, ProjectForm);
