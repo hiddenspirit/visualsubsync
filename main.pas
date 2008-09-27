@@ -545,6 +545,7 @@ type
     procedure MemoSubPopupMenuPopup(Sender: TObject);
     procedure MenuItemGetMoreDictionariesClick(Sender: TObject);
     procedure ActionSpellCheckExecute(Sender: TObject);
+    procedure ActionSpellCheckUpdate(Sender: TObject);
    
   private
     { Private declarations }
@@ -966,7 +967,6 @@ begin
   FreeAndNil(RedoStack);
   ClearStack(UndoStack);
   FreeAndNil(UndoStack);
-  FreeAndNil(FSpellChecker);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
 end;
@@ -1096,7 +1096,8 @@ begin
       SaveFormPosition(IniFile, PreferencesFormInstance);
     if Assigned(SilentZoneForm) then
       SaveFormPosition(IniFile, SilentZoneForm);
-
+    if Assigned(SpellCheckForm) then
+      SaveFormPosition(IniFile, SpellCheckForm);
 
     IniFile.WriteInteger('Windows', 'MainForm_PanelTop_Height', PanelTop.Height);
     IniFile.WriteInteger('Windows', 'MainForm_PanelBottom_Height', PanelBottom.Height);
@@ -3849,7 +3850,7 @@ begin
     Exit;
 
   HaveNewSub := False;
-  Source := TTntStringList.Create;
+  Source := MyTTntStringList.Create;
   Source.LoadFromFile(TntOpenDialog1.FileName);
 
   g_WebRWSynchro.BeginWrite;
@@ -5429,13 +5430,15 @@ function TMainForm.DetectCharsetDataLoss : Boolean;
 var i : integer;
     Subrange : TSubtitleRange;
     ansiCharString : string;
+    backWideCharString : WideString;
 begin
   Result := False;
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    ansiCharString := SubRange.Text;
-    if (ansiCharString <> SubRange.Text) then
+    ansiCharString := WC2MB(SubRange.Text);
+    backWideCharString := MB2WC(ansiCharString);
+    if (backWideCharString <> SubRange.Text) then
     begin
       Result := True;
       Break;
@@ -5477,7 +5480,7 @@ begin
     if InUTF8 then
       WriteStringLnStream(UTF8Encode(ConvertFunc(Subrange.Text)), FS)
     else
-      WriteStringLnStream(ConvertFunc(Subrange.Text), FS);
+      WriteStringLnStream(WC2MB(ConvertFunc(Subrange.Text)), FS);
     WriteStringLnStream('', FS);
   end;
   FS.Free;
@@ -5561,7 +5564,7 @@ begin
     if InUTF8 then
       s := s + UTF8Encode(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]))
     else
-      s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+      s := s + WC2MB(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]));
     WriteStringLnStream(s, FS);
   end;
 
@@ -5651,7 +5654,7 @@ begin
     if InUTF8 then
       s := s + UTF8Encode(Tnt_WideStringReplace(ConvertFunc(Subrange.Text) ,CRLF, '\N', [rfReplaceAll]))
     else
-      s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+      s := s + WC2MB(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]));
     WriteStringLnStream(s, FS);
   end;
   
@@ -6621,7 +6624,7 @@ begin
     if InUTF8 then
       WriteStringLnStream(UTF8Encode(Text), FS)
     else
-      WriteStringLnStream(Text, FS);
+      WriteStringLnStream(WC2MB(Text), FS);
   end;
   FS.Free;
 end;
@@ -7660,6 +7663,14 @@ begin
   end;
 end;
 
+function TMainForm.GetAt(Index : Integer) : TSubtitleRange;
+begin
+  if (Index >= 0) and (Index < WAVDisplayer.RangeList.Count) then
+    Result := TSubtitleRange(WAVDisplayer.RangeList[Index])
+  else
+    Result := nil;
+end;
+
 //------------------------------------------------------------------------------
 
 procedure TMainForm.LoadPresetFile(Filename : WideString);
@@ -7945,13 +7956,11 @@ begin
     mi.OnClick := OnSpellcheckIgnoreMenuItemClick;
     MemoSubPopupMenu.Items.Insert(j, mi);
     Inc(j);
-    if Assigned(mi) then
-    begin
-      mi := TTntMenuItem.Create(Self);
-      mi.Caption := cLineCaption;
-      MemoSubPopupMenu.Items.Insert(j, mi);
-      Inc(j);
-    end;
+    // -
+    mi := TTntMenuItem.Create(Self);
+    mi.Caption := cLineCaption;
+    MemoSubPopupMenu.Items.Insert(j, mi);
+    Inc(j);
   end;
 end;
 
@@ -8019,22 +8028,36 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionSpellCheckExecute(Sender: TObject);
-var UndoableTask : TUndoableMultiChangeTask;
+var SpellUndoableTask : TUndoableMultiChangeTask;
+    IniFile : TIniFile;
 begin
+  if (not FSpellChecker.IsInitialized) then
+  begin
+    Exit;
+  end;
+
   if (SpellCheckForm = nil) then
   begin
     SpellCheckForm := TSpellCheckForm.Create(Self);
+    IniFile := TIniFile.Create(GetIniFilename);
+    LoadFormPosition(IniFile, SpellCheckForm);
+    IniFile.Free;    
   end;
   SpellCheckForm.ShowModal;
 
-  UndoableTask := SpellCheckForm.GetUndoableTask;
-  if Assigned(UndoableTask) and (UndoableTask.GetCount > 0) then
+  SpellUndoableTask := SpellCheckForm.GetUndoableTask;
+  if Assigned(SpellUndoableTask) and (SpellUndoableTask.GetCount > 0) then
   begin
-    PushUndoableTask(UndoableTask);
+    PushUndoableTask(SpellUndoableTask);
     CurrentProject.IsDirty := True;
     WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
     vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
     vtvSubsList.Repaint;
+    SpellCheckForm.Reset;
+  end
+  else
+  begin
+    FreeAndNil(SpellUndoableTask);
   end;
 end;
 
@@ -8043,6 +8066,13 @@ end;
 function TMainForm.GetSpellChecker : THunspellChecker;
 begin
   Result := FSpellChecker;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionSpellCheckUpdate(Sender: TObject);
+begin
+  ActionSpellCheck.Enabled := FSpellChecker.IsInitialized;
 end;
 
 //------------------------------------------------------------------------------

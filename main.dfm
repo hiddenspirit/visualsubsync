@@ -2218,8 +2218,10 @@ object MainForm: TMainForm
       OnExecute = ActionLiveSpellCheckExecute
     end
     object ActionSpellCheck: TTntAction
+      Tag = 1
       Caption = 'Spell check'
       OnExecute = ActionSpellCheckExecute
+      OnUpdate = ActionSpellCheckUpdate
     end
   end
   object ImageList1: TImageList

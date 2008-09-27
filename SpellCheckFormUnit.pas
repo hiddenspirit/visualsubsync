@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, TntStdCtrls, ComCtrls, TntComCtrls, SubStructUnit,
-  LibHunspellUnit, UndoableSubTaskUnit;
+  LibHunspellUnit, UndoableSubTaskUnit, TntClasses;
 
 type
   TSpellCheckForm = class(TForm)
@@ -19,6 +19,9 @@ type
     bttIgnoreAll: TTntButton;
     bttCancel: TTntButton;
     bttAdd: TTntButton;
+    lblSub: TTntLabel;
+    edReplaceBy: TTntEdit;
+    TntLabel3: TTntLabel;
     procedure bttCancelClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bttIgnoreClick(Sender: TObject);
@@ -26,6 +29,9 @@ type
     procedure bttIgnoreAllClick(Sender: TObject);
     procedure bttAddClick(Sender: TObject);
     procedure bttReplaceClick(Sender: TObject);
+    procedure bttReplaceAllClick(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure lbSuggestionsClick(Sender: TObject);
   private
     { Private declarations }
     Sub : TSubtitleRange;
@@ -35,8 +41,12 @@ type
     WordInfo : TWordInfo;
     CurrentWord : WideString;
     MultiChangeTask : TUndoableMultiChangeTask;
-    
+    ReplaceAllWords : TTntStringList;
+    EndOfCheck : Boolean;
+
     procedure NextError;
+    procedure ReplaceWordBy(Subtitle : TSubtitleRange; AWordInfo : TWordInfo; NewText : WideString);
+    procedure UpdateButton;
   public
     { Public declarations }
     function GetUndoableTask : TUndoableMultiChangeTask;
@@ -48,9 +58,21 @@ var
 
 implementation
 
-uses main, MiscToolsUnit, Types, TntClasses;
+uses main, MiscToolsUnit, Types;
 
 {$R *.dfm}
+
+procedure TSpellCheckForm.FormCreate(Sender: TObject);
+begin
+  reSubtitleText.Font.Assign(MainForm.MemoSubtitleText.Font);
+  ReplaceAllWords := TTntStringList.Create;
+  MultiChangeTask := nil;
+end;
+
+procedure TSpellCheckForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(ReplaceAllWords);
+end;
 
 procedure TSpellCheckForm.bttCancelClick(Sender: TObject);
 begin
@@ -63,8 +85,20 @@ begin
   TextToSpellWithTagOffset := 0;
   WordIdx := 0;
   Sub := nil;
-  FreeAndNil(MultiChangeTask);
   MultiChangeTask := TUndoableMultiChangeTask.Create;
+  CurrentWord := '';
+  EndOfCheck := False;
+  ReplaceAllWords.Clear;
+  UpdateButton;
+end;
+
+procedure TSpellCheckForm.UpdateButton;
+begin
+  bttReplace.Enabled := (Length(edReplaceBy.Text) > 0) and (EndOfCheck = False);
+  bttReplaceAll.Enabled := (Length(edReplaceBy.Text) > 0) and (EndOfCheck = False);
+  bttIgnore.Enabled := (EndOfCheck = False);
+  bttIgnoreAll.Enabled := (EndOfCheck = False);
+  bttAdd.Enabled := (EndOfCheck = False);
 end;
 
 procedure TSpellCheckForm.NextError;
@@ -72,6 +106,7 @@ var WordArray : TWideStringDynArray;
     TextToSpell : WideString;
     SpellOk : Boolean;
     Suggestions: TTntStrings;
+    replaceBy : WideString;
 begin
   if not Assigned(Sub) then
   begin
@@ -89,28 +124,50 @@ begin
         begin
           GetNextWordPos(TextToSpellOffset, TextToSpell, WordInfo);
           CurrentWord := Copy(TextToSpell, WordInfo.Position, WordInfo.Length);
-          SpellOk := ContainDigit(CurrentWord) or IsUpperCase(CurrentWord)
-            or MainForm.GetSpellChecker.Spell(CurrentWord);
-          if (not SpellOk) then
+          
+          replaceBy := ReplaceAllWords.Values[CurrentWord];
+          if (Length(replaceBy) > 0) then
           begin
-            reSubtitleText.Text := TextToSpell;
-            // Remove all colors
-            reSubtitleText.SelectAll;
-            reSubtitleText.SelAttributes.Color := clWindowText;
-            // Put mispelled word in red
-            reSubtitleText.SelStart := TextToSpellWithTagOffset + WordInfo.Position - 1;
-            reSubtitleText.SelLength := WordInfo.Length;
-            reSubtitleText.SelAttributes.Color := clRed;
-            reSubtitleText.SelLength := 0;
-            // Fill suggestions list
-            Suggestions := TTntStringList.Create;
-            MainForm.GetSpellChecker.Suggest(CurrentWord, Suggestions);
-            lbSuggestions.Items.Assign(Suggestions);
-            Suggestions.Free;
-            // Select first suggestion
-            if (lbSuggestions.Items.Count > 0) then
-              lbSuggestions.ItemIndex := 0;
-            Exit;
+            ReplaceWordBy(Sub, WordInfo, replaceBy);
+          end
+          else
+          begin
+            SpellOk := ContainDigit(CurrentWord) or IsUpperCase(CurrentWord)
+              or MainForm.GetSpellChecker.Spell(CurrentWord);
+            if (not SpellOk) then
+            begin
+              reSubtitleText.Text := TextToSpell;
+              // Remove all colors
+              reSubtitleText.SelectAll;
+              reSubtitleText.SelAttributes.Color := clWindowText;
+              // Put mispelled word in red
+              reSubtitleText.SelStart := TextToSpellWithTagOffset + WordInfo.Position - 1;
+              reSubtitleText.SelLength := WordInfo.Length;
+              reSubtitleText.SelAttributes.Color := clRed;
+              reSubtitleText.SelLength := 0;
+              // Fill suggestions list
+              Suggestions := TTntStringList.Create;
+              MainForm.GetSpellChecker.Suggest(CurrentWord, Suggestions);
+              lbSuggestions.Items.Assign(Suggestions);
+              Suggestions.Free;
+              // Select first suggestion
+              if (lbSuggestions.Items.Count > 0) then
+              begin
+                lbSuggestions.ItemIndex := 0;
+                edReplaceBy.Text := lbSuggestions.Items.Strings[0];
+              end
+              else
+              begin
+                edReplaceBy.Text := '';
+              end;
+              UpdateButton;
+
+              // Show which subtitle it is
+              lblSub.Caption := Format('Subtitle %d/%d : %s -> %s',
+                [Sub.Node.Index+1, MainForm.GetSubCount, TimeMsToString(Sub.StartTime),
+                TimeMsToString(Sub.StopTime)]);
+              Exit;
+            end;
           end;
           Inc(TextToSpellOffset);
         end;
@@ -122,6 +179,16 @@ begin
     WordIdx := 0;
     TextToSpellWithTagOffset := 0;
     Sub := MainForm.GetNext(Sub);
+  end;
+  if not Assigned(Sub) then
+  begin
+    // End of check
+    lblSub.Caption := 'End of check.';
+    reSubtitleText.Clear;
+    edReplaceBy.Text := '';
+    lbSuggestions.Clear;
+    EndOfCheck := True;
+    UpdateButton;
   end;
 end;
 
@@ -136,11 +203,6 @@ begin
   NextError;
 end;
 
-procedure TSpellCheckForm.FormCreate(Sender: TObject);
-begin
-  reSubtitleText.Font.Assign(MainForm.MemoSubtitleText.Font);
-end;
-
 procedure TSpellCheckForm.bttIgnoreAllClick(Sender: TObject);
 begin
   MainForm.GetSpellChecker.Ignore(CurrentWord);
@@ -153,24 +215,45 @@ begin
   NextError;
 end;
 
-procedure TSpellCheckForm.bttReplaceClick(Sender: TObject);
+procedure TSpellCheckForm.ReplaceWordBy(Subtitle : TSubtitleRange; AWordInfo : TWordInfo; NewText : WideString);
 var ChangeSubData : TChangeSubData;
     TextBegin, TextEnd : WideString;
 begin
-  ChangeSubData := TChangeSubData.Create(Sub.Node.Index);
-  ChangeSubData.OldText := Sub.Text;
-  TextBegin := Copy(Sub.Text, 1, WordInfo.Position - 1);
-  TextEnd := Copy(Sub.Text, WordInfo.Position + WordInfo.Length, MaxInt);
-  Sub.Text := TextBegin +
-    lbSuggestions.Items.Strings[lbSuggestions.ItemIndex] + TextEnd;
-  ChangeSubData.NewText := Sub.Text;
+  ChangeSubData := TChangeSubData.Create(Subtitle.Node.Index);
+  ChangeSubData.OldText := Subtitle.Text;
+  TextBegin := Copy(Subtitle.Text, 1, AWordInfo.Position - 1);
+  TextEnd := Copy(Subtitle.Text, AWordInfo.Position + AWordInfo.Length, MaxInt);
+  Subtitle.Text := TextBegin + NewText + TextEnd;
+  ChangeSubData.NewText := Subtitle.Text;
   MultiChangeTask.AddData(ChangeSubData);
+end;
+
+procedure TSpellCheckForm.bttReplaceClick(Sender: TObject);
+begin
+  ReplaceWordBy(Sub, WordInfo, edReplaceBy.Text);
   NextError;
 end;
 
 function TSpellCheckForm.GetUndoableTask : TUndoableMultiChangeTask;
 begin
   Result := MultiChangeTask;
+end;
+
+procedure TSpellCheckForm.bttReplaceAllClick(Sender: TObject);
+var NewText : WideString;
+begin
+  NewText := edReplaceBy.Text;
+  ReplaceAllWords.Add(CurrentWord + '=' + NewText);
+  ReplaceWordBy(Sub, WordInfo, NewText);
+  NextError;  
+end;
+
+procedure TSpellCheckForm.lbSuggestionsClick(Sender: TObject);
+begin
+  if (lbSuggestions.ItemIndex <> -1) then
+  begin
+    edReplaceBy.Text := lbSuggestions.Items.Strings[lbSuggestions.ItemIndex];
+  end;
 end;
 
 end.
