@@ -413,7 +413,7 @@ var Source : TTntStringList;
     ScriptType : WideString;
     i : Integer;
 begin
-  Source := TTntStringList.Create;
+  Source := MyTTntStringList.Create;
   Source.LoadFromFile(Filename);
 
   IsUTF8 := (Source.LastFileCharSet <> csAnsi);

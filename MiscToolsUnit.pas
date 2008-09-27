@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes, Graphics, Types, Richedit, TntComCtrls;
+uses Classes, Graphics, Types, Richedit, TntComCtrls, TntClasses;
 
 type
   TFileVersion = class
@@ -114,9 +114,19 @@ type
   procedure SetRESelectionColor(ARichEdit : TTntRichEdit; AColor : TColor);
   procedure SetReUnderline(ARichEdit: TTntRichEdit; Underline : Boolean);
 
+  function WC2MB(S : WideString) : string;
+  function MB2WC(S : string) : WideString;
+
+
+type
+  MyTTntStringList = class(TTntStringList)
+  public
+    procedure LoadFromStream_BOM(Stream: TStream; WithBOM: Boolean); override;
+  end;  
+
 implementation
 
-uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW;
+uses SysUtils, Windows, Registry, ShlObj, StrUtils, TntSysUtils, TntWindows, VFW, TntSystem;
 
 // -----------------------------------------------------------------------------
 
@@ -1260,6 +1270,74 @@ begin
   else
     SetRECharFormat(ARichEdit, CFU_UNDERLINENONE, 0)
 end;
+
+// -------------------------------------------------------------------------------------------------
+
+function WC2MB(S : WideString) : string;
+var realLen : Cardinal;
+begin
+  SetLength(Result, Length(S) * 4);
+  realLen := WideCharToMultiByte(GetACP, 0, @S[1], Length(S), @Result[1],
+        Length(S) * 4, nil, nil);
+  SetLength(Result, realLen);
+end;
+
+function MB2WC(S : string) : WideString;
+var realLen : Cardinal;
+begin
+  SetLength(Result, Length(S) * 4);
+  realLen := MultiByteToWideChar(GetACP, 0, @S[1], Length(S), @Result[1],
+        Length(S) * 4);
+  SetLength(Result, realLen);
+end;
+
+procedure MyTTntStringList.LoadFromStream_BOM(Stream: TStream; WithBOM: Boolean);
+var
+  DataLeft: Integer;
+  StreamCharSet: TTntStreamCharSet;
+  SW: WideString;
+  SA: AnsiString;
+
+begin
+  BeginUpdate;
+  try
+    if WithBOM then
+      StreamCharSet := AutoDetectCharacterSet(Stream)
+    else
+      StreamCharSet := csUnicode;
+    DataLeft := Stream.Size - Stream.Position;
+    if (StreamCharSet in [csUnicode, csUnicodeSwapped]) then
+    begin
+      // BOM indicates Unicode text stream
+      if DataLeft < SizeOf(WideChar) then
+        SW := ''
+      else begin
+        SetLength(SW, DataLeft div SizeOf(WideChar));
+        Stream.Read(PWideChar(SW)^, DataLeft);
+        if StreamCharSet = csUnicodeSwapped then
+          StrSwapByteOrder(PWideChar(SW));
+      end;
+      SetTextStr(SW);
+    end
+    else if StreamCharSet = csUtf8 then
+    begin
+      // BOM indicates UTF-8 text stream
+      SetLength(SA, DataLeft div SizeOf(AnsiChar));
+      Stream.Read(PAnsiChar(SA)^, DataLeft);
+      SetTextStr(UTF8ToWideString(SA));
+    end
+    else
+    begin
+      // without byte order mark it is assumed that we are loading ANSI text
+      SetLength(SA, DataLeft div SizeOf(AnsiChar));
+      Stream.Read(PAnsiChar(SA)^, DataLeft);
+      SetTextStr(MB2WC(SA));
+    end;
+  finally
+    EndUpdate;
+  end;
+end;
+
 
 // -----------------------------------------------------------------------------
 end.
