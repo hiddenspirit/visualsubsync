@@ -449,7 +449,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 170
+            Width = 166
             WideText = 'Value'
           end
           item
@@ -1017,28 +1017,37 @@ object PreferencesForm: TPreferencesForm
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    DesignSize = (
-      482
-      41)
-    object bttOk: TTntButton
-      Left = 326
-      Top = 16
-      Width = 75
-      Height = 25
-      Anchors = [akTop, akRight]
-      Caption = 'OK'
+    object TntPanel1: TTntPanel
+      Left = 320
+      Top = 0
+      Width = 162
+      Height = 41
+      Align = alRight
+      BevelOuter = bvNone
       TabOrder = 0
-      OnClick = bttOkClick
-    end
-    object bttCancel: TTntButton
-      Left = 406
-      Top = 16
-      Width = 75
-      Height = 25
-      Anchors = [akTop, akRight]
-      Caption = 'Cancel'
-      TabOrder = 1
-      OnClick = bttCancelClick
+      DesignSize = (
+        162
+        41)
+      object bttOk: TTntButton
+        Left = 1
+        Top = 16
+        Width = 75
+        Height = 25
+        Anchors = [akTop, akRight]
+        Caption = 'OK'
+        TabOrder = 0
+        OnClick = bttOkClick
+      end
+      object bttCancel: TTntButton
+        Left = 87
+        Top = 16
+        Width = 75
+        Height = 25
+        Anchors = [akTop, akRight]
+        Caption = 'Cancel'
+        TabOrder = 1
+        OnClick = bttCancelClick
+      end
     end
   end
   object FontDialog1: TFontDialog
