@@ -95,6 +95,9 @@ type
     FInitCC : TCriticalSection;
     FCurrentDictName : WideString;
     FIgnoreList : TTntStringList;
+    FAddList : TTntStringList;
+
+    procedure LoadAddListInHunspell;
 
   public
     constructor Create;
@@ -121,6 +124,8 @@ type
     function GetCurrentDictName : WideString;
 
     procedure Ignore(Word : WideString);
+    procedure LoadPersonalDict(Filename : WideString);
+    procedure SavePersonalDict(Filename : WideString);
 
   end;
 
@@ -144,7 +149,7 @@ function GetWordAt(RichEdit : TTntRichEdit; X,Y : Integer; var WordInfo : TWordI
 
 implementation
 
-uses TntSysUtils, Types, Messages;
+uses TntSysUtils, Types, Messages, TntWideStrings;
 
 // -----------------------------------------------------------------------------
 
@@ -313,6 +318,7 @@ constructor THunspellChecker.Create;
 begin
   FDictList := TTntStringList.Create;
   FIgnoreList := TTntStringList.Create;
+  FAddList := TTntStringList.Create;
   FInitCC := TCriticalSection.Create;
   FCurrentDictName := '';
   FHunspell := 0;
@@ -333,6 +339,7 @@ begin
       FDictEncoding := Hunspell_get_dic_encoding(FHunspell);
       FDictCodePage := GetDicoCodePage(FDictEncoding);
       FCurrentDictName := WideExtractFileName(DictDic);
+      LoadAddListInHunspell;
     end;
     Result := (FHunspell <> 0);
   finally
@@ -460,6 +467,7 @@ end;
 procedure THunspellChecker.Add(Word : WideString);
 var WordEncoded : string;
 begin
+  FAddList.Add(Word);
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Hunspell_add(FHunspell, PChar(WordEncoded));
 end;
@@ -527,7 +535,41 @@ end;
 
 procedure THunspellChecker.Ignore(Word : WideString);
 begin
-  FIgnoreList.Add(Word);            
+  FIgnoreList.Add(Word);
+end;
+
+procedure THunspellChecker.LoadPersonalDict(Filename : WideString);
+begin
+  if WideFileExists(Filename) then
+  begin
+    try
+      FAddList.LoadFromFile(Filename);
+    except
+    end;
+    LoadAddListInHunspell;
+  end;
+end;
+
+procedure THunspellChecker.SavePersonalDict(Filename : WideString);
+begin
+  try
+    FAddList.SaveToFile(Filename);
+  except
+  end;
+end;
+
+procedure THunspellChecker.LoadAddListInHunspell;
+var i : Integer;
+    WordEncoded : string;
+begin
+  if IsInitialized then
+  begin
+    for i := 0 to FAddList.Count-1 do
+    begin
+      WordEncoded := ConvertToHunspell(FAddList[i], FDictCodePage);
+      Hunspell_add(FHunspell, PChar(WordEncoded));
+    end;
+  end;
 end;
 
 end.

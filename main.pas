@@ -920,6 +920,7 @@ begin
 
   // Init spellchecker menu
   FSpellChecker := THunspellChecker.Create;
+  FSpellChecker.LoadPersonalDict(g_DictPath + 'perso.dic');
   FSpellChecker.FindDict(g_DictPath);
   for i := 0 to FSpellChecker.GetDictCount-1 do
   begin
@@ -950,6 +951,11 @@ end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  if Assigned(FSpellChecker) then
+  begin
+    FSpellChecker.SavePersonalDict(g_DictPath + 'perso.dic');
+    FreeAndNil(FSpellChecker);
+  end;
   StartStopServer(True);
   if Assigned(g_VSSCoreWrapper) then
   begin
