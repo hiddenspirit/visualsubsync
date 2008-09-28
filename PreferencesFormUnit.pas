@@ -155,8 +155,6 @@ type
     Label6: TLabel;
     UpDownBackupTime: TUpDown;
     Panel1: TPanel;
-    bttOk: TTntButton;
-    bttCancel: TTntButton;
     Panel2: TPanel;
     TntLabel3: TTntLabel;
     lbErrorDescription: TTntLabel;
@@ -227,6 +225,9 @@ type
     bttSetHotkey: TTntButton;
     bttClearHotkey: TTntButton;
     Bevel9: TBevel;
+    TntPanel1: TTntPanel;
+    bttOk: TTntButton;
+    bttCancel: TTntButton;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
