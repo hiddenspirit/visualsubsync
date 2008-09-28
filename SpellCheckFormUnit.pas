@@ -5,23 +5,33 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, TntStdCtrls, ComCtrls, TntComCtrls, SubStructUnit,
-  LibHunspellUnit, UndoableSubTaskUnit, TntClasses;
+  LibHunspellUnit, UndoableSubTaskUnit, TntClasses, ExtCtrls, TntExtCtrls;
 
 type
   TSpellCheckForm = class(TForm)
-    reSubtitleText: TTntRichEdit;
-    lbSuggestions: TTntListBox;
-    TntLabel1: TTntLabel;
-    TntLabel2: TTntLabel;
+    TntPanel1: TTntPanel;
     bttReplace: TTntButton;
     bttReplaceAll: TTntButton;
     bttIgnore: TTntButton;
     bttIgnoreAll: TTntButton;
-    bttCancel: TTntButton;
     bttAdd: TTntButton;
-    lblSub: TTntLabel;
-    edReplaceBy: TTntEdit;
+    TntPanel2: TTntPanel;
+    TntLabel1: TTntLabel;
+    reSubtitleText: TTntRichEdit;
     TntLabel3: TTntLabel;
+    edReplaceBy: TTntEdit;
+    TntLabel2: TTntLabel;
+    lbSuggestions: TTntListBox;
+    lblSub: TTntLabel;
+    TntPanel3: TTntPanel;
+    bttCancel: TTntButton;
+    TntBevel1: TTntBevel;
+    TntBevel2: TTntBevel;
+    TntBevel3: TTntBevel;
+    TntBevel4: TTntBevel;
+    TntBevel5: TTntBevel;
+    TntBevel6: TTntBevel;
+    TntBevel7: TTntBevel;
     procedure bttCancelClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bttIgnoreClick(Sender: TObject);
