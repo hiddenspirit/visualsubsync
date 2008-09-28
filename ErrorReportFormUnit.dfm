@@ -18,17 +18,14 @@ object ErrorReportForm: TErrorReportForm
   OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  DesignSize = (
-    313
-    379)
   PixelsPerInch = 96
   TextHeight = 13
   object vtvErrorList: TVirtualDrawTree
-    Left = 4
-    Top = 4
-    Width = 305
-    Height = 350
-    Anchors = [akLeft, akTop, akRight, akBottom]
+    Left = 0
+    Top = 0
+    Width = 313
+    Height = 358
+    Align = alClient
     Header.AutoSizeIndex = 0
     Header.Font.Charset = DEFAULT_CHARSET
     Header.Font.Color = clWindowText
