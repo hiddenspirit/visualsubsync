@@ -154,9 +154,9 @@ uses TntSysUtils, Types, Messages, TntWideStrings;
 // -----------------------------------------------------------------------------
 
 function IsWordDelimiter(wc : WideChar) : Boolean;
-const WordDelimiters : array [0..27] of WideChar = (
+const WordDelimiters : array [0..29] of WideChar = (
   ' ', '.', ',', '?', '!', ':', ';', '(', ')', '[', ']', '{', '}',
-  #13, #10, #9, '"', '/', '\', '|', '+', '-', '*', '=', '%', '&', '>', '<');
+  #13, #10, #9, '"', '/', '\', '|', '+', '-', '*', '=', '%', '&', '>', '<', '¡', '¿');
 var i : Integer;
 begin
   for i := Low(WordDelimiters) to High(WordDelimiters) do
