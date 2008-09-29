@@ -203,6 +203,7 @@ object SpellCheckForm: TSpellCheckForm
       TabStop = False
       Align = alTop
       ReadOnly = True
+      ScrollBars = ssVertical
       TabOrder = 0
     end
     object edReplaceBy: TTntEdit

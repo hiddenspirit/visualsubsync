@@ -146,7 +146,7 @@ begin
               or MainForm.GetSpellChecker.Spell(CurrentWord);
             if (not SpellOk) then
             begin
-              reSubtitleText.Text := TextToSpell;
+              reSubtitleText.Text := Sub.Text;
               // Remove all colors
               reSubtitleText.SelectAll;
               reSubtitleText.SelAttributes.Color := clWindowText;
@@ -155,6 +155,7 @@ begin
               reSubtitleText.SelLength := WordInfo.Length;
               reSubtitleText.SelAttributes.Color := clRed;
               reSubtitleText.SelLength := 0;
+
               // Fill suggestions list
               Suggestions := TTntStringList.Create;
               MainForm.GetSpellChecker.Suggest(CurrentWord, Suggestions);
@@ -228,14 +229,18 @@ end;
 procedure TSpellCheckForm.ReplaceWordBy(Subtitle : TSubtitleRange; AWordInfo : TWordInfo; NewText : WideString);
 var ChangeSubData : TChangeSubData;
     TextBegin, TextEnd : WideString;
+    DeltaLen : Integer;
 begin
   ChangeSubData := TChangeSubData.Create(Subtitle.Node.Index);
   ChangeSubData.OldText := Subtitle.Text;
-  TextBegin := Copy(Subtitle.Text, 1, AWordInfo.Position - 1);
-  TextEnd := Copy(Subtitle.Text, AWordInfo.Position + AWordInfo.Length, MaxInt);
+  TextBegin := Copy(Subtitle.Text, 1, TextToSpellWithTagOffset + AWordInfo.Position - 1);
+  TextEnd := Copy(Subtitle.Text, TextToSpellWithTagOffset + AWordInfo.Position + AWordInfo.Length, MaxInt);
   Subtitle.Text := TextBegin + NewText + TextEnd;
   ChangeSubData.NewText := Subtitle.Text;
   MultiChangeTask.AddData(ChangeSubData);
+  // Fix offset when replacing by a word of different length
+  DeltaLen := AWordInfo.Length - Length(NewText);
+  TextToSpellOffset := TextToSpellOffset - DeltaLen; 
 end;
 
 procedure TSpellCheckForm.bttReplaceClick(Sender: TObject);
