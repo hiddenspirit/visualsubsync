@@ -99,11 +99,9 @@ object ExtractWAVForm: TExtractWAVForm
       Width = 401
       Height = 17
       Caption = 'Convert to reduce file size (Mono + Sample rate divided by 2)'
-      Checked = True
       ParentShowHint = False
       ShowHint = False
       TabOrder = 1
-      TabStop = True
       OnClick = rbOnlyPeakClick
     end
     object rbNoConversion: TRadioButton
@@ -122,7 +120,9 @@ object ExtractWAVForm: TExtractWAVForm
       Width = 137
       Height = 17
       Caption = 'Only create peak file'
+      Checked = True
       TabOrder = 3
+      TabStop = True
       OnClick = rbOnlyPeakClick
     end
   end

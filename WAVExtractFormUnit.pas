@@ -136,8 +136,8 @@ begin
   bttExtract.Enabled := (DSWavExtractor.AudioStreamCount > 0);
   bttClose.Enabled := True;
   gbSettings.Enabled := True;
-  CurrentExtractionType := 2;
-  rbFastConversion.Checked := True;
+  CurrentExtractionType := 0;
+  rbOnlyPeak.Checked := True;
   MemoVideoInfo.Lines.Add('Select a stream and press the ''Extract'' button.');
 end;
 
