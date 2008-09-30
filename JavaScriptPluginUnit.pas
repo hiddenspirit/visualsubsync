@@ -1338,7 +1338,9 @@ begin
   for i:=0 to Length(FICPNParamArray)-1 do
     FICPNParamArray[i] := nil;
 
+  FIndexParam.Value := Index;
   FICPNParamArray[0] := FIndexParam;
+  
   if Assigned(CurrentSub) then
   begin
     FCurrentSub.SetSubtitle(CurrentSub);
