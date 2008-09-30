@@ -2383,6 +2383,9 @@ begin
       LoadDict(Idx);
     end;
 
+    // ------ Load presets -----
+    LoadPresetFile(g_PresetsPath + CurrentProject.Presets);
+
     UpdateVolume;
     EnableControl(True);
 
@@ -2460,6 +2463,8 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync', 'FocusedTimeMs', FocusedTimeMs);
 
   ProjectFileIni.WriteString('VisualSubsync', 'Dictionnary', FSpellChecker.GetCurrentDictName);
+
+  ProjectFileIni.WriteString('VisualSubsync','Presets', Project.Presets);
 
   ProjectFileIni.Free;
 end;
@@ -7681,16 +7686,27 @@ end;
 
 procedure TMainForm.LoadPresetFile(Filename : WideString);
 var IniFile : TIniFile;
+    FilenameOnly : WideString;
+    I : Integer;
 begin
-  IniFile := TIniFile.Create(FileName);
-  try
-    ConfigObject.LoadIni(IniFile, True);
-    SetShortcut(IsTimingMode);
-    ApplyMouseSettings;
-    ApplyFontSettings;
-    ApplyMiscSettings;
-  finally
-    IniFile.Free;
+  if WideFileExists(Filename) then
+  begin
+    IniFile := TIniFile.Create(FileName);
+    try
+      ConfigObject.LoadIni(IniFile, True);
+      SetShortcut(IsTimingMode);
+      ApplyMouseSettings;
+      ApplyFontSettings;
+      ApplyMiscSettings;
+    finally
+      IniFile.Free;
+    end;
+    // Check the menu item
+    FilenameOnly := WideExtractFileName(Filename);
+    for i:= 0 to MenuItemLoadPresets.Count-1 do
+    begin
+      MenuItemLoadPresets[i].Checked := (MenuItemLoadPresets[i].Hint = FilenameOnly);
+    end;
   end;
 end;
 
@@ -7738,6 +7754,7 @@ begin
   begin
     MenuItem := Sender as TTntMenuItem;
     LoadPresetFile(g_PresetsPath + MenuItem.Hint);
+    CurrentProject.Presets := MenuItem.Hint;
   end;
 end;
 
