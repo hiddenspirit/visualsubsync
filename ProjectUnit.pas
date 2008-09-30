@@ -58,6 +58,7 @@ type
     WAVDisplayerPositionStopMs : Integer;
     FocusedTimeMs : Integer;
     Dictionnary : WideString;
+    Presets : WideString;
 
     procedure LoadFromINIFile(ProjectFilename : WideString);
     constructor Create;
@@ -180,6 +181,7 @@ begin
     FocusedTimeMs := ProjectFileIni.ReadInteger('VisualSubsync', 'FocusedTimeMs', -1);
 
     Dictionnary := ProjectFileIni.ReadString('VisualSubsync','Dictionnary','');
+    Presets := ProjectFileIni.ReadString('VisualSubsync','Presets','');
 
     ProjectFileIni.Free;
 
