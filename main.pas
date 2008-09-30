@@ -7288,18 +7288,18 @@ begin
     if vtvSubsList.Selected[Node] then
     begin
       // No selection blending
-      vtvSubsList.SelectionBlendFactor := 0;
+      vtvSubsList.SelectionBlendFactor := 2;
     end
     else
     begin
       // default
-      vtvSubsList.SelectionBlendFactor := 180;
+      vtvSubsList.SelectionBlendFactor := 255;
     end;
   end
   else
   begin
     // default  
-    vtvSubsList.SelectionBlendFactor := 180;
+    vtvSubsList.SelectionBlendFactor := 255;
   end;
 end;
 
