@@ -2088,7 +2088,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.UpdateLinesCounter;
-var s : string;
+var s : WideString;
     i, CharCount, TotalCharCount, TotalCharCountWithCRLF, CPS : Integer;
     LineNo, LineStart, ColNo : Integer;
     NodeData: PTreeData;
@@ -5467,7 +5467,7 @@ var i : integer;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + CRLF;
+      s := s + #10#13;
       Stream.Write(s[1],Length(s));
     end;
 begin
@@ -5509,7 +5509,7 @@ var i : integer;
     
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + CRLF;
+      str := str + #10#13;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -5600,7 +5600,7 @@ var i : integer;
 
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + CRLF;
+      str := str + #10#13;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -5985,7 +5985,7 @@ var i : integer;
 
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + CRLF;
+      str := str + #10#13;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -6613,7 +6613,7 @@ var i : integer;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + CRLF;
+      s := s + #10#13;
       Stream.Write(s[1],Length(s));
     end;
 begin
