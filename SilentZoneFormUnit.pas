@@ -118,7 +118,7 @@ end;
 procedure TSilentZoneForm.UpdateData;
 begin
   Clear;
-  FWAVDisplayer.DetectSilentZone(FZoneList, GetThreshold, 200);
+  FWAVDisplayer.DetectSilentZone(FZoneList, GetThreshold, 100);
   SilentZoneForm.FillZone(FZoneList);
 end;
 
