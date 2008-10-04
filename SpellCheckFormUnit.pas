@@ -120,7 +120,10 @@ var WordArray : TWideStringDynArray;
 begin
   if not Assigned(Sub) then
   begin
-    Sub := MainForm.GetFirst;
+    if (MainForm.GetSelectedCount <= 1) then
+      Sub := MainForm.GetFirst
+    else
+      Sub := MainForm.GetFirstSelected;
   end;
   while Assigned(Sub) do
   begin
@@ -189,7 +192,11 @@ begin
     end;
     WordIdx := 0;
     TextToSpellWithTagOffset := 0;
-    Sub := MainForm.GetNext(Sub);
+
+    if (MainForm.GetSelectedCount <= 1) then
+      Sub := MainForm.GetNext(Sub)
+    else
+      Sub := MainForm.GetNextSelected(Sub)
   end;
   if not Assigned(Sub) then
   begin
