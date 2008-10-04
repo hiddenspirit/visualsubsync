@@ -573,7 +573,7 @@ var Node : PVirtualNode;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + #10#13;
+      s := s + #13#10;
       Stream.Write(s[1], Length(s));
     end;
 begin
@@ -583,26 +583,26 @@ begin
   begin
     FS := TTntFileStream.Create(TntSaveDialog1.FileName, fmCreate);
     WriteStringLnStream('<html>', FS);
-    Msg := '<head>' + #10#13 +
-		'<meta http-equiv="Content-Type" content="text/html; charset=utf-8" >' + #10#13 +
-    '<title>VisualSubSync error report</title>' + #10#13 +
-    '<style type="text/css">' + #10#13 +
-    'body { text-align: center;	}' + #10#13 +
-    'td { padding-left: 5px; padding-right: 5px; }' + #10#13 +
-    '.MainColumn { width: 90%; margin: auto; }' + #10#13 +
-    '.HeaderColor { background-color: #BBDDFF; }' + #10#13 +
-    '.HeaderError { background-color: #BBDDFF; }' + #10#13 +
-		'.HeaderIndex { background-color: #BBDDFF; }' + #10#13 +
-		'.HeaderFromTo { background-color: #BBDDFF; }' + #10#13 +
-		'.HeaderText { background-color: #DDEEFF; }' + #10#13 +
-    '.CellIndex { background-color: #DDDDDD; text-align: center; }' + #10#13 +
-    '.CellFromTo { background-color: #DDDDDD; text-align: center; white-space: nowrap; }' + #10#13 +
-    '.CellText { background-color: #EEEEEE; }' + #10#13 +
-    '.CellError { background-color: #DDDDDD; white-space: nowrap; }' + #10#13 +
-    '.Title { font-size: 180%; margin-bottom: 1em; }' + #10#13 +
-    '.Footer { text-align: center; font-size: 60%; margin-top: 1em; }' + #10#13 +
-    '.Project { text-align: left; font-size: 120%; margin-bottom: 1em; }' + #10#13 +
-    '</style>' + #10#13 +
+    Msg := '<head>' + #13#10 +
+		'<meta http-equiv="Content-Type" content="text/html; charset=utf-8" >' + #13#10 +
+    '<title>VisualSubSync error report</title>' + #13#10 +
+    '<style type="text/css">' + #13#10 +
+    'body { text-align: center;	}' + #13#10 +
+    'td { padding-left: 5px; padding-right: 5px; }' + #13#10 +
+    '.MainColumn { width: 90%; margin: auto; }' + #13#10 +
+    '.HeaderColor { background-color: #BBDDFF; }' + #13#10 +
+    '.HeaderError { background-color: #BBDDFF; }' + #13#10 +
+		'.HeaderIndex { background-color: #BBDDFF; }' + #13#10 +
+		'.HeaderFromTo { background-color: #BBDDFF; }' + #13#10 +
+		'.HeaderText { background-color: #DDEEFF; }' + #13#10 +
+    '.CellIndex { background-color: #DDDDDD; text-align: center; }' + #13#10 +
+    '.CellFromTo { background-color: #DDDDDD; text-align: center; white-space: nowrap; }' + #13#10 +
+    '.CellText { background-color: #EEEEEE; }' + #13#10 +
+    '.CellError { background-color: #DDDDDD; white-space: nowrap; }' + #13#10 +
+    '.Title { font-size: 180%; margin-bottom: 1em; }' + #13#10 +
+    '.Footer { text-align: center; font-size: 60%; margin-top: 1em; }' + #13#10 +
+    '.Project { text-align: left; font-size: 120%; margin-bottom: 1em; }' + #13#10 +
+    '</style>' + #13#10 +
     '</head>';
     WriteStringLnStream(Msg, FS);
     WriteStringLnStream('<body>', FS);
@@ -613,12 +613,12 @@ begin
     Msg := '<table style="margin: auto;">';
     WriteStringLnStream(Msg, FS);
     // Table header
-    Msg := '<tr>' + #10#13 +
-      '<th class="HeaderColor">Color</th>' + #10#13 +
-      '<th class="HeaderError">Error</th>' + #10#13 +
-      '<th class="HeaderIndex">Index</th>' + #10#13 +
-      '<th class="HeaderFromTo">From - To</th>' + #10#13 +
-      '<th class="HeaderText">Text</th>' + #10#13 +
+    Msg := '<tr>' + #13#10 +
+      '<th class="HeaderColor">Color</th>' + #13#10 +
+      '<th class="HeaderError">Error</th>' + #13#10 +
+      '<th class="HeaderIndex">Index</th>' + #13#10 +
+      '<th class="HeaderFromTo">From - To</th>' + #13#10 +
+      '<th class="HeaderText">Text</th>' + #13#10 +
       '</tr>';
     WriteStringLnStream(Msg, FS);
     // Table content
@@ -650,3 +650,4 @@ end;
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
+
