@@ -497,7 +497,7 @@ var Stop : Cardinal;
 begin
   for i:=0 to FEnvVars.Count-1 do
   begin
-    s := Format ('%s = %s#10#13', [FEnvVars.Names[i], FEnvVars.ValueFromIndex[i]]);
+    s := Format ('%s = %s#13#10', [FEnvVars.Names[i], FEnvVars.ValueFromIndex[i]]);
     FAnswerStream.Write(s[1], Length(s));
   end;
   Stop := GetTickCount;
@@ -716,7 +716,7 @@ end;
 
 procedure WriteStreamLn(Stream : TStream; s : string);
 begin
-  s := s + #10#13;
+  s := s + #13#10;
   Stream.Write(s[1],Length(s));
 end;
 
