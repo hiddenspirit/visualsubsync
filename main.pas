@@ -5467,7 +5467,7 @@ var i : integer;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + #10#13;
+      s := s + #13#10;
       Stream.Write(s[1],Length(s));
     end;
 begin
@@ -5509,7 +5509,7 @@ var i : integer;
     
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + #10#13;
+      str := str + #13#10;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -5600,7 +5600,7 @@ var i : integer;
 
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + #10#13;
+      str := str + #13#10;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -5985,7 +5985,7 @@ var i : integer;
 
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
-      str := str + #10#13;
+      str := str + #13#10;
       Stream.Write(str[1], Length(str));
     end;
 begin
@@ -6613,7 +6613,7 @@ var i : integer;
 
     procedure WriteStringLnStream(s : string; Stream : TStream);
     begin
-      s := s + #10#13;
+      s := s + #13#10;
       Stream.Write(s[1],Length(s));
     end;
 begin
@@ -8120,4 +8120,5 @@ TODO : test wav extraction with divx installed
 DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
 
 }
+
 
