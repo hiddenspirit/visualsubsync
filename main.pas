@@ -300,7 +300,7 @@ type
     MenuItemShowStartFrame: TTntMenuItem;
     MenuItemShowStopFrame: TTntMenuItem;
     ActionNextError: TTntAction;
-    TntStatusBar1: TTntStatusBar;
+    StatusBarMainPanel: TPanel;
     ActionUndo: TTntAction;
     ActionRedo: TTntAction;
     Undo2: TTntMenuItem;
@@ -364,6 +364,8 @@ type
     MenuItemGetMoreDictionaries: TTntMenuItem;
     ActionSpellCheck: TTntAction;
     MenuItemSpellcheck: TTntMenuItem;
+    StatusBarPanel1: TPanel;
+    StatusBarPanel2: TPanel;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -504,8 +506,6 @@ type
     procedure ActionSetEditorFocusExecute(Sender: TObject);
     procedure ActionSetEditorFocusAndSelectExecute(Sender: TObject);
     procedure ActionNextErrorExecute(Sender: TObject);
-    procedure TntStatusBar1DrawPanel(StatusBar: TStatusBar;
-      Panel: TStatusPanel; const Rect: TRect);
     procedure ActionUndoExecute(Sender: TObject);
     procedure ActionRedoExecute(Sender: TObject);
     procedure PanelVideoDblClick(Sender: TObject);
@@ -1173,7 +1173,7 @@ begin
     PanelTop.Height);
   PanelBottom.Height := IniFile.ReadInteger('Windows', 'MainForm_PanelBottom_Height',
     PanelBottom.Height);
-  TntStatusBar1.Top := Maxint;
+  StatusBarMainPanel.Top := Maxint;
 
   tbVolume.Position := IniFile.ReadInteger('General', 'Volume', 100);
 
@@ -1403,10 +1403,11 @@ begin
     NewText := StatusBarSecondaryText;
   end;
 
-  if (NewText <> TntStatusBar1.Panels[1].Text) then
+
+  if (NewText <> StatusBarPanel2.Caption) then
   begin
-    TntStatusBar1.Panels[1].Text := NewText;
-    TntStatusBar1.Repaint;
+    StatusBarPanel2.Caption := NewText;
+    StatusBarPanel2.Repaint;
   end;
 end;
 
@@ -1430,7 +1431,7 @@ procedure TMainForm.TimerStatusBarMsgTimer(Sender: TObject);
 begin
   StatusBarSecondaryText := '';
   TimerStatusBarMsg.Enabled := False;
-  UpdateStatusBar;  
+  UpdateStatusBar;
 end;
 
 //------------------------------------------------------------------------------
@@ -2131,7 +2132,7 @@ begin
     s := s + ', Char/s: ' + IntToStr(CPS);
   end;
 
-  TntStatusBar1.Panels[0].Text := s;
+  StatusBarPanel1.Caption := s;
 end;
 
 //------------------------------------------------------------------------------
@@ -3724,10 +3725,11 @@ begin
     MemoLinesCounter.Width := TxtWidth + 2*4;
   end;
 
+  // TODO ? : status bar
   // Adjust status bar panel size for people using bigger fonts
-  TntStatusBar1.Canvas.Font.Assign(TntStatusBar1.Font);
-  TntStatusBar1.Panels[0].Width :=  TntStatusBar1.Canvas.TextWidth(
-    'Line: 99, Column: 999 | Total: 999, Char/s: 99');
+  //StatusBarPanel1.Assign(TntStatusBar1.Font);
+  //StatusBarPanel1.Width :=  TntStatusBar1.Canvas.TextWidth(
+  //  'Line: 99, Column: 999 | Total: 999, Char/s: 99');
 end;
 
 //------------------------------------------------------------------------------
@@ -3789,7 +3791,7 @@ begin
     
     Self.Caption := ApplicationName;
     MemoLinesCounter.Text := '';
-    TntStatusBar1.Panels[0].Text := '';
+    StatusBarPanel1.Caption := '';
     TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := '';
     TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
@@ -3931,7 +3933,7 @@ begin
     PanelMiddle.Align := alClient;
     if(SwapSizeAlso) then
       PanelBottom.Height := SavHeight2;
-    TntStatusBar1.Top := MaxInt; // make sure status bar stay at bottom
+    StatusBarMainPanel.Top := MaxInt; // make sure status bar stay at bottom
   end
   else
   begin
@@ -6571,26 +6573,6 @@ end;
 procedure TMainForm.OnJsSetStatusBarText(const Msg : WideString);
 begin
   SetStatusBarPrimaryText(Msg);
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TMainForm.TntStatusBar1DrawPanel(StatusBar: TStatusBar;
-  Panel: TStatusPanel; const Rect: TRect);
-var TntPanel : TTntStatusPanel;
-begin
-  // Use an owner drawn panel to avoid the 127 bytes text limit in
-  // Windows version inferior to Windows Vista
-  if (Panel = StatusBar.Panels[1]) then
-  begin
-    TntPanel := Panel as TTntStatusPanel;
-    WideCanvasTextRect(StatusBar.Canvas, Rect, Rect.Left + 2, Rect.Top, TntPanel.Text);
-  end
-  else if  (Panel = StatusBar.Panels[2]) then
-  begin
-    StatusBar.Canvas.Brush.Color := clRed;
-    StatusBar.Canvas.FillRect(Rect);
-  end;
 end;
 
 //------------------------------------------------------------------------------
