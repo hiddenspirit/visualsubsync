@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 //  VisualSubSync
 // -----------------------------------------------------------------------------
-//  Copyright (C) 2003 Christophe Paris
+//  Copyright (C) 2003-2008 Christophe Paris
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
