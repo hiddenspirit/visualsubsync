@@ -44,7 +44,8 @@ uses
   SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm},
   LibHunspellUnit in 'LibHunspellUnit.pas',
   BgThreadTaskUnit in 'BgThreadTaskUnit.pas',
-  SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm};
+  SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm},
+  ExceptionFormUnit in 'ExceptionFormUnit.pas' {ExceptionDialog};
 
 {$R *.res}
 
