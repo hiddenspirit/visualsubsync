@@ -1228,21 +1228,34 @@ object MainForm: TMainForm
       end
     end
   end
-  object TntStatusBar1: TTntStatusBar
+  object StatusBarMainPanel: TPanel
     Left = 0
     Top = 516
     Width = 772
     Height = 19
-    Panels = <
-      item
-        Width = 250
-      end
-      item
-        Style = psOwnerDraw
-        Width = 400
-      end>
-    SizeGrip = False
-    OnDrawPanel = TntStatusBar1DrawPanel
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 3
+    object StatusBarPanel1: TPanel
+      Left = 0
+      Top = 0
+      Width = 250
+      Height = 19
+      Align = alLeft
+      Alignment = taLeftJustify
+      BevelOuter = bvLowered
+      TabOrder = 0
+    end
+    object StatusBarPanel2: TPanel
+      Left = 250
+      Top = 0
+      Width = 522
+      Height = 19
+      Align = alClient
+      Alignment = taLeftJustify
+      BevelOuter = bvLowered
+      TabOrder = 1
+    end
   end
   object TntMainMenu1: TTntMainMenu
     Left = 8
