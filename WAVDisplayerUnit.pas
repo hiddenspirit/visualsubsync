@@ -1048,6 +1048,8 @@ begin
   FMouseIsDown := False;
   FMinSelTime := -1;
   FMaxSelTime := -1;
+
+  FRenderer := nil;
   
   FOffscreen := TBitmap.Create;
   FOffscreen.PixelFormat := pf32bit; // for faster drawing
@@ -3552,6 +3554,12 @@ end;
 procedure TWAVDisplayer.Close;
 begin
   ClearRangeList;
+
+  if Assigned(FRenderer) then
+  begin
+    FRenderer.Stop;
+    FRenderer := nil;
+  end;
 
   FPeakDataLoaded := False;
   FPeakTab := nil;

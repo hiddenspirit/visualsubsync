@@ -683,6 +683,8 @@ type
     procedure OnSpellcheckAddToDictionaryMenuItemClick(Sender: TObject);
     procedure OnSpellcheckIgnoreMenuItemClick(Sender: TObject);
 
+    procedure CloseProject;
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -2248,7 +2250,11 @@ begin
     Exit;
   end;
 
-  ActionClose.Execute;
+  if not CheckSubtitlesAreSaved then
+  begin
+    Exit;
+  end;
+  CloseProject;
 
   g_WebRWSynchro.BeginWrite;
   CM := TCursorManager.Create(crHourGlass);
@@ -2562,6 +2568,14 @@ procedure TMainForm.ActionNewProjectExecute(Sender: TObject);
 var
   ProjectFileIni : TTntIniFile;
 begin
+  // First close current project
+  if not CheckSubtitlesAreSaved then
+  begin
+    Exit;
+  end;
+  CloseProject;
+  
+  // New project
   ProjectForm.ConfigureInNewProjectMode;
   if (ProjectForm.ShowModal = mrOK) then
   begin
@@ -3754,62 +3768,69 @@ procedure TMainForm.ActionErrorPreferencesExecute(Sender: TObject);
 begin
   ShowPreferences(PreferencesFormInstance.tsErrorChecking);
 end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.CloseProject;
+var EmptyArray : TIntegerDynArray;
+begin
+  chkAutoScrollSub.Checked := False;
+  TimerAutoScrollSub.Enabled := False;
+  SetLength(EmptyArray, 0);
+
+  g_WebRWSynchro.BeginWrite;
+  try
+    SuggestionForm.Clear;
+    ErrorReportForm.Clear;
+    vtvSubsList.Clear;
+
+    WAVDisplayer.ClearRangeList;
+    WAVDisplayer.Enabled := False;
+    WAVDisplayer.Close;
+    WAVDisplayer.Invalidate;
+    WAVDisplayer.VerticalScaling := 100;
+    WAVDisplayer.SetSceneChangeList(EmptyArray);
+
+    CurrentProject.Filename := '';
+    CurrentProject.VideoSource := '';
+    CurrentProject.WAVFile := '';
+    CurrentProject.PeakFile := '';
+    CurrentProject.SubtitlesFile := '';
+    CurrentProject.IsDirty := False;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+    
+  Self.Caption := ApplicationName;
+  MemoLinesCounter.Text := '';
+  StatusBarPanel1.Caption := '';
+  TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
+  MemoSubtitleText.Text := '';
+  TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+
+  EnableControl(False);
+  cbStyles.Clear;
+  EnableStyleControls(False);
+
+  AudioOnlyRenderer.Close;
+  VideoRenderer.Close;
+
+  if Assigned(SilentZoneForm) then
+    SilentZoneForm.Clear;
+
+  ClearStack(RedoStack);
+  ClearStack(UndoStack);
+  ActionUndo.Enabled := False;
+  ActionRedo.Enabled := False;
+end;
+
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionCloseExecute(Sender: TObject);
-var EmptyArray : TIntegerDynArray;
 begin
   if CheckSubtitlesAreSaved then
   begin
-    WAVDisplayer.Stop;
-    chkAutoScrollSub.Checked := False;
-    TimerAutoScrollSub.Enabled := False;
-    SetLength(EmptyArray, 0);
-
-    g_WebRWSynchro.BeginWrite;
-    try
-      SuggestionForm.Clear;
-      ErrorReportForm.Clear;
-      vtvSubsList.Clear;
-
-      WAVDisplayer.ClearRangeList;
-      WAVDisplayer.Enabled := False;
-      WAVDisplayer.Close;
-      WAVDisplayer.Repaint;
-      WAVDisplayer.VerticalScaling := 100;
-      WAVDisplayer.SetSceneChangeList(EmptyArray);
-
-      CurrentProject.Filename := '';
-      CurrentProject.VideoSource := '';
-      CurrentProject.WAVFile := '';
-      CurrentProject.PeakFile := '';
-      CurrentProject.SubtitlesFile := '';
-      CurrentProject.IsDirty := False;
-    finally
-      g_WebRWSynchro.EndWrite;
-    end;
-    
-    Self.Caption := ApplicationName;
-    MemoLinesCounter.Text := '';
-    StatusBarPanel1.Caption := '';
-    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
-    MemoSubtitleText.Text := '';
-    TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
-
-    EnableControl(False);
-    cbStyles.Clear;
-    EnableStyleControls(False);
-
-    AudioOnlyRenderer.Close;
-    VideoRenderer.Close;
-
-    if Assigned(SilentZoneForm) then
-      SilentZoneForm.Clear;
-
-    ClearStack(RedoStack);
-    ClearStack(UndoStack);
-    ActionUndo.Enabled := False;
-    ActionRedo.Enabled := False;
+    CloseProject;
   end;
 end;
 
