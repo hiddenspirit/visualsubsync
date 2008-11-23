@@ -53,8 +53,13 @@ public:
 			return m_ReadPos - m_WritePos;
         }
 	}
+
+    unsigned int Size() {
+        return m_Size;
+    }
+
 	
-	unsigned int Size()
+	unsigned int Filled()
 	{
 		if(m_WritePos >= m_ReadPos)
         {
@@ -138,4 +143,15 @@ public:
 	{
 		m_ReadPos = m_WritePos = 0;
 	}
+
+    void ChangeSize(int NewSize) {
+        if (Filled() == 0) {
+            // Just reallocate
+            delete[] m_Data;
+            m_Data = new char[NewSize];
+		    m_Size = NewSize;
+        } else {
+            OutputDebugString(TEXT("Changing size of a not empty buffer is not supported!!!\n"));
+        }
+    }
 };

@@ -324,15 +324,26 @@ HRESULT CWavWriterFilter::Write(PBYTE pbData, LONG lDataLength)
 
     m_cbWavData += lDataLength;
 
-    if(!m_bFastConvertMode)
+    if(!m_bFastConvertMode) {
         PeakProcessing(pbData, lDataLength, false);
+    }
 
     if(m_WavFile)
     {
+        if (lDataLength > m_OutBuffSize) {
+            // Change buffer size
+            m_OutBuffSize = (lDataLength * 2);
+            if(m_OutBuff)
+                delete[] m_OutBuff;
+            m_OutBuff = new char[m_OutBuffSize];
+        }
+
         LONG lOutLength = m_OutBuffSize;
         Convert((char*)pbData, lDataLength, m_OutBuff, &lOutLength, false);
-        if(m_bFastConvertMode)
+
+        if(m_bFastConvertMode) {
             PeakProcessing((PBYTE)m_OutBuff, lOutLength, false);
+        }
         dataTotalOut += lOutLength;
         if(!m_WavFile->WritePCMData(m_OutBuff, lOutLength))
         {
@@ -364,6 +375,10 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength,
         
         DebugLog(TEXT("CWavWriterFilter::Convert lInLength=%d"),lInLength);
 
+        if (lInLength > m_ConvCircBuffer->Size()) {
+            m_ConvCircBuffer->ChangeSize(lInLength * 2);
+        }
+
         if(pInData)
         {
             m_ConvCircBuffer->Write(pInData, lInLength);
@@ -371,7 +386,7 @@ HRESULT CWavWriterFilter::Convert(char* pInData, long lInLength,
         
         int BytesToRead = 0, BytesAvailable = 0;
 
-        while( ((BytesAvailable = m_ConvCircBuffer->Size()) >= m_ConvBuffSize) || finalize)
+        while( ((BytesAvailable = m_ConvCircBuffer->Filled()) >= m_ConvBuffSize) || finalize)
         {
             if(finalize && (BytesAvailable < m_ConvBuffSize))
             {
@@ -546,11 +561,15 @@ void CWavWriterFilter::PeakProcessing(BYTE* pInData, LONG lInLength, bool finali
     
     if(!m_bWritePeakFile || m_PeakFile == NULL)
         return;
+
+    if (lInLength > m_PeakCircBuffer->Size()) {
+        m_PeakCircBuffer->ChangeSize(lInLength * 2);
+    }
     
     if(pInData != NULL)
         m_PeakCircBuffer->Write(pInData, lInLength);
     
-    while( ((BytesAvailable = m_PeakCircBuffer->Size()) >= m_PeakCalcBufferSize) || finalize)
+    while( ((BytesAvailable = m_PeakCircBuffer->Filled()) >= m_PeakCalcBufferSize) || finalize)
     {
         if(finalize && (BytesAvailable < m_PeakCalcBufferSize))
         {
