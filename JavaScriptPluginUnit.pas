@@ -167,6 +167,8 @@ type
     function GetFirstSelected : TSubtitleRangeJSWrapper;
     function GetNextSelected(Sub : TSubtitleRangeJSWrapper) : TSubtitleRangeJSWrapper;
 
+    function MeasureStringWidth(FontName : WideString; FontSize : Integer;
+      Bold : Boolean; Text : WideString) : Integer;
 
     property INDEX_COL_IDX : Integer read FINDEX_COL_IDX;
     property START_COL_IDX : Integer read FSTART_COL_IDX;
@@ -1690,6 +1692,8 @@ begin
   VSSCoreJSObj.SetMethodInfo('GetFirstSelected', 0, rtObject);
   VSSCoreJSObj.SetMethodInfo('GetNextSelected', 1, rtObject);
 
+  VSSCoreJSObj.SetMethodInfo('MeasureStringWidth', 4, rtInteger);
+
   for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
   begin
     JSParent.AddNativeObject(FSubRangeWrapperPool[i],
@@ -1830,6 +1834,29 @@ begin
       Result := MakeWrappedSub(SubtitleRange);
     end;
   end;
+end;
+
+function TVSSCoreWrapper.MeasureStringWidth(FontName : WideString;
+  FontSize : Integer; Bold : Boolean; Text : WideString) : Integer;
+var 
+  DC : HDC;
+  xysize : Size;
+  FontLOG : LOGFONT;
+  Font, OldFont : HFONT;
+begin
+  DC := CreateDC('DISPLAY', nil, nil, nil);
+  ZeroMemory(@FontLOG, SizeOf(FontLOG));
+  StrCopy(FontLOG.lfFaceName, PAnsiChar(String(FontName)));
+  FontLOG.lfHeight := -MulDiv(FontSize, GetDeviceCaps(DC, LOGPIXELSY), 72);
+  if (Bold) then
+    FontLOG.lfWeight := FW_BOLD;
+  Font := CreateFontIndirect(FontLOG);
+  OldFont := SelectObject(DC, Font);
+  GetTextExtentPoint32W(DC, PWideChar(Text), Length(Text), xysize);
+  SelectObject(DC, OldFont);
+  DeleteDC(DC);
+  DeleteObject(Font);
+  Result := xysize.cx;
 end;
 
 //==============================================================================
