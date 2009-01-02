@@ -366,6 +366,9 @@ type
     MenuItemSpellcheck: TTntMenuItem;
     StatusBarPanel1: TPanel;
     StatusBarPanel2: TPanel;
+    N24: TTntMenuItem;
+    ActionInsertSceneChange: TTntAction;
+    pmiInsertSC: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -546,6 +549,7 @@ type
     procedure MenuItemGetMoreDictionariesClick(Sender: TObject);
     procedure ActionSpellCheckExecute(Sender: TObject);
     procedure ActionSpellCheckUpdate(Sender: TObject);
+    procedure ActionInsertSceneChangeExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -3360,6 +3364,7 @@ begin
   pmiWAVDispSplitAtCursor.Enabled := pmiWAVDispDeleteRange.Enabled;
   pmiInsertKaraokeMarker.Enabled := pmiWAVDispDeleteRange.Enabled;
   pmiDeleteSC.Enabled := (not WAVDisplayer.SelectionIsEmpty);
+  pmiInsertSC.Enabled := WAVDisplayer.SelectionIsEmpty;
 end;
 
 //------------------------------------------------------------------------------
@@ -8099,6 +8104,22 @@ end;
 procedure TMainForm.ActionSpellCheckUpdate(Sender: TObject);
 begin
   ActionSpellCheck.Enabled := FSpellChecker.IsInitialized;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionInsertSceneChangeExecute(Sender: TObject);
+var UndoableInsertSceneChange : TUndoableInsertSceneChange;
+    CursorPos : Integer;
+begin
+  CursorPos := WAVDisplayer.GetCursorPos;
+  if g_SceneChangeWrapper.Contains(CursorPos,CursorPos) then
+    Exit;
+
+  UndoableInsertSceneChange := TUndoableInsertSceneChange.Create;
+  UndoableInsertSceneChange.SetData(CursorPos);
+  UndoableInsertSceneChange.DoTask;
+  PushUndoableTask(UndoableInsertSceneChange);
 end;
 
 //------------------------------------------------------------------------------

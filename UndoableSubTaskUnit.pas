@@ -247,6 +247,18 @@ type
     procedure SetData(StartTimeMs, StopTimeMs : Integer);
   end;
 
+  TUndoableInsertSceneChange = class(TUndoableTask)
+  private
+    FTimeMs : Integer;
+
+  public
+    procedure DoTask; override;
+    function GetName : WideString; override;
+    procedure UndoTask; override;
+
+    procedure SetData(TimeMs : Integer);
+  end;
+
 implementation
 
 uses Main, MiscToolsUnit, VirtualTrees, Windows, JavascriptPluginUnit;
@@ -837,6 +849,32 @@ procedure TUndoableDeleteSceneChange.SetData(StartTimeMs, StopTimeMs : Integer);
 begin
   FStartTimeMs := StartTimeMs;
   FStopTimeMs := StopTimeMs;
+end;
+
+
+// -----------------------------------------------------------------------------
+
+procedure TUndoableInsertSceneChange.DoTask;
+var InsertSC : TIntegerDynArray;
+begin
+  SetLength(InsertSC, 1);
+  InsertSC[0] := FTimeMs;
+  MainForm.InsertSceneChange(InsertSC);
+end;
+
+function TUndoableInsertSceneChange.GetName : WideString;
+begin
+  Result := 'TUndoableInsertSceneChange';
+end;
+
+procedure TUndoableInsertSceneChange.UndoTask;
+begin
+  MainForm.DeleteSceneChange(FTimeMs, FTimeMs);
+end;
+
+procedure TUndoableInsertSceneChange.SetData(TimeMs : Integer);
+begin
+  FTimeMs := TimeMs;
 end;
 
 // -----------------------------------------------------------------------------
