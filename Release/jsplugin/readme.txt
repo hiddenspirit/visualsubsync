@@ -24,6 +24,9 @@ VSSCore.CpsTarget : Characters per second target
 VSSCore.MinimumDuration : Minimum subtitle duration
 VSSCore.MinimumBlank : Minimum blank between subtitles
 
+VSSCore.VideoWidth : The video width in pixel (0 if no video)
+VSSCore.VideoHeight : The video height in pixel (0 if no video)
+
 VSSCore.RegisterJavascriptAction(Name, Description, DefaultShortcut) : Register a javascript action
 VSSCore.GetSubCount() : Return the total number of subtitles
 VSSCore.GetSubAt(Index) : Return the subtitle at the specified index
