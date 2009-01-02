@@ -2356,6 +2356,13 @@ begin
       DetachedVideoForm.SetNormalPos(CurrentProject.VideoWindowNormalLeft,
         CurrentProject.VideoWindowNormalTop, CurrentProject.VideoWindowNormalWidth,
         CurrentProject.VideoWindowNormalHeight);
+      g_VSSCoreWrapper.SetVideoWidth(VideoRenderer.VideoWidth);
+      g_VSSCoreWrapper.SetVideoHeight(VideoRenderer.VideoHeight);
+    end
+    else
+    begin
+      g_VSSCoreWrapper.SetVideoWidth(0);
+      g_VSSCoreWrapper.SetVideoHeight(0);
     end;
 
     if ShowingVideo then
@@ -2796,6 +2803,8 @@ begin
         ProjectHasChanged := True;
         VideoHasChanged := True;
         LoadVideoSceneChange;
+        g_VSSCoreWrapper.SetVideoWidth(VideoRenderer.VideoWidth);
+        g_VSSCoreWrapper.SetVideoHeight(VideoRenderer.VideoHeight);
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -3819,6 +3828,9 @@ begin
 
   AudioOnlyRenderer.Close;
   VideoRenderer.Close;
+
+  g_VSSCoreWrapper.SetVideoWidth(0);
+  g_VSSCoreWrapper.SetVideoHeight(0);
 
   if Assigned(SilentZoneForm) then
     SilentZoneForm.Clear;
