@@ -108,6 +108,9 @@ type
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
 
+    FVideoWidth : Integer;
+    FVideoHeight : Integer;
+
     FSubRangeWrapperPool : array[0..9] of TSubtitleRangeJSWrapper;
     FSubRangeWrapperPoolIndex : Integer;
 
@@ -133,6 +136,9 @@ type
     procedure SetCpsTarget(Value : Integer);
     procedure SetMinimumDuration(Value : Integer);
     procedure SetMinimumBlank(Value : Integer);
+
+    procedure SetVideoWidth(Value : Integer);
+    procedure SetVideoHeight(Value : Integer);
 
     procedure RegisterJS(JSParent : TJSObject);
 
@@ -172,6 +178,9 @@ type
     property CpsTarget : Integer read FCpsTarget;
     property MinimumDuration : Integer read FMinimumDuration;
     property MinimumBlank : Integer read FMinimumBlank;
+
+    property VideoWidth : Integer read FVideoWidth;
+    property VideoHeight : Integer read FVideoHeight;
   end;
 
 {$TYPEINFO OFF}
@@ -1653,6 +1662,16 @@ end;
 procedure TVSSCoreWrapper.SetMinimumBlank(Value : Integer);
 begin
   FMinimumBlank := Value;
+end;
+
+procedure TVSSCoreWrapper.SetVideoWidth(Value : Integer);
+begin
+  FVideoWidth := Value;
+end;
+
+procedure TVSSCoreWrapper.SetVideoHeight(Value : Integer);
+begin
+  FVideoHeight := Value;
 end;
 
 procedure TVSSCoreWrapper.RegisterJS(JSParent : TJSObject);

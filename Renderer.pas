@@ -1012,6 +1012,8 @@ begin
     RemoveFromRot(FROTID);
     FROTID := 0;
   end;
+  FVideoWidth := 0;
+  FVideoHeight := 0;  
   FIsOpen := False;
   if Assigned(FMediaControl) then FMediaControl.Stop;
   SetDisplayWindow(0);
@@ -1025,6 +1027,7 @@ begin
     CoFreeLibrary(FHCustomVSFilterInst);
     FHCustomVSFilterInst := 0;
   end;
+
 end;
 
 //------------------------------------------------------------------------------
