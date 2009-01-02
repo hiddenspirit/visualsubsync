@@ -20,9 +20,9 @@ VSSCore.STYLE_COL_IDX : Index of the style column (SSA/ASS only)
 VSSCore.TEXT_COL_IDX  : Index of the text column
 VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
 
-VSSCore.CpsTarget : Characters per second target 
-VSSCore.MinimumDuration : Minimum subtitle duration
-VSSCore.MinimumBlank : Minimum blank between subtitles
+VSSCore.CpsTarget : Characters per second target (value set in the preferences dialog)
+VSSCore.MinimumDuration : Minimum subtitle duration (value set in the preferences dialog)
+VSSCore.MinimumBlank : Minimum blank between subtitles (value set in the preferences dialog)
 
 VSSCore.VideoWidth : The video width in pixel (0 if no video)
 VSSCore.VideoHeight : The video height in pixel (0 if no video)
@@ -35,7 +35,7 @@ VSSCore.GetNext(Subtitle) : Return the subtitle next to the specified one
 VSSCore.GetPrevious(Subtitle) : Return the subtitle previous to the specified one
 VSSCore.GetFirstSelected() : Return the first selected subtitle
 VSSCore.GetNextSelected(Subtitle) : Return the next selected subtitle after the specified one
-
+VSSCore.MeasureStringWidth(FontName, FontSize, IsBold, Text) : Return the width of the text in pixels.
 
 Subtitle.Index : Index of the subtitle
 Subtitle.Start : Start time in ms of the subtitle
