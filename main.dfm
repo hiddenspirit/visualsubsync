@@ -42,7 +42,7 @@ object MainForm: TMainForm
     Cursor = crVSplit
     Align = alTop
     AutoSnap = False
-    MinSize = 120
+    MinSize = 40
     ResizeStyle = rsUpdate
   end
   object PanelTop: TPanel
@@ -2236,6 +2236,11 @@ object MainForm: TMainForm
       OnExecute = ActionSpellCheckExecute
       OnUpdate = ActionSpellCheckUpdate
     end
+    object ActionInsertSceneChange: TTntAction
+      Tag = 1
+      Caption = 'Insert scene change'
+      OnExecute = ActionInsertSceneChangeExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia
@@ -3992,6 +3997,12 @@ object MainForm: TMainForm
     end
     object pmiWAVDispSetSubtitleTime: TTntMenuItem
       Action = ActionSetSubtitleTime
+    end
+    object N24: TTntMenuItem
+      Caption = '-'
+    end
+    object pmiInsertSC: TTntMenuItem
+      Action = ActionInsertSceneChange
     end
     object pmiDeleteSC: TTntMenuItem
       Action = ActionDeleteSceneChange
