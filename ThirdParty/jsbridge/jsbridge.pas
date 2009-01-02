@@ -203,7 +203,12 @@ begin
   tinfo := PTypeInfo(self.ClassInfo);
 
   ptypes := [tkInteger, tkChar, tkEnumeration, tkFloat, tkString, tkWChar, tkLString, tkWString, tkInt64];
+  {$IFNDEF D6OR7}
+  GetMem(plist, SizeOf(Pointer)*GetTypeData(tinfo)^.PropCount);
+  {$ELSE}
   plist := nil;
+  {$ENDIF}
+
   count := GetPropList(tinfo, {$IFNDEF D6OR7}ptypes, {$ENDIF}plist);
   for i := 0 to count-1 do
     if (plist^[i]^.PropType^.Kind in ptypes) then
@@ -215,7 +220,7 @@ begin
       JS_DefineUCProperty(_FContext, _FJSObject, CreateWideString(LName), Length(LName), JSVAL_NULL, nil, nil, JSPROP_ENUMERATE or JSPROP_PERMANENT);
       {$ENDIF}
     end;
-  //FreeMem(plist);
+  FreeMem(plist);
 
   _FMethods := TNamedArray.Create;
   _FMethods.OwnsValues := false;
