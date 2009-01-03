@@ -32,6 +32,8 @@ type
     TntBevel5: TTntBevel;
     TntBevel6: TTntBevel;
     TntBevel7: TTntBevel;
+    pbSubs: TTntProgressBar;
+    TntBevel8: TTntBevel;
     procedure bttCancelClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bttIgnoreClick(Sender: TObject);
@@ -75,6 +77,7 @@ uses main, MiscToolsUnit, Types;
 procedure TSpellCheckForm.FormCreate(Sender: TObject);
 begin
   reSubtitleText.Font.Assign(MainForm.MemoSubtitleText.Font);
+  lbSuggestions.Font.Assign(MainForm.MemoSubtitleText.Font);
   ReplaceAllWords := TTntStringList.Create;
   MultiChangeTask := nil;
 end;
@@ -118,6 +121,7 @@ var WordArray : TWideStringDynArray;
     Suggestions: TTntStrings;
     replaceBy : WideString;
 begin
+  pbSubs.Max := MainForm.GetSubCount;
   if not Assigned(Sub) then
   begin
     if (MainForm.GetSelectedCount <= 1) then
@@ -127,6 +131,7 @@ begin
   end;
   while Assigned(Sub) do
   begin
+    pbSubs.Position := Sub.Node.Index;
     TagSplit(Sub.Text, WordArray);
     while (WordIdx < Length(WordArray)) do
     begin
@@ -142,6 +147,9 @@ begin
           if (Length(replaceBy) > 0) then
           begin
             ReplaceWordBy(Sub, WordInfo, replaceBy);
+            // Update the text to spell
+            TagSplit(Sub.Text, WordArray);
+            TextToSpell := WordArray[WordIdx];
           end
           else
           begin
@@ -149,6 +157,8 @@ begin
               or MainForm.GetSpellChecker.Spell(CurrentWord);
             if (not SpellOk) then
             begin
+              MainForm.FocusNode(Sub.Node, False);
+
               reSubtitleText.Text := Sub.Text;
               // Remove all colors
               reSubtitleText.SelectAll;
@@ -251,7 +261,7 @@ begin
   MultiChangeTask.AddData(ChangeSubData);
   // Fix offset when replacing by a word of different length
   DeltaLen := AWordInfo.Length - Length(NewText);
-  TextToSpellOffset := TextToSpellOffset - DeltaLen; 
+  TextToSpellOffset := TextToSpellOffset - DeltaLen;
 end;
 
 procedure TSpellCheckForm.bttReplaceClick(Sender: TObject);
