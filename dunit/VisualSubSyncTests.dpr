@@ -14,7 +14,9 @@ uses
   JavaScriptPluginUnitTests in 'JavaScriptPluginUnitTests.pas',
   JavaScriptPluginUnit in '..\JavaScriptPluginUnit.pas',
   MiscToolsUnitTests in 'MiscToolsUnitTests.pas',
-  MiscToolsUnit in '..\MiscToolsUnit.pas';
+  MiscToolsUnit in '..\MiscToolsUnit.pas',
+  SubtitleModelTests in 'SubtitleModelTests.pas',
+  SubtitleModel in '..\SubtitleModel.pas';
 
 {$R *.RES}
 
