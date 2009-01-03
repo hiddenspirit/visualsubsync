@@ -8090,18 +8090,21 @@ begin
   SpellCheckForm.ShowModal;
 
   SpellUndoableTask := SpellCheckForm.GetUndoableTask;
-  if Assigned(SpellUndoableTask) and (SpellUndoableTask.GetCount > 0) then
+  if Assigned(SpellUndoableTask) then
   begin
-    PushUndoableTask(SpellUndoableTask);
-    CurrentProject.IsDirty := True;
-    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
-    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-    vtvSubsList.Repaint;
-    SpellCheckForm.Reset;
-  end
-  else
-  begin
-    FreeAndNil(SpellUndoableTask);
+    if (SpellUndoableTask.GetCount > 0) then
+    begin
+      PushUndoableTask(SpellUndoableTask);
+      CurrentProject.IsDirty := True;
+      WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+      vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+      vtvSubsList.Repaint;
+      SpellCheckForm.Reset;
+    end
+    else
+    begin
+      FreeAndNil(SpellUndoableTask);
+    end;
   end;
 end;
 
