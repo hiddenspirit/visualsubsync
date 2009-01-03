@@ -20,7 +20,7 @@ implementation
 
 constructor TBgThreadTask.Create(CreateSuspended : Boolean; ThreadPriority : TThreadPriority);
 begin
-  Create(CreateSuspended);
+  inherited Create(CreateSuspended);
   Self.Priority := ThreadPriority;
 end;
 

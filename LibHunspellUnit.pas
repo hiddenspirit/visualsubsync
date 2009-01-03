@@ -391,6 +391,7 @@ begin
   FreeAndNil(FInitCC);
   FreeAndNil(FIgnoreList);
   FreeAndNil(FDictList);
+  FreeAndNil(FAddList);
 end;
 
 // -----------------------------------------------------------------------------

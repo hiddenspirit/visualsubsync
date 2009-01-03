@@ -7916,6 +7916,7 @@ begin
 
   // Load new dictionnary in background
   BgThreadTask := TBgThreadTask.Create(True, tpLowest);
+  BgThreadTask.FreeOnTerminate := True;
   BgThreadTask.OnExecute := OnLoadDictionnary;
   BgThreadTask.OnTerminate := OnLoadDictionnaryTerminate;
   BgThreadTask.Param := Idx;
