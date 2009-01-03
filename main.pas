@@ -516,7 +516,7 @@ type
     procedure ActionShowHideSceneChangeExecute(Sender: TObject);
     procedure vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
       TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
-      CellRect: TRect);
+      CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
     procedure ActionTextItalicExecute(Sender: TObject);
     procedure ActionTextBoldExecute(Sender: TObject);
     procedure ActionTextUnderlineExecute(Sender: TObject);
@@ -7311,7 +7311,7 @@ end;
 
 procedure TMainForm.vtvSubsListBeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
-  CellRect: TRect);
+  CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
     NewColor : TColor;
 begin
