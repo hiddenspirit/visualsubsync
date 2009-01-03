@@ -2,7 +2,7 @@ object SpellCheckForm: TSpellCheckForm
   Left = 410
   Top = 185
   Width = 480
-  Height = 350
+  Height = 360
   BorderWidth = 4
   Caption = 'Spell check'
   Color = clBtnFace
@@ -21,7 +21,7 @@ object SpellCheckForm: TSpellCheckForm
     Left = 384
     Top = 0
     Width = 5
-    Height = 315
+    Height = 325
     Align = alRight
     Shape = bsSpacer
   end
@@ -29,7 +29,7 @@ object SpellCheckForm: TSpellCheckForm
     Left = 389
     Top = 0
     Width = 75
-    Height = 315
+    Height = 325
     Align = alRight
     BevelOuter = bvNone
     TabOrder = 0
@@ -80,7 +80,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntPanel3: TTntPanel
       Left = 0
-      Top = 288
+      Top = 298
       Width = 75
       Height = 27
       Align = alBottom
@@ -105,13 +105,13 @@ object SpellCheckForm: TSpellCheckForm
     Left = 0
     Top = 0
     Width = 384
-    Height = 315
+    Height = 325
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
     object TntLabel1: TTntLabel
       Left = 0
-      Top = 19
+      Top = 29
       Width = 384
       Height = 13
       Align = alTop
@@ -119,7 +119,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntLabel3: TTntLabel
       Left = 0
-      Top = 115
+      Top = 111
       Width = 384
       Height = 13
       Align = alTop
@@ -127,7 +127,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntLabel2: TTntLabel
       Left = 0
-      Top = 159
+      Top = 155
       Width = 384
       Height = 13
       Align = alTop
@@ -151,13 +151,13 @@ object SpellCheckForm: TSpellCheckForm
       Left = 0
       Top = 13
       Width = 384
-      Height = 6
+      Height = 3
       Align = alTop
       Shape = bsSpacer
     end
     object TntBevel3: TTntBevel
       Left = 0
-      Top = 32
+      Top = 42
       Width = 384
       Height = 4
       Align = alTop
@@ -165,7 +165,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntBevel4: TTntBevel
       Left = 0
-      Top = 109
+      Top = 105
       Width = 384
       Height = 6
       Align = alTop
@@ -173,7 +173,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntBevel5: TTntBevel
       Left = 0
-      Top = 128
+      Top = 124
       Width = 384
       Height = 4
       Align = alTop
@@ -181,7 +181,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntBevel6: TTntBevel
       Left = 0
-      Top = 153
+      Top = 149
       Width = 384
       Height = 6
       Align = alTop
@@ -189,17 +189,25 @@ object SpellCheckForm: TSpellCheckForm
     end
     object TntBevel7: TTntBevel
       Left = 0
-      Top = 172
+      Top = 168
       Width = 384
       Height = 4
       Align = alTop
       Shape = bsSpacer
     end
+    object TntBevel8: TTntBevel
+      Left = 0
+      Top = 26
+      Width = 384
+      Height = 3
+      Align = alTop
+      Shape = bsSpacer
+    end
     object reSubtitleText: TTntRichEdit
       Left = 0
-      Top = 36
+      Top = 46
       Width = 384
-      Height = 73
+      Height = 59
       TabStop = False
       Align = alTop
       ReadOnly = True
@@ -208,7 +216,7 @@ object SpellCheckForm: TSpellCheckForm
     end
     object edReplaceBy: TTntEdit
       Left = 0
-      Top = 132
+      Top = 128
       Width = 384
       Height = 21
       Align = alTop
@@ -216,13 +224,27 @@ object SpellCheckForm: TSpellCheckForm
     end
     object lbSuggestions: TTntListBox
       Left = 0
-      Top = 176
+      Top = 172
       Width = 384
-      Height = 139
+      Height = 153
       Align = alClient
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Dialog'
+      Font.Style = []
       ItemHeight = 13
+      ParentFont = False
       TabOrder = 2
       OnClick = lbSuggestionsClick
+    end
+    object pbSubs: TTntProgressBar
+      Left = 0
+      Top = 16
+      Width = 384
+      Height = 10
+      Align = alTop
+      TabOrder = 3
     end
   end
 end
