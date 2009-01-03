@@ -82,8 +82,6 @@ end;
 procedure TSpellCheckForm.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(ReplaceAllWords);
-  if Assigned(MultiChangeTask) then
-    FreeAndNil(MultiChangeTask);
 end;
 
 procedure TSpellCheckForm.bttCancelClick(Sender: TObject);
@@ -97,7 +95,7 @@ begin
   TextToSpellWithTagOffset := 0;
   WordIdx := 0;
   Sub := nil;
-  MultiChangeTask := TUndoableMultiChangeTask.Create;
+  MultiChangeTask := nil;
   CurrentWord := '';
   EndOfCheck := False;
   ReplaceAllWords.Clear;
@@ -246,6 +244,10 @@ begin
   TextEnd := Copy(Subtitle.Text, TextToSpellWithTagOffset + AWordInfo.Position + AWordInfo.Length, MaxInt);
   Subtitle.Text := TextBegin + NewText + TextEnd;
   ChangeSubData.NewText := Subtitle.Text;
+  if (MultiChangeTask = nil) then
+  begin
+    MultiChangeTask := TUndoableMultiChangeTask.Create
+  end;
   MultiChangeTask.AddData(ChangeSubData);
   // Fix offset when replacing by a word of different length
   DeltaLen := AWordInfo.Length - Length(NewText);
