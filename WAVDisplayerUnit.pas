@@ -888,7 +888,10 @@ begin
     else if CompareResult = -1 then // RangeCursor > Range
       Max := Mid-1
     else // r = Range
-      Break;
+    begin
+      Result := Mid;
+      Exit;
+    end;
     Mid := (Max+Min) div 2;
   end;
   
