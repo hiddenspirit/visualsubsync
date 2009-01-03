@@ -82,6 +82,8 @@ end;
 procedure TSpellCheckForm.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(ReplaceAllWords);
+  if Assigned(MultiChangeTask) then
+    FreeAndNil(MultiChangeTask);
 end;
 
 procedure TSpellCheckForm.bttCancelClick(Sender: TObject);
