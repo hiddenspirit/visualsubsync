@@ -2,11 +2,11 @@ unit VSSClipboardUnit;
 
 interface
 
-uses VirtualTrees;
+uses VirtualTrees, Classes;
 
 procedure CopyVTVToClipboard(vtv: TVirtualStringTree);
-procedure PasteClipboardToVTV(vtv: TVirtualStringTree);
-  
+procedure PasteClipboard(SubList: TList);
+
 var
   VSSClipBoardFORMAT : Cardinal;
 
@@ -15,7 +15,7 @@ const
 
 implementation
 
-uses Windows, SubStructUnit, Classes, SysUtils, MiscToolsUnit, TntClipBrd, TntSysUtils;
+uses Windows, SubStructUnit, SysUtils, MiscToolsUnit, TntClipBrd, TntSysUtils;
 
 //==================================================================================================
 
@@ -71,7 +71,7 @@ end;
 
 // -------------------------------------------------------------------------------------------------
 
-procedure PasteClipboardToVTV(vtv: TVirtualStringTree);
+procedure PasteClipboard(SubList: TList);
 var MemHandle : THandle;
     MemPointer : Pointer;
     MemStream : TMemoryStream;
@@ -95,14 +95,12 @@ begin
     begin
       // Load each sub
       LoadFromStreamInt(MemStream, SubCount);
-      SubRange := TSubtitleRange.Create;
       for i := 0 to SubCount-1 do
       begin
+        SubRange := TSubtitleRange.Create;
         SubRange.LoadFromStream(MemStream);
-        // TODO : really add subtitle / sort / undo
-        //AddSubtitle(SubRange);
+        SubList.Add(SubRange);
       end;
-      SubRange.Free;
     end;
     MemStream.Free;
   end;

@@ -175,7 +175,6 @@ type
     pmiMemoSubCut: TTntMenuItem;
     pmiMemoSubPaste: TTntMenuItem;
     EditCut1: TTntEditCut;
-    EditPaste1: TTntEditPaste;
     EditSelectAll1: TTntEditSelectAll;
     EditDelete1: TTntEditDelete;
     pmiMemoSubUndo: TTntMenuItem;
@@ -345,7 +344,6 @@ type
     ActionMergeDialog: TTntAction;
     ActionFixSelectedErrors: TTntAction;
     pmiSubListMergeDialog: TTntMenuItem;
-    TntButton2: TTntButton;
     ActionMergeOnOneLine: TTntAction;
     MenuItemJSTools: TTntMenuItem;
     N20: TTntMenuItem;
@@ -369,6 +367,7 @@ type
     N24: TTntMenuItem;
     ActionInsertSceneChange: TTntAction;
     pmiInsertSC: TTntMenuItem;
+    ActionPaste: TTntAction;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -538,7 +537,6 @@ type
     procedure ActionMergeWithNextExecute(Sender: TObject);
     procedure ActionMergeDialogExecute(Sender: TObject);
     procedure ActionFixSelectedErrorsExecute(Sender: TObject);
-    procedure TntButton2Click(Sender: TObject);
     procedure ActionMergeOnOneLineExecute(Sender: TObject);
     procedure ActionLoadPresetsExecute(Sender: TObject);
     procedure ActionCopyExecute(Sender: TObject);
@@ -550,6 +548,8 @@ type
     procedure ActionSpellCheckExecute(Sender: TObject);
     procedure ActionSpellCheckUpdate(Sender: TObject);
     procedure ActionInsertSceneChangeExecute(Sender: TObject);
+    procedure ActionPasteExecute(Sender: TObject);
+    procedure ActionPasteUpdate(Sender: TObject);
    
   private
     { Private declarations }
@@ -723,7 +723,7 @@ type
     procedure DeleteSubtitle(Index : Integer);
     procedure DeleteSubtitles(var Indexes : array of Integer);
     procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
-    procedure RestoreSubtitles(List : TList);
+    procedure RestoreSubtitles(List : TList; Indexes : TIntegerDynArray = nil);
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
     procedure SplitSubtitle(Index, SplitTime, BlankTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer; MergeType : TMergeType) : TSubtitleRange;
@@ -782,7 +782,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
   SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
-  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit;
+  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd;
 
 {$R *.dfm}
 
@@ -6818,7 +6818,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.RestoreSubtitles(List : TList);
+procedure TMainForm.RestoreSubtitles(List : TList; Indexes : TIntegerDynArray);
 var i : integer;
     Range : TSubtitleRange;
     Node : PVirtualNode;
@@ -6827,7 +6827,18 @@ begin
   begin
     Range := List[i];
     Node := AddSubtitle(Range);
+    Range.Node := Node;
   end;
+
+  if Assigned(Indexes) then
+  begin
+    for i := 0 to List.Count-1 do
+    begin
+      Range := List[i];
+      Indexes[i] := Range.Node.Index;    
+    end;
+  end;
+
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
@@ -7529,13 +7540,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.TntButton2Click(Sender: TObject);
-begin
-  PasteClipboardToVTV(vtvSubsList);
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.ActionMergeOnOneLineExecute(Sender: TObject);
 begin
   if (vtvSubsList.SelectedCount > 1) then
@@ -8136,6 +8140,46 @@ begin
   UndoableInsertSceneChange.SetData(CursorPos);
   UndoableInsertSceneChange.DoTask;
   PushUndoableTask(UndoableInsertSceneChange);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPasteExecute(Sender: TObject);
+var actCtrl : TWinControl;
+    SubList : TList;
+    UndoableMultiAddTask : TUndoableMultiAddTask;
+    Range : TSubtitleRange;
+begin
+  actCtrl := Screen.ActiveControl;
+  if (actCtrl is TCustomEdit) then
+  begin
+    TCustomEdit(actCtrl).PasteFromClipboard;
+  end
+  else if (actCtrl is TVirtualStringTree) then
+  begin
+    SubList := TList.Create;
+    PasteClipboard(SubList);
+    if (SubList.Count > 0) then
+    begin
+      // TODO : maybe check for duplicate sub when pasting ?
+      UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+      UndoableMultiAddTask.SetData(SubList);
+      UndoableMultiAddTask.DoTask;
+      PushUndoableTask(UndoableMultiAddTask);
+      CurrentProject.IsDirty := True;
+    end;
+    SubList.Free;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPasteUpdate(Sender: TObject);
+var actCtrl : TWinControl;
+begin
+  actCtrl := Screen.ActiveControl;
+  ActionPaste.Enabled := ((actCtrl is TCustomEdit) and (TntClipboard.HasFormat(CF_TEXT)))
+    or ((actCtrl is TVirtualStringTree) and (TntClipboard.HasFormat(VSSClipBoardFORMAT)));
 end;
 
 //------------------------------------------------------------------------------

@@ -1078,16 +1078,6 @@ object MainForm: TMainForm
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
-        object TntButton2: TTntButton
-          Left = 8
-          Top = 0
-          Width = 33
-          Height = 25
-          Caption = 'TntButton2'
-          TabOrder = 0
-          Visible = False
-          OnClick = TntButton2Click
-        end
       end
       object PanelTimeSelView: TPanel
         Left = 366
@@ -1768,13 +1758,6 @@ object MainForm: TMainForm
       ImageIndex = 28
       ShortCut = 16472
     end
-    object EditPaste1: TTntEditPaste
-      Category = 'Edit'
-      Caption = '&Paste'
-      Hint = 'Paste|Inserts Clipboard contents'
-      ImageIndex = 30
-      ShortCut = 16470
-    end
     object EditSelectAll1: TTntEditSelectAll
       Category = 'Edit'
       Caption = 'Select &All'
@@ -2240,6 +2223,14 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Insert scene change'
       OnExecute = ActionInsertSceneChangeExecute
+    end
+    object ActionPaste: TTntAction
+      Caption = '&Paste'
+      Hint = 'Paste|Inserts Clipboard contents'
+      ImageIndex = 30
+      ShortCut = 16470
+      OnExecute = ActionPasteExecute
+      OnUpdate = ActionPasteUpdate
     end
   end
   object ImageList1: TImageList
@@ -4104,7 +4095,7 @@ object MainForm: TMainForm
       AutoHotkeys = maAutomatic
     end
     object pmiMemoSubPaste: TTntMenuItem
-      Action = EditPaste1
+      Action = ActionPaste
       AutoHotkeys = maAutomatic
     end
     object Delete1: TTntMenuItem

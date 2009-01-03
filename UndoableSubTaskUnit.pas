@@ -22,7 +22,8 @@ unit UndoableSubTaskUnit;
 
 interface
 
-uses UndoableTaskUnit, SubStructUnit, Contnrs, Graphics, TntComCtrls, Types;
+uses UndoableTaskUnit, SubStructUnit, Classes, Contnrs, Graphics, TntComCtrls,
+  Types;
 
 type
   TUndoableTaskIndexed = class(TUndoableTask)
@@ -89,6 +90,8 @@ type
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
+
+    procedure SetData(SubList : TList);
   end;
 
   TUndoableSetTimeTask = class(TUndoableTask)
@@ -363,7 +366,7 @@ end;
 procedure TUndoableMultiAddTask.DoTask;
 begin
   // Lazy task
-  MainForm.RestoreSubtitles(FDeletedSubs);
+  MainForm.RestoreSubtitles(FDeletedSubs, FIndexes);
   FDeletedSubs.Clear;
 end;
 
@@ -378,6 +381,14 @@ begin
   MainForm.CloneSubtitles(FIndexes, FDeletedSubs);
   // Now delete them
   MainForm.DeleteSubtitles(FIndexes);
+end;
+
+procedure TUndoableMultiAddTask.SetData(SubList : TList);
+var i : Integer;
+begin
+  SetCapacity(SubList.Count);
+  FCount := SubList.Count;
+  FDeletedSubs.Assign(SubList);
 end;
 
 //------------------------------------------------------------------------------
