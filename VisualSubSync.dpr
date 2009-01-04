@@ -1,6 +1,8 @@
 program VisualSubSync;
 
 uses
+  FastMM4,
+  VCLFixPack,
   Windows,
   Forms,
   TntSystem,
@@ -45,7 +47,7 @@ uses
   LibHunspellUnit in 'LibHunspellUnit.pas',
   BgThreadTaskUnit in 'BgThreadTaskUnit.pas',
   SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm},
-  ExceptionFormUnit in 'ExceptionFormUnit.pas' {ExceptionDialog};
+  VSSClipboardUnit in 'VSSClipboardUnit.pas';
 
 {$R *.res}
 
