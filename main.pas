@@ -689,6 +689,9 @@ type
 
     procedure CloseProject;
 
+    function GetTextPipeAutoOption : Integer;
+    procedure SetTextPipeAutoOption(Option : Integer);
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -985,6 +988,27 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TMainForm.GetTextPipeAutoOption : Integer;
+begin
+  if pmiAutoColorizeText.Checked then
+    Result := 0
+  else if pmiAutoDeleteText.Checked then
+    Result := 1
+  else if pmiAutoDeleteAllTextBefore.Checked then
+    Result := 2;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SetTextPipeAutoOption(Option : Integer);
+begin
+  pmiAutoColorizeText.Checked := (Option = 0);
+  pmiAutoDeleteText.Checked := (Option = 1);
+  pmiAutoDeleteAllTextBefore.Checked := (Option = 2);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure SaveFormPosition(IniFile : TIniFile; Form : TForm);
 var
   WindowPlacement: TWindowPlacement;
@@ -1068,6 +1092,8 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+
 function GetVTVColumnByName(Vtv : TVirtualStringTree; Name : WideString) : TVirtualTreeColumn;
 var i : Integer;
     Column : TVirtualTreeColumn;
@@ -1083,6 +1109,8 @@ begin
   end;
   Result := nil;
 end;
+
+//------------------------------------------------------------------------------
 
 procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
@@ -1141,6 +1169,10 @@ begin
     IniFile.WriteString('General', 'ColumnsPosition', ColumnsPositionList.CommaText);
     ColumnsPositionList.Free;
 
+    // Text pipe
+    IniFile.WriteBool('TextPipe', 'ShowTextPipe', MemoTextPipe.Visible);
+    IniFile.WriteInteger('TextPipe', 'TextPipeAutoOption', GetTextPipeAutoOption);
+
     IniFile.Free;
   except
     on E: Exception do MessageBox(Handle, PChar(E.Message), nil, MB_OK or MB_ICONERROR);
@@ -1185,6 +1217,11 @@ begin
 
   StartupDetachVideo := IniFile.ReadBool('Windows', 'DetachedVideo', False);
   StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
+
+  // Text pipe
+  if IniFile.ReadBool('TextPipe', 'ShowTextPipe', False) then
+    ActionShowHideTextPipe.Execute;
+  SetTextPipeAutoOption(IniFile.ReadInteger('TextPipe', 'TextPipeAutoOption', 0));
 
   IniFile.Free;
 end;
