@@ -68,6 +68,14 @@
 }
 
 {
+ 2009-01-15: (Andreas Hausladen)
+    - Fixed: WideString hashing code
+    - Added: inline support
+    - Added: WideCompareText (with Win95 support) for Delphi 5
+
+ 2009-01-08: (Andreas Hausladen)
+    - Fixed DMap.SetComparator access violation
+
  2008-10-23:
     - Applied patches that were not in the original release
 
@@ -83,11 +91,11 @@
 unit DeCAL;
 
 {$IFDEF VER100}
-{$DEFINE DELPHI3}
+  {$DEFINE DELPHI3}
 {$ENDIF}
 
 {$IFDEF VER110}
-{$DEFINE DELPHI3}
+  {$DEFINE DELPHI3}
 {$ENDIF}
 
 {$IFDEF CONDITIONALEXPRESSIONS}
@@ -563,10 +571,9 @@ type
   DContainer = class(DIterHandler)
   private
     fComparator: DComparator;
-    procedure SetComparator(const Value: DComparator); {$IFDEF SUPPORTS_INLINE}inline;{$ENDIF}
 
   protected
-
+    procedure SetComparator(const Value: DComparator); virtual;
     procedure cloneTo(newContainer : DContainer); virtual;
 
   protected
@@ -1503,6 +1510,8 @@ type
 
     tree : DRedBlackTree;
 
+    procedure SetComparator(const Value: DComparator); override;
+
     //
     // Iterator manipulation.
     //
@@ -1955,29 +1964,29 @@ type
 
   {** Moves the iterator to the next object in the container.
   @param iterator The iterator to advance.}
-  procedure advance(var iterator : DIterator);
+  procedure advance(var iterator : DIterator); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Returns a new iterator at the next position in the container. }
-  function advanceF(const iterator : DIterator) : DIterator;
+  function advanceF(const iterator : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Moves the iterator forward by count objects.
   @param iterator The iterator to advance.
   @param count The number of positions to advance.}
-  procedure advanceBy(var iterator : DIterator; count : Integer);
+  procedure advanceBy(var iterator : DIterator; count : Integer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Returns a new iterator at the next position in the container. This is
   a functional version of advanceBy, returning a new iterator. }
-  function advanceByF(const iterator : DIterator; count : Integer) : DIterator;
+  function advanceByF(const iterator : DIterator; count : Integer) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Tests to see if the iterator is at the start of the container.
   @param iterator The iterator to test.}
-  function atStart(const iterator : DIterator) : Boolean;
+  function atStart(const iterator : DIterator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Tests to see if the iterator is at the end of the container.  This is
   extremely common during loops.  Containers should make a real effort to
   ensure that this is processed quickly.
   @param iterator The iterator to test.}
-  function atEnd(const iterator : DIterator) : Boolean;
+  function atEnd(const iterator : DIterator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object an iterator is positioned at.  This object is
   returned in DObject form, which is a generic type that can hold any
@@ -1985,14 +1994,14 @@ type
   turn it into something useful.  Or, use one of the getXXX functions,
   which are slightly more efficient.
   @param iterator The iterator to get the object from. }
-  function get(const iterator : DIterator) : DObject;
+  function get(const iterator : DIterator) : DObject; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve a pointer to the object the iterator is positioned at.
   This is somewhat more efficient than getting the object directly,
   which involves copying.  Many of the internal functions use this to
   avoid copying DObjects around.
   @param iterator The iterator to get the object from.}
-  function getRef(const iterator : DIterator) : PDObject;
+  function getRef(const iterator : DIterator) : PDObject; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   // TODO: What the f&^&* to I really need to do here to make this
   // PutRef/PutRefClear dichotomy work?  The answer is that PutRef
@@ -2006,56 +2015,56 @@ type
 
   {** Retrieve the object at the iterator as an integer.
   @param iterator The iterator to get from. }
-  function getInteger(const iterator : DIterator) : Integer;
+  function getInteger(const iterator : DIterator) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a boolean.
   @param iterator The iterator to get from. }
-  function getBoolean(const iterator : DIterator) : Boolean;
+  function getBoolean(const iterator : DIterator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a character.
   @param iterator The iterator to get from. }
-  function getAnsiChar(const iterator : DIterator) : AnsiChar;
+  function getAnsiChar(const iterator : DIterator) : AnsiChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a character.
   @param iterator The iterator to get from. }
-  function getChar(const iterator : DIterator) : Char;
+  function getChar(const iterator : DIterator) : Char; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as an extended floating point value.
   @param iterator The iterator to get from. }
-  function getExtended(const iterator : DIterator) : Extended;
+  function getExtended(const iterator : DIterator) : Extended; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a short string (old style string).
   @param iterator The iterator to get from. }
-  function getShortString(const iterator : DIterator) : ShortString;
+  function getShortString(const iterator : DIterator) : ShortString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as an untyped pointer.
   @param iterator The iterator to get from. }
-  function getPointer(const iterator : DIterator) : Pointer;
+  function getPointer(const iterator : DIterator) : Pointer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a PAnsiChar.
   @param iterator The iterator to get from. }
-  function getPAnsiChar(const iterator : DIterator) : PAnsiChar;
+  function getPAnsiChar(const iterator : DIterator) : PAnsiChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a PChar.
   @param iterator The iterator to get from. }
-  function getPChar(const iterator : DIterator) : PChar;
+  function getPChar(const iterator : DIterator) : PChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as an object reference.
   It's a good idea to do a typecast with this using the AS operator.
   @param iterator The iterator to get from. }
-  function getObject(const iterator : DIterator) : TObject;
+  function getObject(const iterator : DIterator) : TObject; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a class reference (TClass).
   @param iterator The iterator to get from. }
-  function getClass(const iterator : DIterator) : TClass;
+  function getClass(const iterator : DIterator) : TClass; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a wide character.
   @param iterator The iterator to get from. }
-  function getWideChar(const iterator : DIterator) : WideChar;
+  function getWideChar(const iterator : DIterator) : WideChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a pointer to a wide character.
   @param iterator The iterator to get from. }
-  function getPWideChar(const iterator : DIterator) : PWideChar;
+  function getPWideChar(const iterator : DIterator) : PWideChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a AnsiString.
   @param iterator The iterator to get from. }
@@ -2067,67 +2076,67 @@ type
 
   {** Retrieve the object at the iterator as a currency value.
   @param iterator The iterator to get from. }
-  function getCurrency(const iterator : DIterator) : Currency;
+  function getCurrency(const iterator : DIterator) : Currency; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a variant.
   @param iterator The iterator to get from. }
-  function getVariant(const iterator : DIterator) : Variant;
+  function getVariant(const iterator : DIterator) : Variant; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as an interface pointer.
   @param iterator The iterator to get from. }
-  function getInterface(const iterator : DIterator) : Pointer;
+  function getInterface(const iterator : DIterator) : Pointer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieve the object at the iterator as a WideString.
   @param iterator The iterator to get from. }
-  function getWideString(const iterator : DIterator) : WideString;
+  function getWideString(const iterator : DIterator) : WideString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
 {$IFDEF USELONGWORD}
-  function getInt64(const iterator : DIterator) : Int64;
+  function getInt64(const iterator : DIterator) : Int64; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$ENDIF}
   //
   // Atomic data type converters!
   //
 
   {** Converts the DObject to an integer. Asserts if the type is not correct. }
-  function asInteger(const obj : DObject) : Integer;
+  function asInteger(const obj : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a Boolean. Asserts if the type is not correct. }
-  function asBoolean(const obj : DObject) : Boolean;
+  function asBoolean(const obj : DObject) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a AnsiChar. Asserts if the type is not correct. }
-  function asAnsiChar(const obj : DObject) : AnsiChar;
+  function asAnsiChar(const obj : DObject) : AnsiChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a Char. Asserts if the type is not correct. }
-  function asChar(const obj : DObject) : Char;
+  function asChar(const obj : DObject) : Char; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to an extended floating point value. Asserts if the type is not correct. }
-  function asExtended(const obj : DObject) : Extended;
+  function asExtended(const obj : DObject) : Extended; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a short string.Asserts if the type is not correct. }
-  function asShortString(const obj : DObject) : ShortString;
+  function asShortString(const obj : DObject) : ShortString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to an untyped pointer.Asserts if the type is not correct. }
-  function asPointer(const obj : DObject) : Pointer;
+  function asPointer(const obj : DObject) : Pointer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a PAnsiChar. Asserts if the type is not correct. }
-  function asPAnsiChar(const obj : DObject) : PAnsiChar;
+  function asPAnsiChar(const obj : DObject) : PAnsiChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a PChar. Asserts if the type is not correct. }
-  function asPChar(const obj : DObject) : PChar;
+  function asPChar(const obj : DObject) : PChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to an object reference.  Asserts if the type is not correct. }
-  function asObject(const obj : DObject) : TObject;
+  function asObject(const obj : DObject) : TObject; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a class reference (TClass). Asserts if the type is not correct. }
-  function asClass(const obj : DObject) : TClass;
+  function asClass(const obj : DObject) : TClass; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a WideChar. Asserts if the type is not correct. }
-  function asWideChar(const obj : DObject) : WideChar;
+  function asWideChar(const obj : DObject) : WideChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a pointer to a WideChar. Asserts if the type is not correct. }
-  function asPWideChar(const obj : DObject) : PWideChar;
+  function asPWideChar(const obj : DObject) : PWideChar; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a AnsiString. Asserts if the type is not correct. }
-  function asAnsiString(const obj : DObject) : AnsiString;
+  function asAnsiString(const obj : DObject) : AnsiString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a string. Asserts if the type is not correct. }
   function asString(const obj : DObject) : string;
   {** Converts the DObject to a currency value. Asserts if the type is not correct. }
-  function asCurrency(const obj : DObject) : Currency;
+  function asCurrency(const obj : DObject) : Currency; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a variant. Asserts if the type is not correct. }
-  function asVariant(const obj : DObject) : Variant;
+  function asVariant(const obj : DObject) : Variant; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to an interface pointer. Asserts if the type is not correct. }
-  function asInterface(const obj : DObject) : Pointer;
+  function asInterface(const obj : DObject) : Pointer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Converts the DObject to a WideString. Asserts if the type is not correct. }
-  function asWideString(const obj : DObject) : WideString;
+  function asWideString(const obj : DObject) : WideString; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$IFDEF USELONGWORD}
-  function asInt64(const obj : DObject) : Int64;
+  function asInt64(const obj : DObject) : Int64; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$ENDIF}
 
   //
@@ -2181,13 +2190,13 @@ type
   the same container and at the same object.
   @param iter1 The first iterator.
   @param iter2 The second iterator.}
-  function equals(const iter1, iter2 : DIterator) : Boolean;
+  function equals(const iter1, iter2 : DIterator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Retrieves the container associated with an iterator.  You can cast the
   reference returned into the real container type, or just use it as a
   generic container.
   @param iterator The iterator to retrieve a container for. }
-  function getContainer(const iterator : DIterator) : DContainer;
+  function getContainer(const iterator : DIterator) : DContainer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
 
   {** Stores an object at the current iterator location, if possible.  Following
@@ -2204,7 +2213,7 @@ type
   erases whatever was in the location before; it is destructive.
   @param iterator The location to store at.
   @param obj The object to store. }
-  procedure _put(const iterator : DIterator; const obj : DObject);
+  procedure _put(const iterator : DIterator; const obj : DObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Stores an array of objects at the current iterator location, if possible.  Some
   containers don't permit arbitrary insertions (like trees).  The put operation
@@ -2216,88 +2225,88 @@ type
   procedure put(const iterator : DIterator; const objs : array of const);
 
   {** Store an integer at the current iterator location. }
-  procedure putInteger(const iterator : DIterator; value : Integer);
+  procedure putInteger(const iterator : DIterator; value : Integer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a boolean at the current iterator location. }
-  procedure putBoolean(const iterator : DIterator; value : Boolean);
+  procedure putBoolean(const iterator : DIterator; value : Boolean); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a character at the current iterator location. }
-  procedure putAnsiChar(const iterator : DIterator; value : AnsiChar);
+  procedure putAnsiChar(const iterator : DIterator; value : AnsiChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a character at the current iterator location. }
-  procedure putChar(const iterator : DIterator; value : Char);
+  procedure putChar(const iterator : DIterator; value : Char); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store an extended floating point value at the current iterator location. }
-  procedure putExtended(const iterator : DIterator; const value : Extended);
+  procedure putExtended(const iterator : DIterator; const value : Extended); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a short string at the current iterator location. }
-  procedure putShortString(const iterator : DIterator; const value : ShortString);
+  procedure putShortString(const iterator : DIterator; const value : ShortString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store an untyped pointer at the current iterator location. }
-  procedure putPointer(const iterator : DIterator; value : Pointer);
+  procedure putPointer(const iterator : DIterator; value : Pointer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a PAnsiChar at the current iterator location. }
-  procedure putPAnsiChar(const iterator : DIterator; value : PAnsiChar);
+  procedure putPAnsiChar(const iterator : DIterator; value : PAnsiChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a PChar at the current iterator location. }
-  procedure putPChar(const iterator : DIterator; value : PChar);
+  procedure putPChar(const iterator : DIterator; value : PChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store an object reference at the current iterator location. }
-  procedure putObject(const iterator : DIterator; value : TObject);
+  procedure putObject(const iterator : DIterator; value : TObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a class reference at the current iterator location. }
-  procedure putClass(const iterator : DIterator; value : TClass);
+  procedure putClass(const iterator : DIterator; value : TClass); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a wide character at the current iterator location. }
-  procedure putWideChar(const iterator : DIterator; value : WideChar);
+  procedure putWideChar(const iterator : DIterator; value : WideChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a pointer to a wide character at the current iterator location. }
-  procedure putPWideChar(const iterator : DIterator; value : PWideChar);
+  procedure putPWideChar(const iterator : DIterator; value : PWideChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a AnsiString at the current iterator location. }
-  procedure putAnsiString(const iterator : DIterator; const value : AnsiString);
+  procedure putAnsiString(const iterator : DIterator; const value : AnsiString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a string at the current iterator location. }
-  procedure putString(const iterator : DIterator; const value : string);
+  procedure putString(const iterator : DIterator; const value : string); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a currency value at the current iterator location. }
-  procedure putCurrency(const iterator : DIterator; value : Currency);
+  procedure putCurrency(const iterator : DIterator; value : Currency); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a variant at the current iterator location. }
-  procedure putVariant(const iterator : DIterator; const value : Variant);
+  procedure putVariant(const iterator : DIterator; const value : Variant); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store an interface pointer at the current iterator location. }
-  procedure putInterface(const iterator : DIterator; value : Pointer);
+  procedure putInterface(const iterator : DIterator; value : Pointer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Store a wide string at the current iterator location. }
-  procedure putWideString(const iterator : DIterator; const value : WideString);
+  procedure putWideString(const iterator : DIterator; const value : WideString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$IFDEF USELONGWORD}
-  procedure putInt64(const iterator : DIterator; const value : Int64);
+  procedure putInt64(const iterator : DIterator; const value : Int64); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$ENDIF}
 
   {** Set an integer to a DObject. }
-  procedure setInteger(var obj : DObject; value : Integer);
+  procedure setInteger(var obj : DObject; value : Integer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a boolean to a DObject. }
-  procedure setBoolean(var obj : DObject; value : Boolean);
+  procedure setBoolean(var obj : DObject; value : Boolean); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a character to a DObject. }
-  procedure setAnsiChar(var obj : DObject; value : AnsiChar);
+  procedure setAnsiChar(var obj : DObject; value : AnsiChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a character to a DObject. }
-  procedure setChar(var obj : DObject; value : Char);
+  procedure setChar(var obj : DObject; value : Char); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set an extended floating point value to a DObject. }
-  procedure setExtended(var obj : DObject; const value : Extended);
+  procedure setExtended(var obj : DObject; const value : Extended); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a short string to a DObject. }
-  procedure setShortString(var obj : DObject; const value : ShortString);
+  procedure setShortString(var obj : DObject; const value : ShortString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set an untyped pointer to a DObject. }
-  procedure setPointer(var obj : DObject; value : Pointer);
+  procedure setPointer(var obj : DObject; value : Pointer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a PAnsiChar to a DObject. }
-  procedure setPAnsiChar(var obj : DObject; value : PAnsiChar);
+  procedure setPAnsiChar(var obj : DObject; value : PAnsiChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a PChar to a DObject. }
-  procedure setPChar(var obj : DObject; value : PChar);
+  procedure setPChar(var obj : DObject; value : PChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set an object reference to a DObject. }
-  procedure setObject(var obj : DObject; value : TObject);
+  procedure setObject(var obj : DObject; value : TObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a class reference to a DObject. }
-  procedure setClass(var obj : DObject; value : TClass);
+  procedure setClass(var obj : DObject; value : TClass); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a wide character to a DObject. }
-  procedure setWideChar(var obj : DObject; value : WideChar);
+  procedure setWideChar(var obj : DObject; value : WideChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a pointer to a wide character to a DObject. }
-  procedure setPWideChar(var obj : DObject; value : PWideChar);
+  procedure setPWideChar(var obj : DObject; value : PWideChar); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a AnsiString to a DObject. }
-  procedure setAnsiString(var obj : DObject; const value : AnsiString);
+  procedure setAnsiString(var obj : DObject; const value : AnsiString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a string to a DObject. }
-  procedure setString(var obj : DObject; const value : string);
+  procedure setString(var obj : DObject; const value : string); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a currency value to a DObject. }
-  procedure setCurrency(var obj : DObject; value : Currency);
+  procedure setCurrency(var obj : DObject; value : Currency); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a variant to a DObject. }
-  procedure setVariant(var obj : DObject; const value : Variant);
+  procedure setVariant(var obj : DObject; const value : Variant); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set an interface pointer to a DObject. }
-  procedure setInterface(var obj : DObject; value : Pointer);
+  procedure setInterface(var obj : DObject; value : Pointer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Set a wide string to a DObject. }
-  procedure setWideString(var obj : DObject; const value : WideString);
+  procedure setWideString(var obj : DObject; const value : WideString); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
 {$IFDEF USELONGWORD}
-  procedure setInt64(var obj : Dobject; const value : Int64);
+  procedure setInt64(var obj : Dobject; const value : Int64); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 {$ENDIF}
 
 
@@ -2310,31 +2319,31 @@ type
 
   {** Determines the number of positions between iter1 and iter2.  The two
   iterators must point to the same container. }
-  function distance(const iter1, iter2 : DIterator) : Integer;
+  function distance(const iter1, iter2 : DIterator) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   //
   // bidirectional
   //
 
   {** Move an iterator backwards one position. }
-  procedure retreat(var iterator : DIterator);
+  procedure retreat(var iterator : DIterator); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Move an iterator backwards by count positions. }
-  procedure retreatBy(var iterator : DIterator; count : Integer);
+  procedure retreatBy(var iterator : DIterator; count : Integer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Move an iterator backwards one position. }
-  function retreatF(const iterator : DIterator) : DIterator;
+  function retreatF(const iterator : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Move an iterator backwards by count positions. }
-  function retreatByF(const iterator : DIterator; count : Integer) : DIterator;
+  function retreatByF(const iterator : DIterator; count : Integer) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Return the object at the given offset from the iterator.
   @param iter The iterator that gives the starting position.
   @param offset The number of positions to move (positive or negative). }
-  function getAt(const iter : DIterator; offset : Integer) : DObject;
+  function getAt(const iter : DIterator; offset : Integer) : DObject; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Put an object at the given offset from the iterator. }
-  procedure putAt(const iter : DIterator; offset : Integer; const obj : DObject);
+  procedure putAt(const iter : DIterator; offset : Integer; const obj : DObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Use the array of const form to store atomic values at the given offset from
   iter.
@@ -2347,10 +2356,10 @@ type
   // random access
   //
   {** Determine the index (position within the container) for the given iterator. }
-  function index(const iter : DIterator) : Integer;
+  function index(const iter : DIterator) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Determine if iter1 comes before iter2. }
-  function less(const iter1, iter2 : DIterator) : Boolean;
+  function less(const iter1, iter2 : DIterator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Toggle the iterator to retrieve keys.  Only useful with map containers. }
   procedure SetToKey(var iter : DIterator);
@@ -2374,7 +2383,7 @@ type
   {** Apply the unary function to each object in the container.
   @param container The container to iterator over.
   @param unary The function to apply. }
-  procedure forEach(container : DContainer; unary : DApply);
+  procedure forEach(container : DContainer; unary : DApply); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Apply the unary function to a range of objects.
   @param _start An iterator set to the start of the range.
@@ -2387,7 +2396,7 @@ type
   @param container The container to iterate over.
   @param unary The function to apply.
   @param test The test that must be passed before the function will be applied. }
-  procedure forEachIf(container : DContainer; unary : DApply; test : DTest);
+  procedure forEachIf(container : DContainer; unary : DApply; test : DTest); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Apply a unary function to a range of objects if the object passes
   a test.
@@ -2430,7 +2439,7 @@ type
 
   {** Tests to see if two containers are equal, testing each object with
   their comparators. }
-  function equal(con1, con2 : DContainer) : Boolean;
+  function equal(con1, con2 : DContainer) : Boolean; //{$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Tests to see if two ranges contain equal objects, according to the
   comparators associated with the containers associated with the iterators. }
@@ -2490,10 +2499,10 @@ type
   ////////////////////////////////////////////////////////////////////
 
   {** Copies the contents of source to dest. }
-  function copyContainer(source, dest : DContainer) : DIterator;
+  function copyContainer(source, dest : DContainer) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copies the contents of con1 to the given iterator.  }
-  function copyTo(source : DContainer; dest : DIterator) : DIterator;
+  function copyTo(source : DContainer; dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copies a range of values to the given iterator. }
   function copyInTo(_start, _end, dest : DIterator) : DIterator;
@@ -2511,7 +2520,7 @@ type
   container.  You may often use the count version instead of this version.
   @param con1 The container to count in.
   @param obj The object to count.}
-  function _count(con1 : DContainer; const obj : DObject) : Integer;
+  function _count(con1 : DContainer; const obj : DObject) : Integer; //{$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Counts the number of times items matching the given obj appear in a given
   range.  You may often use the countIn version instead of this version.
@@ -2537,7 +2546,7 @@ type
   container is passed to the test.
   @param con1 The container to test in
   @param test The DTest to apply to each object in the container}
-  function countIf(con1 : DContainer; test : DTest) : Integer;
+  function countIf(con1 : DContainer; test : DTest) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Counts the number of times the test returns true.  Each item in the
   specified range is passed to the test.
@@ -2553,7 +2562,7 @@ type
   ////////////////////////////////////////////////////////////////////
 
   {** Fill the given container with the specified value. }
-  procedure _fill(con : DContainer; const obj : DObject);
+  procedure _fill(con : DContainer; const obj : DObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Fill a container with N copies of a value.  This will expand
   the container if necessary.}
@@ -2591,32 +2600,32 @@ type
 
   {** Removes duplicate values from a container, replacing them with a
   single instance. Empty items will have undefined values. }
-  function unique(con : DContainer) : DIterator;
+  function unique(con : DContainer) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Removes duplicate values from the range, replacing them with a
   single instance.  The empty items will have undefined values. }
-  function uniqueIn(_start, _end : DIterator) : DIterator;
+  function uniqueIn(_start, _end : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Removes duplicate values, as defined by the given comparator return true. }
-  function uniqueWith(con : DContainer; compare : DBinaryTest) : DIterator;
+  function uniqueWith(con : DContainer; compare : DBinaryTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Removes duplicate values in a range, as defined by comparator returning true. }
   function uniqueInWith(_start, _end : DIterator; compare : DBinaryTest) : DIterator;
 
   {** Copies a container to a destination, removing duplicates. }
-  function uniqueTo(con : DContainer; dest : DIterator) : DIterator;
+  function uniqueTo(con : DContainer; dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copies a range to a destination, removing duplicates. }
-  function uniqueInTo(_start, _end, dest : DIterator) : DIterator;
+  function uniqueInTo(_start, _end, dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copy all values to a destination, removing duplicates. }
   function uniqueInWithTo(_start, _end, dest : DIterator; compare : DBinaryTest) : DIterator;
 
   {** Copy values for which test returns true to the destination. }
-  procedure Filter(fromCon, toCon : DContainer; test : DTest);
+  procedure Filter(fromCon, toCon : DContainer; test : DTest); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copy values for which test returns true to the destination. }
-  function FilterTo(con : DContainer; dest : DIterator; test : DTest) : DIterator;
+  function FilterTo(con : DContainer; dest : DIterator; test : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copy values for which test returns true to the destination. }
   function FilterInTo(_start, _end, dest : DIterator; test : DTest) : DIterator;
@@ -2635,7 +2644,7 @@ type
   {** Locates the first pair of consecutive equal items in the container, using the compare specified.
   Returns an iterator posisitioned on the first item.  Returns atEnd if
   no such pair is found. }
-  function adjacentFindWith(container : DContainer; compare : DBinaryTest) : DIterator;
+  function adjacentFindWith(container : DContainer; compare : DBinaryTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Locates the first pair of consecutive equal items in the range.
   Returns an iterator posisitioned on the first item.  Returns _end if
@@ -2649,7 +2658,7 @@ type
 
   function _binarySearch(con : DContainer; const obj : DObject) : DIterator;
   function _binarySearchIn(_start, _end : DIterator; const obj : DObject) : DIterator;
-  function _binarySearchWith(con : DContainer; compare : DComparator; const obj : DObject) : DIterator;
+  function _binarySearchWith(con : DContainer; compare : DComparator; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _binarySearchInWith(_start, _end : DIterator; compare : DComparator; const obj : DObject) : DIterator;
 
   {** Locates an object in a sorted container using a binary search.  Returns
@@ -2671,20 +2680,20 @@ type
   {** Determines the first item for which compare returns true.
   @param container The container whose items should be tested.
   @param compare The test to try. }
-  function detectWith(container : DContainer; compare : DTest) : DIterator;
+  function detectWith(container : DContainer; compare : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Determines the first item in the range for which the compare returns true. }
   function detectInWith(_start, _end : DIterator; compare : DTest) : DIterator;
 
   {** Determines if the test returns true for every element in the container. }
-  function every(container : DContainer; test : DTest) : Boolean;
+  function every(container : DContainer; test : DTest) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Determines if the test returns true for every element in the range. }
   function everyIn(_start, _end : DIterator; test : DTest) : Boolean;
 
   {** Locates the given object in the container, returning an iterator positioned
   at it.  If the object is not found, the iterator is atEnd. }
-  function _find(container : DContainer; const obj : DObject) : DIterator;
+  function _find(container : DContainer; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Locate the object in the given range, returning an iterator positioned
   at it.  If not found, the iterator equals _end. }
@@ -2698,7 +2707,7 @@ type
 
   {** Find the first item in a container for which test returns true.  Returns
   atEnd if no such item is found. }
-  function findIf(container : DContainer; test : DTest) : DIterator;
+  function findIf(container : DContainer; test : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Find the first item in a range for which test returns true.  Returns
   _end if no such item is found. }
@@ -2706,7 +2715,7 @@ type
 
   {** Determines if any of the items in the container return true, when passed
   to test. }
-  function some(container : DContainer; test : DTest) : Boolean;
+  function some(container : DContainer; test : DTest) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Determines if any of the items in the range cause test to return true. }
   function someIn(_start, _end : DIterator; test : DTest) : Boolean;
@@ -2719,14 +2728,14 @@ type
 
   {** Calls TObject.Free on all the objects in the container.  Asserts if
   the type of an item is not TObject. }
-  procedure objFree(container : DContainer);
+  procedure objFree(container : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Calls TObject.Free on all the items in the range. }
   procedure objFreeIn(_start, _end : DIterator);
 
   {** Calls FreeMem on all the items in the container.  Assumes the items
   are pointers to memory allocated with GetMem. }
-  procedure objDispose(container : DContainer);
+  procedure objDispose(container : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Calls FreeMem on all the items in the range.  Assumes the items
   are pointers to memory allocated with GetMem. }
@@ -2743,7 +2752,7 @@ type
   ////////////////////////////////////////////////////////////////////
   {** Hashes all the items in the container.  The order or the items
   is significant. }
-  function orderedHash(container : DContainer) : Integer;
+  function orderedHash(container : DContainer) : Integer; //{$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Hashes all the items in the range.  The order or the items
   is significant. }
@@ -2751,7 +2760,7 @@ type
 
   {** Hashes all the items in the container.  The order or the items
   is not significant. }
-  function unorderedHash(container : DContainer) : Integer;
+  function unorderedHash(container : DContainer) : Integer; //{$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Hashes all the items in the range.  The order or the items
   is not significant. }
@@ -2763,11 +2772,11 @@ type
   //
   ////////////////////////////////////////////////////////////////////
   {** Not implemented. }
-  function nextPermutation(container : DContainer; comparator : DComparator) : Boolean;
+  function nextPermutation(container : DContainer; comparator : DComparator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Not implemented. }
   function nextPermutationIn(_start, _end : DIterator; comparator : DComparator) : Boolean;
   {** Not implemented. }
-  function prevPermutation(container : DContainer; comparator : DComparator) : Boolean;
+  function prevPermutation(container : DContainer; comparator : DComparator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   {** Not implemented. }
   function prevPermutationIn(_start, _end : DIterator; comparator : DComparator) : Boolean;
 
@@ -2776,12 +2785,12 @@ type
   // Removing
   //
   ////////////////////////////////////////////////////////////////////
-  function _remove(container : DContainer; const obj : DObject) : DIterator;
+  function _remove(container : DContainer; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _removeIn(_start, _end : DIterator; const obj : DObject) : DIterator;
-  function _removeTo(container : DContainer; dest : DIterator; const obj : DObject) : DIterator;
+  function _removeTo(container : DContainer; dest : DIterator; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _removeInTo(_start, _end, dest : DIterator; const obj : DObject) : DIterator;
-  function _removeCopy(source, destination : DContainer; const obj : DObject) : DIterator;
-  function _removeCopyTo(source : DContainer; dest : DIterator; const obj : DObject) : DIterator;
+  function _removeCopy(source, destination : DContainer; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _removeCopyTo(source : DContainer; dest : DIterator; const obj : DObject) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _removeCopyIn(_start, _end, dest : DIterator; const obj : DObject) : DIterator;
 
   {** Removes all instances of each item in objs from the container. }
@@ -2812,18 +2821,18 @@ type
 
   {** Copies the source container to the destination, except for those items
   for which test returns true. }
-  function removeCopyIf(source, destination : DContainer; test : DTest) : DIterator;
+  function removeCopyIf(source, destination : DContainer; test : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copies the source container to the destination, except for those items
   for which test returns true. }
-  function removeCopyIfTo(source : DContainer; dest : DIterator; test : DTest) : DIterator;
+  function removeCopyIfTo(source : DContainer; dest : DIterator; test : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copies the source range to the destination, except for those items
   for which test returns true. }
   function removeCopyIfIn(_start, _end, dest : DIterator; test : DTest) : DIterator;
 
   {** Removes items from the container for which test returns true. }
-  function removeIf(container : DContainer; test : DTest) : DIterator;
+  function removeIf(container : DContainer; test : DTest) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Removes items from the range for which test returns true. The extra elements
   left after removal will have undefined values. }
@@ -2833,7 +2842,7 @@ type
   The removed items are sent to the destination. A pair of iterators is
   returned: the first is positioned after the last element remaining in the
   container.  The second is positioned after the last element written to dest.}
-  function removeIfTo(container : DContainer; dest : DIterator; test : DTest) : DIteratorPair;
+  function removeIfTo(container : DContainer; dest : DIterator; test : DTest) : DIteratorPair; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Removes items from the range, where that item returns true from test.
   The removed items are sent to the destination. A pair of iterators is
@@ -2847,16 +2856,16 @@ type
   // Replacing
   //
   ////////////////////////////////////////////////////////////////////
-  function _replace(container : DContainer; const obj1, obj2 : DObject) : Integer;
-  function _replaceIn(_start, _end : DIterator; const obj1, obj2 : DObject) : Integer;
-  function _replaceCopy(con1, con2 : DContainer; const obj1, obj2 : DObject) : Integer;
-  function _replaceCopyTo(container : DContainer; dest : DIterator; const obj1, obj2 : DObject) : Integer;
+  function _replace(container : DContainer; const obj1, obj2 : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _replaceIn(_start, _end : DIterator; const obj1, obj2 : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _replaceCopy(con1, con2 : DContainer; const obj1, obj2 : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _replaceCopyTo(container : DContainer; dest : DIterator; const obj1, obj2 : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _replaceCopyInTo(_start, _end, dest : DIterator; const obj1, obj2 : DObject) : Integer;
-  function _replaceCopyIf(con1, con2 : DContainer; test : DTest; const obj : DObject) : Integer;
-  function _replaceCopyIfTo(container : DContainer; dest : DIterator; test : DTest; const obj : DObject) : Integer;
+  function _replaceCopyIf(con1, con2 : DContainer; test : DTest; const obj : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _replaceCopyIfTo(container : DContainer; dest : DIterator; test : DTest; const obj : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
   function _replaceCopyIfInTo(_start, _end, dest : DIterator; test : DTest; const obj : DObject) : Integer;
-  function _replaceIf(container : DContainer; test : DTest; const obj : DObject) : Integer;
-  function _replaceIfIn(_start, _end : DIterator; test : DTest; const obj : DObject) : Integer;
+  function _replaceIf(container : DContainer; test : DTest; const obj : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function _replaceIfIn(_start, _end : DIterator; test : DTest; const obj : DObject) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** For each pair of items objs1[N] and objs2[N], replace all instances of
   objs1[N] with objs2[N] in the given container.  Returns the number of
@@ -2913,17 +2922,17 @@ type
   ////////////////////////////////////////////////////////////////////
 
   {** Reverse the order of the items in the container. }
-  procedure reverse(container : DContainer);
+  procedure reverse(container : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Reverse the order of the items in the range. }
   procedure reverseIn(_start, _end : DIterator);
 
   {** Copy the items in con1 to con2, in reverse order. }
-  procedure reverseCopy(con1, con2 : DContainer);
+  procedure reverseCopy(con1, con2 : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copy the items in container to the output iterator, in reverse
   order. }
-  procedure reverseCopyTo(container : DContainer; dest : DIterator);
+  procedure reverseCopyTo(container : DContainer; dest : DIterator); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Copy the items in the range to the output iterator, in reverse
   order. }
@@ -2945,7 +2954,7 @@ type
   end will move to the beginning of the range.  This is a right rotation.
   The items at the original iterators are not altered.  The results of
   this operation are copied to the output iterator. }
-  function rotateCopy(first, middle, last, dest : DIterator) : DIterator;
+  function rotateCopy(first, middle, last, dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   ////////////////////////////////////////////////////////////////////
   //
@@ -2960,7 +2969,7 @@ type
   {** Determines if master contains all the items in subset, comparing
   items with the supplied comparator. Requires that both containers
   be sorted. }
-  function includesWith(master, subset : DContainer; comparator : DComparator) : Boolean;
+  function includesWith(master, subset : DContainer; comparator : DComparator) : Boolean; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Determine if the master range contains all the items in subset range.  Requires that
   both containers be sorted. }
@@ -2987,7 +2996,7 @@ type
   that set to the destination iterator.  Assumes that both containers are
   sorted. An iterator positioned just after
   the last written item is returned.}
-  function setDifferenceWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator;
+  function setDifferenceWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are in range 1 but not in range 2, using comparator to test them, and writes
   that set to the destination iterator.  Assumes that both ranges are
@@ -2999,7 +3008,7 @@ type
   that set to the destination iterator.  Assumes that both containers are
   sorted. An iterator positioned just after
   the last written item is returned.}
-  function setIntersection(con1, con2 : DContainer; dest : DIterator) : DIterator;
+  function setIntersection(con1, con2 : DContainer; dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are in both range 1 and in range 2, and writes
   that set to the destination iterator.  Assumes that both ranges are
@@ -3011,7 +3020,7 @@ type
   that set to the destination iterator.  Assumes that both containers are
   sorted. An iterator positioned just after
   the last written item is returned.}
-  function setIntersectionWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator;
+  function setIntersectionWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are in both range 1 and range 2, using comparator to test them, and writes
   that set to the destination iterator.  Assumes that both ranges are
@@ -3024,7 +3033,7 @@ type
   that are only in con1, or only in con2.  It writes these items to the
   destination iterator.  Assumes that both containers are sorted. An iterator positioned just after
   the last written item is returned.}
-  function setSymmetricDifference(con1, con2 : DContainer; dest : DIterator) : DIterator;
+  function setSymmetricDifference(con1, con2 : DContainer; dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are NOT in both sets.  That is, it finds the items
   that are only in range 1, or only in range 2.  It writes these items to the
@@ -3036,7 +3045,7 @@ type
   that are only in con1, or only in con2.  It writes these items to the
   destination iterator.  Assumes that both containers are sorted. An iterator positioned just after
   the last written item is returned.}
-  function setSymmetricDifferenceWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator;
+  function setSymmetricDifferenceWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are NOT in both sets, using the specified comparator.  That is, it finds the items
   that are only in range 1, or only in range 2.  It writes these items to the
@@ -3048,7 +3057,7 @@ type
   one copy of each item will show up (a unique operation).  The results are
   written to the destination iterator.  An iterator positioned just after
   the last written item is returned. }
-  function setUnion(con1, con2 : DContainer; dest : DIterator) : DIterator;
+  function setUnion(con1, con2 : DContainer; dest : DIterator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are in both range 1 and range 2.  Note that only
   one copy of each item will show up (a unique operation).  The results are
@@ -3060,7 +3069,7 @@ type
   one copy of each item will show up (a unique operation).  The results are
   written to the destination iterator.  An iterator positioned just after
   the last written item is returned. }
-  function setUnionWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator;
+  function setUnionWith(con1, con2 : DContainer; dest : DIterator; comparator : DComparator) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Finds the set of items that are in both range 1 and range 2, using the specified comparator.  Note that only
   one copy of each item will show up (a unique operation).  The results are
@@ -3076,7 +3085,7 @@ type
 
   {** Shuffles the items in the container, just like shuffling a deck
   of cards. }
-  procedure randomShuffle(container : DContainer);
+  procedure randomShuffle(container : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Shuffles the items in the range, just like shuffling a deck
   of cards. }
@@ -3089,28 +3098,28 @@ type
   ////////////////////////////////////////////////////////////////////
 
   {** Sorts the items in the sequence with QuickSort.}
-  procedure sort(sequence : DSequence);
+  procedure sort(sequence : DSequence); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Sorts the items in the range with QuickSort. }
   procedure sortIn(_start, _end : DIterator);
 
   {** Sorts the items in the sequence with QuickSort, using the specified
   comparator to control sorting. }
-  procedure sortWith(sequence : DSequence; comparator : DComparator);
+  procedure sortWith(sequence : DSequence; comparator : DComparator); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Sorts the items in the range with QuickSort, using the specified
   comparator to control sorting. }
   procedure sortInWith(_start, _end : DIterator; comparator : DComparator);
 
   {** Sorts the items in the sequence with MergeSort.}
-  procedure stablesort(sequence : DSequence);
+  procedure stablesort(sequence : DSequence); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Sorts the items in the range with MergeSort. }
   procedure stablesortIn(_start, _end : DIterator);
 
   {** Sorts the items in the sequence with MergeSort, using the specified
   comparator to control sorting. }
-  procedure stablesortWith(sequence : DSequence; comparator : DComparator);
+  procedure stablesortWith(sequence : DSequence; comparator : DComparator); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Sorts the items in the range with MergeSort, using the specified
   comparator to control sorting. }
@@ -3126,7 +3135,7 @@ type
   procedure iterSwap(iter1, iter2 : DIterator);
 
   {** Swaps the items in the two containers. }
-  procedure swapRanges(con1, con2 : DContainer);
+  procedure swapRanges(con1, con2 : DContainer); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Swaps the items in two ranges.  }
   procedure swaprangesInTo(start1, end1, start2 : DIterator);
@@ -3142,7 +3151,7 @@ type
   that is of the same type as the existing one.
   @param container The container to operator on.
   @param unary The function to apply }
-  function collect(container : DContainer; unary : DUnary) : DContainer;
+  function collect(container : DContainer; unary : DUnary) : DContainer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** CollectIn applies the unary function to each object in the given range,
   storing the results in a new container (that is constructed by this function)
@@ -3159,7 +3168,7 @@ type
   @param con2 The container of objects that will be passed as the second parameter.
   @param output The container where the results will go.
   @param binary The binary function to be applied. }
-  procedure transformBinary(con1, con2, output : DContainer; binary : DBinary);
+  procedure transformBinary(con1, con2, output : DContainer; binary : DBinary); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** TransformBinaryTo applies a binary function to pairs of objects from
   con1 and con2, and stores the result at the output iterator.  con1 and
@@ -3168,7 +3177,7 @@ type
   @param con2 The container of objects that will be passed as the second parameter.
   @param output The iterator where the results will go.
   @param binary The binary function to be applied. }
-  function transformBinaryTo(con1, con2 : DContainer; output : DIterator; binary : DBinary) : DIterator;
+  function transformBinaryTo(con1, con2 : DContainer; output : DIterator; binary : DBinary) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** TransformBinaryInTo applies a binary function to pairs of objects.  The first
   object is taken from the range starting at start1 and ending at finish1.  The
@@ -3186,14 +3195,14 @@ type
   @param container The container of objects to apply the function to.
   @param output The container where the results of the function will go.
   @param unary The function to apply. }
-  procedure transformUnary(container, output : DContainer; unary : DUnary);
+  procedure transformUnary(container, output : DContainer; unary : DUnary); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** TransformUnary applies a function to each object in a container, storing
   the results at an output iterator.
   @param container The container of objects to apply the function to.
   @param output The iterator where the results of the function will go.
   @param unary The function to apply. }
-  function transformUnaryTo(container : DContainer; output : DIterator; unary : DUnary) : DIterator;
+  function transformUnaryTo(container : DContainer; output : DIterator; unary : DUnary) : DIterator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** TransformUnaryInTo applies a unary function to each object in a range,
   storing the results at another iterator.
@@ -3227,19 +3236,20 @@ type
   function JenkinsHashString(const s : string) : Integer; overload;
   {$ENDIF UNICODE}
   function JenkinsHashString(const s : AnsiString) : Integer; overload;
-  function JenkinsHashSingle(s : Single) : Integer;
-  function JenkinsHashDouble(d : Double) : Integer;
+  function JenkinsHashWideString(const s: WideString) : Integer; 
+  function JenkinsHashSingle(s : Single) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
+  function JenkinsHashDouble(d : Double) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Make sure a DObject is empty.  Does not clear out the previous contents.
   Call this when you're creating a DObject (like on the stack) and you're not
   sure if the memory is clear or not. }
-  procedure InitDObject(var obj : DObject);
+  procedure InitDObject(var obj : DObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Creates a copy of the DObject. }
   procedure CopyDObject(const source : DObject; var dest : DObject);
 
   {** Moves a DObject; the original is left empty. }
-  procedure MoveDObject(var source, dest : DObject);
+  procedure MoveDObject(var source, dest : DObject); {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Clears an existing DObject, freeing memory if need be.  Do not call
   this on uninitialized memory -- prepare that kind of memory with InitDObject. }
@@ -3258,55 +3268,55 @@ type
   procedure Swap(var obj1, obj2 : DObject);
 
   {** Retrieve the type of the DObject an iterator is positioned on. }
-  function getVType(const iterator : DIterator) : Integer;
+  function getVType(const iterator : DIterator) : Integer; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a comparator. }
-  function MakeComparatorEx(proc : DComparatorProc; ptr : Pointer) : DComparator;
+  function MakeComparatorEx(proc : DComparatorProc; ptr : Pointer) : DComparator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DEquals. }
-  function MakeEqualsEx(proc : DEqualsProc; ptr : Pointer) : DEquals;
+  function MakeEqualsEx(proc : DEqualsProc; ptr : Pointer) : DEquals; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DTest. }
-  function MakeTestEx(proc : DTestProc; ptr : Pointer) : DTest;
+  function MakeTestEx(proc : DTestProc; ptr : Pointer) : DTest; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DApply. }
-  function MakeApplyEx(proc : DApplyProc; ptr : Pointer) : DApply;
+  function MakeApplyEx(proc : DApplyProc; ptr : Pointer) : DApply; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DUnary. }
-  function MakeUnaryEx(proc : DUnaryProc; ptr : Pointer) : DUnary;
+  function MakeUnaryEx(proc : DUnaryProc; ptr : Pointer) : DUnary; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DBinary. }
-  function MakeBinaryEx(proc : DBinaryProc; ptr : Pointer) : DBinary;
+  function MakeBinaryEx(proc : DBinaryProc; ptr : Pointer) : DBinary; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DHash. }
-  function MakeHashEx(proc : DHashProc; ptr : Pointer) : DHash;
+  function MakeHashEx(proc : DHashProc; ptr : Pointer) : DHash; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DGenerator. }
-  function MakeGeneratorEx(proc : DGeneratorProc; ptr : Pointer) : DGenerator;
+  function MakeGeneratorEx(proc : DGeneratorProc; ptr : Pointer) : DGenerator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a comparator. }
-  function MakeComparator(proc : DComparatorProc) : DComparator;
+  function MakeComparator(proc : DComparatorProc) : DComparator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DEquals. }
-  function MakeEquals(proc : DEqualsProc) : DEquals;
+  function MakeEquals(proc : DEqualsProc) : DEquals; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DTest. }
-  function MakeTest(proc : DTestProc) : DTest;
+  function MakeTest(proc : DTestProc) : DTest; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DApply. }
-  function MakeApply(proc : DApplyProc) : DApply;
+  function MakeApply(proc : DApplyProc) : DApply; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DUnary. }
-  function MakeUnary(proc : DUnaryProc) : DUnary;
+  function MakeUnary(proc : DUnaryProc) : DUnary; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DBinary. }
-  function MakeBinary(proc : DBinaryProc) : DBinary;
+  function MakeBinary(proc : DBinaryProc) : DBinary; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DHash. }
-  function MakeHash(proc : DHashProc) : DHash;
+  function MakeHash(proc : DHashProc) : DHash; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
   {** Turn a procedure into a closure, suitable for use as a DGenerator. }
-  function MakeGenerator(proc : DGeneratorProc) : DGenerator;
+  function MakeGenerator(proc : DGeneratorProc) : DGenerator; {$IFDEF SUPPORTS_INLINE} inline; {$ENDIF}
 
 type
   {** Signature for conversion functions that change objects into printable
@@ -3325,15 +3335,6 @@ type
   procedure ApplyPrint(ptr : Pointer; const obj : DObject);
   procedure ApplyPrintLN(ptr : Pointer; const obj : DObject);
 
-
-implementation
-
-uses
-  {$IFDEF UNICODE}
-  AnsiStrings,
-  {$ENDIF UNICODE}
-  mwFixedRecSort;
-
 //
 // We need to bring a couple of things forward from the Delphi system unit.
 //
@@ -3344,10 +3345,23 @@ const
   vtUnicodeString = 17;
   vtLastVType = vtUnicodeString;
 
+implementation
+
+uses
+  {$IFDEF UNICODE}
+  AnsiStrings,
+  {$ENDIF UNICODE}
+  mwFixedRecSort;
+
+{$IFNDEF SUPPORTS_INLINE}
+{type
+  PInteger = ^Integer;}
+{$ENDIF SUPPORTS_INLINE}
+
 {$IFNDEF UNICODE}
 type
   PByte = PAnsiChar;
-{$ENDIF UNICODE}
+{$ENDIF ~UNICODE}
 
 type
   DeCALBasicType = vtInteger..vtLastVType;
@@ -3356,6 +3370,33 @@ type
 var
   nil_node : DTreeNode = nil;
   emptyDObject : DObject;
+
+{$IFNDEF DELPHI6_UP}
+function DumbItDownFor95(const S1, S2: WideString): Integer;
+var
+  a1, a2: AnsiString;
+begin
+  a1 := s1;
+  a2 := s2;
+  Result := CompareStringA(LOCALE_USER_DEFAULT, NORM_IGNORECASE,
+    PChar(a1), Length(a1), PChar(a2), Length(a2)) - 2;
+end;
+
+function WideCompareText(const S1, S2: WideString): Integer;
+begin
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE,
+    PWideChar(S1), Length(S1), PWideChar(S2), Length(S2)) - 2;
+  case GetLastError of
+    0: ;
+    ERROR_CALL_NOT_IMPLEMENTED:
+      Result := DumbItDownFor95(S1, S2);
+  else
+    RaiseLastWin32Error; 
+  end;
+end;
+{$ENDIF ~DELPHI6_UP}
+
 
 function DeCALAlloc(sz : Integer) : Pointer;
 begin
@@ -3903,8 +3944,15 @@ begin
     Result := JenkinsHashInteger(NullStringHash);
 end;
 
+function JenkinsHashWideString(const s: WideString) : Integer;
+begin
+  if s <> '' then
+    Result := JenkinsHashBuffer(PByte(Pointer(s))^, Length(s) * SizeOf(WideChar), 0)
+  else
+    Result := JenkinsHashInteger(NullStringHash);
+end;
+
 function JenkinsHashSingle(s : Single) : Integer;
-type PInteger = ^Integer;
 begin
   Result := JenkinsHashInteger(PInteger(@s)^);
 end;
@@ -3979,10 +4027,17 @@ begin
       vtVariant:
         raise DException.Create('variant type hash not implemented yet');
       vtWideString:
-        // TODO: Not sure if this is right.  Probably not.
         begin
-          loc := obj.VWideString;
-          len := Length(WideString(obj.VWideString)) * SizeOf(WideChar);
+          if obj.VWideString <> nil then
+            begin
+              loc := obj.VWideString;
+              len := Length(WideString(obj.VWideString)) * SizeOf(WideChar);
+            end
+          else
+            begin
+              loc := @NullStringHash;
+              len := SizeOf(NullStringHash);
+            end;
         end;
 {$IFDEF USELONGWORD}
       vtInt64:
@@ -3998,7 +4053,7 @@ function JenkinsHashDObject(const obj : DObject) : Integer;
 begin
   case obj.VType of
       vtInteger, vtPointer, vtPAnsiChar, vtObject, vtClass, vtPWideChar, vtInterface:
-        Result := JenkinsHashInteger(obj.vinteger);
+        Result := JenkinsHashInteger(obj.VInteger);
       vtBoolean:
         Result := Ord(obj.VBoolean);
       vtChar:
@@ -4010,24 +4065,17 @@ begin
       vtWideChar:
         Result := JenkinsHashBuffer(obj.VWideChar, SizeOf(WideChar), 0);
       vtAnsiString:
-        if obj.VAnsiString = nil then
-          Result := JenkinsHashInteger(NullStringHash)
-        else
-          Result := JenkinsHashString(AnsiString(obj.VAnsiString));
+        Result := JenkinsHashString(AnsiString(obj.VAnsiString));
       {$IFDEF UNICODE}
       vtUnicodeString:
-        if obj.VUnicodeString = nil then
-          Result := JenkinsHashInteger(NullStringHash)
-        else
-          Result := JenkinsHashString(UnicodeString(obj.VUnicodeString));
+        Result := JenkinsHashString(UnicodeString(obj.VUnicodeString));
       {$ENDIF UNICODE}
       vtCurrency:
         Result := JenkinsHashBuffer(obj.VCurrency^, SizeOf(Currency), 0);
       vtVariant:
         raise DException.Create('variant type hash not implemented yet');
       vtWideString:
-        // TODO: Not sure if this is right.  Probably not.
-        Result := JenkinsHashBuffer(WideString(obj.VWideString), Length(WideString(obj.VWideString)) * SizeOf(WideChar), 0);
+        Result := JenkinsHashWideString(WideString(obj.VWideString));
 {$IFDEF USELONGWORD}
       vtInt64:
         Result := JenkinsHashBuffer(obj.VInt64^, SizeOf(Int64), 0);
@@ -4067,10 +4115,10 @@ begin
         vtString:
           FreeMem(obj.VString);
         vtAnsiString:
-          Finalize(AnsiString(obj.VAnsiString));
+          AnsiString(obj.VAnsiString) := '';
         {$IFDEF UNICODE}
         vtUnicodeString:
-          Finalize(UnicodeString(obj.VUnicodeString));
+          UnicodeString(obj.VUnicodeString) := '';
         {$ENDIF UNICODE}
         vtCurrency:
           FreeMem(obj.VCurrency);
@@ -4079,10 +4127,7 @@ begin
         vtVariant:
           Finalize(obj.VVariant^);
         vtWideString:
-          begin
-           Finalize(WideString(obj.VWideString));
-            // TODO : What should happen here for deletion?
-          end;
+          WideString(obj.VWideString) := '';
 {$IFDEF USELONGWORD}
         vtInt64:
           FreeMem(obj.vInt64);
@@ -4312,8 +4357,7 @@ begin
         vtVariant:
           raise DException.Create('Can''t hash variants.');
         vtWideString:
-          // I'm not sure if this will work correctly or not.
-          Result := JenkinsHashBuffer(PByte(obj.VWideString)^, length(WideString(obj.VWideString)) * 2, 0);
+          Result := JenkinsHashWideString(WideString(obj.VWideString));
 {$IFDEF USELONGWORD}
         vtInt64:
           Result := JenkinsHashBuffer(obj.vint64^, SizeOf(int64), 0);
@@ -6201,8 +6245,6 @@ end;
 procedure DContainer.SetComparator(const Value: DComparator);
 begin
   fComparator := Value;
-  if Self is DInternalMap then
-    DInternalMap(Self).Tree.fComparator := Value;
 end;
 
 procedure DContainer.addRef(const obj : DObject);
@@ -6470,11 +6512,7 @@ begin
   else
   {$ENDIF UNICODE}
   if obj1.VType = vtWideString then
-    {$IFDEF DELPHI6_UP}
     Result := WideCompareText(WideString(obj1.VWideString), WideString(obj2.VWideString))
-    {$ELSE}
-    Result := CompareText(string(WideString(obj1.VWideString)), string(WideString(obj2.VWideString)))
-    {$ENDIF DELPHI6_UP}
   else
   begin
     Assert(obj1.VType = vtAnsiString);
@@ -8224,6 +8262,13 @@ end;
 procedure DInternalMap.removeIn(_start, _finish : DIterator);
 begin
   tree.eraseIn(_start, _finish);
+end;
+
+procedure DInternalMap.SetComparator(const Value: DComparator);
+begin
+  inherited SetComparator(Value);
+  if Tree <> nil then
+    Tree.fComparator := Value;
 end;
 
 function DInternalMap.startKey : DIterator;
@@ -11503,8 +11548,8 @@ end;
 
 initialization
   Init;
-  emptyDObject.vtype := vtInteger;
-  emptyDObject.vinteger := 0;
+  emptyDObject.VType := vtInteger;
+  emptyDObject.VInteger := 0;
 finalization
   Cleanup;
 end.
