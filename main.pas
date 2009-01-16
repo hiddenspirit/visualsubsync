@@ -785,7 +785,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
   SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
-  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd;
+  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd, DeCAL;
 
 {$R *.dfm}
 
@@ -995,7 +995,9 @@ begin
   else if pmiAutoDeleteText.Checked then
     Result := 1
   else if pmiAutoDeleteAllTextBefore.Checked then
-    Result := 2;
+    Result := 2
+  else
+    Result := 0;
 end;
 
 //------------------------------------------------------------------------------
@@ -4984,52 +4986,79 @@ var NodeData : PErrorTreeData;
     JSPEnum : TJavaScriptPluginEnumerator;
     JPlugin : TJavaScriptPlugin;
     JSPluginInfo : TJSPluginInfo;
+    JSPluginMap : DHashMap;
+    Iter : DIterator;
     SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
-    i,j : integer;
+    i, j : Integer;
+    Start, ExecTime : Cardinal;
+    Msg : WideString;
 begin
+  Start := GetTickCount;
+  
   UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
   JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
   JSPEnum.OnJSPluginError := LogForm.LogMsg;
   JSPEnum.Reset;
+  JSPluginMap := DHashMap.Create;
 
   g_WebRWSynchro.BeginWrite;
   try
-    for j:=0 to ErrorList.Count-1 do
+    for j := 0 to ErrorList.Count-1 do
     begin
       NodeData := ErrorList[j];
-      JPlugin := JSPEnum.GetPluginByFilename(NodeData.Filename);
+      Iter := JSPluginMap.locate([NodeData.Filename]);
+      if atEnd(Iter) then
+      begin
+        JPlugin := JSPEnum.GetPluginByFilename(NodeData.Filename);
+        if Assigned(JPlugin) then
+        begin
+          JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
+          if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) then
+          begin
+            ConfigObject.ApplyParam(JPlugin);
+            // Install handler to fill UndoableMultiChangeTask
+            JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+            JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+            JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
+          end
+          else
+          begin
+            FreeAndNil(JPlugin);
+          end;
+        end;
+        JSPluginMap.putPair([NodeData.Filename, JPlugin]);
+      end
+      else
+      begin
+        JPlugin := TJavaScriptPlugin(getObject(Iter));
+      end;
+
       if Assigned(JPlugin) then
       begin
-        JSPluginInfo := ConfigObject.GetJSPluginInfoByName(JPlugin.Name);
-        if Assigned(JSPluginInfo) and (JSPluginInfo.Enabled = True) then
-        begin
-          ConfigObject.ApplyParam(JPlugin);
-          // Install handler to fill UndoableMultiChangeTask
-          JPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
-          JPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
-          JPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
-          SubRangeCurrent := NodeData.Range;
-          i := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
+        SubRangeCurrent := NodeData.Range;
+        i := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
 
-          if (i > 0) then
-            SubRangePrevious := TSubtitleRange(WAVDisplayer.RangeList[i-1])
-          else
-            SubRangePrevious := nil;
+        if (i > 0) then
+          SubRangePrevious := TSubtitleRange(WAVDisplayer.RangeList[i-1])
+        else
+          SubRangePrevious := nil;
 
-          if (i < WAVDisplayer.RangeList.Count-1) then
-            SubRangeNext := TSubtitleRange(WAVDisplayer.RangeList[i+1])
-          else
-            SubRangeNext := nil;
+        if (i < WAVDisplayer.RangeList.Count-1) then
+          SubRangeNext := TSubtitleRange(WAVDisplayer.RangeList[i+1])
+        else
+          SubRangeNext := nil;
 
-          JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
-        end;
-        FreeAndNil(JPlugin);
+        JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
       end;
     end;
   finally
     g_WebRWSynchro.EndWrite;
     JSPEnum.Free;
+    FreeAndClear(JSPluginMap);
   end;
+
+  ExecTime := GetTickCount - Start;
+
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
@@ -5044,6 +5073,9 @@ begin
   begin
     FreeAndNil(UndoableMultiChangeTask);
   end;
+
+  Msg := Format('Fixed in %d ms.', [ExecTime]);
+  ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
 end;
 
 //------------------------------------------------------------------------------
