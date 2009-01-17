@@ -336,7 +336,9 @@ end;
 procedure TErrorReportForm.FixSelectedErrors;
 var ErrorLst : TList;
     Node : PVirtualNode;
+    CM : ICursorManager;
 begin
+  CM := TCursorManager.Create(crHourGlass);
   ErrorLst := TList.Create;
   Node := vtvErrorList.GetFirstSelected;
   while Assigned(Node) do
