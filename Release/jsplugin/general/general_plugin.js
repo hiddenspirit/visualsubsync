@@ -95,6 +95,18 @@ VSSPlugin = {
     SetStatusBarText(statusBarText(CurrentSub));
   },
   
+  // Called when the WAV selection is doubleclicked at start
+  OnDblClickWAVStart : function(CurrentSub, PreviousSub, NextSub) {
+    // nothing for now
+    //ScriptLog('OnDblClickWAVStart on : ' + CurrentSub.Text);    
+  },
+  
+  // Called when the WAV selection is doubleclicked at stop
+  OnDblClickWAVStop : function(CurrentSub, PreviousSub, NextSub) {
+    // nothing for now
+    //ScriptLog('OnDblClickWAVStop on : ' + CurrentSub.Text);
+  },
+  
   // COLUMNS -----------------------------------------------------------------
 
   // VSS core columns index
