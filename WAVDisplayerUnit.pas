@@ -129,6 +129,7 @@ type
   TSelectedRangeEvent = procedure (Sender: TObject; Range : TRange; IsDynamic : Boolean) of object;
   TSubtitleChangedEvent = procedure (Sender: TObject; OldStart, OldStop : Integer; NeedSort : Boolean) of object;
   TCustomDrawRange = procedure (Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect) of object;
+  TRangeTimeStampDblClickEvent = procedure (Sender: TObject; Range : TRange) of object;
 
   TMinBlankInfoPart = (mbipStart, mbipStop, mbipInvalid);
   TMinBlankInfo = class(TObject)
@@ -191,6 +192,8 @@ type
     FOnKaraokeChanged : TKaraokeTimeChangedEvent;
     FOnSelectedKaraokeRange : TSelectedKaraokeRangeEvent;
     FOnCustomDrawRange: TCustomDrawRange;
+    FOnRangeStartDblClick : TRangeTimeStampDblClickEvent;
+    FOnRangeStopDblClick : TRangeTimeStampDblClickEvent;
 
     FRenderer : TRenderer;
     FUpdateCursorTimer : TTimer;
@@ -345,6 +348,8 @@ type
     property OnKaraokeChanged : TKaraokeTimeChangedEvent read FOnKaraokeChanged write FOnKaraokeChanged;
     property OnSelectedKaraokeRange : TSelectedKaraokeRangeEvent read FOnSelectedKaraokeRange write FOnSelectedKaraokeRange;
     property OnCustomDrawRange : TCustomDrawRange read FOnCustomDrawRange write FOnCustomDrawRange;
+    property OnRangeStartDblClick : TRangeTimeStampDblClickEvent read FOnRangeStartDblClick write FOnRangeStartDblClick;
+    property OnRangeStopDblClick : TRangeTimeStampDblClickEvent read FOnRangeStopDblClick write FOnRangeStopDblClick;
 
     property Align;
     property Anchors;
@@ -2508,6 +2513,25 @@ begin
   // Disable subtitle selection for SSA mode
   if (not FPeakDataLoaded) or (SelMode = smSSA) then
     Exit;
+
+  // Detect double click on start or stop timestamp
+  if ((FDynamicEditMode = demStart) or (FDynamicEditMode = demStop)) and Assigned(FDynamicSelRange) then
+  begin
+    Case FDynamicEditMode of
+    demStart :
+      begin
+        if Assigned(FOnRangeStartDblClick) then
+          FOnRangeStartDblClick(Self, FDynamicSelRange);
+      end;
+    demStop :
+      begin
+        if Assigned(FOnRangeStartDblClick) then
+          FOnRangeStopDblClick(Self, FDynamicSelRange);
+      end;
+    end;
+    Exit;
+  end;
+
   idx := FRangeList.GetRangeIdxAt(FCursorMs);
   if (idx = -1) then
     Exit;

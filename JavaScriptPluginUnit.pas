@@ -290,12 +290,18 @@ type
   private
     FNotifySubtitleModificationFunc : TJSFunction;
     FNotifySelectionModificationFunc : TJSFunction;
+    FNotifyDblClickWAVStartFunc : TJSFunction;
+    FNotifyDblClickWAVStopFunc : TJSFunction;
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
     FCurrentSubJS, FPreviousSubJS, FNextSubJS : TJSObject;
     FVSSPluginObject : TJSObject;
     FParamArray : array[0..2] of TJSBase; // used when calling a JS function
     FOnJSPluginSetStatusBarText : TJSPluginNotifyEvent;
 
+    FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
+    FOnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
+    FOnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
+    
     // Columns
     FGetColumnBGColor : TJSFunction;
     FGetColumnText : TJSFunction;
@@ -314,6 +320,10 @@ type
     procedure FillICPNParamArray(Index : Integer; CurrentSub, PreviousSub,
       NextSub : TSubtitleRange);
 
+    procedure SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
+    procedure SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+    procedure SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
+
   protected
     // nothing for now
     
@@ -324,6 +334,8 @@ type
     function LoadScript(Filename : WideString) : Boolean;
     function NotifySubtitleModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifySelectionModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifyDblClickWAVStart(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifyDblClickWAVStop(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
 
     function GetColumnTitle(Index : Integer) : WideString;
     function GetColumnSize(Index : Integer) : Integer;
@@ -335,6 +347,9 @@ type
     property CoreColumnsCount : Integer read FCoreColumnsCount write FCoreColumnsCount;
     property ExtraColumnsCount : Integer read FExtraColumnsCount;
     property OnJSPluginSetStatusBarText : TJSPluginNotifyEvent read FOnJSPluginSetStatusBarText write FOnJSPluginSetStatusBarText;
+    property OnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent read FOnSubtitleChangeStart write SetOnSubtitleChangeStartEvent;
+    property OnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent read FOnSubtitleChangeStop write SetOnSubtitleChangeStopEvent;
+    property OnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent read FOnSubtitleChangeText write SetOnSubtitleChangeTextEvent;
   end;
 
   TAbstractJavaScriptPluginEnumerator = class
@@ -823,7 +838,6 @@ begin
   inherited;
 end;
 
-
 //------------------------------------------------------------------------------
 
 procedure TJavaScriptPlugin.SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
@@ -1150,6 +1164,8 @@ begin
   FVSSPluginObject := nil;
   FNotifySubtitleModificationFunc := nil;
   FNotifySelectionModificationFunc := nil;
+  FNotifyDblClickWAVStartFunc := nil;
+  FNotifyDblClickWAVStopFunc := nil;
 
   FCoreColumnsCount := 0;
   FExtraColumnsCount := 0;
@@ -1173,6 +1189,10 @@ begin
     FreeAndNil(FNotifySubtitleModificationFunc);
   if Assigned(FNotifySelectionModificationFunc) then
     FreeAndNil(FNotifySelectionModificationFunc);
+  if Assigned(FNotifyDblClickWAVStartFunc) then
+    FreeAndNil(FNotifyDblClickWAVStartFunc);
+  if Assigned(FNotifyDblClickWAVStopFunc) then
+    FreeAndNil(FNotifyDblClickWAVStopFunc);
     
   if Assigned(FGetColumnBGColor) then
     FreeAndNil(FGetColumnBGColor);
@@ -1189,6 +1209,45 @@ begin
   FCurrentSub.Free;
 
   inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TSimpleJavascriptWrapper.SetOnSubtitleChangeStartEvent(Value : TSubtitleRangeJSWrapperChangeStartEvent);
+begin
+  if (@Value <> @FOnSubtitleChangeStart) then
+  begin
+    FOnSubtitleChangeStart := Value;
+    FCurrentSub.FOnChangeStart := Value;
+    FPreviousSub.FOnChangeStart := Value;
+    FNextSub.FOnChangeStart := Value;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TSimpleJavascriptWrapper.SetOnSubtitleChangeStopEvent(Value : TSubtitleRangeJSWrapperChangeStopEvent);
+begin
+  if (@Value <> @FOnSubtitleChangeStop) then
+  begin
+    FOnSubtitleChangeStop := Value;
+    FCurrentSub.FOnChangeStop := Value;
+    FPreviousSub.FOnChangeStop := Value;
+    FNextSub.FOnChangeStop := Value;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TSimpleJavascriptWrapper.SetOnSubtitleChangeTextEvent(Value : TSubtitleRangeJSWrapperChangeTextEvent);
+begin
+  if (@Value <> @FOnSubtitleChangeText) then
+  begin
+    FOnSubtitleChangeText := Value;
+    FCurrentSub.FOnChangeText := Value;
+    FPreviousSub.FOnChangeText := Value;
+    FNextSub.FOnChangeText := Value;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1217,6 +1276,30 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TSimpleJavascriptWrapper.NotifyDblClickWAVStart(CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange) : WideString;
+begin
+  if Assigned(FNotifyDblClickWAVStartFunc) then
+  begin
+    FillParamArray(CurrentSub, PreviousSub, NextSub);
+    FNotifyDblClickWAVStartFunc.Call(FParamArray, Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TSimpleJavascriptWrapper.NotifyDblClickWAVStop(CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange) : WideString;
+begin
+  if Assigned(FNotifyDblClickWAVStopFunc) then
+  begin
+    FillParamArray(CurrentSub, PreviousSub, NextSub);
+    FNotifyDblClickWAVStopFunc.Call(FParamArray, Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 function TSimpleJavascriptWrapper.LoadScript(Filename : WideString) : Boolean;
 var JSFunction : TJSFunction;
     i : Integer;
@@ -1236,6 +1319,8 @@ begin
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
+    FNotifyDblClickWAVStartFunc := FVSSPluginObject.GetFunction('OnDblClickWAVStart');
+    FNotifyDblClickWAVStopFunc := FVSSPluginObject.GetFunction('OnDblClickWAVStop');
 
     JSFunction := FVSSPluginObject.GetFunction('GetExtraColumnsCount');
     if Assigned(JSFunction) then
