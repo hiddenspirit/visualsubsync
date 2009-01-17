@@ -19,7 +19,7 @@
 //  http://www.gnu.org/copyleft/gpl.html
 // -----------------------------------------------------------------------------
 //
-// SSA/ASS loding code contribution by Mirage (2005)
+// SSA/ASS loading code contribution by Mirage (2005)
 //
 // -----------------------------------------------------------------------------
 
@@ -386,6 +386,8 @@ type
     procedure WAVDisplayer1SelectedKaraokeRange(Sender: TObject;
         Range : TRange);
     procedure WAVDisplayer1CustomDrawRange(Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect);
+    procedure WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
+    procedure WAVDisplayer1RangeStopDblClick(Sender: TObject; Range : TRange);    
     procedure vtvSubsListGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
       var CellText: WideString);
@@ -669,6 +671,7 @@ type
     procedure OnJsSetStatusBarText(const Msg : WideString);
 
     procedure OnJavascriptAction(Sender : TObject);
+    procedure UpdateAfterJSChange;
 
     // Undo/Redo stuff
     procedure PushUndoableTask(UndoableTask : TUndoableTask);
@@ -891,6 +894,9 @@ begin
   WAVDisplayer.OnKaraokeChanged := WAVDisplayer1KaraokeChanged;
   WAVDisplayer.OnSelectedKaraokeRange := WAVDisplayer1SelectedKaraokeRange;
   WAVDisplayer.OnCustomDrawRange := WAVDisplayer1CustomDrawRange;
+  WAVDisplayer.OnRangeStartDblClick := WAVDisplayer1RangeStartDblClick;
+  WAVDisplayer.OnRangeStopDblClick := WAVDisplayer1RangeStopDblClick;
+
   WAVDisplayer.Enabled := False;
   WAVDisplayer.PopupMenu := WAVDisplayPopupMenu;
 
@@ -4749,11 +4755,11 @@ begin
   if (ErrorReportForm.vtvErrorList.TotalCount > 0) then
   begin
     ErrorReportForm.Visible := True;
-    Msg := Format('%d  error(s) found.', [ErrorReportForm.vtvErrorList.TotalCount]);
+    Msg := Format('%d error(s) found', [ErrorReportForm.vtvErrorList.TotalCount]);
   end
   else
-    Msg := 'No error found.';
-  Msg := Msg + Format(' (in %d ms)',[ExecTime]);
+    Msg := 'No error found';
+  Msg := Msg + Format(' (in %d ms).', [ExecTime]);
   ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
   LogForm.SilentLogMsg(Msg);
 end;
@@ -4991,9 +4997,11 @@ var NodeData : PErrorTreeData;
     SubRangeCurrent, SubRangePrevious, SubRangeNext : TSubtitleRange;
     i, j : Integer;
     Start, ExecTime : Cardinal;
+    FixedCount : Cardinal;
     Msg : WideString;
 begin
   Start := GetTickCount;
+  FixedCount := 0;
   
   UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
   JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
@@ -5049,6 +5057,7 @@ begin
           SubRangeNext := nil;
 
         JPlugin.FixError(SubRangeCurrent, SubRangePrevious, SubRangeNext);
+        Inc(FixedCount);
       end;
     end;
   finally
@@ -5074,7 +5083,7 @@ begin
     FreeAndNil(UndoableMultiChangeTask);
   end;
 
-  Msg := Format('Fixed in %d ms.', [ExecTime]);
+  Msg := Format('%d error(s) fixed (in %d ms).', [FixedCount, ExecTime]);
   ErrorReportForm.TntStatusBar1.Panels[0].Text := Msg;
 end;
 
@@ -6677,6 +6686,76 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
+
+    // Install handler to fill UndoableMultiChangeTask
+    GeneralJSPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+    GeneralJSPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+    GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
+
+    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifyDblClickWAVStart(CurrentSub, PreviousSub, NextSub);
+
+    GeneralJSPlugin.OnSubtitleChangeStart := nil;
+    GeneralJSPlugin.OnSubtitleChangeStop := nil;
+    GeneralJSPlugin.OnSubtitleChangeText := nil;
+
+    if (UndoableMultiChangeTask.GetCount > 0) then
+    begin
+      PushUndoableTask(UndoableMultiChangeTask);
+      // Do not free the task, it's on the stack now
+      UndoableMultiChangeTask := nil;
+      UpdateAfterJSChange;
+    end
+    else
+    begin
+      FreeAndNil(UndoableMultiChangeTask);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.WAVDisplayer1RangeStopDblClick(Sender: TObject; Range : TRange);
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+begin
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
+
+    // Install handler to fill UndoableMultiChangeTask
+    GeneralJSPlugin.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
+    GeneralJSPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
+    GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
+
+    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifyDblClickWAVStop(CurrentSub, PreviousSub, NextSub);
+
+    GeneralJSPlugin.OnSubtitleChangeStart := nil;
+    GeneralJSPlugin.OnSubtitleChangeStop := nil;
+    GeneralJSPlugin.OnSubtitleChangeText := nil;
+
+    if (UndoableMultiChangeTask.GetCount > 0) then
+    begin
+      PushUndoableTask(UndoableMultiChangeTask);
+      // Do not free the task, it's on the stack now
+      UndoableMultiChangeTask := nil;
+      UpdateAfterJSChange
+    end
+    else
+    begin
+      FreeAndNil(UndoableMultiChangeTask);
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.OnJsSetStatusBarText(const Msg : WideString);
 begin
   SetStatusBarPrimaryText(Msg);
@@ -7638,32 +7717,45 @@ begin
       PushUndoableTask(UndoableMultiChangeTask);
       // Do not free the task, it's on the stack now
       UndoableMultiChangeTask := nil;
+      CallJSOnSubtitleModification;
     end
     else
     begin
       FreeAndNil(UndoableMultiChangeTask);
     end;
 
-    // Update MemoSubtitleText if changed
-    if Assigned(vtvSubsList.FocusedNode) then
-    begin
-      NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
-      SubtitleRange := NodeData.Range;
-      if (MemoSubtitleText.Text <> SubtitleRange.Text) then
-      begin
-        SelStart := MemoSubtitleText.SelStart;
-        SelLength := MemoSubtitleText.SelLength;
-
-        vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-
-        MemoSubtitleText.SelStart := SelStart;
-        MemoSubtitleText.SelLength := SelLength;
-      end;
-    end;
-    // Update subtitle list and wavdisplay
-    vtvSubsList.Repaint;
-    WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+    UpdateAfterJSChange;
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateAfterJSChange;
+var SubtitleRange : TSubtitleRange;
+    NodeData : PTreeData;
+    SelStart, SelLength : Integer;
+begin
+  CallJSOnSubtitleModification;
+  
+  // Update MemoSubtitleText if changed
+  if Assigned(vtvSubsList.FocusedNode) then
+  begin
+    NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
+    SubtitleRange := NodeData.Range;
+    if (MemoSubtitleText.Text <> SubtitleRange.Text) then
+    begin
+      SelStart := MemoSubtitleText.SelStart;
+      SelLength := MemoSubtitleText.SelLength;
+
+      vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+      MemoSubtitleText.SelStart := SelStart;
+      MemoSubtitleText.SelLength := SelLength;
+    end;
+  end;
+  // Update subtitle list and wavdisplay
+  vtvSubsList.Repaint;
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
 end;
 
 //------------------------------------------------------------------------------
