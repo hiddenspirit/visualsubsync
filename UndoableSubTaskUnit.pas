@@ -384,7 +384,6 @@ begin
 end;
 
 procedure TUndoableMultiAddTask.SetData(SubList : TList);
-var i : Integer;
 begin
   SetCapacity(SubList.Count);
   FCount := SubList.Count;
