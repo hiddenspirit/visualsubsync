@@ -2,7 +2,7 @@ unit SRTParserUnit;
 
 interface
 
-uses Classes, Contnrs;
+uses Classes, Contnrs, TntClasses;
 
 type
   TSRTSubtitle = class
@@ -19,7 +19,9 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function Load(Filename : WideString) : Integer;
+    function Load(Stream : TStream) : Integer; overload;
+    function Load(Source : TTntStrings) : Integer; overload;
+    function Load(Filename : WideString) : Integer; overload;
 
     function GetCount : Integer;
     function GetAt(Index : Integer) : TSRTSubtitle;
@@ -30,7 +32,7 @@ type
 
 implementation
 
-uses TntClasses, MiscToolsUnit, SysUtils, TntSysUtils;
+uses MiscToolsUnit, SysUtils, TntSysUtils;
 
 constructor TSRTParser.Create;
 begin
@@ -55,15 +57,21 @@ begin
   Result := TSRTSubtitle(FSubList[Index]);
 end;
 
-function TSRTParser.Load(Filename : WideString) : Integer;
+function TSRTParser.Load(Stream : TStream) : Integer;
 var Source : TTntStringList;
-    i, lineIndex : integer;
+begin
+  Source := MyTTntStringList.Create;
+  Source.LoadFromStream(Stream);
+  Result := Load(Source);
+  Source.Free;
+end;
+
+function TSRTParser.Load(Source : TTntStrings) : Integer;
+var i, lineIndex : integer;
     Start, Stop, NextStart, NextStop : Integer;
     S, SubText : WideString;
     Sub : TSRTSubtitle;
 begin
-  Source := MyTTntStringList.Create;
-  Source.LoadFromFile(Filename);
   FIsUTF8 := (Source.LastFileCharSet <> csAnsi);
   FAutoCorrectedFile := False;
   lineIndex := 0;
@@ -119,9 +127,17 @@ begin
     Start := NextStart;
     Stop := NextStop;
   end;
-  Source.Free;
-
+  
   Result := FSubList.Count;
+end;
+
+function TSRTParser.Load(Filename : WideString) : Integer;
+var Source : TTntStringList;
+begin
+  Source := MyTTntStringList.Create;
+  Source.LoadFromFile(Filename);
+  Result := Load(Source);
+  Source.Free;
 end;
 
 end.

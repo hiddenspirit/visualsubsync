@@ -1893,7 +1893,7 @@ begin
   WAVDisplayer.ClearRangeList;
 
   ssaParser := TSSAParser.Create;
-  ssaParser.Parse(Filename);
+  ssaParser.Load(Filename);
   IsUTF8 := ssaParser.GetIsUTF8;
   SubtitleFileHeader := ssaParser.GetHeaderLines;
   SubtitleFileFooter := ssaParser.GetFooterLines;
@@ -3941,7 +3941,8 @@ var
   UndoableMultiAddTask : TUndoableMultiAddTask;
 begin
 
-  TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' + 'All files (*.*)|*.*';
+  TntOpenDialog1.Filter := 'Text file|*.TXT' + '|' +
+    'All files (*.*)|*.*';
   if not TntOpenDialog1.Execute then
     Exit;
 
@@ -3951,6 +3952,9 @@ begin
 
   g_WebRWSynchro.BeginWrite;
   try
+    // TODO : insert SRT file, SSA/ASS file
+
+
     // Get start time for the first new subtitle
     if (WAVDisplayer.RangeList.Count > 0) then
     begin
@@ -7700,9 +7704,6 @@ end;
 
 procedure TMainForm.OnJavascriptAction(Sender : TObject);
 var JsAction : TJavascriptAction;
-    SubtitleRange : TSubtitleRange;
-    NodeData : PTreeData;
-    SelStart, SelLength : Integer;
 begin
   if (Sender is TJavascriptAction) then
   begin
@@ -8309,8 +8310,10 @@ procedure TMainForm.ActionPasteExecute(Sender: TObject);
 var actCtrl : TWinControl;
     SubList : TList;
     UndoableMultiAddTask : TUndoableMultiAddTask;
-    Range : TSubtitleRange;
 begin
+
+  // TODO : Paste at wavdisplay cursor position 
+
   actCtrl := Screen.ActiveControl;
   if (actCtrl is TCustomEdit) then
   begin
@@ -8319,7 +8322,7 @@ begin
   else if (actCtrl is TVirtualStringTree) then
   begin
     SubList := TList.Create;
-    PasteClipboard(SubList);
+    PasteClipboard(SubList, SubRangeFactory);
     if (SubList.Count > 0) then
     begin
       // TODO : maybe check for duplicate sub when pasting ?
@@ -8339,8 +8342,9 @@ procedure TMainForm.ActionPasteUpdate(Sender: TObject);
 var actCtrl : TWinControl;
 begin
   actCtrl := Screen.ActiveControl;
-  ActionPaste.Enabled := ((actCtrl is TCustomEdit) and (TntClipboard.HasFormat(CF_TEXT)))
-    or ((actCtrl is TVirtualStringTree) and (TntClipboard.HasFormat(VSSClipBoardFORMAT)));
+  ActionPaste.Enabled := ((actCtrl is TCustomEdit) and TntClipboard.HasFormat(CF_TEXT))
+    or ((actCtrl is TVirtualStringTree) and
+      (TntClipboard.HasFormat(VSSClipBoardFORMAT) or TntClipboard.HasFormat(CF_TEXT)));
 end;
 
 //------------------------------------------------------------------------------
