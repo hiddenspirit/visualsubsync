@@ -95,16 +95,44 @@ VSSPlugin = {
     SetStatusBarText(statusBarText(CurrentSub));
   },
   
-  // Called when the WAV selection is doubleclicked at start
-  OnDblClickWAVStart : function(CurrentSub, PreviousSub, NextSub) {
-    // nothing for now
-    //ScriptLog('OnDblClickWAVStart on : ' + CurrentSub.Text);    
+  // Called when the selection is doubleclicked at start on the WAV display
+  OnRangeStartDblClick : function(CurrentSub, PreviousSub, NextSub) {
+
+    // No overlap onto previous subtitle
+    if (PreviousSub) {
+        var afterPreviousSub = PreviousSub.Stop + VSSCore.MinimumBlank;
+
+        if (CurrentSub.Start < afterPreviousSub) {
+            CurrentSub.Start = afterPreviousSub;
+        }
+    }
+
+    // TODO: unoverlap onto any previous or next scene change,
+    // if scene changes are visible
   },
   
-  // Called when the WAV selection is doubleclicked at stop
-  OnDblClickWAVStop : function(CurrentSub, PreviousSub, NextSub) {
-    // nothing for now
-    //ScriptLog('OnDblClickWAVStop on : ' + CurrentSub.Text);
+  // Called when the selection is doubleclicked at stop on the WAV display
+  OnRangeStopDblClick : function(CurrentSub, PreviousSub, NextSub) {
+
+    // Lavie duration
+    var duration = CurrentSub.StrippedText.length * 50 + 500;
+    var stop = CurrentSub.Start + duration;
+
+    // No overlap onto next subtitle
+    if (NextSub) {
+        var beforeNextSub = NextSub.Start - VSSCore.MinimumBlank;
+
+        if (stop > beforeNextSub) {
+            stop = beforeNextSub;
+        }
+    }
+
+    // TODO: unoverlap onto any previous or next scene change,
+    // if scene changes are visible
+
+    if (stop > CurrentSub.Start) {
+        CurrentSub.Stop = stop;
+    }
   },
   
   // COLUMNS -----------------------------------------------------------------
