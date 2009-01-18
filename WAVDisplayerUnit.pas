@@ -2446,7 +2446,7 @@ begin
   inherited;
 
   //TODO : Add user setting for anti-empty-selection
-  if ((FSelection.StopTime - FSelection.StartTime) < 80) and
+  if ((FSelection.StopTime - FSelection.StartTime) < 40) and
     (not (Assigned(FSelectedRange) or Assigned(FDynamicSelRange) or
     Assigned(FSelectedKaraokeRange))) then
   begin
