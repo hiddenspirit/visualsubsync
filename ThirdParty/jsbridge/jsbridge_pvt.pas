@@ -249,10 +249,24 @@ begin
           JS_ValueToNumber(cx, val, @parm^.dbl);
       JSTYPE_STRING:
         begin
+          // Here we convert the javascript parameter to a Delphi string
           str := JS_GetStringChars(JS_ValueToString(cx, val));
+          // Copy the string parameter in this array so it's no freed          
           SetLength(strlist, Length(strlist) + 1);
-          strlist[Length(strlist) - 1] := str;
-          parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
+          strlist[Length(strlist) - 1] := JS_GetStringChars(JS_ValueToString(cx, val));
+          // Finally get a pointer on this delphi string
+          if Length(str) = 0 then
+          begin
+            parm^.obj := nil
+          end
+          else
+          begin
+            parm^.obj := PBridgeChar(strlist[Length(strlist) - 1]);
+            // for the record, here is the syntax :
+            // Params[0]:=@s1;           //VAR string parameter
+            // Params[1]:=@s2[1];        //CONST string parameter
+            // Params[3]:=PWideChar(s3); //CONST string parameter
+          end;
         end;
       JSTYPE_BOOLEAN:
         parm^.bool := JSValToBoolean(val);
