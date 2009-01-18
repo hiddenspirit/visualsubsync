@@ -253,7 +253,7 @@ begin
           str := JS_GetStringChars(JS_ValueToString(cx, val));
           // Copy the string parameter in this array so it's no freed          
           SetLength(strlist, Length(strlist) + 1);
-          strlist[Length(strlist) - 1] := JS_GetStringChars(JS_ValueToString(cx, val));
+          strlist[Length(strlist) - 1] := str;
           // Finally get a pointer on this delphi string
           if Length(str) = 0 then
           begin
