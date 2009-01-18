@@ -2515,21 +2515,22 @@ begin
     Exit;
 
   // Detect double click on start or stop timestamp
-  if ((FDynamicEditMode = demStart) or (FDynamicEditMode = demStop)) and Assigned(FDynamicSelRange) then
+  if Assigned(FDynamicSelRange) then
   begin
     Case FDynamicEditMode of
     demStart :
+      if Assigned(FOnRangeStartDblClick) then
       begin
-        if Assigned(FOnRangeStartDblClick) then
-          FOnRangeStartDblClick(Self, FDynamicSelRange);
+        FOnRangeStartDblClick(Self, FDynamicSelRange);
+        Exit;
       end;
     demStop :
+      if Assigned(FOnRangeStopDblClick) then
       begin
-        if Assigned(FOnRangeStartDblClick) then
-          FOnRangeStopDblClick(Self, FDynamicSelRange);
+        FOnRangeStopDblClick(Self, FDynamicSelRange);
+        Exit;
       end;
     end;
-    Exit;
   end;
 
   idx := FRangeList.GetRangeIdxAt(FCursorMs);

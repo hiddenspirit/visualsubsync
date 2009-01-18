@@ -6703,7 +6703,7 @@ begin
     GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
 
     GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
-    GeneralJSPlugin.NotifyDblClickWAVStart(CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifyRangeStartDblClick(CurrentSub, PreviousSub, NextSub);
 
     GeneralJSPlugin.OnSubtitleChangeStart := nil;
     GeneralJSPlugin.OnSubtitleChangeStop := nil;
@@ -6738,7 +6738,7 @@ begin
     GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
 
     GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
-    GeneralJSPlugin.NotifyDblClickWAVStop(CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifyRangeStopDblClick(CurrentSub, PreviousSub, NextSub);
 
     GeneralJSPlugin.OnSubtitleChangeStart := nil;
     GeneralJSPlugin.OnSubtitleChangeStop := nil;
@@ -6749,7 +6749,7 @@ begin
       PushUndoableTask(UndoableMultiChangeTask);
       // Do not free the task, it's on the stack now
       UndoableMultiChangeTask := nil;
-      UpdateAfterJSChange
+      UpdateAfterJSChange;
     end
     else
     begin
@@ -7718,14 +7718,12 @@ begin
       PushUndoableTask(UndoableMultiChangeTask);
       // Do not free the task, it's on the stack now
       UndoableMultiChangeTask := nil;
-      CallJSOnSubtitleModification;
+      UpdateAfterJSChange;
     end
     else
     begin
       FreeAndNil(UndoableMultiChangeTask);
     end;
-
-    UpdateAfterJSChange;
   end;
 end;
 
@@ -7757,6 +7755,7 @@ begin
   // Update subtitle list and wavdisplay
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
 end;
 
 //------------------------------------------------------------------------------
