@@ -1335,6 +1335,7 @@ object MainForm: TMainForm
       end
       object Inserttextfile1: TTntMenuItem
         Action = ActionInsertTextFile
+        Caption = 'Insert file...'
       end
       object MenuItemTextPipe: TTntMenuItem
         Caption = 'Text pipe'
@@ -1772,7 +1773,7 @@ object MainForm: TMainForm
       ShortCut = 46
     end
     object ActionInsertTextFile: TTntAction
-      Caption = 'Insert text file'
+      Caption = 'Insert file'
       ImageIndex = 33
       OnExecute = ActionInsertTextFileExecute
     end
