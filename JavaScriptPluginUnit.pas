@@ -290,8 +290,8 @@ type
   private
     FNotifySubtitleModificationFunc : TJSFunction;
     FNotifySelectionModificationFunc : TJSFunction;
-    FNotifyDblClickWAVStartFunc : TJSFunction;
-    FNotifyDblClickWAVStopFunc : TJSFunction;
+    FNotifyRangeStartDblClickFunc : TJSFunction;
+    FNotifyRangeStopDblClickFunc : TJSFunction;
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
     FCurrentSubJS, FPreviousSubJS, FNextSubJS : TJSObject;
     FVSSPluginObject : TJSObject;
@@ -334,8 +334,8 @@ type
     function LoadScript(Filename : WideString) : Boolean;
     function NotifySubtitleModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifySelectionModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
-    function NotifyDblClickWAVStart(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
-    function NotifyDblClickWAVStop(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifyRangeStartDblClick(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifyRangeStopDblClick(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
 
     function GetColumnTitle(Index : Integer) : WideString;
     function GetColumnSize(Index : Integer) : Integer;
@@ -1164,8 +1164,8 @@ begin
   FVSSPluginObject := nil;
   FNotifySubtitleModificationFunc := nil;
   FNotifySelectionModificationFunc := nil;
-  FNotifyDblClickWAVStartFunc := nil;
-  FNotifyDblClickWAVStopFunc := nil;
+  FNotifyRangeStartDblClickFunc := nil;
+  FNotifyRangeStopDblClickFunc := nil;
 
   FCoreColumnsCount := 0;
   FExtraColumnsCount := 0;
@@ -1189,10 +1189,10 @@ begin
     FreeAndNil(FNotifySubtitleModificationFunc);
   if Assigned(FNotifySelectionModificationFunc) then
     FreeAndNil(FNotifySelectionModificationFunc);
-  if Assigned(FNotifyDblClickWAVStartFunc) then
-    FreeAndNil(FNotifyDblClickWAVStartFunc);
-  if Assigned(FNotifyDblClickWAVStopFunc) then
-    FreeAndNil(FNotifyDblClickWAVStopFunc);
+  if Assigned(FNotifyRangeStartDblClickFunc) then
+    FreeAndNil(FNotifyRangeStartDblClickFunc);
+  if Assigned(FNotifyRangeStopDblClickFunc) then
+    FreeAndNil(FNotifyRangeStopDblClickFunc);
     
   if Assigned(FGetColumnBGColor) then
     FreeAndNil(FGetColumnBGColor);
@@ -1276,25 +1276,25 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TSimpleJavascriptWrapper.NotifyDblClickWAVStart(CurrentSub,
+function TSimpleJavascriptWrapper.NotifyRangeStartDblClick(CurrentSub,
   PreviousSub, NextSub : TSubtitleRange) : WideString;
 begin
-  if Assigned(FNotifyDblClickWAVStartFunc) then
+  if Assigned(FNotifyRangeStartDblClickFunc) then
   begin
     FillParamArray(CurrentSub, PreviousSub, NextSub);
-    FNotifyDblClickWAVStartFunc.Call(FParamArray, Result);
+    FNotifyRangeStartDblClickFunc.Call(FParamArray, Result);
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-function TSimpleJavascriptWrapper.NotifyDblClickWAVStop(CurrentSub,
+function TSimpleJavascriptWrapper.NotifyRangeStopDblClick(CurrentSub,
   PreviousSub, NextSub : TSubtitleRange) : WideString;
 begin
-  if Assigned(FNotifyDblClickWAVStopFunc) then
+  if Assigned(FNotifyRangeStopDblClickFunc) then
   begin
     FillParamArray(CurrentSub, PreviousSub, NextSub);
-    FNotifyDblClickWAVStopFunc.Call(FParamArray, Result);
+    FNotifyRangeStopDblClickFunc.Call(FParamArray, Result);
   end;
 end;
 
@@ -1319,8 +1319,8 @@ begin
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
-    FNotifyDblClickWAVStartFunc := FVSSPluginObject.GetFunction('OnDblClickWAVStart');
-    FNotifyDblClickWAVStopFunc := FVSSPluginObject.GetFunction('OnDblClickWAVStop');
+    FNotifyRangeStartDblClickFunc := FVSSPluginObject.GetFunction('OnRangeStartDblClick');
+    FNotifyRangeStopDblClickFunc := FVSSPluginObject.GetFunction('OnRangeStopDblClick');
 
     JSFunction := FVSSPluginObject.GetFunction('GetExtraColumnsCount');
     if Assigned(JSFunction) then
