@@ -98,7 +98,10 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure Parse(Filename: WideString);
+    function Load(Stream : TStream) : Integer; overload;
+    function Load(Source : TTntStrings) : Integer; overload;
+    function Load(Filename : WideString) : Integer; overload; 
+
     function GetStylesCount : Integer;
     function GetDialoguesCount : Integer;
     function GetStyleValueAsString(lineIndex : integer; valueKey : WideString) : WideString;
@@ -406,16 +409,12 @@ begin
     Result := FooterParser;
 end;
 
-procedure TSSAParser.Parse(Filename: WideString);
-var Source : TTntStringList;
-    line : WideString;
+function TSSAParser.Load(Source: TTntStrings) : Integer;
+var line : WideString;
     sectionParser : TAbstractLineParser;
     ScriptType : WideString;
     i : Integer;
 begin
-  Source := MyTTntStringList.Create;
-  Source.LoadFromFile(Filename);
-
   IsUTF8 := (Source.LastFileCharSet <> csAnsi);
 
   // Read file
@@ -431,10 +430,29 @@ begin
     end;
     sectionParser.ParseLine(line);
   end;
-  Source.Free;
 
   ScriptType := Trim(ScriptInfoParser.GetValueAsString('ScriptType'));
   IsASS := StartsText('v4.00+', ScriptType) or StyleParser.IsASS;
+
+  Result := GetDialoguesCount; 
+end;
+
+function TSSAParser.Load(Filename: WideString) : Integer;
+var Source : TTntStringList;
+begin
+  Source := MyTTntStringList.Create;
+  Source.LoadFromFile(Filename);
+  Result := Load(Source);
+  Source.Free;
+end;
+
+function TSSAParser.Load(Stream : TStream) : Integer;
+var Source : TTntStringList;
+begin
+  Source := MyTTntStringList.Create;
+  Source.LoadFromStream(Stream);
+  Result := Load(Source);
+  Source.Free;
 end;
 
 function TSSAParser.GetStylesCount : Integer;
