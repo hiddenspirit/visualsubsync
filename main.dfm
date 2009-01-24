@@ -1653,6 +1653,7 @@ object MainForm: TMainForm
       OnExecute = ActionOpenProjectExecute
     end
     object ActionFind: TTntAction
+      Tag = 1
       Caption = 'Find'
       ImageIndex = 11
       ShortCut = 16454
