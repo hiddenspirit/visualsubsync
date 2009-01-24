@@ -861,7 +861,7 @@ begin
 
   vtvSubsList.Constraints.MinWidth := 600;
   PanelMiddle.Constraints.MinHeight := 125;
-  PanelBottom.Constraints.MinHeight := 60;
+  PanelBottom.Constraints.MinHeight := 40;
   Splitter1.MinSize := 1;
 
   // Clear speed button caption text filled by action :p
@@ -3783,6 +3783,7 @@ begin
   SuggestionForm.UpdateFonts;
 
   String2Font(ConfigObject.SubTextFont, MemoSubtitleText.Font);
+  // TODO : check why MemoSubtitleText font is not updated automatically (need to select a new subtitle)
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
 
   // Update line counter size so we have at least 3 digit
