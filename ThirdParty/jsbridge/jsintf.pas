@@ -1625,9 +1625,9 @@ begin
   if (FConnected) then
   begin
     {$IFNDEF JSUnicode}
-    FJSString := JS_NewStringCopyN(FEngine.Context, PBridgeChar(Value), Length(Value));
+    FJSString := JS_NewStringCopyN(FEngine.Context, PBridgeChar(FValue), Length(FValue));
     {$ELSE}
-    FJSString := JS_NewUCStringCopyN(FEngine.Context, PBridgeChar(Value), Length(Value));
+    FJSString := JS_NewUCStringCopyN(FEngine.Context, PBridgeChar(FValue), Length(FValue));
     {$ENDIF}
     FJSVal := jsval(FJSString) or JSVAL_STRING;
 
