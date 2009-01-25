@@ -250,11 +250,11 @@ begin
     raise Exception.Create('Unable to find TJSObject instance.');
   str := GetParamName(cx, id);
 
+  // Always return true otherwise it stops any following operation.
+  // The real result is in vp, we just don't touch it.
   Result := JS_TRUE;
   if (delphiobj.HasNativeProperty(jsobj, str, false)) then
     vp^ := delphiobj.GetNativeProperty(jsobj, str)
-  else
-    Result := JS_FALSE;
 end;
 
 function IntfBridge_ResolveOp(cx: PJSContext; obj: PJSObject; id: jsval): JSBool; cdecl;
@@ -268,6 +268,7 @@ var
   dobj: TJSObject;
   str: Variant;
   paramName: TBridgeString;
+  msg : String;
 begin
   jsobj := GetDelphiObject(cx, obj);
   if (jsobj = nil) then
@@ -281,10 +282,14 @@ begin
   if (dobj.HasNativeProperty(jsobj, paramName, true)) then
   begin
     dobj.SetNativeProperty(jsobj, paramName, str);
-    Result := JS_TRUE;
+    Result := JS_TRUE;    
   end
   else
+  begin
+    msg := Format('Can''t set none existing property %s on a native object.', [paramName]);
+    JS_ReportError(cx, PAnsiChar(msg), id);
     Result := JS_FALSE;
+  end;
 end;
 
 function IntfBridge_MethodCall(cx: PJSContext; obj: PJSObject; argc: uintN; argv: pjsval; rval: pjsval): JSBool; cdecl;
