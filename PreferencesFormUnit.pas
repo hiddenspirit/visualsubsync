@@ -79,6 +79,7 @@ type
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
+    MaximumSubtitleDuration : Integer;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -228,6 +229,9 @@ type
     TntPanel1: TTntPanel;
     bttOk: TTntButton;
     bttCancel: TTntButton;
+    EditMaximalDuration: TTntEdit;
+    UpDownMaximumDuration: TTntUpDown;
+    TntLabel14: TTntLabel;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -477,6 +481,7 @@ begin
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
+  MaximumSubtitleDuration := 6000;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -601,6 +606,7 @@ begin
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   IniFile.WriteBool('Misc','EnableMouseSnapping',EnableMouseSnapping);
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
+  IniFile.WriteInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -679,6 +685,7 @@ begin
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
   EnableMouseSnapping := IniFile.ReadBool('Misc','EnableMouseSnapping',EnableMouseSnapping);
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
+  MaximumSubtitleDuration := IniFile.ReadInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
 
   // Web server
   if (not IsPresets) then
@@ -817,6 +824,7 @@ begin
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
+  UpDownMaximumDuration.Position := Config.MaximumSubtitleDuration;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -906,6 +914,7 @@ begin
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
+  Config.MaximumSubtitleDuration := UpDownMaximumDuration.Position;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
