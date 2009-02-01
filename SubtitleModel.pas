@@ -23,7 +23,7 @@ type
     function GetStop : Integer;
     function GetText : WideString;
   end;
-    
+
   
   TUndoableSubTask = class(TObject)
   private
@@ -128,11 +128,32 @@ type
     function GetCount : Integer;
   end;
 
+  function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;  
+
 implementation
 
 uses SysUtils;
 
 var SubIdCounter : Integer = 10;
+
+// -----------------------------------------------------------------------------
+
+function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
+begin
+  if (Item1.Start < Item2.Start ) then
+    Result := -1
+  else if (Item1.Start > Item2.Start) then
+    Result := 1
+  else
+  begin
+    if (Item1.Stop < Item2.Stop) then
+      Result := -1
+    else if (Item1.Stop > Item2.Stop) then
+      Result := 1
+    else
+      Result := 0
+  end
+end;
 
 // -----------------------------------------------------------------------------
 
