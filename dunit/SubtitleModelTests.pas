@@ -24,7 +24,16 @@ type
     procedure TestSetStop;
     procedure TestSetText;
     procedure TestDeleteSubtitle;
+    procedure TestSubtitleTimeComparator;
 
+  end;
+
+  TSubtitleItemHack = class(TObject)
+  private
+    Id : Integer;
+    Start : Integer;
+    Stop : Integer;
+    Text : WideString;
   end;
 
 implementation
@@ -201,9 +210,37 @@ begin
   CheckEquals(SubId, Sub.GetId, 'Same id.');
 end;
 
+procedure TSubtitleModelTests.TestSubtitleTimeComparator;
+var SubItem1, SubItem2 : TSubtitleItem;
+begin
+  SubItem1 := TSubtitleItem.Create;
+  SubItem2 := TSubtitleItem.Create;
+
+  TSubtitleItemHack(SubItem1).Start := 0;
+  TSubtitleItemHack(SubItem1).Stop := 0;
+  TSubtitleItemHack(SubItem2).Start := 0;
+  TSubtitleItemHack(SubItem2).Stop := 0;
+  CheckEquals(0, SubtitleTimeComparator(SubItem1, SubItem2), 'strictly =');
+
+  TSubtitleItemHack(SubItem1).Start := 10;
+  TSubtitleItemHack(SubItem1).Stop := 15;
+  CheckEquals(1, SubtitleTimeComparator(SubItem1, SubItem2), 'strictly >');
+
+  TSubtitleItemHack(SubItem2).Start := 20;
+  TSubtitleItemHack(SubItem2).Stop := 25;
+  CheckEquals(-1, SubtitleTimeComparator(SubItem1, SubItem2), 'strictly <');
+
+  TSubtitleItemHack(SubItem1).Start := 20;
+  TSubtitleItemHack(SubItem1).Stop := 22;
+  CheckEquals(-1, SubtitleTimeComparator(SubItem1, SubItem2), 'stop <');
+
+  TSubtitleItemHack(SubItem1).Start := 20;
+  TSubtitleItemHack(SubItem1).Stop := 28;
+  CheckEquals(1, SubtitleTimeComparator(SubItem1, SubItem2), 'stop >');
+end;
+
 initialization
   TestFramework.RegisterTest('SubtitleModelTests Suite',
     TSubtitleModelTests.Suite);
 
 end.
- 
