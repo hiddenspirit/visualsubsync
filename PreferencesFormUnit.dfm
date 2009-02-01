@@ -260,29 +260,29 @@ object PreferencesForm: TPreferencesForm
           Top = 160
           Width = 81
           Height = 21
-          TabOrder = 0
+          TabOrder = 3
           Text = '0'
         end
         object UpDownBlankBetweenSub: TTntUpDown
-          Left = 256
+          Left = 257
           Top = 160
           Width = 15
           Height = 21
           Associate = EditBlankBetweenSub
           Max = 500
           Increment = 10
-          TabOrder = 1
+          TabOrder = 4
         end
         object EditCPSTarget: TTntEdit
           Left = 176
           Top = 64
           Width = 81
           Height = 21
-          TabOrder = 2
+          TabOrder = 0
           Text = '5'
         end
         object UpDownCPSTarget: TTntUpDown
-          Left = 256
+          Left = 257
           Top = 64
           Width = 15
           Height = 21
@@ -290,7 +290,7 @@ object PreferencesForm: TPreferencesForm
           Min = 5
           Max = 50
           Position = 5
-          TabOrder = 3
+          TabOrder = 5
           Thousands = False
         end
         object EditMinimalDuration: TTntEdit
@@ -298,11 +298,11 @@ object PreferencesForm: TPreferencesForm
           Top = 96
           Width = 81
           Height = 21
-          TabOrder = 4
+          TabOrder = 1
           Text = '500'
         end
         object UpDownMinimalDuration: TTntUpDown
-          Left = 256
+          Left = 257
           Top = 96
           Width = 15
           Height = 21
@@ -311,7 +311,7 @@ object PreferencesForm: TPreferencesForm
           Max = 5000
           Increment = 100
           Position = 500
-          TabOrder = 5
+          TabOrder = 6
           Thousands = False
         end
         object EditMaximalDuration: TTntEdit
@@ -319,11 +319,11 @@ object PreferencesForm: TPreferencesForm
           Top = 128
           Width = 81
           Height = 21
-          TabOrder = 6
+          TabOrder = 2
           Text = '6000'
         end
         object UpDownMaximumDuration: TTntUpDown
-          Left = 256
+          Left = 257
           Top = 128
           Width = 16
           Height = 21
