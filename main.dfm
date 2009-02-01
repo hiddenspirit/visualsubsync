@@ -2234,6 +2234,10 @@ object MainForm: TMainForm
       OnExecute = ActionPasteExecute
       OnUpdate = ActionPasteUpdate
     end
+    object ActionPasteAtCursor: TTntAction
+      Caption = 'Paste at cursor'
+      OnExecute = ActionPasteAtCursorExecute
+    end
   end
   object ImageList1: TImageList
     BkColor = clFuchsia
@@ -3990,6 +3994,9 @@ object MainForm: TMainForm
     end
     object pmiWAVDispSetSubtitleTime: TTntMenuItem
       Action = ActionSetSubtitleTime
+    end
+    object Pasteatcursor1: TTntMenuItem
+      Action = ActionPasteAtCursor
     end
     object N24: TTntMenuItem
       Caption = '-'

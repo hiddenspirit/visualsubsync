@@ -368,6 +368,8 @@ type
     ActionInsertSceneChange: TTntAction;
     pmiInsertSC: TTntMenuItem;
     ActionPaste: TTntAction;
+    ActionPasteAtCursor: TTntAction;
+    Pasteatcursor1: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -552,6 +554,7 @@ type
     procedure ActionInsertSceneChangeExecute(Sender: TObject);
     procedure ActionPasteExecute(Sender: TObject);
     procedure ActionPasteUpdate(Sender: TObject);
+    procedure ActionPasteAtCursorExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -1252,6 +1255,7 @@ begin
   g_VSSCoreWrapper.SetCpsTarget(ConfigObject.SpaceKeyCPSTarget);
   g_VSSCoreWrapper.SetMinimumDuration(ConfigObject.SpaceKeyMinimalDuration);
   g_VSSCoreWrapper.SetMinimumBlank(ConfigObject.SpaceKeyBlankBetweenSubtitles);
+  g_VSSCoreWrapper.SetMaximumDuration(ConfigObject.MaximumSubtitleDuration);
 
   MenuItemShowHidesSeneChange.Checked := ConfigObject.ShowSceneChange;
 end;
@@ -8346,9 +8350,6 @@ var actCtrl : TWinControl;
     SubList : TList;
     UndoableMultiAddTask : TUndoableMultiAddTask;
 begin
-
-  // TODO : Paste at wavdisplay cursor position 
-
   actCtrl := Screen.ActiveControl;
   if (actCtrl is TCustomEdit) then
   begin
@@ -8380,6 +8381,38 @@ begin
   ActionPaste.Enabled := ((actCtrl is TCustomEdit) and TntClipboard.HasFormat(CF_TEXT))
     or ((actCtrl is TVirtualStringTree) and
       (TntClipboard.HasFormat(VSSClipBoardFORMAT) or TntClipboard.HasFormat(CF_TEXT)));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionPasteAtCursorExecute(Sender: TObject);
+var SubList : TList;
+    UndoableMultiAddTask : TUndoableMultiAddTask;
+    SubRange : TSubtitleRange;
+    Delay, i : Integer;
+begin
+  SubList := TList.Create;
+  PasteClipboard(SubList, SubRangeFactory);
+  if (SubList.Count > 0) then
+  begin
+    // Delay each subtitle so the start time of the first subtitle match
+    // the cursor position
+    SubRange := SubList[0];
+    Delay := SubRange.StartTime - WAVDisplayer.GetCursorPos;
+    for i:=0 to SubList.Count-1 do
+    begin
+      SubRange := SubList[i];
+      SubRange.StartTime := SubRange.StartTime - Delay;
+      SubRange.StopTime := SubRange.StopTime - Delay;
+    end;
+    // TODO : maybe check for duplicate sub when pasting ?
+    UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+    UndoableMultiAddTask.SetData(SubList);
+    UndoableMultiAddTask.DoTask;
+    PushUndoableTask(UndoableMultiAddTask);
+    CurrentProject.IsDirty := True;
+  end;
+  SubList.Free;
 end;
 
 //------------------------------------------------------------------------------
