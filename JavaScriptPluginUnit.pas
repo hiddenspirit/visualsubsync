@@ -107,6 +107,7 @@ type
     FMinimumBlank : Integer;
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
+    FMaximumDuration : Integer;
 
     FVideoWidth : Integer;
     FVideoHeight : Integer;
@@ -135,6 +136,7 @@ type
 
     procedure SetCpsTarget(Value : Integer);
     procedure SetMinimumDuration(Value : Integer);
+    procedure SetMaximumDuration(Value : Integer);    
     procedure SetMinimumBlank(Value : Integer);
 
     procedure SetVideoWidth(Value : Integer);
@@ -179,6 +181,7 @@ type
 
     property CpsTarget : Integer read FCpsTarget;
     property MinimumDuration : Integer read FMinimumDuration;
+    property MaximumDuration : Integer read FMaximumDuration;    
     property MinimumBlank : Integer read FMinimumBlank;
 
     property VideoWidth : Integer read FVideoWidth;
@@ -1744,6 +1747,11 @@ end;
 procedure TVSSCoreWrapper.SetMinimumDuration(Value : Integer);
 begin
   FMinimumDuration := Value;
+end;
+
+procedure TVSSCoreWrapper.SetMaximumDuration(Value : Integer);
+begin
+  FMaximumDuration := Value;
 end;
 
 procedure TVSSCoreWrapper.SetMinimumBlank(Value : Integer);

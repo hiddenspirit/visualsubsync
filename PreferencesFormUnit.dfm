@@ -25,7 +25,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 482
     Height = 356
-    ActivePage = tsMouse
+    ActivePage = tsSubtitle
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -217,7 +217,7 @@ object PreferencesForm: TPreferencesForm
           328)
         object TntLabel8: TTntLabel
           Left = 16
-          Top = 128
+          Top = 164
           Width = 140
           Height = 13
           Caption = 'Blank between subtitles (ms) :'
@@ -236,7 +236,7 @@ object PreferencesForm: TPreferencesForm
         end
         object TntLabel2: TTntLabel
           Left = 16
-          Top = 72
+          Top = 68
           Width = 143
           Height = 13
           Caption = 'Characters per second target :'
@@ -248,17 +248,24 @@ object PreferencesForm: TPreferencesForm
           Height = 13
           Caption = 'Minimum subtitle duration (ms) :'
         end
+        object TntLabel14: TTntLabel
+          Left = 16
+          Top = 132
+          Width = 149
+          Height = 13
+          Caption = 'Maximum subtitle duration (ms) :'
+        end
         object EditBlankBetweenSub: TTntEdit
-          Left = 172
-          Top = 124
+          Left = 176
+          Top = 160
           Width = 81
           Height = 21
           TabOrder = 0
           Text = '0'
         end
         object UpDownBlankBetweenSub: TTntUpDown
-          Left = 253
-          Top = 124
+          Left = 256
+          Top = 160
           Width = 15
           Height = 21
           Associate = EditBlankBetweenSub
@@ -267,16 +274,16 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 1
         end
         object EditCPSTarget: TTntEdit
-          Left = 172
-          Top = 68
+          Left = 176
+          Top = 64
           Width = 81
           Height = 21
           TabOrder = 2
           Text = '5'
         end
         object UpDownCPSTarget: TTntUpDown
-          Left = 253
-          Top = 68
+          Left = 256
+          Top = 64
           Width = 15
           Height = 21
           Associate = EditCPSTarget
@@ -287,7 +294,7 @@ object PreferencesForm: TPreferencesForm
           Thousands = False
         end
         object EditMinimalDuration: TTntEdit
-          Left = 172
+          Left = 176
           Top = 96
           Width = 81
           Height = 21
@@ -295,7 +302,7 @@ object PreferencesForm: TPreferencesForm
           Text = '500'
         end
         object UpDownMinimalDuration: TTntUpDown
-          Left = 253
+          Left = 256
           Top = 96
           Width = 15
           Height = 21
@@ -305,6 +312,27 @@ object PreferencesForm: TPreferencesForm
           Increment = 100
           Position = 500
           TabOrder = 5
+          Thousands = False
+        end
+        object EditMaximalDuration: TTntEdit
+          Left = 176
+          Top = 128
+          Width = 81
+          Height = 21
+          TabOrder = 6
+          Text = '6000'
+        end
+        object UpDownMaximumDuration: TTntUpDown
+          Left = 256
+          Top = 128
+          Width = 16
+          Height = 21
+          Associate = EditMaximalDuration
+          Min = 1000
+          Max = 25000
+          Increment = 100
+          Position = 6000
+          TabOrder = 7
           Thousands = False
         end
       end
@@ -449,7 +477,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 166
+            Width = 170
             WideText = 'Value'
           end
           item
@@ -1061,8 +1089,8 @@ object PreferencesForm: TPreferencesForm
     Top = 360
   end
   object pmErrorChecking: TPopupMenu
-    Left = 236
-    Top = 168
+    Left = 404
+    Top = 160
     object pmiSelectAll: TMenuItem
       Caption = 'Select all'
       OnClick = pmiSelectAllClick
