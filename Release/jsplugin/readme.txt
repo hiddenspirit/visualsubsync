@@ -22,6 +22,7 @@ VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
 
 VSSCore.CpsTarget : Characters per second target (value set in the preferences dialog)
 VSSCore.MinimumDuration : Minimum subtitle duration (value set in the preferences dialog)
+VSSCore.MaximumDuration : Maximum subtitle duration (value set in the preferences dialog)
 VSSCore.MinimumBlank : Minimum blank between subtitles (value set in the preferences dialog)
 
 VSSCore.VideoWidth : The video width in pixel (0 if no video)
