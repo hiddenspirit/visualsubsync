@@ -1,7 +1,7 @@
 {**************************************************************************************************}
 {                                                                                                  }
 { VCLFixPack unit - Unoffical bug fixes for Delphi/C++Builder                                      }
-{ Version 1.0 (2008-11-20)                                                                         }
+{ Version 1.1 (2009-01-25)                                                                         }
 {                                                                                                  }
 { The contents of this file are subject to the Mozilla Public License Version 1.1 (the "License"); }
 { you may not use this file except in compliance with the License. You may obtain a copy of the    }
@@ -25,7 +25,7 @@
 
 {$A8,B-,C+,D-,E-,F-,G+,H+,I+,J-,K-,L+,M-,N-,O+,P+,Q-,R-,S-,T-,U-,V+,W-,X+,Y+,Z1}
 
-{ If you define VCLFIXPACK_DEBUG the patches are compiled with debug information }
+{ If you define VCLFIXPACK_DEBUG the patches are compiled with debug information. }
 {$IFDEF VCLFIXPACK_DEBUG} {$D+} {$ENDIF}
 
 { If you use Delphi 6/7 Personal you must disable the VCLFIXPACK_DB_SUPPORT define }
@@ -114,9 +114,22 @@ unit VCLFixPack;
    - [2009]
      QC #69112: TSpeedButton is painted as a black rectangle on a double buffered panel on a sheet of glass.
 
+   - [2009]
+     QC #69294: TProgressBar fails with PBS_MARQUEE and disabled Themes (Vista)
+     http://qc.codegear.com/wc/qcmain.aspx?d=69294
+
    - [Windows Vista]
      Workaround for Windows Vista CompareString bug
      (Workaround is disabled by default, define "VistaCompareStringFix" to activate it)
+
+
+ Changlog:
+   2009-01-25:
+     Fixed: DBGrid ScrollBar gab wasn't painted correctly in BiDiMode <> bdLeftToRight
+     Fixed: TTabSheet could throw an access violation if no PageControl was assigned to it
+     Changed: Rewritten TaskModalDialog bugfix
+     Added: QC #69294: TProgressBar fails with PBS_MARQUEE and disabled Themes (Vista)
+
 }
 
 interface
@@ -187,6 +200,10 @@ interface
   {$DEFINE SpeedButtonGlassFix}
 {$IFEND}
 
+{$IF CompilerVersion = 20.0} // Delphi 2009
+  {$DEFINE VistaProgressBarMarqueeFix}
+{$IFEND}
+
 {**************************************************************************************************}
 { Workaround for Windows Vista CompareString bug.                                                  }
 { The Ü/ü ($DC/$FC) and the UE/ue are treated equal in all locales, but they aren't equal. There   }
@@ -217,7 +234,8 @@ uses
   {$IFDEF VCLFIXPACK_DB_SUPPORT}
   DBGrids,
   {$ENDIF VCLFIXPACK_DB_SUPPORT}
-  Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Buttons;
+  Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Buttons,
+  CommCtrl;
 
 { ---------------------------------------------------------------------------- }
 { Helper functions, shared }
@@ -331,7 +349,7 @@ procedure UnhookProc(Proc: Pointer; var BackupCode: TXRedirCode);
 var
   n: Cardinal;
 begin
-  if BackupCode.Jump <> 0 then
+  if (BackupCode.Jump <> 0) and (Proc <> nil) then
   begin
     Proc := GetActualAddr(Proc);
     Assert(Proc <> nil);
@@ -432,46 +450,45 @@ end;
 { ---------------------------------------------------------------------------- }
 { QC #68740: Lost focus after TOpenDialog when MainFormOnTaskBar is set }
 {$IFDEF TaskModalDialogFix}
-{
- How does the fix work:
-   In the TCommonDialog.TaskModalDialog() method is a call to "DisableTaskWindows(0)".
-   The bugfix replaces the "(0)" with the "ActiveWindow" variable. This is achieved by
-   replacing the "xor eax,eax" with "nop; nop;" }
-
-{
-function TCommonDialog.TaskModalDialog
-...
-ActiveWindow := Application.ActiveFormHandle;
-...
-8945F0           mov [ebp-$10],eax
-WindowList := DisableTaskWindows(0);
-33C0             xor eax,eax
-}
-
-procedure FixTaskModalDialog;
 var
-  P: PAnsiChar;
-  Len: Integer;
-  NopNop: Word;
-  n: Cardinal;
+  DialogsTaskModalDialogHook: TXRedirCode;
+  DialogsTaskModalDialogCritSect: TRTLCriticalSection;
+
+function TCommonDialog_TaskModalDialog(Instance: TObject; DialogFunc: Pointer; var DialogData): Bool;
+var
+  FocusWindow: HWND;
+  Func: function(Instance: TObject; DialogFunc: Pointer; var DialogData): Bool;
 begin
-  P := GetActualAddr(@TOpenCommonDialog.TaskModalDialog);
-  Len := 0;
-  while Len < 128 do
-  begin
-    if (P[0] = #$89) and (P[1] = #$45) and (P[2] = #$F0) and
-       (P[3] = #$33) and (P[4] = #$C0) then
-    begin
-      { Remove the "xor eax,eax" what keeps the "ActiveWindow" in EAX for
-        the DisableTaskWindows(ActiveWindow) call. }
-      NopNop := $9090;
-      WriteProcessMemory(GetCurrentProcess, @P[3], @NopNop, SizeOf(NopNop), n);
-      DebugLog('FixTaskModalDialog');
-      Exit;
+  EnterCriticalSection(DialogsTaskModalDialogCritSect);
+  try
+    UnhookProc(@TOpenCommonDialog.TaskModalDialog, DialogsTaskModalDialogHook);
+    try
+      FocusWindow := GetFocus;
+      try
+        Func := @TOpenCommonDialog.TaskModalDialog;
+        Result := Func(Instance, DialogFunc, DialogData);
+      finally
+        SetFocus(FocusWindow);
+      end;
+    finally
+      HookProc(@TOpenCommonDialog.TaskModalDialog, @TCommonDialog_TaskModalDialog, DialogsTaskModalDialogHook);
     end;
-    Inc(P);
-    Inc(Len);
+  finally
+    LeaveCriticalSection(DialogsTaskModalDialogCritSect);
   end;
+end;
+
+procedure InitTaskModalDialogFix;
+begin
+  InitializeCriticalSection(DialogsTaskModalDialogCritSect);
+  HookProc(@TOpenCommonDialog.TaskModalDialog, @TCommonDialog_TaskModalDialog, DialogsTaskModalDialogHook);
+  DebugLog('FixTaskModalDialog');
+end;
+
+procedure FiniTaskModalDialogFix;
+begin
+  UnhookProc(@TOpenCommonDialog.TaskModalDialog, DialogsTaskModalDialogHook);
+  DeleteCriticalSection(DialogsTaskModalDialogCritSect);
 end;
 {$ENDIF TaskModalDialogFix}
 { ---------------------------------------------------------------------------- }
@@ -1335,8 +1352,11 @@ var
   FreeCount: Integer;
 begin
   GetObjectInstancePointers(InstFreeListP, InstBlockListP);
-  Assert( (InstFreeListP <> nil) and (InstBlockListP <> nil) ,
-          'Cannot apply Classes.FreeObjectInstance memory leak-fix' );
+  if (InstFreeListP = nil) or (InstBlockListP = nil) then
+  begin
+    OutputDebugString('Cannot apply Classes.FreeObjectInstance memory leak-fix');
+    Exit;
+  end;
 
   Block := InstBlockListP^;
   PrevBlock := nil;
@@ -1656,7 +1676,7 @@ procedure TFlickerlessTabSheet.WMEraseBkgnd(var Message: TWMEraseBkgnd);
 var
   R: TRect;
 begin
-  if (PageControl.Style = tsTabs) and ThemeServices.ThemesEnabled then
+  if (PageControl <> nil) and (PageControl.Style = tsTabs) and ThemeServices.ThemesEnabled then
   begin
     { Paint the TabSheet background without filling the gray color from the parent.
       And fill it in WM_ERASEBKGND where it belongs instead of WM_PRINTCLIENT. }
@@ -1758,16 +1778,31 @@ begin
   { Fill the area between the two scroll bars. }
   Size.cx := GetSystemMetrics(SM_CXVSCROLL);
   Size.cy := GetSystemMetrics(SM_CYHSCROLL);
-  R := Bounds(Grid.Width - Size.cx, Grid.Height - Size.cy, Size.cx, Size.cy);
+  if {Grid.BiDiMode <> bdLeftToRight}Grid.UseRightToLeftAlignment then
+    R := Bounds(0, Grid.Height - Size.cy, Size.cx, Size.cy)
+  else
+    R := Bounds(Grid.Width - Size.cx, Grid.Height - Size.cy, Size.cx, Size.cy);
   FillRect(Message.DC, R, Grid.Brush.Handle);
   Message.Result := 1;
 end;
 
 {$IFDEF VCLFIXPACK_DB_SUPPORT}
 procedure TFlickerlessDBGrid.NewWndProc(var Msg: TMessage);
+{var
+  Rect: TRect;}
 begin
   if Msg.Msg = WM_ERASEBKGND then
     GridWMEraseBkgnd(Self, TWMEraseBkgnd(Msg))
+  else if Msg.Msg = WM_PAINT then
+  begin
+    {if UseRightToLeftAlignment then
+    Begin
+      Rect.TopLeft := ClientRect.TopLeft;
+      Rect.BottomRight := ClientRect.BottomRight;
+      InvalidateRect(Handle, @Rect, False);
+    end;}
+    inherited WndProc(Msg);
+  end
   else
     inherited WndProc(Msg);
 end;
@@ -1865,6 +1900,82 @@ begin
   ReplaceVmtField(TSpeedButton, @TGlassableSpeedButton.NewWndProc, @TGlassableSpeedButton.WndProc);
 end;
 {$ENDIF SpeedButtonGlassFix}
+{ ---------------------------------------------------------------------------- }
+
+
+
+{ ---------------------------------------------------------------------------- }
+{$IFDEF VistaProgressBarMarqueeFix}
+{ QC #69294: TProgressBar fails with PBS_MARQUEE and disabled Themes }
+type
+  TVistaProgressBarMarqueeFix = class(TProgressBar)
+  protected
+    procedure SetMarqueeInterval(Value: Integer);
+    procedure CreateParamsFix(var Params: TCreateParams);
+    procedure CreateWndFix;
+  end;
+
+var
+  SetMarqueeIntervalHook: TXRedirCode;
+  SetMarqueeInterval: Pointer;
+
+procedure TVistaProgressBarMarqueeFix.SetMarqueeInterval(Value: Integer);
+var
+  MarqueeEnabled: Boolean;
+begin
+  PInteger(@MarqueeInterval)^ := Value;
+  if (Style = pbstMarquee) and HandleAllocated then
+  begin
+    MarqueeEnabled := Style = pbstMarquee;
+    SendMessage(Handle, PBM_SETMARQUEE, WPARAM(MarqueeEnabled), LPARAM(MarqueeInterval));
+  end;
+end;
+
+procedure TVistaProgressBarMarqueeFix.CreateParamsFix(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  if Style = pbstMarquee then
+    Params.Style := Params.Style or PBS_MARQUEE;
+end;
+
+procedure TVistaProgressBarMarqueeFix.CreateWndFix;
+var
+  MarqueeEnabled: Boolean;
+begin
+  inherited CreateWnd;
+  MarqueeEnabled := Style = pbstMarquee;
+  SendMessage(Handle, PBM_SETMARQUEE, WPARAM(THandle(MarqueeEnabled)), LPARAM(MarqueeInterval));
+end;
+
+procedure InitVistaProgressBarMarqueeFix;
+var
+  PropInfo: PPropInfo;
+begin
+  if CheckWin32Version(6, 0) then
+  begin
+    ReplaceVmtField(TProgressBar, @TVistaProgressBarMarqueeFix.CreateParams, @TVistaProgressBarMarqueeFix.CreateParamsFix);
+    ReplaceVmtField(TProgressBar, @TVistaProgressBarMarqueeFix.CreateWnd, @TVistaProgressBarMarqueeFix.CreateWndFix);
+    PropInfo := GetPropInfo(TProgressBar, 'MarqueeInterval');
+    if (PropInfo <> nil) and (PropInfo.SetProc <> nil) and
+       not (Byte(DWORD_PTR(PropInfo.SetProc) shr 24) in [$FF, $FE]) then
+    begin
+      SetMarqueeInterval := PropInfo.SetProc;
+      HookProc(SetMarqueeInterval, @TVistaProgressBarMarqueeFix.SetMarqueeInterval, SetMarqueeIntervalHook);
+    end;
+    DebugLog('VistaProgressBarMarqueeFix');
+  end;
+end;
+
+procedure FiniVistaProgressBarMarqueeFix;
+begin
+  if CheckWin32Version(6, 0) then
+  begin
+    ReplaceVmtField(TProgressBar, @TVistaProgressBarMarqueeFix.CreateParamsFix, @TVistaProgressBarMarqueeFix.CreateParams);
+    ReplaceVmtField(TProgressBar, @TVistaProgressBarMarqueeFix.CreateWndFix, @TVistaProgressBarMarqueeFix.CreateWnd);
+    UnhookProc(SetMarqueeInterval, SetMarqueeIntervalHook);
+  end;
+end;
+{$ENDIF VistaProgressBarMarqueeFix}
 { ---------------------------------------------------------------------------- }
 
 
@@ -2238,7 +2349,7 @@ initialization
   {$ENDIF GetNonToolWindowPopupParentFix}
 
   {$IFDEF TaskModalDialogFix}
-  FixTaskModalDialog;
+  InitTaskModalDialogFix;
   {$ENDIF TaskModalDialogFix}
 
   {$IFDEF AppDeActivateZOrderFix}
@@ -2299,6 +2410,10 @@ initialization
   InitSpeedButtonGlassFix;
   {$ENDIF SpeedButtonGlassFix}
 
+  {$IFDEF VistaProgressBarMarqueeFix}
+  InitVistaProgressBarMarqueeFix;
+  {$ENDIF VistaProgressBarMarqueeFix}
+
   {$IFDEF VistaCompareStringFix}
   InitCompareStringFix;
   {$ENDIF VistaCompareStringFix}
@@ -2309,6 +2424,10 @@ finalization
   {$IFDEF VistaCompareStringFix}
   FiniCompareStringFix;
   {$ENDIF VistaCompareStringFix}
+
+  {$IFDEF VistaProgressBarMarqueeFix}
+  FiniVistaProgressBarMarqueeFix;
+  {$ENDIF VistaProgressBarMarqueeFix}
 
   {$IFDEF SpeedButtonGlassFix}
   FiniSpeedButtonGlassFix;
@@ -2358,6 +2477,10 @@ finalization
   if FindTopMostWindowProc <> nil then
     UnhookProc(FindTopMostWindowProc, FindTopMostWindowHook);
   {$ENDIF HideStackTrashingFix}
+
+  {$IFDEF TaskModalDialogFix}
+  FiniTaskModalDialogFix;
+  {$ENDIF TaskModalDialogFix}
 
   {$IFDEF AppDeActivateZOrderFix}
   if Application <> nil then
