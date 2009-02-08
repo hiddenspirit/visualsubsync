@@ -19,18 +19,18 @@ type
 
     // Test methods
     procedure TestCreateSubtitle;
-    procedure TestGet;
     procedure TestSetStart;
     procedure TestSetStop;
     procedure TestSetText;
     procedure TestDeleteSubtitle;
     procedure TestSubtitleTimeComparator;
+    procedure TestSubtitleSorted;
 
   end;
 
   TSubtitleItemHack = class(TObject)
   private
-    Id : Integer;
+    Index : Integer;
     Start : Integer;
     Stop : Integer;
     Text : WideString;
@@ -53,7 +53,7 @@ end;
 procedure TSubtitleModelTests.TestCreateSubtitle;
 var Sub : TSubtitleItem;
     Transaction : TCompositeSubTask;
-    SubId : Integer;
+    SubIndex : Integer;
 begin
   CheckEquals(0, FSubtitleModel.GetCount, 'No subtitle yet.');
   FSubtitleModel.BeginTransaction;
@@ -65,38 +65,19 @@ begin
   CheckNotNull(Sub, 'Subtitle exists.');
   CheckEquals(1, FSubtitleModel.GetCount, '1 subtitle.');
   
-  SubId := Sub.GetId;
+  SubIndex := Sub.GetIndex;
   Transaction.UndoTask;
   CheckEquals(0, FSubtitleModel.GetCount, '0 subtitle.');
-  Sub := FSubtitleModel.Get(SubId);
+  Sub := FSubtitleModel.GetAt(SubIndex);
   CheckNull(Sub, 'No subtitle anymore.');
 
   Transaction.DoTask;
   CheckEquals(1, FSubtitleModel.GetCount, '1 subtitle again.');
-  Sub := FSubtitleModel.Get(SubId);
+  Sub := FSubtitleModel.GetAt(SubIndex);
   CheckNotNull(Sub, 'Subtitle exists again.');
-  CheckEquals(SubId, Sub.GetId, 'Same id.');
+  CheckEquals(SubIndex, Sub.GetIndex, 'Same index.');
     
   FreeAndNil(Transaction);
-end;
-
-procedure TSubtitleModelTests.TestGet;
-var Sub, Sub2 : TSubtitleItem;
-    Transaction : TCompositeSubTask;
-begin
-  Sub := FSubtitleModel.Get(100);
-  CheckNull(Sub, 'Subtitle doesnt exists yet.');
-  FSubtitleModel.BeginTransaction;
-  try
-    Sub := FSubtitleModel.CreateSubtitle;
-  finally
-    Transaction := FSubtitleModel.EndTransaction;
-  end;
-  FreeAndNil(Transaction);  
-  CheckNotNull(Sub, 'Subtitle created.');
-  Sub2 := FSubtitleModel.Get(Sub.GetId);
-  CheckNotNull(Sub2, 'Subtitle not null.');
-  CheckEquals(Sub.GetId, Sub2.GetId, 'Subtitle is same.');
 end;
 
 procedure TSubtitleModelTests.TestSetStart;
@@ -180,7 +161,7 @@ end;
 procedure TSubtitleModelTests.TestDeleteSubtitle;
 var Sub : TSubtitleItem;
     Transaction : TCompositeSubTask;
-    SubId : Integer;
+    SubIndex : Integer;
 begin
   CheckEquals(0, FSubtitleModel.GetCount, 'No subtitle yet.');
   FSubtitleModel.BeginTransaction;
@@ -193,7 +174,7 @@ begin
   CheckNotNull(Sub, 'Subtitle exists.');
   CheckEquals(1, FSubtitleModel.GetCount, 'One subtitle.');
 
-  SubId := Sub.GetId;
+  SubIndex := Sub.GetIndex;
   FSubtitleModel.BeginTransaction;
   try
     FSubtitleModel.DeleteSubtitle(Sub);
@@ -205,9 +186,9 @@ begin
   Transaction.UndoTask;
 
   CheckEquals(1, FSubtitleModel.GetCount, 'One subtitle again.');
-  Sub := FSubtitleModel.Get(SubId);
+  Sub := FSubtitleModel.GetAt(SubIndex);
   CheckNotNull(Sub, 'Subtitle exists again.');
-  CheckEquals(SubId, Sub.GetId, 'Same id.');
+  CheckEquals(SubIndex, Sub.GetIndex, 'Same index.');
 end;
 
 procedure TSubtitleModelTests.TestSubtitleTimeComparator;
@@ -237,6 +218,88 @@ begin
   TSubtitleItemHack(SubItem1).Start := 20;
   TSubtitleItemHack(SubItem1).Stop := 28;
   CheckEquals(1, SubtitleTimeComparator(SubItem1, SubItem2), 'stop >');
+end;
+
+procedure TSubtitleModelTests.TestSubtitleSorted;
+var Sub, Sub2 : TSubtitleItem;
+    Transaction : TCompositeSubTask;
+begin
+  Sub := FSubtitleModel.GetFirst;
+  CheckNull(Sub, 'No sub, GetFirst => nil');
+
+  Sub := FSubtitleModel.GetNext(nil);
+  CheckNull(Sub, 'GetNext(nil) => nil');
+
+  Sub := FSubtitleModel.GetPrevious(nil);
+  CheckNull(Sub, 'GetPrevious(nil) => nil');
+
+  FSubtitleModel.BeginTransaction;
+  try
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 100);
+    FSubtitleModel.SetSubtitleStop(Sub, 110);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 10);
+    FSubtitleModel.SetSubtitleStop(Sub, 20);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 50);
+    FSubtitleModel.SetSubtitleStop(Sub, 60);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 200);
+    FSubtitleModel.SetSubtitleStop(Sub, 210);
+  finally
+    Transaction := FSubtitleModel.EndTransaction;
+  end;
+  CheckEquals(4, FSubtitleModel.GetCount, '4 subtitles.');
+
+  Sub := FSubtitleModel.GetAt(-1);
+  CheckNull(Sub, '[-1] => nil');
+
+  // Around 0
+  Sub := FSubtitleModel.GetAt(0);
+  CheckEquals(10, Sub.GetStart, '[0] start => 10');
+
+  Sub2 := FSubtitleModel.GetPrevious(Sub);
+  CheckNull(Sub2, 'GetPrevious([0]) => nil');
+
+  Sub2 := FSubtitleModel.GetNext(Sub);
+  CheckEquals(50, Sub2.GetStart, 'GetNext([0]) start => 50');
+
+  // Around 1
+  Sub := FSubtitleModel.GetAt(1);
+  CheckEquals(50, Sub.GetStart, '[1] start => 50');
+
+  Sub2 := FSubtitleModel.GetPrevious(Sub);
+  CheckEquals(10, Sub2.GetStart, 'GetPrevious([1]) => 10');
+
+  Sub2 := FSubtitleModel.GetNext(Sub);
+  CheckEquals(100, Sub2.GetStart, 'GetNext([1]) start => 100');
+
+  // Around 2
+  Sub := FSubtitleModel.GetAt(2);
+  CheckEquals(100, Sub.GetStart, '[2] start => 100');
+
+  Sub2 := FSubtitleModel.GetPrevious(Sub);
+  CheckEquals(50, Sub2.GetStart, 'GetPrevious([2]) => 50');
+
+  Sub2 := FSubtitleModel.GetNext(Sub);
+  CheckEquals(200, Sub2.GetStart, 'GetNext([2]) start => 200');
+
+  // Around 3
+  Sub := FSubtitleModel.GetAt(3);
+  CheckEquals(200, Sub.GetStart, '[3] start => 200');
+
+  Sub2 := FSubtitleModel.GetPrevious(Sub);
+  CheckEquals(100, Sub2.GetStart, 'GetPrevious([3]) => 100');
+
+  Sub2 := FSubtitleModel.GetNext(Sub);
+  CheckNull(Sub2, 'GetNext([3]) => nil');
+
+  // Around 4
+  Sub := FSubtitleModel.GetAt(4);
+  CheckNull(Sub, '4 => nil');
+
+  FreeAndNil(Transaction);
 end;
 
 initialization
