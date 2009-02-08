@@ -3,9 +3,6 @@ unit SubtitleModel;
 interface
 
 uses Classes, Contnrs, DeCAL;
-
-const
-  INVALID_SUB_ID : Integer = -1;
   
 type
   // Forward Declarations
@@ -13,12 +10,14 @@ type
 
   TSubtitleItem = class(TObject)
   private
-    Id : Integer;
+    Index : Integer;   
     Start : Integer;
     Stop : Integer;
     Text : WideString;
   public
-    function GetId : Integer;
+    constructor Create;
+      
+    function GetIndex : Integer;
     function GetStart : Integer;
     function GetStop : Integer;
     function GetText : WideString;
@@ -37,7 +36,7 @@ type
 
   TCreateSubTask = class(TUndoableSubTask)
   private
-    FSubtitleId : Integer;
+    FSubtitleIndex : Integer;
   public
     procedure DoTask; override;
     procedure UndoTask; override;
@@ -45,7 +44,7 @@ type
 
   TSetStartTask = class(TUndoableSubTask)
   private
-    FSubtitleId : Integer;
+    FSubtitleIndex : Integer;
     FOldStart, FNewStart : Integer;
   public
     procedure DoTask; override;
@@ -54,7 +53,7 @@ type
 
   TSetStopTask = class(TUndoableSubTask)
   private
-    FSubtitleId : Integer;
+    FSubtitleIndex : Integer;
     FOldStop, FNewStop : Integer;
   public
     procedure DoTask; override;
@@ -63,7 +62,7 @@ type
 
   TSetTextTask = class(TUndoableSubTask)
   private
-    FSubtitleId : Integer;
+    FSubtitleIndex : Integer;
     FOldText, FNewText : WideString;
   public
     procedure DoTask; override;
@@ -72,7 +71,7 @@ type
 
   TDeleteSubTask = class(TUndoableSubTask)
   private
-    FSubtitleId : Integer;
+    FSubtitleIndex : Integer;
     FOldSubtitle : TSubtitleItem;
   public
     destructor Destroy; override;
@@ -84,38 +83,39 @@ type
   TCompositeSubTask = class(TUndoableSubTask)
   private
     FTasks : TObjectList;
-    FTasks2 : DHashMap;
   public
     constructor Create(SubtitleModel : TSubtitleModel); override;
     destructor Destroy; override;
 
     procedure Add(Task : TUndoableSubTask);
-    
+
     procedure DoTask; override;
-    procedure UndoTask; override;    
+    procedure UndoTask; override;
   end;
 
 
 
   TSubtitleModel = class(TObject)
   private
-    FSubs : DHashMap; // Subtitle map (Map<Sub.Id, Sub>)
+    FSortedSubs : DArray;
     FTransaction : TCompositeSubTask; // Current transaction
 
-    // TODO
-    // Sorted by time container
-
   protected
-    function InternalCreateSubtitle(Id : Integer = -1) : TSubtitleItem;
-    procedure InternalDeleteSubtitle(Id : Integer; FreeMemory : Boolean = True);
+    function InternalCreateSubtitle : TSubtitleItem;
+    procedure InternalDeleteSubtitle(Index : Integer; FreeMemory : Boolean = True);
     procedure InternalInsertSubtitle(SubtitleItem : TSubtitleItem);
-    
+    procedure InternalSetStart(Sub : TSubtitleItem; Value : Integer);
+    procedure InternalSetStop(Sub : TSubtitleItem; Value : Integer);
+    procedure InternalSetText(Sub : TSubtitleItem; Value : WideString);
+    procedure InternalReindex(FromIndex : Integer = 0);
+
   public
     constructor Create;
     destructor Destroy; override;
     
     function CreateSubtitle : TSubtitleItem;
-    procedure DeleteSubtitle(Sub : TSubtitleItem);
+    procedure DeleteSubtitle(Sub : TSubtitleItem); overload;
+    procedure DeleteSubtitle(Idx : Integer); overload;
     
     procedure BeginTransaction;
     function EndTransaction : TCompositeSubTask;
@@ -124,11 +124,15 @@ type
     procedure SetSubtitleStop(Sub : TSubtitleItem; Value : Integer);
     procedure SetSubtitleText(Sub : TSubtitleItem; Value : WideString);
 
-    function Get(Id : Integer) : TSubtitleItem;
     function GetCount : Integer;
+    function GetAt(Idx : Integer) : TSubtitleItem;
+
+    function GetFirst : TSubtitleItem;
+    function GetNext(Sub : TSubtitleItem) : TSubtitleItem;
+    function GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
   end;
 
-  function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;  
+  function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
 
 implementation
 
@@ -137,6 +141,11 @@ uses SysUtils;
 var SubIdCounter : Integer = 10;
 
 // -----------------------------------------------------------------------------
+
+function SubtitleTimeDComparator(ptr : Pointer; const obj1, obj2 : DObject) : Integer;
+begin
+  Result := SubtitleTimeComparator(TSubtitleItem(asObject(obj1)), TSubtitleItem(asObject(obj2))); 
+end;
 
 function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
 begin
@@ -157,9 +166,15 @@ end;
 
 // -----------------------------------------------------------------------------
 
-function TSubtitleItem.GetId : Integer;
+constructor TSubtitleItem.Create;
 begin
-  Result := Id;
+  Start := 0;
+  Stop := 0;
+end;
+
+function TSubtitleItem.GetIndex : Integer;
+begin
+  Result := Index;
 end;
 
 function TSubtitleItem.GetStart : Integer;
@@ -189,13 +204,13 @@ end;
 procedure TCreateSubTask.DoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.InternalCreateSubtitle(FSubtitleId);
-  FSubtitleId := Sub.GetId;
+  Sub := FSubtitleModel.InternalCreateSubtitle;
+  FSubtitleIndex := Sub.GetIndex;
 end;
 
 procedure TCreateSubTask.UndoTask;
 begin
-  FSubtitleModel.InternalDeleteSubtitle(FSubtitleId);
+  FSubtitleModel.InternalDeleteSubtitle(FSubtitleIndex);
 end;
 
 // ------
@@ -203,15 +218,15 @@ end;
 procedure TSetStartTask.DoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Start := FNewStart;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetStart(Sub, FNewStart);
 end;
 
 procedure TSetStartTask.UndoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Start := FOldStart;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetStart(Sub, FOldStart);
 end;
 
 // ------
@@ -219,15 +234,15 @@ end;
 procedure TSetStopTask.DoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Stop := FNewStop;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetStop(Sub, FNewStop);
 end;
 
 procedure TSetStopTask.UndoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Stop := FOldStop;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetStop(Sub, FOldStop);
 end;
 
 // ------
@@ -235,23 +250,23 @@ end;
 procedure TSetTextTask.DoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Text := FNewText;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetText(Sub, FNewText);
 end;
 
 procedure TSetTextTask.UndoTask;
 var Sub : TSubtitleItem;
 begin
-  Sub := FSubtitleModel.Get(FSubtitleId);
-  Sub.Text := FOldText;
+  Sub := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalSetText(Sub, FOldText);
 end;
 
 // ------
 
 procedure TDeleteSubTask.DoTask;
 begin
-  FOldSubtitle := FSubtitleModel.Get(FSubtitleId);
-  FSubtitleModel.InternalDeleteSubtitle(FSubtitleId, False);
+  FOldSubtitle := FSubtitleModel.GetAt(FSubtitleIndex);
+  FSubtitleModel.InternalDeleteSubtitle(FSubtitleIndex, False);
 end;
 
 procedure TDeleteSubTask.UndoTask;
@@ -308,52 +323,77 @@ end;
 // -----------------------------------------------------------------------------
 
 constructor TSubtitleModel.Create;
+var SubComparator : DComparator; 
 begin
-  FSubs := DHashMap.Create;
+  SubComparator := MakeComparator(SubtitleTimeDComparator);
+  FSortedSubs := DArray.CreateWith(SubComparator);
   FTransaction := nil;
 end;
 
 destructor TSubtitleModel.Destroy;
 begin
-  FSubs.Free;
+  FTransaction.Free;
   if (FTransaction <> nil) then
     FreeAndNil(FTransaction);
   inherited;
 end;
 
-function TSubtitleModel.InternalCreateSubtitle(Id : Integer) : TSubtitleItem;
+function TSubtitleModel.InternalCreateSubtitle : TSubtitleItem;
 begin
   Result := TSubtitleItem.Create;
-  if (Id = INVALID_SUB_ID) then
-  begin
-    Result.Id := SubIdCounter;
-    Inc(SubIdCounter);
-  end
-  else
-  begin
-    Result.Id := Id;
-  end;
-  FSubs.putPair([Result.Id, Result]);
+  InternalInsertSubtitle(Result);
 end;
 
 procedure TSubtitleModel.InternalInsertSubtitle(SubtitleItem : TSubtitleItem);
 begin
-  FSubs.putPair([SubtitleItem.Id, SubtitleItem]);
+  FSortedSubs.add([SubtitleItem]);
+  InternalReindex;
 end;
 
-procedure TSubtitleModel.InternalDeleteSubtitle(Id : Integer; FreeMemory : Boolean);
+procedure TSubtitleModel.InternalDeleteSubtitle(Index : Integer; FreeMemory : Boolean = True);
 var Sub : TSubtitleItem;
-    Iter : DIterator;
 begin
-  Iter := FSubs.locate([Id]);
-  if (not atEnd(Iter)) then
+  Sub := GetAt(Index);
+  if Assigned(Sub) then
   begin
-    Sub := TSubtitleItem(getObject(Iter));
+    FSortedSubs.removeAt(Index);
+    InternalReindex(Sub.Index);
     if (FreeMemory) then
     begin
       FreeAndNil(Sub);
     end;
-    FSubs.removeAt(Iter);
+  end;
+end;
+
+procedure TSubtitleModel.InternalSetStart(Sub : TSubtitleItem; Value : Integer);
+begin
+  Sub.Start := Value;
+  // TODO optimize sort only the modified subtitle ?
+  sort(FSortedSubs);
+  InternalReindex;  
+end;
+
+procedure TSubtitleModel.InternalSetStop(Sub : TSubtitleItem; Value : Integer);
+begin
+  Sub.Stop := Value;
+  // TODO optimize sort only the modified subtitle ?
+  sort(FSortedSubs);
+  InternalReindex;   
+end;
+
+procedure TSubtitleModel.InternalSetText(Sub : TSubtitleItem; Value : WideString);
+begin
+  Sub.Text := Value;
+end;
+
+procedure TSubtitleModel.InternalReindex(FromIndex : Integer = 0);
+var I : Integer;
+    Sub : TSubtitleItem;
+begin
+  for I := FromIndex to FSortedSubs.size-1 do
+  begin
+    Sub := TSubtitleItem(FSortedSubs.atAsObject(I));
+    Sub.Index := I;
   end;
 end;
 
@@ -363,10 +403,9 @@ begin
   if (FTransaction = nil) then
     raise Exception.Create('Missing transaction');
   Task := TCreateSubTask.Create(Self);
-  Task.FSubtitleId := INVALID_SUB_ID;
   Task.DoTask;
   FTransaction.Add(Task);
-  Result := Get(Task.FSubtitleId);
+  Result := GetAt(Task.FSubtitleIndex);
 end;
 
 procedure TSubtitleModel.DeleteSubtitle(Sub : TSubtitleItem);
@@ -375,9 +414,16 @@ begin
   if (FTransaction = nil) then
     raise Exception.Create('Missing transaction');
   Task := TDeleteSubTask.Create(Self);
-  Task.FSubtitleId := Sub.Id;
+  Task.FSubtitleIndex := Sub.Index;
   Task.DoTask;
   FTransaction.Add(Task);
+end;
+
+procedure TSubtitleModel.DeleteSubtitle(Idx : Integer);
+var Sub : TSubtitleItem;
+begin
+  Sub := GetAt(Idx);
+  DeleteSubtitle(Sub);
 end;
 
 procedure TSubtitleModel.BeginTransaction;
@@ -401,7 +447,7 @@ begin
   if (FTransaction = nil) then
     raise Exception.Create('Missing transaction');
   Task := TSetStartTask.Create(Self);
-  Task.FSubtitleId := Sub.Id;
+  Task.FSubtitleIndex := Sub.Index;
   Task.FNewStart := Value;
   Task.FOldStart := Sub.Start;
   Task.FSubtitleModel := Self;
@@ -415,7 +461,7 @@ begin
   if (FTransaction = nil) then
     raise Exception.Create('Missing transaction');
   Task := TSetStopTask.Create(Self);
-  Task.FSubtitleId := Sub.Id;
+  Task.FSubtitleIndex := Sub.Index;
   Task.FNewStop := Value;
   Task.FOldStop := Sub.Stop;
   Task.FSubtitleModel := Self;
@@ -429,7 +475,7 @@ begin
   if (FTransaction = nil) then
     raise Exception.Create('Missing transaction');
   Task := TSetTextTask.Create(Self);
-  Task.FSubtitleId := Sub.Id;
+  Task.FSubtitleIndex := Sub.Index;
   Task.FNewText := Value;
   Task.FOldText := Sub.Text;
   Task.FSubtitleModel := Self;
@@ -437,19 +483,47 @@ begin
   FTransaction.Add(Task);
 end;
 
-function TSubtitleModel.Get(Id : Integer) : TSubtitleItem;
-var Iter : DIterator;
-begin
-  Iter := FSubs.locate([Id]);
-  if (atEnd(Iter)) then
-    Result := nil
-  else
-    Result := TSubtitleItem(getObject(Iter));
-end;
-
 function TSubtitleModel.GetCount : Integer;
 begin
-  Result := FSubs.size;
+  Result := FSortedSubs.size;
 end;
+
+function TSubtitleModel.GetAt(Idx : Integer) : TSubtitleItem;
+begin
+  if FSortedSubs.legalIndex(Idx) then
+    Result := TSubtitleItem(FSortedSubs.atAsObject(Idx))
+  else
+    Result := nil
+end;
+
+function TSubtitleModel.GetFirst : TSubtitleItem;
+begin
+  Result := GetAt(0);
+end;
+
+function TSubtitleModel.GetNext(Sub : TSubtitleItem) : TSubtitleItem;
+var NextIndex : Integer;
+begin
+  if (Sub <> nil) then
+  begin
+    NextIndex := Sub.Index + 1;
+    Result := GetAt(NextIndex);
+  end
+  else
+    Result := nil
+end;
+
+function TSubtitleModel.GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
+var PreviousIndex : Integer;
+begin
+  if (Sub <> nil) then
+  begin
+    PreviousIndex := Sub.Index - 1;
+    Result := GetAt(PreviousIndex);
+  end
+  else
+    Result := nil
+end;
+
 
 end.
