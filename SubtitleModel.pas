@@ -138,8 +138,6 @@ implementation
 
 uses SysUtils;
 
-var SubIdCounter : Integer = 10;
-
 // -----------------------------------------------------------------------------
 
 function SubtitleTimeDComparator(ptr : Pointer; const obj1, obj2 : DObject) : Integer;
@@ -366,19 +364,59 @@ begin
 end;
 
 procedure TSubtitleModel.InternalSetStart(Sub : TSubtitleItem; Value : Integer);
+var NextSub, PreviousSub : TSubtitleItem;
 begin
   Sub.Start := Value;
-  // TODO optimize sort only the modified subtitle ?
-  sort(FSortedSubs);
-  InternalReindex;  
+
+  // Check with next and previous subtitle to see if subtitle order has changed
+  PreviousSub := GetPrevious(Sub);
+  if Assigned(PreviousSub) and (SubtitleTimeComparator(Sub, PreviousSub) < 0) then
+  begin
+    // Need resort
+    // TODO optimize sort only the modified subtitle ?
+    sort(FSortedSubs);
+    InternalReindex;
+    Exit;
+  end;
+
+
+  NextSub := GetNext(Sub);
+  if Assigned(NextSub) and (SubtitleTimeComparator(Sub, NextSub) > 0) then
+  begin
+    // Need resort
+    // TODO optimize sort only the modified subtitle ?
+    sort(FSortedSubs);
+    InternalReindex;
+    Exit;
+  end;
 end;
 
 procedure TSubtitleModel.InternalSetStop(Sub : TSubtitleItem; Value : Integer);
+var NextSub, PreviousSub : TSubtitleItem;
 begin
   Sub.Stop := Value;
-  // TODO optimize sort only the modified subtitle ?
-  sort(FSortedSubs);
-  InternalReindex;   
+
+  // Check with next and previous subtitle to see if subtitle order has changed
+  NextSub := GetNext(Sub);
+  if Assigned(NextSub) and (SubtitleTimeComparator(Sub, NextSub) > 0) then
+  begin
+    // Need resort
+    // TODO optimize sort only the modified subtitle ?
+    sort(FSortedSubs);
+    InternalReindex;
+    Exit;
+  end;
+
+  // Check with next and previous subtitle to see if subtitle order has changed
+  PreviousSub := GetPrevious(Sub);
+  if Assigned(PreviousSub) and (SubtitleTimeComparator(Sub, PreviousSub) < 0) then
+  begin
+    // Need resort
+    // TODO optimize sort only the modified subtitle ?
+    sort(FSortedSubs);
+    InternalReindex;
+    Exit;
+  end;
 end;
 
 procedure TSubtitleModel.InternalSetText(Sub : TSubtitleItem; Value : WideString);
