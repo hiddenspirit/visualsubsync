@@ -25,7 +25,8 @@ type
     procedure TestDeleteSubtitle;
     procedure TestSubtitleTimeComparator;
     procedure TestSubtitleSorted;
-
+    procedure TestBenchmarkSortedOrder;
+    procedure TestBenchmarkRandomOrder;
   end;
 
   TSubtitleItemHack = class(TObject)
@@ -300,6 +301,51 @@ begin
   CheckNull(Sub, '4 => nil');
 
   FreeAndNil(Transaction);
+end;
+
+procedure TSubtitleModelTests.TestBenchmarkSortedOrder;
+var Sub : TSubtitleItem;
+    Transaction : TCompositeSubTask;
+    I, t, Duration : Integer;
+begin
+  FSubtitleModel.BeginTransaction;
+  try
+    t := 0;
+    RandSeed := 0;
+    for I := 1 to 1000 do
+    begin
+      Sub := FSubtitleModel.CreateSubtitle;
+      Inc(t, Random(4000));
+      FSubtitleModel.SetSubtitleStart(Sub, t);
+      Inc(t, Random(4000));
+      FSubtitleModel.SetSubtitleStop(Sub, t);
+    end;
+  finally
+    Transaction := FSubtitleModel.EndTransaction;
+  end;
+  FreeAndNil(Transaction);  
+end;
+
+procedure TSubtitleModelTests.TestBenchmarkRandomOrder;
+var Sub : TSubtitleItem;
+    Transaction : TCompositeSubTask;
+    I, t, Duration : Integer;
+begin
+  FSubtitleModel.BeginTransaction;
+  try
+    RandSeed := 0;
+    for I := 1 to 1000 do
+    begin
+      Sub := FSubtitleModel.CreateSubtitle;
+      t := Random(3600000);
+      FSubtitleModel.SetSubtitleStart(Sub, t);
+      Inc(t, Random(3000));
+      FSubtitleModel.SetSubtitleStop(Sub, t);
+    end;
+  finally
+    Transaction := FSubtitleModel.EndTransaction;
+  end;
+  FreeAndNil(Transaction);  
 end;
 
 initialization
