@@ -25,8 +25,12 @@ type
     procedure TestDeleteSubtitle;
     procedure TestSubtitleTimeComparator;
     procedure TestSubtitleSorted;
+    procedure TestFindInsertPosition;
+
     procedure TestBenchmarkSortedOrder;
     procedure TestBenchmarkRandomOrder;
+
+
   end;
 
   TSubtitleItemHack = class(TObject)
@@ -346,6 +350,33 @@ begin
     Transaction := FSubtitleModel.EndTransaction;
   end;
   FreeAndNil(Transaction);  
+end;
+
+procedure TSubtitleModelTests.TestFindInsertPosition;
+var Sub : TSubtitleItem;
+    Transaction : TCompositeSubTask;
+begin
+  FSubtitleModel.BeginTransaction;
+  try
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 100);
+    FSubtitleModel.SetSubtitleStop(Sub, 110);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 10);
+    FSubtitleModel.SetSubtitleStop(Sub, 20);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 50);
+    FSubtitleModel.SetSubtitleStop(Sub, 60);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 200);
+    FSubtitleModel.SetSubtitleStop(Sub, 210);
+  finally
+    Transaction := FSubtitleModel.EndTransaction;
+  end;
+
+  CheckEquals(0, FSubtitleModel.FindInsertPosition(30,40), '0');
+
+  FreeAndNil(Transaction);
 end;
 
 initialization
