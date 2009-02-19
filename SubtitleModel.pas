@@ -109,6 +109,7 @@ type
     procedure InternalSetText(Sub : TSubtitleItem; Value : WideString);
     procedure InternalReindex(FromIndex : Integer = 0);
 
+
   public
     constructor Create;
     destructor Destroy; override;
@@ -122,6 +123,7 @@ type
     
     procedure SetSubtitleStart(Sub : TSubtitleItem; Value : Integer);
     procedure SetSubtitleStop(Sub : TSubtitleItem; Value : Integer);
+    //procedure SetSubtitleStartStop(Sub : TSubtitleItem; Start, Stop : Integer);
     procedure SetSubtitleText(Sub : TSubtitleItem; Value : WideString);
 
     function GetCount : Integer;
@@ -130,6 +132,9 @@ type
     function GetFirst : TSubtitleItem;
     function GetNext(Sub : TSubtitleItem) : TSubtitleItem;
     function GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
+
+
+    function FindInsertPosition(const Start,Stop : Integer) : Integer;    
   end;
 
   function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
@@ -563,5 +568,19 @@ begin
     Result := nil
 end;
 
+function TSubtitleModel.FindInsertPosition(const Start,Stop : Integer) : Integer;
+var Sub : TSubtitleItem;
+    Iter : DIterator;
+begin
+  Sub := TSubtitleItem.Create;
+  Sub.Start := Start;
+  Sub.Stop := Stop;
+  Iter := binarySearch(FSortedSubs, [Sub]);
+  if not atEnd(Iter) then
+    Result := TSubtitleItem(getObject(Iter)).Index
+  else
+    Result := -1;
+  Sub.Free;
+end;
 
 end.
