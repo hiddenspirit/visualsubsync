@@ -134,7 +134,7 @@ type
     function GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
 
 
-    function FindInsertPosition(const Start,Stop : Integer) : Integer;    
+    function FindInsertPosition(const Start, Stop : Integer) : Integer;
   end;
 
   function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
@@ -568,18 +568,75 @@ begin
     Result := nil
 end;
 
+
+function _myBinarySearchInWith(_start, _end : DIterator; compare : DComparator;
+  const obj : DObject; var ExactMatch : Boolean) : DIterator;
+var dist, comp : Integer;
+    last : DIterator;
+begin
+
+  Assert(diRandom in _start.flags, 'Binary search only on random access iterators');
+  last := _end;
+  Result := last;
+
+  repeat
+    dist := distance(_start, _end) div 2;
+    if dist <= 0 then
+      begin
+        if atEnd(_start) then
+        begin
+          Result := last;
+          Break;
+        end;
+        comp := compare(getRef(_start)^, obj);
+        if comp = 0 then
+        begin
+          Result := _start;
+          ExactMatch := True;
+        end
+        else if comp > 0 then
+          Result := _start
+        else
+          Result := _end;
+        Break;
+      end;
+    Result := advanceByF(_start, dist);
+    comp := compare(getRef(result)^, obj);
+    if comp = 0 then
+    begin
+      ExactMatch := True;
+      Break;
+    end
+    else if comp < 0 then
+      _start := result
+    else
+      _end := result
+  until False;
+end;
+
+function myBinarySearch(con : DContainer; const obj : array of const; var ExactMatch : Boolean) : DIterator;
+begin
+  Assert(Low(obj) = High(obj), 'Can only pass one object.');
+  Result := _myBinarySearchInWith(con.start, con.finish, con.comparator,
+    obj[Low(obj)], ExactMatch);
+end;
+
 function TSubtitleModel.FindInsertPosition(const Start,Stop : Integer) : Integer;
 var Sub : TSubtitleItem;
     Iter : DIterator;
+    ExactMatch : Boolean;
 begin
   Sub := TSubtitleItem.Create;
   Sub.Start := Start;
   Sub.Stop := Stop;
-  Iter := binarySearch(FSortedSubs, [Sub]);
+
+  ExactMatch := False;
+  Iter := myBinarySearch(FSortedSubs, [Sub], ExactMatch);
+
   if not atEnd(Iter) then
     Result := TSubtitleItem(getObject(Iter)).Index
   else
-    Result := -1;
+    Result := FSortedSubs.size;
   Sub.Free;
 end;
 
