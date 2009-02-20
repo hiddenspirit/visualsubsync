@@ -194,6 +194,8 @@ begin
   Sub := FSubtitleModel.GetAt(SubIndex);
   CheckNotNull(Sub, 'Subtitle exists again.');
   CheckEquals(SubIndex, Sub.GetIndex, 'Same index.');
+
+  FreeAndNil(Transaction);
 end;
 
 procedure TSubtitleModelTests.TestSubtitleTimeComparator;
@@ -223,6 +225,9 @@ begin
   TSubtitleItemHack(SubItem1).Start := 20;
   TSubtitleItemHack(SubItem1).Stop := 28;
   CheckEquals(1, SubtitleTimeComparator(SubItem1, SubItem2), 'stop >');
+
+  FreeAndNil(SubItem1);
+  FreeAndNil(SubItem2);
 end;
 
 procedure TSubtitleModelTests.TestSubtitleSorted;
