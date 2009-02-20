@@ -102,12 +102,12 @@ type
 
   protected
     function InternalCreateSubtitle : TSubtitleItem;
-    procedure InternalDeleteSubtitle(Index : Integer; FreeMemory : Boolean = True);
+    procedure InternalDeleteSubtitle(const Index : Integer; FreeMemory : Boolean = True);
     procedure InternalInsertSubtitle(SubtitleItem : TSubtitleItem);
-    procedure InternalSetStart(Sub : TSubtitleItem; Value : Integer);
-    procedure InternalSetStop(Sub : TSubtitleItem; Value : Integer);
-    procedure InternalSetText(Sub : TSubtitleItem; Value : WideString);
-    procedure InternalReindex(FromIndex : Integer = 0);
+    procedure InternalSetStart(Sub : TSubtitleItem; const Value : Integer);
+    procedure InternalSetStop(Sub : TSubtitleItem; const Value : Integer);
+    procedure InternalSetText(Sub : TSubtitleItem; const Value : WideString);
+    procedure InternalReindex(const FromIndex : Integer = 0);
 
 
   public
@@ -116,25 +116,27 @@ type
     
     function CreateSubtitle : TSubtitleItem;
     procedure DeleteSubtitle(Sub : TSubtitleItem); overload;
-    procedure DeleteSubtitle(Idx : Integer); overload;
+    procedure DeleteSubtitle(const Idx : Integer); overload;
     
     procedure BeginTransaction;
     function EndTransaction : TCompositeSubTask;
     
-    procedure SetSubtitleStart(Sub : TSubtitleItem; Value : Integer);
-    procedure SetSubtitleStop(Sub : TSubtitleItem; Value : Integer);
+    procedure SetSubtitleStart(Sub : TSubtitleItem; const Value : Integer);
+    procedure SetSubtitleStop(Sub : TSubtitleItem; const Value : Integer);
     //procedure SetSubtitleStartStop(Sub : TSubtitleItem; Start, Stop : Integer);
-    procedure SetSubtitleText(Sub : TSubtitleItem; Value : WideString);
+    procedure SetSubtitleText(Sub : TSubtitleItem; const Value : WideString);
 
     function GetCount : Integer;
-    function GetAt(Idx : Integer) : TSubtitleItem;
+    function GetAt(const Idx : Integer) : TSubtitleItem;
 
     function GetFirst : TSubtitleItem;
-    function GetNext(Sub : TSubtitleItem) : TSubtitleItem;
-    function GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
+    function GetNext(const Sub : TSubtitleItem) : TSubtitleItem;
+    function GetPrevious(const Sub : TSubtitleItem) : TSubtitleItem;
 
 
-    function FindInsertPosition(const Start, Stop : Integer) : Integer;
+    function FindInsertPosition(const Start, Stop : Integer) : Integer; overload;
+    function FindInsertPosition(const Sub : TSubtitleItem) : Integer; overload;
+    function GetBetween(const Start, Stop : Integer) : Integer;
   end;
 
   function SubtitleTimeComparator(const Item1, Item2 : TSubtitleItem) : Integer;
@@ -338,6 +340,8 @@ begin
   FTransaction.Free;
   if (FTransaction <> nil) then
     FreeAndNil(FTransaction);
+  objFree(FSortedSubs);
+  FreeAndNil(FSortedSubs);
   inherited;
 end;
 
@@ -353,7 +357,7 @@ begin
   InternalReindex;
 end;
 
-procedure TSubtitleModel.InternalDeleteSubtitle(Index : Integer; FreeMemory : Boolean = True);
+procedure TSubtitleModel.InternalDeleteSubtitle(const Index : Integer; FreeMemory : Boolean = True);
 var Sub : TSubtitleItem;
 begin
   Sub := GetAt(Index);
@@ -368,7 +372,7 @@ begin
   end;
 end;
 
-procedure TSubtitleModel.InternalSetStart(Sub : TSubtitleItem; Value : Integer);
+procedure TSubtitleModel.InternalSetStart(Sub : TSubtitleItem; const Value : Integer);
 var NextSub, PreviousSub : TSubtitleItem;
 begin
   Sub.Start := Value;
@@ -396,7 +400,7 @@ begin
   end;
 end;
 
-procedure TSubtitleModel.InternalSetStop(Sub : TSubtitleItem; Value : Integer);
+procedure TSubtitleModel.InternalSetStop(Sub : TSubtitleItem; const Value : Integer);
 var NextSub, PreviousSub : TSubtitleItem;
 begin
   Sub.Stop := Value;
@@ -424,12 +428,12 @@ begin
   end;
 end;
 
-procedure TSubtitleModel.InternalSetText(Sub : TSubtitleItem; Value : WideString);
+procedure TSubtitleModel.InternalSetText(Sub : TSubtitleItem; const Value : WideString);
 begin
   Sub.Text := Value;
 end;
 
-procedure TSubtitleModel.InternalReindex(FromIndex : Integer = 0);
+procedure TSubtitleModel.InternalReindex(const FromIndex : Integer = 0);
 var I : Integer;
     Sub : TSubtitleItem;
 begin
@@ -462,7 +466,7 @@ begin
   FTransaction.Add(Task);
 end;
 
-procedure TSubtitleModel.DeleteSubtitle(Idx : Integer);
+procedure TSubtitleModel.DeleteSubtitle(const Idx : Integer);
 var Sub : TSubtitleItem;
 begin
   Sub := GetAt(Idx);
@@ -484,7 +488,7 @@ begin
   FTransaction := nil;
 end;
 
-procedure TSubtitleModel.SetSubtitleStart(Sub : TSubtitleItem; Value : Integer);
+procedure TSubtitleModel.SetSubtitleStart(Sub : TSubtitleItem; const Value : Integer);
 var Task : TSetStartTask;
 begin
   if (FTransaction = nil) then
@@ -498,7 +502,7 @@ begin
   FTransaction.Add(Task);
 end;
 
-procedure TSubtitleModel.SetSubtitleStop(Sub : TSubtitleItem; Value : Integer);
+procedure TSubtitleModel.SetSubtitleStop(Sub : TSubtitleItem; const Value : Integer);
 var Task : TSetStopTask;
 begin
   if (FTransaction = nil) then
@@ -512,7 +516,7 @@ begin
   FTransaction.Add(Task);
 end;
 
-procedure TSubtitleModel.SetSubtitleText(Sub : TSubtitleItem; Value : WideString);
+procedure TSubtitleModel.SetSubtitleText(Sub : TSubtitleItem; const Value : WideString);
 var Task : TSetTextTask;
 begin
   if (FTransaction = nil) then
@@ -531,7 +535,7 @@ begin
   Result := FSortedSubs.size;
 end;
 
-function TSubtitleModel.GetAt(Idx : Integer) : TSubtitleItem;
+function TSubtitleModel.GetAt(const Idx : Integer) : TSubtitleItem;
 begin
   if FSortedSubs.legalIndex(Idx) then
     Result := TSubtitleItem(FSortedSubs.atAsObject(Idx))
@@ -544,7 +548,7 @@ begin
   Result := GetAt(0);
 end;
 
-function TSubtitleModel.GetNext(Sub : TSubtitleItem) : TSubtitleItem;
+function TSubtitleModel.GetNext(const Sub : TSubtitleItem) : TSubtitleItem;
 var NextIndex : Integer;
 begin
   if (Sub <> nil) then
@@ -556,7 +560,7 @@ begin
     Result := nil
 end;
 
-function TSubtitleModel.GetPrevious(Sub : TSubtitleItem) : TSubtitleItem;
+function TSubtitleModel.GetPrevious(const Sub : TSubtitleItem) : TSubtitleItem;
 var PreviousIndex : Integer;
 begin
   if (Sub <> nil) then
@@ -621,23 +625,35 @@ begin
     obj[Low(obj)], ExactMatch);
 end;
 
-function TSubtitleModel.FindInsertPosition(const Start,Stop : Integer) : Integer;
-var Sub : TSubtitleItem;
-    Iter : DIterator;
+function TSubtitleModel.FindInsertPosition(
+  const Sub: TSubtitleItem): Integer;
+var Iter : DIterator;
     ExactMatch : Boolean;
 begin
-  Sub := TSubtitleItem.Create;
-  Sub.Start := Start;
-  Sub.Stop := Stop;
-
   ExactMatch := False;
   Iter := myBinarySearch(FSortedSubs, [Sub], ExactMatch);
-
   if not atEnd(Iter) then
     Result := TSubtitleItem(getObject(Iter)).Index
   else
     Result := FSortedSubs.size;
+end;
+
+function TSubtitleModel.FindInsertPosition(const Start, Stop : Integer) : Integer;
+var Sub : TSubtitleItem;
+begin
+  Sub := TSubtitleItem.Create;
+  Sub.Start := Start;
+  Sub.Stop := Stop;
+  Result := FindInsertPosition(Sub);
   Sub.Free;
 end;
+
+function TSubtitleModel.GetBetween(const Start, Stop: Integer): Integer;
+begin
+  // TODO
+  Result := -1;
+end;
+
+
 
 end.
