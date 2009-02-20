@@ -359,22 +359,35 @@ begin
   FSubtitleModel.BeginTransaction;
   try
     Sub := FSubtitleModel.CreateSubtitle;
-    FSubtitleModel.SetSubtitleStart(Sub, 100);
-    FSubtitleModel.SetSubtitleStop(Sub, 110);
-    Sub := FSubtitleModel.CreateSubtitle;
     FSubtitleModel.SetSubtitleStart(Sub, 10);
     FSubtitleModel.SetSubtitleStop(Sub, 20);
     Sub := FSubtitleModel.CreateSubtitle;
     FSubtitleModel.SetSubtitleStart(Sub, 50);
     FSubtitleModel.SetSubtitleStop(Sub, 60);
     Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 100);
+    FSubtitleModel.SetSubtitleStop(Sub, 110);
+    Sub := FSubtitleModel.CreateSubtitle;
     FSubtitleModel.SetSubtitleStart(Sub, 200);
     FSubtitleModel.SetSubtitleStop(Sub, 210);
+    Sub := FSubtitleModel.CreateSubtitle;
+    FSubtitleModel.SetSubtitleStart(Sub, 240);
+    FSubtitleModel.SetSubtitleStop(Sub, 250);
   finally
     Transaction := FSubtitleModel.EndTransaction;
   end;
 
-  CheckEquals(0, FSubtitleModel.FindInsertPosition(30,40), '0');
+  CheckEquals(0, FSubtitleModel.FindInsertPosition(2,4), '0a');
+  CheckEquals(0, FSubtitleModel.FindInsertPosition(10,20), '0b');
+  CheckEquals(1, FSubtitleModel.FindInsertPosition(30,40), '1a');
+  CheckEquals(1, FSubtitleModel.FindInsertPosition(50,60), '1b');
+  CheckEquals(2, FSubtitleModel.FindInsertPosition(80,90), '2a');
+  CheckEquals(2, FSubtitleModel.FindInsertPosition(100,110), '2b');
+  CheckEquals(3, FSubtitleModel.FindInsertPosition(150,160), '3a');
+  CheckEquals(3, FSubtitleModel.FindInsertPosition(200,210), '3b');
+  CheckEquals(4, FSubtitleModel.FindInsertPosition(220,130), '4a');
+  CheckEquals(4, FSubtitleModel.FindInsertPosition(240,250), '4b');
+  CheckEquals(5, FSubtitleModel.FindInsertPosition(260,270), '5');
 
   FreeAndNil(Transaction);
 end;
