@@ -37,6 +37,7 @@ type
     procedure Resume; virtual; abstract;
     procedure UpdatePlayRange(Start, Stop : Cardinal); virtual;
     function GetPosition : Cardinal; virtual; abstract;
+    function GetDuration : Cardinal; virtual; abstract;
     procedure Stop(CallOnStopPlaying : Boolean = True); virtual; abstract;
     function IsOpen : Boolean; virtual; abstract;
     procedure SetRate(Rate : Integer); virtual;
@@ -87,6 +88,7 @@ type
     procedure Resume; override;
     procedure UpdatePlayRange(Start, Stop : Cardinal); override;
     function GetPosition : Cardinal; override;
+    function GetDuration : Cardinal; override;    
     procedure Stop(CallOnStopPlaying : Boolean = True); override;
     function IsPlaying : Boolean;
     function IsPaused : Boolean;
@@ -709,6 +711,9 @@ end;
 
 procedure TDShowRenderer.Stop(CallOnStopPlaying : Boolean);
 begin
+  if not Assigned(FMediaControl) then
+    Exit;
+
   FMediaControl.Stop;
   if Assigned(FWaitThread) then
   begin
@@ -732,6 +737,15 @@ begin
     OutputDebugString('WARN in TDShowRenderer.GetPosition : CurrentTime < 0');
   end;
   Result := CurrentTime div 10000;
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.GetDuration : Cardinal;
+var Duration : Int64;
+begin
+  FMediaSeeking.GetDuration(Duration);
+  Result := Duration div 10000;
 end;
 
 //------------------------------------------------------------------------------
