@@ -4,7 +4,7 @@ object ProjectForm: TProjectForm
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'New Project'
-  ClientHeight = 331
+  ClientHeight = 407
   ClientWidth = 550
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,7 +18,7 @@ object ProjectForm: TProjectForm
   TextHeight = 13
   object bttCreateNewProject: TTntButton
     Left = 336
-    Top = 304
+    Top = 376
     Width = 131
     Height = 25
     Caption = 'Create new project'
@@ -27,7 +27,7 @@ object ProjectForm: TProjectForm
   end
   object bttCancel: TTntButton
     Left = 472
-    Top = 304
+    Top = 376
     Width = 75
     Height = 25
     Caption = 'Cancel'
@@ -38,8 +38,8 @@ object ProjectForm: TProjectForm
     Left = 8
     Top = 8
     Width = 537
-    Height = 49
-    Caption = ' Video source file : '
+    Height = 81
+    Caption = ' Video source file (optional) : '
     TabOrder = 0
     object bttBrowseVideoFile: TSpeedButton
       Left = 504
@@ -56,17 +56,26 @@ object ProjectForm: TProjectForm
       Height = 21
       TabOrder = 0
     end
+    object bttExtractWAVFromVideo: TTntButton
+      Left = 8
+      Top = 48
+      Width = 521
+      Height = 22
+      Caption = 'Extract WAV/Peak file from video'
+      TabOrder = 1
+      OnClick = bttExtractWAVFromVideoClick
+    end
   end
   object gbWAVFile: TTntGroupBox
     Left = 8
-    Top = 64
+    Top = 104
     Width = 537
-    Height = 113
-    Caption = ' WAV file : '
+    Height = 121
+    Caption = ' Audio waveform / Audio only preview (optional) : '
     TabOrder = 1
     object bttBrowseWAVFile: TSpeedButton
       Left = 504
-      Top = 49
+      Top = 73
       Width = 23
       Height = 22
       Caption = '...'
@@ -74,68 +83,76 @@ object ProjectForm: TProjectForm
     end
     object bttBrowsePeakFile: TSpeedButton
       Left = 504
-      Top = 77
+      Top = 45
       Width = 23
       Height = 22
       Caption = '...'
       OnClick = bttBrowsePeakFileClick
     end
-    object bttExtractWAVFromVideo: TTntButton
-      Left = 104
-      Top = 20
-      Width = 161
-      Height = 25
-      Caption = 'Extract from video now'
-      TabOrder = 1
-      OnClick = bttExtractWAVFromVideoClick
-    end
     object EditWAVFilename: TTntEdit
-      Left = 104
-      Top = 50
-      Width = 393
+      Left = 88
+      Top = 74
+      Width = 409
       Height = 21
       TabOrder = 0
-    end
-    object rbInternalWAV: TRadioButton
-      Left = 8
-      Top = 24
-      Width = 65
-      Height = 17
-      Caption = 'Internal :'
-      TabOrder = 2
-      OnClick = rbInternalWAVClick
+      OnEnter = EditPeakFilenameEnter
+      OnExit = EditPeakFilenameExit
     end
     object rbExternal: TRadioButton
       Tag = 1
       Left = 8
-      Top = 52
-      Width = 65
+      Top = 76
+      Width = 73
       Height = 17
-      Caption = 'External :'
-      TabOrder = 3
+      Hint = 'Use an external or extracted WAV file for audio only preview.'
+      Caption = 'WAV file :'
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 1
       OnClick = rbInternalWAVClick
     end
     object rbPeakOnly: TRadioButton
       Tag = 2
       Left = 8
-      Top = 80
-      Width = 89
+      Top = 48
+      Width = 73
       Height = 17
-      Caption = 'Peak file only :'
-      TabOrder = 4
+      Hint = 
+        'Use the video file for audio preview and a created peak file for' +
+        ' the waveform display.'
+      Caption = 'Peak file :'
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 2
       OnClick = rbInternalWAVClick
     end
     object EditPeakFilename: TTntEdit
-      Left = 104
-      Top = 78
-      Width = 393
+      Left = 88
+      Top = 46
+      Width = 409
       Height = 21
-      TabOrder = 5
+      TabOrder = 3
+      OnEnter = EditPeakFilenameEnter
+      OnExit = EditPeakFilenameExit
+    end
+    object rbNoWaveform: TTntRadioButton
+      Left = 8
+      Top = 24
+      Width = 129
+      Height = 17
+      Hint = 
+        'If available the audio track of the video file will be used for ' +
+        'preview but no waveform is displayed.'
+      Caption = 'No waveform display'
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 4
+      OnClick = rbInternalWAVClick
     end
   end
   object gbSubtitleFile: TTntGroupBox
     Left = 8
-    Top = 184
+    Top = 240
     Width = 537
     Height = 49
     Caption = ' Subtitle file : '
@@ -177,7 +194,7 @@ object ProjectForm: TProjectForm
   end
   object gbProjectFile: TTntGroupBox
     Left = 8
-    Top = 248
+    Top = 304
     Width = 537
     Height = 49
     Caption = ' Project file : '
@@ -200,7 +217,7 @@ object ProjectForm: TProjectForm
   end
   object bttOk: TTntButton
     Left = 392
-    Top = 304
+    Top = 376
     Width = 75
     Height = 25
     Caption = 'OK'
@@ -210,14 +227,14 @@ object ProjectForm: TProjectForm
   end
   object chkSaveAsUTF8: TTntCheckBox
     Left = 112
-    Top = 183
+    Top = 239
     Width = 92
     Height = 17
     Caption = 'Save as UTF8'
     TabOrder = 7
   end
   object TntOpenDialog1: TTntOpenDialog
-    Left = 288
-    Top = 304
+    Left = 128
+    Top = 368
   end
 end

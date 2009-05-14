@@ -1502,16 +1502,26 @@ end;
 
 procedure TMainForm.EnableControl(Enable : Boolean);
 begin
-  ActionPlay.Enabled := Enable;
-  ActionStop.Enabled := Enable;
-  ActionLoop.Enabled := Enable;
+  ActionPlay.Enabled := Enable and (VideoRenderer.IsOpen or AudioOnlyRenderer.IsOpen);
+  ActionStop.Enabled := ActionPlay.Enabled;
+  ActionLoop.Enabled := ActionPlay.Enabled;
+  ActionLoopSelStart.Enabled := ActionPlay.Enabled;
+  ActionLoopSelEnd.Enabled := ActionPlay.Enabled;
   ActionNextSub.Enabled := Enable;
   ActionPreviousSub.Enabled := Enable;
-  ActionPlaySelStart.Enabled := Enable;
-  ActionPlaySelEnd.Enabled := Enable;
-  ActionPlayToEnd.Enabled := Enable;
-  ActionPlay1sBefore.Enabled := Enable;
-  ActionPause.Enabled := Enable;
+  ActionPlaySelStart.Enabled := ActionPlay.Enabled;
+  ActionPlaySelEnd.Enabled := ActionPlay.Enabled;
+  ActionPlayToEnd.Enabled := ActionPlay.Enabled;
+  ActionPlay1sBefore.Enabled := ActionPlay.Enabled;
+  ActionPause.Enabled := ActionPlay.Enabled;
+  ActionSetPlaybackRate60.Enabled := ActionPlay.Enabled;
+  ActionSetPlaybackRate70.Enabled := ActionPlay.Enabled;
+  ActionSetPlaybackRate80.Enabled := ActionPlay.Enabled;
+  ActionSetPlaybackRate90.Enabled := ActionPlay.Enabled;
+  ActionSetPlaybackRate100.Enabled := ActionPlay.Enabled;
+  
+  ActionToggleTimingMode.Enabled := ActionPlay.Enabled;
+  bttWorkingMode.Enabled := ActionToggleTimingMode.Enabled;
 
   ActionZoomIn.Enabled := Enable;
   ActionZoomOut.Enabled := Enable;
@@ -1534,9 +1544,9 @@ begin
   ActionSaveAs.Enabled := Enable;
   ActionExportToSSA.Enabled := Enable;
   ActionExportToWAV.Enabled := Enable;
-  ActionShowStartFrame.Enabled := Enable;
-  ActionShowStopFrame.Enabled := Enable;
-  ActionShowFrameAtCursor.Enabled := Enable;
+  ActionShowStartFrame.Enabled := Enable and VideoRenderer.IsOpen;
+  ActionShowStopFrame.Enabled := Enable and VideoRenderer.IsOpen;
+  ActionShowFrameAtCursor.Enabled := Enable and VideoRenderer.IsOpen;
 
   vtvSubsList.Enabled := Enable;
   MemoLinesCounter.Enabled := Enable;
@@ -1558,14 +1568,6 @@ begin
   ActionSave.Enabled := False;
   ActionOpenProjectFolder.Enabled := Enable;  
 
-  ActionSetPlaybackRate60.Enabled := Enable;
-  ActionSetPlaybackRate70.Enabled := Enable;
-  ActionSetPlaybackRate80.Enabled := Enable;
-  ActionSetPlaybackRate90.Enabled := Enable;
-  ActionSetPlaybackRate100.Enabled := Enable;
-
-  ActionLoopSelStart.Enabled := Enable;
-  ActionLoopSelEnd.Enabled := Enable;
 
   lblVolume.Enabled := Enable;
   tbVolume.Enabled := Enable;
@@ -1999,7 +2001,7 @@ end;
 
 procedure TMainForm.TagHighlight(RichEdit : TTntRichEdit; TagIndex : Integer);
 var savSelStart, savSelLength : Integer;
-    i, j, eventMask : Integer;
+    i, j, eventMask, len : Integer;
     WordArray : TWideStringDynArray;
     WordColor : TColor;
     TextToSpell, AWord : WideString;
@@ -2014,7 +2016,7 @@ begin
   TagSplit(RichEdit.Text, WordArray);
 
   eventMask := RichEdit.Perform(EM_SETEVENTMASK, 0, 0);
-  
+
   RichEdit.Lines.BeginUpdate;
 
   RichEdit.SelectAll;
@@ -2031,9 +2033,11 @@ begin
     else
       WordColor := clGrayText;
 
+    len := Length(WordArray[i]);
     if (WordColor <> clWindowText) then
     begin
-      SetRESelection(RichEdit, j, Length(WordArray[i]));
+      // Richedit count line break as 1 character only
+      SetRESelection(RichEdit, j, len - WideStringCount(WordArray[i], CRLF));
       SetRESelectionColor(RichEdit, WordColor);
     end
     else
@@ -2058,7 +2062,7 @@ begin
       end;
     end;
     
-    Inc(j, Length(WordArray[i]));
+    Inc(j, len);
   end;
   SetRESelection(RichEdit, savSelStart, savSelLength);
   
@@ -2126,37 +2130,23 @@ end;
 
 //------------------------------------------------------------------------------
 
-function MyLineLength(const s : WideString) : Integer;
-var i : Integer;
-    wsnotag : WideString;
-begin
-  Result := 0;
-  wsnotag := StripTags(s);
-  // Fix win98 b0rk (#13 #10 are included in the richedit text line)
-  for i:=1 to Length(wsnotag) do
-  begin
-    if (wsnotag[i] = #13) or (wsnotag[i] = #10) then
-      Break;
-    Inc(Result);
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
 procedure TMainForm.UpdateLinesCounter;
-var s : WideString;
+var s, StrippedText : WideString;
     i, CharCount, TotalCharCount, TotalCharCountWithCRLF, CPS : Integer;
     LineNo, LineStart, ColNo : Integer;
     NodeData: PTreeData;
     SubDuration : Integer;
+    LineArray : TWideStringDynArray;
 begin
   s := '';
   TotalCharCount := 0;
   TotalCharCountWithCRLF := 0;
+  StrippedText := StripTagsKeepNL(MemoSubtitleText.Text);
+  ExplodeW(CRLF, StrippedText, LineArray);
 
-  for i := MemoSubtitleText.Perform(EM_GETFIRSTVISIBLELINE,0,0) to MemoSubtitleText.Lines.Count-1 do
+  for i := MemoSubtitleText.Perform(EM_GETFIRSTVISIBLELINE, 0, 0) to MemoSubtitleText.Lines.Count-1 do
   begin
-    CharCount := MyLineLength(MemoSubtitleText.Lines.Strings[i]);
+    CharCount := Length(LineArray[i]);
     Inc(TotalCharCount, CharCount);
     s := s + IntToStr(CharCount) + CRLF;
   end;
@@ -2366,16 +2356,21 @@ begin
         end
         else
         begin
-          MessageBoxW(Handle, PWideChar(WideFormat('Can''t open WAV file : %s',
-            [CurrentProject.WAVFile])),
-            PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+
           // TODO : Show project page as a new project but with pre-filled data
-          Exit;
+
+
+          // WIP : Load without video or audio Exit;
+          //MessageBoxW(Handle, PWideChar(WideFormat('Can''t open WAV file : %s',
+          //  [CurrentProject.WAVFile])),
+          //  PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+
         end;
       end;
     end;
     // TODO : report invalid wav file error
-    WAVDisplayer.Enabled := LoadWAVOK;
+    
+    WAVDisplayer.Enabled := True;
 
     // ----- Load subtitles
     ShowStatusBarMessage('Loading subtitles...');
@@ -2418,6 +2413,28 @@ begin
       WAVDisplayer.SetRenderer(VideoRenderer)
     else
       WAVDisplayer.SetRenderer(AudioOnlyRenderer);
+
+    if (not LoadWAVOK) then
+    begin
+      if VideoRenderer.IsOpen then
+      begin
+        // Extract duration form video
+        WAVDisplayer.Length := VideoRenderer.GetDuration;
+      end
+      else
+      begin
+        if (WAVDisplayer.RangeList.Count > 0) then
+        begin
+          // Use last subtitle stop time + 1 minute
+          WAVDisplayer.Length := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count - 1].StopTime + (1 * 60 * 1000);
+        end
+        else
+        begin
+          // TODO : field to enter duration or auto extend duration ?
+          WAVDisplayer.Length := 1 * 3600 * 1000; // 1 hour by default
+        end;
+      end;
+    end;
 
     // ----- Load script
     if WideFileExists(WideChangeFileExt(CurrentProject.Filename,'.vssscript')) then
@@ -2464,6 +2481,7 @@ begin
     if (not VideoRenderer.IsOpen) and ShowingVideo then
         ActionShowHideVideo.Execute;
   end;
+
   MRUList.AddFile(CurrentProject.Filename);
   ShowStatusBarMessage('Project loaded.');
 end;
@@ -2642,8 +2660,8 @@ begin
     // Create the project file
     ProjectFileIni := TTntIniFile.Create(ProjectForm.EditProjectFilename.Text);
     ProjectFileIni.WriteString('VisualSubsync','VideoSource',ProjectForm.EditVideoFilename.Text);
-    ProjectFileIni.WriteString('VisualSubsync','WAVFile',ProjectForm.EditWAVFilename.Text);
-    ProjectFileIni.WriteString('VisualSubsync','PeakFile',ProjectForm.EditPeakFilename.Text);
+    ProjectFileIni.WriteString('VisualSubsync','WAVFile',ProjectForm.GetWAVFilename);
+    ProjectFileIni.WriteString('VisualSubsync','PeakFile',ProjectForm.GetPeakFilename);
     ProjectFileIni.WriteInteger('VisualSubsync','WAVMode',Ord(ProjectForm.GetWAVMode));
     ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',ProjectForm.EditSubtitleFilename.Text);
     ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
@@ -2663,7 +2681,7 @@ procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
 begin
   if (not VideoRenderer.IsOpen) then
   begin
-    ShowStatusBarMessage('Video file is not open...');
+    ShowStatusBarMessage('Video file is not opened...');
     Exit;
   end;
 
@@ -2920,6 +2938,10 @@ begin
     finally
       g_WebRWSynchro.EndWrite;
     end;
+
+    WAVDisplayer.UpdateView([uvfPageSize]);
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+    vtvSubsList.Repaint;
   end;
 end;
 
