@@ -1,7 +1,7 @@
 {**************************************************************************************************}
 {                                                                                                  }
 { VCLFixPack unit - Unoffical bug fixes for Delphi/C++Builder                                      }
-{ Version 1.1 (2009-01-25)                                                                         }
+{ Version 1.2 (2009-03-03)                                                                         }
 {                                                                                                  }
 { The contents of this file are subject to the Mozilla Public License Version 1.1 (the "License"); }
 { you may not use this file except in compliance with the License. You may obtain a copy of the    }
@@ -58,7 +58,7 @@ unit VCLFixPack;
      QC #68740: Lost focus after TOpenDialog when MainFormOnTaskBar is set
      (http://qc.codegear.com/wc/qcmain.aspx?d=68740)
 
-   - [2007-2009]
+   - [2005-2009]
      QC #59963: Closing non-modal forms after a task switch can deactivate the application
      (http://qc.codegear.com/wc/qcmain.aspx?d=59963)
 
@@ -122,8 +122,29 @@ unit VCLFixPack;
      Workaround for Windows Vista CompareString bug
      (Workaround is disabled by default, define "VistaCompareStringFix" to activate it)
 
+   - [2007-2009]
+     QC #52439: DbNavigator paints incorrectly when flat=true in themed mode
+
+   - [2009]
+     QC #70441: ToUpper and ToLower modify a Const argument
+
+   - [2009]
+     QC #69752: ToUpper and ToLower with NullString
+
+   - [2009]
+     QC #69875: StringBuilder.Replace is incorrect
+     QC #67564: Error in TStringBuilder.Replace
+
 
  Changlog:
+   2009-03-03:
+     Fixed: Rewritten patch for QC #59963 (AppDeActivateZOrderFix) to fix the cause instead of the symptom
+     Added: QC #52439: DbNavigator paints incorrectly when flat=true in themed mode
+     Added: QC #70441: ToUpper and ToLower modify a Const argument
+     Added: QC #69752: ToUpper and ToLower with NullString
+     Added: QC #69875, #67564: StringBuilder.Replace is incorrect
+            + a much faster implementation
+
    2009-01-25:
      Fixed: DBGrid ScrollBar gab wasn't painted correctly in BiDiMode <> bdLeftToRight
      Fixed: TTabSheet could throw an access violation if no PageControl was assigned to it
@@ -146,7 +167,7 @@ interface
   {$DEFINE TaskModalDialogFix}
 {$IFEND}
 
-{$IF CompilerVersion >= 18.5} // Delphi 2007+
+{$IF CompilerVersion >= 16.0} // Delphi 2005
   {$DEFINE AppDeActivateZOrderFix}
 {$IFEND}
 
@@ -204,6 +225,20 @@ interface
   {$DEFINE VistaProgressBarMarqueeFix}
 {$IFEND}
 
+{$IF CompilerVersion = 20.0} // Delphi 2009
+  {$DEFINE CharacterFix}
+{$IFEND}
+
+{$IF CompilerVersion = 20.0} // Delphi 2009
+  {$DEFINE StringBuilderFix}
+{$IFEND}
+
+{$IF (CompilerVersion >= 18.5) and (CompilerVersion <= 20.0)} // Delphi 2007-2009
+  {$IFDEF VCLFIXPACK_DB_SUPPORT}
+    {$DEFINE DBNavigatorFix}
+  {$ENDIF VCLFIXPACK_DB_SUPPORT}
+{$IFEND}
+
 {**************************************************************************************************}
 { Workaround for Windows Vista CompareString bug.                                                  }
 { The Ü/ü ($DC/$FC) and the UE/ue are treated equal in all locales, but they aren't equal. There   }
@@ -231,8 +266,11 @@ uses
   {$IF CompilerVersion >= 15.0}
   Themes,
   {$IFEND}
+  {$IF CompilerVersion >= 20.0}
+  Character,
+  {$IFEND}
   {$IFDEF VCLFIXPACK_DB_SUPPORT}
-  DBGrids,
+  DBGrids, DBCtrls,
   {$ENDIF VCLFIXPACK_DB_SUPPORT}
   Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Buttons,
   CommCtrl;
@@ -498,56 +536,60 @@ end;
 { ---------------------------------------------------------------------------- }
 { QC #59963: Closing non-modal forms after a task switch can deactivate the application }
 {$IFDEF AppDeActivateZOrderFix}
-type
-  TAppDeActivateZOrderFix = class(TObject)
-    class function AppWndProc(var Message: TMessage): Boolean;
-  end;
+{
+// Release
+0047B1FD F6401C08         test byte ptr [eax+$1c],$08
+0047B201 7522             jnz $0047b225     << replace by $90 $90 => nop nop
+0047B203 8BC3             mov eax,ebx
+0047B205 8B150C824500     mov edx,[$0045820c]
+0047B20B E85C8BF8FF       call @IsClass
+0047B210 84C0             test al,al
+0047B212 7509             jnz $0047b21d
+0047B214 83BBCC01000000   cmp dword ptr [ebx+$000001cc],$00
+0047B21B 7408             jz $0047b225
+0047B21D 8B45FC           mov eax,[ebp-$04]
+0047B220 E8DFFDFFFF       call TWinControl.UpdateShowing
+0047B225 5E               pop esi
+0047B226 5B               pop ebx
+0047B227 59               pop ecx
+0047B228 5D               pop ebp
+0047B229 C3               ret
+}
 
+procedure InitAppDeActivateZOrderFix;
 var
-  FLastActivePopup: HWND;
-
-class function TAppDeActivateZOrderFix.AppWndProc(var Message: TMessage): Boolean;
-var
-  TopWindow: HWND;
+  P: PAnsiChar;
+  Len: Integer;
+  Buf: Word;
+  n: Cardinal;
 begin
-  Result := False;
-  case Message.Msg of
-    CM_ACTIVATE:
-      begin
-        if Assigned(Application.OnActivate) then
-          Application.OnActivate(Application);
-        if Assigned(Application.MainForm) and Application.MainFormOnTaskBar and
-           not IsWindowEnabled(Application.MainForm.Handle) and
-           (FLastActivePopup <> Application.MainForm.Handle) then
-          Windows.SetFocus(FLastActivePopup)
-        else
-        begin
-          { If the user switches to a different process and then back, every DestroyWindow call
-            will accidentally activate a window from another process. }
-          TopWindow := GetActiveWindow;
-          if not Assigned(Application.MainForm) or (TopWindow <> Application.MainFormHandle) then
-          begin
-            {if TopWindow = 0 then // this happens when another app is active and the user clicks on the Close-Button of our form
-              Windows.SetFocus(FindTopMostWindow(0))
-            else}
-              Windows.SetFocus(Application.Handle); // tell Windows that our application is still the focus owner
-            if TopWindow <> 0 then
-              SetActiveWindow(TopWindow); // restore the active window
-          end;
-        end;
-        FLastActivePopup := 0;
+  P := GetActualAddr(@TWinControl.UpdateControlState);
+  Len := 0;
+  while Len < 200 do
+  begin
+    if (P[0] = #$F6) and (P[1] = #$40) and (P[2] = #$1C) and (P[3] = #$08) and // test byte ptr [eax+$1c],$08
+       (P[4] = #$75) and (P[5] = #$22) and                                     // jnz +$22
+       (P[6] = #$8B) and (P[7] = #$C3) and                                     // mov eax,ebx
+       (P[8] = #$8B) then                                                      // mov edx,[TCustomForm]
+    begin
+      Buf := $9090; // nop nop
+      WriteProcessMemory(GetCurrentProcess, @P[4], @Buf, SizeOf(Buf), n);
+      DebugLog('AppDeActivateZOrderFix');
+      Exit;
+    end
+    else
+    if (P[0] = #$59) and (P[0] = #$5D) and (P[1] = #$C3) then // function end reached
+      Break;
 
-        Result := True;
-      end;
-    CM_DEACTIVATE:
-      begin
-        FLastActivePopup := GetLastActivePopup(Application.Handle);
-        if Assigned(Application.OnDeactivate) then
-          Application.OnDeactivate(Application);
-        Result := True;
-      end;
+    Inc(P);
+    Inc(Len);
   end;
 end;
+
+procedure FiniAppDeActivateZOrderFix;
+begin
+end;
+
 {$ENDIF AppDeActivateZOrderFix}
 { ---------------------------------------------------------------------------- }
 
@@ -1893,11 +1935,17 @@ procedure InitSpeedButtonGlassFix;
 begin
   DebugLog('SpeedButtonGlassFix');
   ReplaceVmtField(TSpeedButton, @TGlassableSpeedButton.WndProc, @TGlassableSpeedButton.NewWndProc);
+  {$IFDEF VCLFIXPACK_DB_SUPPORT}
+  ReplaceVmtField(TNavButton, @TGlassableSpeedButton.WndProc, @TGlassableSpeedButton.NewWndProc);
+  {$ENDIF VCLFIXPACK_DB_SUPPORT}
 end;
 
 procedure FiniSpeedButtonGlassFix;
 begin
   ReplaceVmtField(TSpeedButton, @TGlassableSpeedButton.NewWndProc, @TGlassableSpeedButton.WndProc);
+  {$IFDEF VCLFIXPACK_DB_SUPPORT}
+  ReplaceVmtField(TNavButton, @TGlassableSpeedButton.NewWndProc, @TGlassableSpeedButton.WndProc);
+  {$ENDIF VCLFIXPACK_DB_SUPPORT}
 end;
 {$ENDIF SpeedButtonGlassFix}
 { ---------------------------------------------------------------------------- }
@@ -1905,8 +1953,8 @@ end;
 
 
 { ---------------------------------------------------------------------------- }
-{$IFDEF VistaProgressBarMarqueeFix}
 { QC #69294: TProgressBar fails with PBS_MARQUEE and disabled Themes }
+{$IFDEF VistaProgressBarMarqueeFix}
 type
   TVistaProgressBarMarqueeFix = class(TProgressBar)
   protected
@@ -1978,6 +2026,269 @@ end;
 {$ENDIF VistaProgressBarMarqueeFix}
 { ---------------------------------------------------------------------------- }
 
+
+{ ---------------------------------------------------------------------------- }
+{ QC #52439: DbNavigator paints incorrectly when flat=true in themed mode }
+{$IFDEF DBNavigatorFix}
+type
+  TOpenDBNavigator = class(TDBNavigator)
+  public
+    procedure SetFlatFixed(Value: Boolean);
+  end;
+
+var
+  DBNavigatorSetFlat: Pointer;
+  DBNavigatorSetFlatHook: TXRedirCode;
+
+procedure TOpenDBNavigator.SetFlatFixed(Value: Boolean);
+var
+  I: TNavigateBtn;
+begin
+  if Flat <> Value then
+  begin
+    Boolean(Pointer(@Flat)^) := Value; // FFlat := Value
+    for I := Low(Buttons) to High(Buttons) do
+      Buttons[I].Flat := Value;
+    if Flat then
+      ControlStyle := ControlStyle - [csOpaque]
+    else
+      ControlStyle := ControlStyle + [csOpaque];
+  end;
+end;
+
+procedure InitDBNavigatorFix;
+var
+  Info: PPropInfo;
+begin
+  Info := GetPropInfo(TDBNavigator, 'Flat');
+  if (Info <> nil) and (Info.SetProc <> nil) then
+  begin
+    DBNavigatorSetFlat := Info.SetProc;
+    HookProc(DBNavigatorSetFlat, @TOpenDBNavigator.SetFlatFixed, DBNavigatorSetFlatHook);
+    DebugLog('DBNavigatorFix');
+  end;
+end;
+
+procedure FiniDBNavigatorFix;
+begin
+  UnhookProc(DBNavigatorSetFlat, DBNavigatorSetFlatHook);
+end;
+{$ENDIF DBNavigatorFix}
+{ ---------------------------------------------------------------------------- }
+
+
+{ ---------------------------------------------------------------------------- }
+{ QC #70441: ToUpper and ToLower modify a Const argument
+  QC #69752: ToUpper and ToLower with NullString }
+{$IFDEF CharacterFix}
+var
+  TCharacter_ToLowerHook, TCharacter_ToUpperHook: TXRedirCode;
+
+function TCharacter_ToLower(const S: string): string;
+var
+  Len: Integer;
+begin
+  if S <> '' then
+  begin
+    Len := Length(S);
+    SetLength(Result, Len);
+    if LCMapString(GetThreadLocale, LCMAP_LOWERCASE, PChar(S), Len, PChar(Result), Len) = 0 then
+      RaiseLastOSError;
+  end
+  else
+    Result := S;
+end;
+
+function TCharacter_ToUpper(const S: string): string;
+var
+  Len: Integer;
+begin
+  if S <> '' then
+  begin
+    Len := Length(S);
+    SetLength(Result, Len);
+    if LCMapString(GetThreadLocale, LCMAP_UPPERCASE, PChar(S), Len, PChar(Result), Len) = 0 then
+      RaiseLastOSError;
+  end
+  else
+    Result := S;
+end;
+
+procedure InitCharacterFix;
+begin
+  DebugLog('CharacterFix');
+  HookProc(@TCharacter.ToLower, @TCharacter_ToLower, TCharacter_ToLowerHook);
+  HookProc(@TCharacter.ToUpper, @TCharacter_ToUpper, TCharacter_ToUpperHook);
+end;
+
+procedure FiniCharacterFix;
+begin
+  UnhookProc(@TCharacter.ToLower, TCharacter_ToLowerHook);
+  UnhookProc(@TCharacter.ToUpper, TCharacter_ToUpperHook);
+end;
+{$ENDIF CharacterFix}
+{ ---------------------------------------------------------------------------- }
+
+
+{ ---------------------------------------------------------------------------- }
+{ QC #69875: StringBuilder.Replace is incorrect
+             + a much faster implementation }
+{$IFDEF StringBuilderFix}
+var
+  TStringBuilder_ReplaceHook: TXRedirCode;
+
+type
+  TStringBuilderFix = class(TStringBuilder)
+  public
+    function Replace(const OldValue, NewValue: string; StartIndex, Count: Integer): TStringBuilder;
+  end;
+
+function TStringBuilderFix.Replace(const OldValue, NewValue: string;
+  StartIndex, Count: Integer): TStringBuilder;
+
+  procedure OffsetChars(Data: PChar; Offset: Integer; EndP: PChar); inline;
+  begin
+    Move(Data^, PChar(Data + Offset)^, (EndP - Data) * SizeOf(Char));
+  end;
+
+var
+  P, EndP, F: PChar;
+  FirstChar: Char;
+  OldValueLen, NewValueLen, DataLen: Integer;
+  FoundCount, I: Integer;
+  StackStart: Pointer;
+  StackP: ^PChar;
+  SizeChange: Integer;
+  NewLength: Integer;
+begin
+  { Bounds checking }
+  DataLen := System.Length(FData);
+  if StartIndex + Count >= DataLen then
+    Count := DataLen - StartIndex;
+
+  if (Count <= 0) or (StartIndex < 0) or (StartIndex >= DataLen) or (OldValue = '') then
+    Exit(Self);
+
+  OldValueLen := System.Length(OldValue);
+  NewValueLen := System.Length(NewValue);
+  SizeChange := NewValueLen - OldValueLen;
+
+  { Start stack position-buffer }
+  asm mov StackStart, esp end;
+
+  FoundCount := 0;
+  FirstChar := PChar(Pointer(OldValue))^;
+
+  P := PChar(@FData[StartIndex]);
+  while Count > 0 do
+  begin
+    while (Count > 0) and (P^ <> FirstChar) do
+    begin
+      Inc(P);
+      Dec(Count);
+    end;
+
+    if Count > 0 then
+    begin
+      if (OldValueLen = 1) or (StrLComp(P + 1, PChar(Pointer(OldValue)) + 1, OldValueLen - 1) = 0) then
+      begin
+        if SizeChange = 0 then
+        begin
+          { Replace inplace }
+          Move(NewValue[1], P^, OldValueLen * SizeOf(Char));
+        end
+        else
+        begin
+          { Save position to the stack and proceed }
+          asm push P end;
+          Inc(FoundCount);
+        end;
+        Inc(P, OldValueLen - 1);
+        Dec(Count, OldValueLen - 1);
+      end;
+    end;
+    Inc(P);
+    Dec(Count);
+  end;
+
+  NewLength := FLength + SizeChange * FoundCount;
+  if FoundCount > 0 then { Expand }
+  begin
+    { Offset the data from right to left }
+    if SizeChange > 0 then
+    begin
+      { Resize FData to the new length }
+      F := @FData[0];
+      if NewLength > System.Length(FData) then
+        SetLength(FData, NewLength);
+      EndP := PChar(@FData[FLength - 1]) + 1;
+
+      while FoundCount > 0 do
+      begin
+        asm pop P end; { take the last position from the stack }
+        P := PChar(@FData[0]) + (P - F);
+        { Offset all chars right to the OldValue by FoundCount*SizeChange }
+        OffsetChars(P + OldValueLen, FoundCount * SizeChange, EndP);
+        EndP := P;
+        { Put the NewValue into the buffer }
+        Move(NewValue[1], PChar(P + (FoundCount - 1) * SizeChange)^, NewValueLen * SizeOf(Char));
+        Dec(FoundCount);
+      end;
+    end
+    else { SizeChange < 0, Shrink }
+    begin
+      { Offset the data from left to right }
+
+      { Push the terminator to the stack; the loop uses the "next position" as EndP }
+      EndP := PChar(@FData[FLength - 1]) + 1;
+      asm push EndP end;
+
+      StackP := Pointer(INT_PTR(StackStart) - SizeOf(Pointer));
+      I := 0;
+      while FoundCount > 0 do
+      begin
+        P := StackP^;
+        Dec(StackP);
+        EndP := StackP^;
+        { Offset all chars right to the OldValue by FoundCount*SizeChange }
+        OffsetChars(@P[OldValueLen], (I + 1) * SizeChange, EndP);
+        { Put the NewValue into the buffer }
+        if NewValue <> '' then
+          Move(NewValue[1], P[I * SizeChange], NewValueLen * SizeOf(Char));
+        Inc(I);
+        Dec(FoundCount);
+      end;
+
+      {if NewLength > System.Length(FData) then
+        SetLength(FData, NewLength);}
+    end;
+  end;
+
+  { Release stack memory }
+  asm mov esp, StackStart end;
+
+  FLength := NewLength;
+  Result := Self;
+end;
+
+procedure InitStringBuilderFix;
+var
+  Proc: function(const OldValue: string; const NewValue: string; StartIndex: Integer; Count: Integer): TStringBuilder of object;
+begin
+  DebugLog('StringBuilderFix');
+  Proc := TStringBuilder(nil).Replace;
+  HookProc(TMethod(Proc).Code, @TStringBuilderFix.Replace, TStringBuilder_ReplaceHook);
+end;
+
+procedure FiniStringBuilderFix;
+var
+  Proc: function(const OldValue: string; const NewValue: string; StartIndex: Integer; Count: Integer): TStringBuilder of object;
+begin
+  Proc := TStringBuilder(nil).Replace;
+  UnhookProc(TMethod(Proc).Code, TStringBuilder_ReplaceHook);
+end;
+{$ENDIF StringBuilderFix}
+{ ---------------------------------------------------------------------------- }
 
 
 { ---------------------------------------------------------------------------- }
@@ -2353,8 +2664,7 @@ initialization
   {$ENDIF TaskModalDialogFix}
 
   {$IFDEF AppDeActivateZOrderFix}
-  DebugLog('AppDeActivateZOrderFix');
-  Application.HookMainWindow(TAppDeActivateZOrderFix.AppWndProc);
+  InitAppDeActivateZOrderFix;
   {$ENDIF AppDeActivateZOrderFix}
 
   {$IFDEF HideStackTrashingFix}
@@ -2414,6 +2724,18 @@ initialization
   InitVistaProgressBarMarqueeFix;
   {$ENDIF VistaProgressBarMarqueeFix}
 
+  {$IFDEF DBNavigatorFix}
+  InitDBNavigatorFix;
+  {$ENDIF DBNavigatorFix}
+
+  {$IFDEF CharacterFix}
+  InitCharacterFix;
+  {$ENDIF CharacterFix}
+
+  {$IFDEF StringBuilderFix}
+  InitStringBuilderFix;
+  {$ENDIF StringBuilderFix}
+
   {$IFDEF VistaCompareStringFix}
   InitCompareStringFix;
   {$ENDIF VistaCompareStringFix}
@@ -2424,6 +2746,18 @@ finalization
   {$IFDEF VistaCompareStringFix}
   FiniCompareStringFix;
   {$ENDIF VistaCompareStringFix}
+
+  {$IFDEF StringBuilderFix}
+  FiniStringBuilderFix;
+  {$ENDIF StringBuilderFix}
+
+  {$IFDEF CharacterFix}
+  FiniCharacterFix;
+  {$ENDIF CharacterFix}
+
+  {$IFDEF DBNavigatorFix}
+  FiniDBNavigatorFix;
+  {$ENDIF DBNavigatorFix}
 
   {$IFDEF VistaProgressBarMarqueeFix}
   FiniVistaProgressBarMarqueeFix;
@@ -2483,8 +2817,7 @@ finalization
   {$ENDIF TaskModalDialogFix}
 
   {$IFDEF AppDeActivateZOrderFix}
-  if Application <> nil then
-    Application.UnhookMainWindow(TAppDeActivateZOrderFix.AppWndProc);
+  FiniAppDeActivateZOrderFix;
   {$ENDIF AppDeActivateZOrderFix}
 
   {$IFDEF MkObjInstLeakFix}
