@@ -28,7 +28,7 @@ uses
   Dialogs, StdCtrls, Buttons, TntStdCtrls, TntDialogs;
 
 type
-  TProjectWAVMode = (pwmInternal, pwmExternal, pwmPeakOnly);
+  TProjectWAVMode = (pwmNoWaveform, pwmExternal, pwmPeakOnly);
   TVSSProject = class
   private
     FIsDirty : Boolean;
@@ -76,7 +76,6 @@ type
     EditVideoFilename: TTntEdit;
     gbWAVFile: TTntGroupBox;
     bttBrowseWAVFile: TSpeedButton;
-    bttExtractWAVFromVideo: TTntButton;
     EditWAVFilename: TTntEdit;
     gbSubtitleFile: TTntGroupBox;
     bttBrowseSubtitleFile: TSpeedButton;
@@ -86,13 +85,14 @@ type
     EditProjectFilename: TTntEdit;
     TntOpenDialog1: TTntOpenDialog;
     bttOk: TTntButton;
-    rbInternalWAV: TRadioButton;
     rbExternal: TRadioButton;
     rbPeakOnly: TRadioButton;
     bttBrowsePeakFile: TSpeedButton;
     EditPeakFilename: TTntEdit;
     chkSaveAsUTF8: TTntCheckBox;
     cbSubtitleFormat: TTntComboBox;
+    rbNoWaveform: TTntRadioButton;
+    bttExtractWAVFromVideo: TTntButton;
     procedure bttCreateNewProjectClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure bttBrowseVideoFileClick(Sender: TObject);
@@ -104,6 +104,8 @@ type
     procedure rbInternalWAVClick(Sender: TObject);
     procedure bttBrowsePeakFileClick(Sender: TObject);
     procedure cbSubtitleFormatChange(Sender: TObject);
+    procedure EditPeakFilenameEnter(Sender: TObject);
+    procedure EditPeakFilenameExit(Sender: TObject);
   private
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
@@ -114,10 +116,15 @@ type
     procedure ConfigureInNewProjectMode;
     procedure ConfigureInModifyProjectMode(Project : TVSSProject);
     function GetWAVMode : TProjectWAVMode;
+    function GetPeakFilename : WideString;
+    function GetWAVFilename : WideString;
   end;
 
 var
   ProjectForm: TProjectForm;
+
+const
+  LEAVE_EMPTY : WideString = 'Leave empty for extraction';
 
 implementation
 
@@ -197,60 +204,44 @@ end;
 
 procedure TProjectForm.bttCreateNewProjectClick(Sender: TObject);
 var res : Integer;
+    VideoFileExists : Boolean;
 begin
-  if (Trim(EditVideoFilename.Text) <> '') and (not WideFileExists(EditVideoFilename.Text)) then
-  begin
-    MessageBoxW(Handle, PWideChar(WideString('The video file "' + EditVideoFilename.Text +
-      '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-    EditVideoFilename.SetFocus;
-    Exit;
-  end;
+  VideoFileExists := (Trim(EditVideoFilename.Text) <> '') and WideFileExists(EditVideoFilename.Text);
 
-  if ((Trim(EditWAVFilename.Text) <> '') or rbExternal.Checked) and
-     (not WideFileExists(EditWAVFilename.Text)) then
+  if (Trim(EditSubtitleFilename.Text) = '') then
   begin
-    MessageBoxW(Handle, PWideChar(WideString('The WAV file "' + EditWAVFilename.Text +
-      '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-    EditWAVFilename.SetFocus;
-    Exit;
-  end;
-
-  if (Trim(EditVideoFilename.Text) = '') and (Trim(EditWAVFilename.Text) = '') then
-  begin
-    MessageBoxW(Handle, PWideChar(WideString('You need to give at least a video file or an audio file.')),
+    MessageBoxW(Handle, PWideChar(WideString('The subtitle file name is missing.')),
       PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-    EditVideoFilename.SetFocus;
+    EditSubtitleFilename.SetFocus;
     Exit;
   end;
 
-  if ((Trim(EditPeakFilename.Text) <> '') or rbPeakOnly.Checked) and
-     (not WideFileExists(EditPeakFilename.Text)) then
+  if (rbExternal.Checked) then
   begin
-    MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
-      '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-    EditPeakFilename.SetFocus;
-    Exit;
-  end;
-
-  if Trim(EditSubtitleFilename.Text) = '' then
-  begin
-    EditSubtitleFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.srt');
-    UpdateFormatCombobox;
-  end;
-  if Trim(EditProjectFilename.Text) = '' then
-  begin
-    EditProjectFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.vssprj');
-  end;
-
-  if rbInternalWAV.Checked then
-  begin
-    bttExtractWAVFromVideo.Click;
-    if rbInternalWAV.Checked then
+    if VideoFileExists and (not WideFileExists(EditWAVFilename.Text)) then
     begin
-      MessageBoxW(Handle,
-        PWideChar(WideString('You need a WAV file or a peak file.')),
-        PWideChar(WideString('Error :')),
-        MB_OK or MB_ICONERROR);
+      bttExtractWAVFromVideo.Click;
+    end
+    else
+    begin
+      MessageBoxW(Handle, PWideChar(WideString('The WAV file "' + EditWAVFilename.Text +
+        '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+      EditWAVFilename.SetFocus;
+      Exit;
+    end;
+  end;
+
+  if (rbPeakOnly.Checked) then
+  begin
+    if VideoFileExists and (not WideFileExists(EditPeakFilename.Text)) then
+    begin
+      bttExtractWAVFromVideo.Click;
+    end
+    else
+    begin
+      MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
+        '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+      EditPeakFilename.SetFocus;
       Exit;
     end;
   end;
@@ -281,6 +272,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TProjectForm.bttBrowseVideoFileClick(Sender: TObject);
+var WAVFilename, PeakFilename : WideString;
 begin
   TntOpenDialog1.FileName := EditVideoFilename.Text;
   TntOpenDialog1.Filter :=
@@ -290,21 +282,40 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditVideoFilename.Text := TntOpenDialog1.FileName;
-    if (Trim(EditWAVFilename.Text) = '') and WideFileExists(WideChangeFileExt(EditVideoFilename.Text,'.wav')) then
+    
+    // If external wav file exists with the same name use it
+    WAVFilename := WideChangeFileExt(EditVideoFilename.Text,'.wav');
+    PeakFilename := WideChangeFileExt(EditVideoFilename.Text,'.peak');
+    if (Trim(EditWAVFilename.Text) = '') and WideFileExists(WAVFilename) then
     begin
       WAVSelectMode(pwmExternal);
-      EditWAVFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.wav');
+      EditWAVFilename.Text := WAVFilename;
+    end
+    // else if peak file exists with the same name use it
+    else if (Trim(EditPeakFilename.Text) = '') and WideFileExists(PeakFilename) then
+    begin
+      WAVSelectMode(pwmPeakOnly);
+      EditPeakFilename.Text := PeakFilename;
+    end
+    // else choose peak file
+    else
+    begin
+      WAVSelectMode(pwmPeakOnly);
     end;
+
     if Trim(EditSubtitleFilename.Text) = '' then
     begin
       EditSubtitleFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.srt');
       UpdateFormatCombobox;
     end;
+
     if Trim(EditProjectFilename.Text) = '' then
     begin
       EditProjectFilename.Text := WideChangeFileExt(EditVideoFilename.Text,'.vssprj');
     end;
   end;
+
+  bttExtractWAVFromVideo.Enabled := WideFileExists(EditVideoFilename.Text);
 end;
 
 //------------------------------------------------------------------------------
@@ -342,6 +353,10 @@ begin
   begin
     EditSubtitleFilename.Text := TntOpenDialog1.FileName;
     UpdateFormatCombobox;
+    if Trim(EditProjectFilename.Text) = '' then
+    begin
+      EditProjectFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.vssprj');
+    end;
   end;
 end;
 
@@ -386,7 +401,7 @@ begin
       EditWAVFilename.Text := ExtractWAVForm.DestinationFilename;
       WAVSelectMode(pwmExternal);
     end;
-  end;  
+  end;
   ExtractWAVForm.Free;
 end;
 
@@ -401,6 +416,13 @@ begin
   EditPeakFilename.Text := '';
   chkSaveAsUTF8.Checked := False;
   cbSubtitleFormat.ItemIndex := 0;
+  bttExtractWAVFromVideo.Enabled := False;
+
+  EditPeakFilename.Text := LEAVE_EMPTY;
+  EditPeakFilename.Font.Color := clInactiveCaption;
+
+  EditWAVFilename.Text := LEAVE_EMPTY;
+  EditWAVFilename.Font.Color := clInactiveCaption;
 end;
 
 //------------------------------------------------------------------------------
@@ -410,7 +432,7 @@ begin
   Self.Caption := 'New Project';
   bttCreateNewProject.Visible := True;
   bttOk.Visible := False;
-  WAVSelectMode(pwmInternal);
+  WAVSelectMode(pwmNoWaveform);
   Self.Clear;
 end;
 
@@ -443,8 +465,7 @@ end;
 
 procedure TProjectForm.WAVSelectMode(WavMode : TProjectWAVMode);
 begin
-  rbInternalWAV.Checked := (WavMode = pwmInternal);
-  bttExtractWAVFromVideo.Enabled := (WavMode = pwmInternal);
+  rbNoWaveform.Checked := (WavMode = pwmNoWaveform);
 
   rbExternal.Checked := (WavMode = pwmExternal);
   EditWAVFilename.Enabled := (WavMode = pwmExternal);
@@ -479,8 +500,8 @@ end;
 
 function TProjectForm.GetWAVMode : TProjectWAVMode;
 begin
-  if rbInternalWAV.Checked then
-    Result := pwmInternal
+  if rbNoWaveform.Checked then
+    Result := pwmNoWaveform
   else if rbExternal.Checked then
     Result := pwmExternal
   else
@@ -493,7 +514,7 @@ procedure TProjectForm.cbSubtitleFormatChange(Sender: TObject);
 begin
   if Length(EditSubtitleFilename.Text) <= 0 then
     Exit;
-    
+
   // Change subtitle format
   case cbSubtitleFormat.ItemIndex of
   0: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.srt');
@@ -514,6 +535,58 @@ begin
     cbSubtitleFormat.ItemIndex := 1
   else if (Ext = '.ass') then
     cbSubtitleFormat.ItemIndex := 2;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.EditPeakFilenameEnter(Sender: TObject);
+var TntEdit : TTntEdit;
+begin
+  if (Sender is TTntEdit) then
+  begin
+    TntEdit := (Sender as TTntEdit);
+    if (TntEdit.Text = LEAVE_EMPTY) then
+    begin
+      TntEdit.Text := '';
+      TntEdit.Font.Color := clWindowText;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.EditPeakFilenameExit(Sender: TObject);
+var TntEdit : TTntEdit;
+begin
+  if (Sender is TTntEdit) then
+  begin
+    TntEdit := (Sender as TTntEdit);
+    if (TntEdit.Text = '') then
+    begin
+      TntEdit.Text := LEAVE_EMPTY;
+      TntEdit.Font.Color := clInactiveCaption;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TProjectForm.GetPeakFilename : WideString;
+begin
+  if (EditPeakFilename.Text = LEAVE_EMPTY) then
+    Result := ''
+  else
+    Result := EditPeakFilename.Text
+end;
+
+//------------------------------------------------------------------------------
+
+function TProjectForm.GetWAVFilename : WideString;
+begin
+  if (EditWAVFilename.Text = LEAVE_EMPTY) then
+    Result := ''
+  else
+    Result := EditWAVFilename.Text
 end;
 
 //------------------------------------------------------------------------------
