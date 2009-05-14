@@ -266,6 +266,8 @@ type
 
     function FindSnappingPoint(PosMs : Integer) : Integer;
     function FindCorrectedSnappingPoint(PosMs : Integer) : Integer;
+
+    procedure SetLengthMs(LenghtMs : Integer);
         
   protected
     procedure DblClick; override;
@@ -356,7 +358,7 @@ type
     property AutoScrolling : Boolean read FAutoScrolling write SetAutoScroll;
     property IsPlaying : Boolean read FIsPlaying;
     property Enabled;
-    property Length : Integer read FLengthMs;
+    property Length : Integer read FLengthMs write SetLengthMs;
     property EnableMouseAntiOverlapping : Boolean read FEnableMouseAntiOverlapping write FEnableMouseAntiOverlapping;
     property MinimumBlank : Integer read FMinimumBlank write FMinimumBlank;
     property PageSize : Integer read FPageSizeMs;
@@ -1070,6 +1072,7 @@ begin
   FSelection.StopTime := 0;
   FNeedToSortSelectedSub := False;
 
+  FLengthMs := 0;
   FSceneChangeStartOffset := 130;
   FSceneChangeStopOffset := 130;
   FSceneChangeFilterOffset := 250;
@@ -1140,6 +1143,14 @@ var x, y1, y2 : Integer;
     Rect : TRect;
     RectHeight : Integer;
 begin
+  if (not FPeakDataLoaded) then
+  begin
+    // Paint whole background only
+    ACanvas.Brush.Color := WAV_BACK_COLOR;
+    ACanvas.FillRect(ClientRect);
+    Exit;
+  end;
+
   PeaksPerPixelScaled := (((FPageSizeMs / 1000.0) * FWavFormat.nSamplesPerSec) / FSamplesPerPeak) / Width;
   StartPositionInPeaks := ((FPositionMs / 1000.0) * FWavFormat.nSamplesPerSec) / FSamplesPerPeak;
 
@@ -1611,7 +1622,7 @@ begin
   FOffscreen.Width := FOffscreenWAV.Width;
   FOffscreen.Height := FOffscreenWAV.Height;
 
-  if (not FPeakDataLoaded) then
+  if (FLengthMs = 0) then
   begin
     FOffscreen.Canvas.Brush.Color := DISABLED_BACK_COLOR;
     FOffscreen.Canvas.FillRect(FOffscreen.Canvas.ClipRect);
@@ -2113,7 +2124,7 @@ begin
   inherited;
   UpdateFlags := [];
 
-  if (ssDouble in Shift) or (not FPeakDataLoaded) then
+  if (ssDouble in Shift) or (FLengthMs = 0) then
     Exit;
 
   if (not InRange(X, 0, Width)) then
@@ -2222,7 +2233,7 @@ var NewCursorPos, CursorPosMs, SnappingPos : Integer;
 begin
   inherited;
 
-  if (ssDouble in Shift) or (not FPeakDataLoaded) then
+  if (ssDouble in Shift) or (FLengthMs = 0) then
     Exit;
 
   UpdateFlags := [];
@@ -2511,7 +2522,7 @@ begin
   inherited;
 
   // Disable subtitle selection for SSA mode
-  if (not FPeakDataLoaded) or (SelMode = smSSA) then
+  if (FLengthMs = 0) or (SelMode = smSSA) then
     Exit;
 
   // Detect double click on start or stop timestamp
@@ -2817,6 +2828,7 @@ var PeakFilename : WideString;
     HDRSize : Integer;
     CreatePeakFile : Boolean;
     Normalized : Boolean;
+    LengthMs : Integer;
 const
     PeakFileID : string = 'PeakFile';
     PeakFileVer : Cardinal = $0100;
@@ -2859,7 +2871,7 @@ begin
       SetLength(PeakFileIDRead, System.Length(PeakFileID));
       PeakFS.ReadBuffer(PeakFileIDRead[1], System.Length(PeakFileID));
       PeakFS.ReadBuffer(PeakFileVerRead, SizeOf(PeakFileVerRead));
-      PeakFS.ReadBuffer(FLengthMs, SizeOf(FLengthMs));
+      PeakFS.ReadBuffer(LengthMs, SizeOf(LengthMs));
       PeakFS.ReadBuffer(FWavFormat.nSamplesPerSec, SizeOf(FWavFormat.nSamplesPerSec));
       PeakFS.ReadBuffer(FWavFormat.nChannels, SizeOf(FWavFormat.nChannels));
       PeakFS.ReadBuffer(FWavFormat.wBitsPerSample, SizeOf(FWavFormat.wBitsPerSample));
@@ -2897,7 +2909,7 @@ begin
       Exit;
     end;
       
-    FLengthMs := WAVFile.Duration;
+    LengthMs := WAVFile.Duration;
     FWavFormat := WAVFile.GetWaveFormatEx^;
     // Create the "peak" file
     CreatePeakTab(WAVFile);
@@ -2906,24 +2918,9 @@ begin
     WAVFile.Close;
     WAVFile.Free;
   end;
-
-  FPageSizeMs := FLengthMs;
-  FPositionMs := 0;
-  FSelection.StartTime := 0;
-  FSelection.StopTime := 0;
-
-  FScrollBar.Min := 0;
-  FScrollBar.Max := FLengthMs;
-  FScrollBar.Position := 0;
-  FScrollBar.PageSize := FLengthMs;
-
+  
+  SetLengthMs(LengthMs);
   FPeakDataLoaded := True;
-
-  UpdateView([uvfPageSize]);
-  if Assigned(FOnSelectionChange) then
-    FOnSelectionChange(Self);
-  if Assigned(FOnViewChange) then
-    FOnViewChange(Self);
 
   Result := True;
   Cursor := crIBeam;
@@ -3601,6 +3598,7 @@ begin
   SetSelectedRangeEx(nil, False);
   FCursorMs := 0;
   FPlayCursorMs := 0;
+  FLengthMs := 0;
 
   ZeroMemory(@FWavFormat,SizeOf(FWavFormat));
 
@@ -3773,6 +3771,34 @@ begin
   FMinBlankInfo2.SetInfo(nil, mbipInvalid);
   FRangeList.Clear;
   ClearSelection;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.SetLengthMs(LenghtMs : Integer);
+begin
+  if FPeakDataLoaded then
+    Exit;
+  if (FLengthMs <> LenghtMs) then
+  begin
+    FLengthMs := LenghtMs;
+
+    FPageSizeMs := FLengthMs;
+    FPositionMs := 0;
+    FSelection.StartTime := 0;
+    FSelection.StopTime := 0;
+
+    FScrollBar.Min := 0;
+    FScrollBar.Max := FLengthMs;
+    FScrollBar.Position := 0;
+    FScrollBar.PageSize := FLengthMs;
+
+    UpdateView([uvfPageSize]);
+    if Assigned(FOnSelectionChange) then
+      FOnSelectionChange(Self);
+    if Assigned(FOnViewChange) then
+      FOnViewChange(Self);
+  end;
 end;
 
 //------------------------------------------------------------------------------
