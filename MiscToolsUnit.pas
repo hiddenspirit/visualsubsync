@@ -75,6 +75,7 @@ type
 
   procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
   function StripTags(const Text : WideString) : WideString;
+  function StripTagsKeepNL(const Text : WideString) : WideString;
 
   function WideIsAbsolutePath(const Path : WideString) : Boolean;
   function WideMakeRelativePath(const BaseName, DestName : WideString) : WideString;
@@ -86,7 +87,8 @@ type
   function GetUserApplicationDataFolder : WideString;
   function GetTemporaryFolder : WideString;
 
-  
+
+  function ExplodeW(const cSeparator: WideString; const vString: WideString; var WordArray : TWideStringDynArray): Integer;
   function Explode(const cSeparator: String; const vString: String; var WordArray : TStringDynArray): Integer;
   function Implode(const cSeparator: String; const cArray: TStringDynArray): String;
 
@@ -700,6 +702,30 @@ end;
 
 // -----------------------------------------------------------------------------
 
+function ExplodeW(const cSeparator: WideString; const vString: WideString; var WordArray : TWideStringDynArray): Integer;
+var
+  i: Integer;
+  S: WideString;
+begin
+  S := vString;
+  SetLength(WordArray, 0);
+  i := 0;
+  while Pos(cSeparator, S) > 0 do begin
+    SetLength(WordArray, Length(WordArray) + 1);
+    WordArray[i] := Copy(S, 1, Pos(cSeparator, S) -1);
+    Inc(i);
+    S := Copy(S, Pos(cSeparator, S) + Length(cSeparator), Length(S));
+  end;
+  SetLength(WordArray, Length(WordArray) +1);
+  WordArray[i] := Copy(S, 1, Length(S));
+
+  if (Length(S) = 0) then
+    Result := 0
+  else
+    Result := Length(WordArray);
+end;
+
+
 function Explode(const cSeparator: String; const vString: String; var WordArray : TStringDynArray): Integer;
 var
   i: Integer;
@@ -827,6 +853,31 @@ begin
   begin
     if (i mod 2) = 0 then
       Result := Result + WordArray[i];
+  end;
+end;
+
+// A strip tag that keep new lines inside tag
+function StripTagsKeepNL(const Text: WideString) : WideString;
+var i, NLCount, j : Integer;
+    WordTagArray : TWideStringDynArray;
+begin
+  TagSplit(Text, WordTagArray);
+  Result := '';  
+  for i:=0 to Length(WordTagArray)-1 do
+  begin
+    if (i mod 2) = 0 then
+    begin
+      Result := Result + WordTagArray[i];
+    end
+    else
+    begin
+      // Check if there is new lines in tag
+      NLCount := WideStringCount(WordTagArray[i], CRLF);
+      for j := 0 to NLCount-1 do
+      begin
+        Result := Result + CRLF;
+      end;
+    end;
   end;
 end;
 
