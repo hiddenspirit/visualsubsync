@@ -51,15 +51,17 @@ type
     procedure bttStopClick(Sender: TObject);
     procedure rbOnlyPeakClick(Sender: TObject);
     procedure bttDebugClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
     DSWavExtractor : TDSWavExtractor;
     AudioPinIsSelected : Boolean;
-    CurrentExtractionType : Integer;
+    CurrentExtractionType : TWAVExtractionType;
   public
     { Public declarations }
     VideoFilename : WideString;
     DestinationFilename : WideString;
+    procedure SetExtractionType(extType : TWAVExtractionType);
   end;
 
 implementation
@@ -83,7 +85,7 @@ begin
 
   bttStop.Enabled := True;
   DSWavExtractor.DestinationFilename := DestinationFilename;
-  DSWavExtractor.WAVExtractionType := TWAVExtractionType(CurrentExtractionType);
+  DSWavExtractor.WAVExtractionType := CurrentExtractionType;
   DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
   AudioPinIsSelected := True;
 
@@ -99,6 +101,18 @@ begin
   if Assigned(DSWavExtractor) then
     DSWavExtractor.Free;
   ModalResult := mrCancel;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.SetExtractionType(extType : TWAVExtractionType);
+begin
+  CurrentExtractionType := extType;
+  case extType of
+    wetOnlyPeakFile : rbOnlyPeak.Checked := True;
+    wetFastConversion : rbFastConversion.Checked := True;
+    wetNoConversion : rbNoConversion.Checked := True;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
@@ -136,8 +150,6 @@ begin
   bttExtract.Enabled := (DSWavExtractor.AudioStreamCount > 0);
   bttClose.Enabled := True;
   gbSettings.Enabled := True;
-  CurrentExtractionType := 0;
-  rbOnlyPeak.Checked := True;
   MemoVideoInfo.Lines.Add('Select a stream and press the ''Extract'' button.');
 end;
 
@@ -177,7 +189,7 @@ end;
 
 procedure TExtractWAVForm.rbOnlyPeakClick(Sender: TObject);
 begin
-  CurrentExtractionType := TComponent(Sender).Tag;
+  CurrentExtractionType := TWAVExtractionType(TComponent(Sender).Tag);
 end;
 
 // -----------------------------------------------------------------------------
@@ -195,7 +207,7 @@ begin
   end;
 
   DSWavExtractor.DestinationFilename := DestinationFilename;
-  DSWavExtractor.WAVExtractionType := TWAVExtractionType(CurrentExtractionType);
+  DSWavExtractor.WAVExtractionType := CurrentExtractionType;
   DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
   AudioPinIsSelected := True;
 
@@ -206,6 +218,13 @@ begin
     MemoVideoInfo.Lines.Add(slist[i]);
   end;
   slist.Free;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.FormCreate(Sender: TObject);
+begin
+  SetExtractionType(wetOnlyPeakFile);
 end;
 
 // -----------------------------------------------------------------------------

@@ -25,7 +25,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Buttons, TntStdCtrls, TntDialogs;
+  Dialogs, StdCtrls, Buttons, TntStdCtrls, TntDialogs, Renderer;
 
 type
   TProjectWAVMode = (pwmNoWaveform, pwmExternal, pwmPeakOnly);
@@ -109,7 +109,8 @@ type
   private
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
-    procedure UpdateFormatCombobox;    
+    procedure UpdateFormatCombobox;
+    function ShowExtractForm(extType : TWAVExtractionType) : Boolean;    
   public
     { Public declarations }
     procedure Clear;
@@ -130,7 +131,7 @@ implementation
 
 {$R *.dfm}
 
-uses WAVExtractFormUnit, TntSysUtils, MiscToolsUnit, TntIniFiles;
+uses WAVExtractFormUnit, TntSysUtils, MiscToolsUnit, TntIniFiles, TntWindows;
 
 //==============================================================================
 
@@ -202,15 +203,31 @@ end;
 
 //==============================================================================
 
+function TryToCreateOrOpenFile(const fileName : WideString) : Boolean;
+var fileHandle : THandle;
+begin
+  // Try to create it
+  fileHandle := Tnt_CreateFileW(PWideChar(fileName), GENERIC_READ,
+    FILE_SHARE_READ	, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  if (fileHandle <> INVALID_HANDLE_VALUE) then
+  begin
+    CloseHandle(fileHandle);
+    Result := True;
+  end
+  else
+    Result := False;
+end;
+
 procedure TProjectForm.bttCreateNewProjectClick(Sender: TObject);
 var res : Integer;
     VideoFileExists : Boolean;
 begin
   VideoFileExists := (Trim(EditVideoFilename.Text) <> '') and WideFileExists(EditVideoFilename.Text);
 
-  if (Trim(EditSubtitleFilename.Text) = '') then
+  // We need a least subtitle filename
+  if not TryToCreateOrOpenFile(EditSubtitleFilename.Text) then
   begin
-    MessageBoxW(Handle, PWideChar(WideString('The subtitle file name is missing.')),
+    MessageBoxW(Handle, PWideChar(WideString('The subtitle file name is missing or is invalid.')),
       PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
     EditSubtitleFilename.SetFocus;
     Exit;
@@ -220,7 +237,8 @@ begin
   begin
     if VideoFileExists and (not WideFileExists(EditWAVFilename.Text)) then
     begin
-      bttExtractWAVFromVideo.Click;
+      if ShowExtractForm(wetFastConversion) = False then
+        Exit;
     end
     else
     begin
@@ -235,7 +253,8 @@ begin
   begin
     if VideoFileExists and (not WideFileExists(EditPeakFilename.Text)) then
     begin
-      bttExtractWAVFromVideo.Click;
+      if ShowExtractForm(wetOnlyPeakFile) = False then
+        Exit;
     end
     else
     begin
@@ -375,10 +394,12 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TProjectForm.bttExtractWAVFromVideoClick(Sender: TObject);
+function TProjectForm.ShowExtractForm(extType : TWAVExtractionType) : Boolean;
 var
   ExtractWAVForm: TExtractWAVForm;
+  modalResult : Integer;
 begin
+  Result := False;
   if (Trim(EditVideoFilename.Text) = '') or (not WideFileExists(EditVideoFilename.Text)) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The video file "' + EditVideoFilename.Text +
@@ -389,7 +410,9 @@ begin
   ExtractWAVForm := TExtractWAVForm.Create(nil);
   ExtractWAVForm.VideoFilename := EditVideoFilename.Text;
   ExtractWAVForm.DestinationFilename := WideChangeFileExt(EditVideoFilename.Text,'.wav');
-  if ExtractWAVForm.ShowModal = mrOk then
+  ExtractWAVForm.SetExtractionType(extType);
+  modalResult := ExtractWAVForm.ShowModal;
+  if modalResult = mrOk then
   begin
     if ExtractWAVForm.rbOnlyPeak.Checked then
     begin
@@ -402,7 +425,15 @@ begin
       WAVSelectMode(pwmExternal);
     end;
   end;
+  Result := (modalResult = mrOk);
   ExtractWAVForm.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.bttExtractWAVFromVideoClick(Sender: TObject);
+begin
+  ShowExtractForm(wetOnlyPeakFile);
 end;
 
 //------------------------------------------------------------------------------

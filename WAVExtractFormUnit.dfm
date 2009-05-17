@@ -16,6 +16,7 @@ object ExtractWAVForm: TExtractWAVForm
   OldCreateOrder = False
   Position = poOwnerFormCenter
   OnActivate = FormActivate
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object TntLabel3: TTntLabel
