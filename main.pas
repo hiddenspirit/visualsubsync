@@ -2304,8 +2304,8 @@ begin
   try
     CurrentProject.LoadFromINIFile(Filename);
 
-    // ----- Load WAV form
-    ShowStatusBarMessage('Loading WAV form...');
+    // ----- Load waveform
+    ShowStatusBarMessage('Loading waveform...');
     LoadWAVOK := False;
     if CurrentProject.WAVMode = pwmPeakOnly then
     begin
@@ -2318,18 +2318,20 @@ begin
           CurrentProject.WAVMode := pwmExternal;
           LoadWAVOK := WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
           CurrentProject.IsDirty := True;
+          // Show warning
+          MessageBoxW(Handle, PWideChar(WideFormat(
+          'Peak file %s hasn''t been found, project has been switched to "WAV file" mode', [CurrentProject.PeakFile])),
+            PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
         end
         else
         begin
           MessageBoxW(Handle, PWideChar(WideFormat('Can''t open peak file : %s',
             [CurrentProject.PeakFile])),
-            PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-          // TODO : Show project page as a new project but with pre-filled data
-          Exit;
+            PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
         end;
       end;
     end
-    else
+    else if CurrentProject.WAVMode = pwmExternal then
     begin
       if WideFileExists(CurrentProject.WAVFile) then
       begin
@@ -2356,15 +2358,9 @@ begin
         end
         else
         begin
-
-          // TODO : Show project page as a new project but with pre-filled data
-
-
-          // WIP : Load without video or audio Exit;
-          //MessageBoxW(Handle, PWideChar(WideFormat('Can''t open WAV file : %s',
-          //  [CurrentProject.WAVFile])),
-          //  PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-
+          MessageBoxW(Handle, PWideChar(WideFormat('Can''t open WAV file : %s',
+            [CurrentProject.WAVFile])),
+            PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
         end;
       end;
     end;
@@ -2426,7 +2422,8 @@ begin
         if (WAVDisplayer.RangeList.Count > 0) then
         begin
           // Use last subtitle stop time + 1 minute
-          WAVDisplayer.Length := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count - 1].StopTime + (1 * 60 * 1000);
+          WAVDisplayer.Length := WAVDisplayer.RangeList[
+            WAVDisplayer.RangeList.Count - 1].StopTime + (1 * 60 * 1000);
         end
         else
         begin
@@ -2449,11 +2446,18 @@ begin
     end;
 
     // ----- Restore position ---
-    if (CurrentProject.WAVDisplayerPositionStartMs <> -1) and (CurrentProject.WAVDisplayerPositionStopMs <> -1) then
+    if (CurrentProject.WAVDisplayerPositionStartMs <> -1) and
+       (CurrentProject.WAVDisplayerPositionStopMs <> -1) then
     begin
       WAVDisplayer.ZoomRange(CurrentProject.WAVDisplayerPositionStartMs,
         CurrentProject.WAVDisplayerPositionStopMs);
+    end
+    else
+    begin
+      // Zoom in at beginning
+      WAVDisplayer.ZoomRange(0,15000);
     end;
+    
     if (CurrentProject.FocusedTimeMs <> -1) then
     begin
       Idx := WAVDisplayer.RangeList.FindInsertPos(CurrentProject.FocusedTimeMs, -1);
@@ -2482,6 +2486,7 @@ begin
         ActionShowHideVideo.Execute;
   end;
 
+  WAVDisplayer.UpdateView([uvfPageSize]);
   MRUList.AddFile(CurrentProject.Filename);
   ShowStatusBarMessage('Project loaded.');
 end;

@@ -104,7 +104,9 @@ object ProjectForm: TProjectForm
       Top = 76
       Width = 73
       Height = 17
-      Hint = 'Use an external or extracted WAV file for audio only preview.'
+      Hint = 
+        'Use an external or extracted WAV file for waveform and audio onl' +
+        'y preview.'
       Caption = 'WAV file :'
       ParentShowHint = False
       ShowHint = True
