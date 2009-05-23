@@ -441,10 +441,8 @@ end;
 procedure TProjectForm.Clear;
 begin
   EditVideoFilename.Text := '';
-  EditWAVFilename.Text := '';
   EditSubtitleFilename.Text := '';
   EditProjectFilename.Text := '';
-  EditPeakFilename.Text := '';
   chkSaveAsUTF8.Checked := False;
   cbSubtitleFormat.ItemIndex := 0;
   bttExtractWAVFromVideo.Enabled := False;
@@ -475,10 +473,16 @@ begin
   bttCreateNewProject.Visible := False;
   bttOk.Visible := True;
   EditVideoFilename.Text := Project.VideoSource;
-  EditWAVFilename.Text := Project.WAVFile;
+  if (Project.WAVFile = '') then
+    EditWAVFilename.Text := LEAVE_EMPTY
+  else
+    EditWAVFilename.Text := Project.WAVFile;
   EditSubtitleFilename.Text := Project.SubtitlesFile;
   EditProjectFilename.Text := Project.Filename;
-  EditPeakFilename.Text := Project.PeakFile;
+  if (Project.PeakFile = '') then
+    EditPeakFilename.Text := LEAVE_EMPTY
+  else
+    EditPeakFilename.Text := Project.PeakFile;
   WAVSelectMode(Project.WAVMode);
   chkSaveAsUTF8.Checked := Project.IsUTF8;
   UpdateFormatCombobox;

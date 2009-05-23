@@ -25,7 +25,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 482
     Height = 356
-    ActivePage = tsSubtitle
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -123,11 +123,38 @@ object PreferencesForm: TPreferencesForm
         end
         object chkSwapSubList: TCheckBox
           Left = 16
-          Top = 40
+          Top = 88
           Width = 385
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
+        end
+        object chkAssociateExtSRT: TCheckBox
+          Left = 16
+          Top = 40
+          Width = 305
+          Height = 17
+          Caption = 'Associate .SRT file with VisualSubSync'
+          TabOrder = 2
+          OnClick = chkAssociateExtSRTClick
+        end
+        object chkAssociateExtSSA: TCheckBox
+          Left = 16
+          Top = 56
+          Width = 305
+          Height = 17
+          Caption = 'Associate .SSA file with VisualSubSync'
+          TabOrder = 3
+          OnClick = chkAssociateExtSSAClick
+        end
+        object chkAssociateExtASS: TCheckBox
+          Left = 16
+          Top = 72
+          Width = 289
+          Height = 17
+          Caption = 'Associate .ASS file with VisualSubSync'
+          TabOrder = 4
+          OnClick = chkAssociateExtASSClick
         end
       end
       object GroupBoxBackup: TGroupBox
@@ -477,7 +504,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 170
+            Width = 166
             WideText = 'Value'
           end
           item
