@@ -6835,10 +6835,63 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ProcessParams;
+var Ext : WideString;
+    ProjectFileIni : TTntIniFile;
+    ArgFilename, TmpFilename, NewProjectName : WideString;
+    I : Integer;
+const VideoExt : array[0..1] of string = ('.avi', '.mkv');
 begin
   if (WideParamCount = 1) then
   begin
-    MainForm.LoadProject(WideParamStr(1));
+    ArgFilename := WideParamStr(1);
+    Ext := WideLowerCase(WideExtractFileExt(ArgFilename));
+    if (Ext = '.vssprj') then
+    begin
+      MainForm.LoadProject(ArgFilename);
+    end
+    else if (Ext = '.srt') or (Ext = '.ssa') or (Ext = '.ass') then
+    begin
+      // First search if there is not a project with the same name
+      NewProjectName := WideChangeFileExt(ArgFilename, '.vssprj');
+      if WideFileExists(NewProjectName) then
+      begin
+        MainForm.LoadProject(NewProjectName);
+        Exit;
+      end;
+
+      // Make project with existing data and load it
+      ProjectFileIni := TTntIniFile.Create(NewProjectName);
+      
+      ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile', ArgFilename);
+
+      // Search for a matching video file
+      for I := Low(VideoExt) to High(VideoExt) do
+      begin
+        TmpFilename := WideChangeFileExt(ArgFilename, VideoExt[i]);
+        if WideFileExists(TmpFilename) then
+        begin
+          ProjectFileIni.WriteString('VisualSubsync','VideoSource', TmpFilename);
+        end;
+      end;
+
+      // Search for a matching peak file
+      TmpFilename := WideChangeFileExt(ArgFilename, '.peak');
+      if WideFileExists(TmpFilename) then
+      begin
+        ProjectFileIni.WriteString('VisualSubsync','PeakFile', TmpFilename);
+        ProjectFileIni.WriteInteger('VisualSubsync','WAVMode', Ord(pwmPeakOnly));
+      end
+      else
+      begin
+        ProjectFileIni.WriteInteger('VisualSubsync','WAVMode', Ord(pwmNoWaveform));
+      end;
+
+      ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo', StartupDetachVideo);
+      ProjectFileIni.WriteBool('VisualSubsync','ShowVideo', StartupShowVideo);
+      ProjectFileIni.Free;
+
+      MainForm.LoadProject(NewProjectName);
+    end;
   end;
 end;
 

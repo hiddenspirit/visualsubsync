@@ -232,6 +232,9 @@ type
     EditMaximalDuration: TTntEdit;
     UpDownMaximumDuration: TTntUpDown;
     TntLabel14: TTntLabel;
+    chkAssociateExtSRT: TCheckBox;
+    chkAssociateExtSSA: TCheckBox;
+    chkAssociateExtASS: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
@@ -264,6 +267,9 @@ type
       var HintText: WideString);
     procedure pmiSelectAllClick(Sender: TObject);
     procedure pmiUnselectAllClick(Sender: TObject);
+    procedure chkAssociateExtSRTClick(Sender: TObject);
+    procedure chkAssociateExtSSAClick(Sender: TObject);
+    procedure chkAssociateExtASSClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -791,8 +797,17 @@ end;
 procedure TPreferencesForm.FormActivate(Sender: TObject);
 var IsExtReged : Boolean;
 begin
-  IsExtReged := ShellIsExtensionRegistered('vssprj',ApplicationName,Application.ExeName);
+  IsExtReged := ShellIsExtensionRegistered('vssprj', ApplicationName, Application.ExeName);
   chkAssociateExt.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+
+  IsExtReged := ShellIsExtensionRegistered('srt', ApplicationName, Application.ExeName);
+  chkAssociateExtSRT.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+
+  IsExtReged := ShellIsExtensionRegistered('ssa', ApplicationName, Application.ExeName);
+  chkAssociateExtSSA.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+
+  IsExtReged := ShellIsExtensionRegistered('ass', ApplicationName, Application.ExeName);
+  chkAssociateExtASS.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
 end;
 
 //------------------------------------------------------------------------------
@@ -1489,6 +1504,48 @@ begin
   end;
 end;
 
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.chkAssociateExtSRTClick(Sender: TObject);
+begin
+  if chkAssociateExtSRT.Checked then
+  begin
+    ShellRegisterExtension('srt', ApplicationName, Application.ExeName);
+  end
+  else
+  begin
+    ShellUnRegisterExtension('srt', ApplicationName, Application.ExeName);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.chkAssociateExtSSAClick(Sender: TObject);
+begin
+  if chkAssociateExtSSA.Checked then
+  begin
+    ShellRegisterExtension('ssa', ApplicationName, Application.ExeName);
+  end
+  else
+  begin
+    ShellUnRegisterExtension('ssa', ApplicationName, Application.ExeName);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
+begin
+  if chkAssociateExtASS.Checked then
+  begin
+    ShellRegisterExtension('ass', ApplicationName, Application.ExeName);
+  end
+  else
+  begin
+    ShellUnRegisterExtension('ass', ApplicationName, Application.ExeName);
+  end;
+end;
 
 //------------------------------------------------------------------------------
 end.
