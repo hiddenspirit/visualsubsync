@@ -62,9 +62,9 @@ type
 
   function URLDecode(ASrc: string): string;
 
-  procedure ShellRegisterExtension(Extension, Name, Executable : string);
-  function ShellIsExtensionRegistered(Extension, Name, Executable : string) : Boolean;
-  procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
+  procedure ShellRegisterExtension(Extension, AppName, DocType, Executable : string; IconIndex : Integer = -1);
+  function ShellIsExtensionRegistered(Extension, AppName, DocType, Executable : string) : Boolean;
+  procedure ShellUnRegisterExtension(Extension, AppName, DocType, Executable : string);
 
   function ReadLineStream(Stream : TStream; var s : string) : Boolean;
   function RPos(const Substr, S: WideString): Integer;
@@ -515,7 +515,7 @@ end;
 // Shell extension registration
 // =============================================================================
 
-procedure ShellRegisterExtension(Extension, Name, Executable : string);
+procedure ShellRegisterExtension(Extension, AppName, DocType, Executable : string; IconIndex : Integer);
 var
   Reg: TRegistry;
   s : string;
@@ -527,22 +527,32 @@ begin
     Reg.OpenKey('.' + Extension, True);
     try
       s := Reg.ReadString('');
-      if (s <> '') and (s <> Name + '.Document') then
+      if (s <> '') and (s <> AppName + '.' + DocType) then
       begin
         // Save key
-        Reg.WriteString(Name + '.sav', s);
+        Reg.WriteString(AppName + '.sav', s);
       end;
-      Reg.WriteString('', Name + '.Document');
+      Reg.WriteString('', AppName + '.' + DocType);
     finally
       Reg.CloseKey;
     end;
-    Reg.CreateKey(Name + '.Document');
+    Reg.CreateKey(AppName + '.' + DocType);
     // Add command
-    Reg.OpenKey(Name + '.Document\shell\open\command', True);
+    Reg.OpenKey(AppName + '.' + DocType + '\shell\open\command', True);
     try
       Reg.WriteString('', Executable + ' "%1"');
     finally
       Reg.CloseKey;
+    end;
+    if (IconIndex <> -1) then
+    begin
+      // Add icon
+      Reg.OpenKey(AppName + '.' + DocType + '\DefaultIcon\', True);
+      try
+        Reg.WriteString('', Executable + ',' + IntToStr(IconIndex));
+      finally
+        Reg.CloseKey;
+      end;
     end;
   finally
     Reg.Free;
@@ -552,7 +562,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function ShellIsExtensionRegistered(Extension, Name, Executable : string) : Boolean;
+function ShellIsExtensionRegistered(Extension, AppName, DocType, Executable : string) : Boolean;
 var
   Reg: TRegistry;
   s : string;
@@ -565,9 +575,9 @@ begin
     begin
       s := Reg.ReadString('');
       Reg.CloseKey;
-      if (Name + '.Document') = s then
+      if (AppName + '.' + DocType) = s then
       begin
-        if Reg.OpenKey(Name + '.Document\shell\open\command', False) = True then
+        if Reg.OpenKey(AppName + '.' + DocType + '\shell\open\command', False) = True then
         begin
           s := Reg.ReadString('');
           Reg.CloseKey;
@@ -583,7 +593,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure ShellUnRegisterExtension(Extension, Name, Executable : string);
+procedure ShellUnRegisterExtension(Extension, AppName, DocType, Executable : string);
 var
   Reg: TRegistry;
   s : string;
@@ -593,13 +603,13 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
     if Reg.OpenKey('.' + Extension, False) = True then
     begin
-      s := Reg.ReadString(Name + '.sav');
+      s := Reg.ReadString(AppName + '.sav');
       if (s <> '') then
       begin
         // restore
         Reg.WriteString('', s);
         // delete '.sav'
-        Reg.DeleteValue(Name + '.sav');
+        Reg.DeleteValue(AppName + '.sav');
         Reg.CloseKey;
       end
       else
@@ -610,7 +620,7 @@ begin
       end;
     end;
     // Delete our command key
-    Reg.DeleteKey(Name + '.Document');
+    Reg.DeleteKey(AppName + '.' + DocType);
   finally
     Reg.Free;
   end;

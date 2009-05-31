@@ -132,7 +132,7 @@ type
     ListErrorChecking: TTntCheckListBox;
     UpDownServerPort: TTntUpDown;
     GroupBoxMisc: TGroupBox;
-    chkAssociateExt: TCheckBox;
+    chkAssociateExtVSSPRJ: TCheckBox;
     chkEnableCompression: TCheckBox;
     chkSwapSubList: TCheckBox;
     tsHotKeys: TTntTabSheet;
@@ -239,7 +239,7 @@ type
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure ListErrorCheckingClick(Sender: TObject);
-    procedure chkAssociateExtClick(Sender: TObject);
+    procedure chkAssociateExtVSSPRJClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure ListHotkeysSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
@@ -794,20 +794,33 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure SetCheckedState(const checkBox : TCheckBox; const check : Boolean) ;
+var
+  onClickHandler : TNotifyEvent;
+begin
+  with checkBox do
+  begin
+    onClickHandler := OnClick;
+    OnClick := nil;
+    Checked := check;
+    OnClick := onClickHandler;
+  end;
+end;
+
 procedure TPreferencesForm.FormActivate(Sender: TObject);
 var IsExtReged : Boolean;
 begin
-  IsExtReged := ShellIsExtensionRegistered('vssprj', ApplicationName, Application.ExeName);
-  chkAssociateExt.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+  IsExtReged := ShellIsExtensionRegistered('vssprj', ApplicationName, 'Document', Application.ExeName);
+  SetCheckedState(chkAssociateExtVSSPRJ, IsExtReged);
 
-  IsExtReged := ShellIsExtensionRegistered('srt', ApplicationName, Application.ExeName);
-  chkAssociateExtSRT.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+  IsExtReged := ShellIsExtensionRegistered('srt', ApplicationName, 'Document.srt', Application.ExeName);
+  SetCheckedState(chkAssociateExtSRT, IsExtReged);
 
-  IsExtReged := ShellIsExtensionRegistered('ssa', ApplicationName, Application.ExeName);
-  chkAssociateExtSSA.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+  IsExtReged := ShellIsExtensionRegistered('ssa', ApplicationName, 'Document.ssa', Application.ExeName);
+  SetCheckedState(chkAssociateExtSSA, IsExtReged);
 
-  IsExtReged := ShellIsExtensionRegistered('ass', ApplicationName, Application.ExeName);
-  chkAssociateExtASS.Perform(BM_SETCHECK, Ord(IsExtReged), 0);
+  IsExtReged := ShellIsExtensionRegistered('ass', ApplicationName, 'Document.ass', Application.ExeName);
+  SetCheckedState(chkAssociateExtASS, IsExtReged);
 end;
 
 //------------------------------------------------------------------------------
@@ -1021,20 +1034,6 @@ begin
   begin
     JSPluginInfo := TJSPluginInfo(ListErrorChecking.Items.Objects[ListErrorChecking.ItemIndex]);
     JSPluginInfo.Enabled := ListErrorChecking.Checked[ListErrorChecking.ItemIndex];
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TPreferencesForm.chkAssociateExtClick(Sender: TObject);
-begin
-  if chkAssociateExt.Checked then
-  begin
-    ShellRegisterExtension('vssprj',ApplicationName,Application.ExeName);
-  end
-  else
-  begin
-    ShellUnRegisterExtension('vssprj',ApplicationName,Application.ExeName);
   end;
 end;
 
@@ -1504,6 +1503,19 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.chkAssociateExtVSSPRJClick(Sender: TObject);
+begin
+  if chkAssociateExtVSSPRJ.Checked then
+  begin
+    ShellRegisterExtension('vssprj', ApplicationName, 'Document', Application.ExeName, 0);
+  end
+  else
+  begin
+    ShellUnRegisterExtension('vssprj', ApplicationName, 'Document', Application.ExeName);
+  end;
+end;
 
 //------------------------------------------------------------------------------
 
@@ -1511,11 +1523,11 @@ procedure TPreferencesForm.chkAssociateExtSRTClick(Sender: TObject);
 begin
   if chkAssociateExtSRT.Checked then
   begin
-    ShellRegisterExtension('srt', ApplicationName, Application.ExeName);
+    ShellRegisterExtension('srt', ApplicationName, 'Document.srt', Application.ExeName, 1);
   end
   else
   begin
-    ShellUnRegisterExtension('srt', ApplicationName, Application.ExeName);
+    ShellUnRegisterExtension('srt', ApplicationName, 'Document', Application.ExeName);
   end;
 end;
 
@@ -1525,11 +1537,11 @@ procedure TPreferencesForm.chkAssociateExtSSAClick(Sender: TObject);
 begin
   if chkAssociateExtSSA.Checked then
   begin
-    ShellRegisterExtension('ssa', ApplicationName, Application.ExeName);
+    ShellRegisterExtension('ssa', ApplicationName, 'Document.ssa', Application.ExeName, 1);
   end
   else
   begin
-    ShellUnRegisterExtension('ssa', ApplicationName, Application.ExeName);
+    ShellUnRegisterExtension('ssa', ApplicationName, 'Document.ssa', Application.ExeName);
   end;
 end;
 
@@ -1539,11 +1551,11 @@ procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
 begin
   if chkAssociateExtASS.Checked then
   begin
-    ShellRegisterExtension('ass', ApplicationName, Application.ExeName);
+    ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, 1);
   end
   else
   begin
-    ShellUnRegisterExtension('ass', ApplicationName, Application.ExeName);
+    ShellUnRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName);
   end;
 end;
 
