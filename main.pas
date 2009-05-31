@@ -794,6 +794,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd, DeCAL;
 
 {$R *.dfm}
+{$R Resources\resources.RES}
 
 //==============================================================================
 

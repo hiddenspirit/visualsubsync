@@ -107,7 +107,7 @@ object PreferencesForm: TPreferencesForm
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
-        object chkAssociateExt: TCheckBox
+        object chkAssociateExtVSSPRJ: TCheckBox
           Left = 16
           Top = 24
           Width = 385
@@ -119,7 +119,7 @@ object PreferencesForm: TPreferencesForm
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
-          OnClick = chkAssociateExtClick
+          OnClick = chkAssociateExtVSSPRJClick
         end
         object chkSwapSubList: TCheckBox
           Left = 16
@@ -504,7 +504,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 166
+            Width = 170
             WideText = 'Value'
           end
           item
