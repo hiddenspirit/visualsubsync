@@ -709,6 +709,7 @@ type
     procedure LoadSettings;
     procedure ShowPreferences(TabSheet : TTntTabSheet);
     procedure LoadVideoSceneChange;
+    procedure ClearVideoSceneChange;
     procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
@@ -794,7 +795,6 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd, DeCAL;
 
 {$R *.dfm}
-{$R Resources\resources.RES}
 
 //==============================================================================
 
@@ -2254,6 +2254,17 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ClearVideoSceneChange;
+var SCArray : TIntegerDynArray;
+begin
+  SetLength(SCArray, 0);
+  WAVDisplayer.SetSceneChangeList(SCArray);
+  WAVDisplayer.UpdateView([uvfRange]);
+  g_SceneChangeWrapper.SetSceneChangeList(SCArray);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.LoadVideoSceneChange;
 var SceneChangeFileName : WideString;
     SCArray :TIntegerDynArray;
@@ -2685,7 +2696,7 @@ end;
 
 procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
 begin
-  if (not VideoRenderer.IsOpen) then
+  if (not VideoRenderer.IsOpen) and (not ShowingVideo) then
   begin
     ShowStatusBarMessage('Video file is not opened...');
     Exit;
@@ -2869,15 +2880,24 @@ begin
       if (CurrentProject.VideoSource <> ProjectForm.EditVideoFilename.Text) then
       begin
         CurrentProject.VideoSource := ProjectForm.EditVideoFilename.Text;
-        VideoRenderer.Open(CurrentProject.VideoSource);
-        CurrentProject.VideoPanelWidth := 0;
-        CurrentProject.VideoPanelHeight := 0;
-        UpdateVideoRendererWindow;
         ProjectHasChanged := True;
         VideoHasChanged := True;
-        LoadVideoSceneChange;
-        g_VSSCoreWrapper.SetVideoWidth(VideoRenderer.VideoWidth);
-        g_VSSCoreWrapper.SetVideoHeight(VideoRenderer.VideoHeight);
+        if VideoRenderer.Open(CurrentProject.VideoSource) then
+        begin
+          CurrentProject.VideoPanelWidth := 0;
+          CurrentProject.VideoPanelHeight := 0;
+          UpdateVideoRendererWindow;
+          LoadVideoSceneChange;
+          g_VSSCoreWrapper.SetVideoWidth(VideoRenderer.VideoWidth);
+          g_VSSCoreWrapper.SetVideoHeight(VideoRenderer.VideoHeight);
+        end
+        else
+        begin
+          VideoRenderer.Close;
+          ClearVideoSceneChange;
+          g_VSSCoreWrapper.SetVideoWidth(0);
+          g_VSSCoreWrapper.SetVideoHeight(0);
+        end;
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -2895,12 +2915,17 @@ begin
           WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile, '.wav'));
           if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
             AudioOnlyRenderer.KillVideo;
+        end
+        else
+        begin
+          // TODO : Clear peak file data
         end;
         ProjectHasChanged := True;
       end;
 
       if (CurrentProject.WAVFile <> ProjectForm.EditWAVFilename.Text) then
       begin
+        // TODO : file can be empty now
         CurrentProject.WAVFile := ProjectForm.EditWAVFilename.Text;
         WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
         AudioOnlyRenderer.Open(CurrentProject.WAVFile);
@@ -2909,6 +2934,7 @@ begin
 
       if (CurrentProject.PeakFile <> ProjectForm.EditPeakFilename.Text) then
       begin
+        // TODO : file can be empty now      
         CurrentProject.PeakFile := ProjectForm.EditPeakFilename.Text;
         WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile, '.wav'));
         ProjectHasChanged := True;
@@ -2944,6 +2970,9 @@ begin
     finally
       g_WebRWSynchro.EndWrite;
     end;
+
+    // Update controls
+    EnableControl(True);
 
     WAVDisplayer.UpdateView([uvfPageSize]);
     vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);

@@ -328,6 +328,12 @@ const
     (ActionName: 'ActionRedo'; ShortCut: 'Ctrl+Y')
   );
 
+const
+  VSSPRJ_ICON_INDEX = 1;
+  SRT_ICON_INDEX = 2;
+  SSA_ICON_INDEX = 2;
+  ASS_ICON_INDEX = 2;
+
 var
   PreferencesForm: TPreferencesForm = nil;
 
@@ -1509,7 +1515,7 @@ procedure TPreferencesForm.chkAssociateExtVSSPRJClick(Sender: TObject);
 begin
   if chkAssociateExtVSSPRJ.Checked then
   begin
-    ShellRegisterExtension('vssprj', ApplicationName, 'Document', Application.ExeName, 0);
+    ShellRegisterExtension('vssprj', ApplicationName, 'Document', Application.ExeName, VSSPRJ_ICON_INDEX);
   end
   else
   begin
@@ -1523,7 +1529,7 @@ procedure TPreferencesForm.chkAssociateExtSRTClick(Sender: TObject);
 begin
   if chkAssociateExtSRT.Checked then
   begin
-    ShellRegisterExtension('srt', ApplicationName, 'Document.srt', Application.ExeName, 1);
+    ShellRegisterExtension('srt', ApplicationName, 'Document.srt', Application.ExeName, SRT_ICON_INDEX);
   end
   else
   begin
@@ -1537,7 +1543,7 @@ procedure TPreferencesForm.chkAssociateExtSSAClick(Sender: TObject);
 begin
   if chkAssociateExtSSA.Checked then
   begin
-    ShellRegisterExtension('ssa', ApplicationName, 'Document.ssa', Application.ExeName, 1);
+    ShellRegisterExtension('ssa', ApplicationName, 'Document.ssa', Application.ExeName, SSA_ICON_INDEX);
   end
   else
   begin
@@ -1551,7 +1557,7 @@ procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
 begin
   if chkAssociateExtASS.Checked then
   begin
-    ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, 1);
+    ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, ASS_ICON_INDEX);
   end
   else
   begin
