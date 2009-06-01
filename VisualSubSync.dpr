@@ -50,6 +50,7 @@ uses
   VSSClipboardUnit in 'VSSClipboardUnit.pas';
 
 {$R *.res}
+{$R Resources\resources.RES}
 
 begin
   Application.Initialize;
