@@ -558,7 +558,7 @@ begin
   if Assigned(FGraphBuilder) then
     Close;
   Result := False;
-  if filename = '' then
+  if (filename = '') or (not WideFileExists(filename)) then
     Exit;
   FLastResult := CoCreateInstance(TGUID(CLSID_FilterGraph), nil, CLSCTX_INPROC,
     TGUID(IID_IGraphBuilder), FGraphBuilder);
