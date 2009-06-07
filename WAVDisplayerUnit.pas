@@ -166,7 +166,7 @@ type
     FVerticalScaling : Integer; // 1..800%
 
     FOldPositionMs : Integer; // Used to optimize drawing
-    FOldPageSizeMs : Integer;    
+    FOldPageSizeMs : Integer;
 
     FSelection : TRange;
     FSelectionOrigin : Integer;
@@ -326,6 +326,8 @@ type
 
     procedure DetectSilentZone(List : TList; Threshold : Integer;
       WinSizeMS : Integer);
+
+    procedure ClearPeakData;      
 
     property RangeList : TRangeList read FRangeList;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
@@ -2838,7 +2840,7 @@ const
       PeakFS := TTntFileStream.Create(PeakFilename, fmCreate);
       PeakFS.WriteBuffer(PeakFileID[1], System.Length(PeakFileID));
       PeakFS.WriteBuffer(PeakFileVer, SizeOf(PeakFileVer));
-      PeakFS.WriteBuffer(FLengthMs, SizeOf(FLengthMs));
+      PeakFS.WriteBuffer(LengthMs, SizeOf(FLengthMs));
       PeakFS.WriteBuffer(FWavFormat.nSamplesPerSec, SizeOf(FWavFormat.nSamplesPerSec));
       PeakFS.WriteBuffer(FWavFormat.nChannels, SizeOf(FWavFormat.nChannels));
       PeakFS.WriteBuffer(FWavFormat.wBitsPerSample, SizeOf(FWavFormat.wBitsPerSample));
@@ -2848,6 +2850,7 @@ const
       PeakFS.Free;
     end;
 begin
+  ClearPeakData;
   FPeakDataLoaded := False;
   CreatePeakFile := True;
 
@@ -3799,6 +3802,17 @@ begin
     if Assigned(FOnViewChange) then
       FOnViewChange(Self);
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.ClearPeakData;
+begin
+  FPeakDataLoaded := False;
+  FPeakTab := nil;
+  FPeakTabSize := 0;
+  FSamplesPerPeak := 0;
+  ZeroMemory(@FWavFormat,SizeOf(FWavFormat));
 end;
 
 //------------------------------------------------------------------------------

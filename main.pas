@@ -2918,23 +2918,28 @@ begin
         end
         else
         begin
-          // TODO : Clear peak file data
+          WAVDisplayer.ClearPeakData;
         end;
         ProjectHasChanged := True;
       end;
 
       if (CurrentProject.WAVFile <> ProjectForm.EditWAVFilename.Text) then
       begin
-        // TODO : file can be empty now
         CurrentProject.WAVFile := ProjectForm.EditWAVFilename.Text;
         WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
-        AudioOnlyRenderer.Open(CurrentProject.WAVFile);
+        if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
+        begin
+          // Failed to load audio try to use video
+          if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
+            AudioOnlyRenderer.KillVideo
+          else
+            AudioOnlyRenderer.Close;
+        end;
         ProjectHasChanged := True;
       end;
 
       if (CurrentProject.PeakFile <> ProjectForm.EditPeakFilename.Text) then
       begin
-        // TODO : file can be empty now      
         CurrentProject.PeakFile := ProjectForm.EditPeakFilename.Text;
         WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile, '.wav'));
         ProjectHasChanged := True;
