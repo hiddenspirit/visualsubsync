@@ -110,7 +110,8 @@ type
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
     procedure UpdateFormatCombobox;
-    function ShowExtractForm(extType : TWAVExtractionType) : Boolean;    
+    function ShowExtractForm(extType : TWAVExtractionType) : Boolean;
+    function CheckData(AskForExtraction : Boolean) : Boolean;
   public
     { Public declarations }
     procedure Clear;
@@ -132,6 +133,23 @@ implementation
 {$R *.dfm}
 
 uses WAVExtractFormUnit, TntSysUtils, MiscToolsUnit, TntIniFiles, TntWindows;
+
+//==============================================================================
+
+function TryToCreateOrOpenFile(const fileName : WideString) : Boolean;
+var fileHandle : THandle;
+begin
+  // Try to create it
+  fileHandle := Tnt_CreateFileW(PWideChar(fileName), GENERIC_READ,
+    FILE_SHARE_READ	, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  if (fileHandle <> INVALID_HANDLE_VALUE) then
+  begin
+    CloseHandle(fileHandle);
+    Result := True;
+  end
+  else
+    Result := False;
+end;
 
 //==============================================================================
 
@@ -203,25 +221,11 @@ end;
 
 //==============================================================================
 
-function TryToCreateOrOpenFile(const fileName : WideString) : Boolean;
-var fileHandle : THandle;
-begin
-  // Try to create it
-  fileHandle := Tnt_CreateFileW(PWideChar(fileName), GENERIC_READ,
-    FILE_SHARE_READ	, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-  if (fileHandle <> INVALID_HANDLE_VALUE) then
-  begin
-    CloseHandle(fileHandle);
-    Result := True;
-  end
-  else
-    Result := False;
-end;
-
-procedure TProjectForm.bttCreateNewProjectClick(Sender: TObject);
+function TProjectForm.CheckData(AskForExtraction : Boolean) : Boolean;
 var res : Integer;
     VideoFileExists : Boolean;
 begin
+  Result := False;
   VideoFileExists := (Trim(EditVideoFilename.Text) <> '') and WideFileExists(EditVideoFilename.Text);
 
   // We need a least subtitle filename
@@ -233,37 +237,56 @@ begin
     Exit;
   end;
 
+  // External WAV file mode
   if (rbExternal.Checked) then
   begin
-    if VideoFileExists and (not WideFileExists(EditWAVFilename.Text)) then
+    if (not WideFileExists(EditWAVFilename.Text)) then
     begin
-      if ShowExtractForm(wetFastConversion) = False then
+      if (AskForExtraction and VideoFileExists) then
+      begin
+        if ShowExtractForm(wetFastConversion) = False then
+          Exit;
+      end
+      else
+      begin
+        MessageBoxW(Handle, PWideChar(WideString('The WAV file "' + EditWAVFilename.Text +
+          '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+        EditWAVFilename.SetFocus;
         Exit;
-    end
-    else
-    begin
-      MessageBoxW(Handle, PWideChar(WideString('The WAV file "' + EditWAVFilename.Text +
-        '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-      EditWAVFilename.SetFocus;
-      Exit;
+      end;
     end;
   end;
 
+  // Peak file only mode
   if (rbPeakOnly.Checked) then
   begin
-    if VideoFileExists and (not WideFileExists(EditPeakFilename.Text)) then
+    if (not WideFileExists(EditPeakFilename.Text)) then
     begin
-      if ShowExtractForm(wetOnlyPeakFile) = False then
+      if (AskForExtraction and VideoFileExists) then
+      begin
+        if ShowExtractForm(wetOnlyPeakFile) = False then
+          Exit;
+      end
+      else
+      begin
+        MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
+          '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+        EditPeakFilename.SetFocus;
         Exit;
-    end
-    else
-    begin
-      MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
-        '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
-      EditPeakFilename.SetFocus;
-      Exit;
+      end;
     end;
   end;
+
+  Result := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.bttCreateNewProjectClick(Sender: TObject);
+var res : Integer;
+begin
+  if not CheckData(True) then
+    Exit;
 
   if WideFileExists(EditProjectFilename.Text) then
   begin
@@ -492,7 +515,8 @@ end;
 
 procedure TProjectForm.bttOkClick(Sender: TObject);
 begin
-  // TODO : do some checking
+  if not CheckData(False) then
+    Exit;
   ModalResult := mrOk;
 end;
 
