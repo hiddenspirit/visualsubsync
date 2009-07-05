@@ -1487,6 +1487,11 @@ begin
   begin
     // We need a pin with wformattag which is probably after a decoder :)
     Pin.ConnectedTo(PinConnectedTo);
+    if not Assigned(PinConnectedTo) then
+    begin
+      // TODO : Do something here or add more error checking
+
+    end;
     PinConnectedTo.QueryPinInfo(PinInfo);
     Filter := PinInfo.pFilter;
     PCMPin := GetPCMOutputPin(Filter);
