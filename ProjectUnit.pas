@@ -269,7 +269,7 @@ begin
       end
       else
       begin
-        MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditWAVFilename.Text +
+        MessageBoxW(Handle, PWideChar(WideString('The peak file "' + EditPeakFilename.Text +
           '" doesn''t exist.')), PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
         EditPeakFilename.SetFocus;
         Exit;
