@@ -841,6 +841,7 @@ begin
   CustomMemo.Left := MemoSubtitleText.Left;
   CustomMemo.Align := MemoSubtitleText.Align;
   CustomMemo.HideSelection := MemoSubtitleText.HideSelection;
+  CustomMemo.WordWrap := False;
   //CustomMemo.DisableWindowsUndo;
   MemoSubtitleText.Free;
   MemoSubtitleText := CustomMemo;
