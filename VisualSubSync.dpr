@@ -72,5 +72,6 @@ begin
   MainForm.FinishLoadSettings;
   Application.ProcessMessages;
   MainForm.ProcessParams;
+  MainForm.LoadAfterParamsSettings;
   Application.Run;
 end.
