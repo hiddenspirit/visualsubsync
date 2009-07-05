@@ -566,6 +566,8 @@ type
     VideoRenderer : TDShowRenderer;
     SearchNodeIndex : Integer;
     SearchPos : Integer;
+    SearchItem : ^TTntRichEdit;
+    SearchItemPos : Integer;
     OldAutoScrollIdx : Integer;
 
     Server : THTTPServer;
@@ -698,6 +700,13 @@ type
 
     function GetTextPipeAutoOption : Integer;
     procedure SetTextPipeAutoOption(Option : Integer);
+
+    function SearchMemo(FindText : WideString) : Boolean;
+    function SearchSubtitles(FindText : WideString) : Boolean;
+    procedure ReplaceTextMemo;
+    procedure ReplaceTextSubs;
+    function ReplaceAllTextMemo(FindText : WideString) : Integer;
+    function ReplaceAllTextSubs(FindText : WideString) : Integer;
 
   public
     { Public declarations }
@@ -3031,6 +3040,7 @@ procedure TMainForm.ResetFind;
 begin
   SearchNodeIndex := -1;
   SearchPos := 1;
+  SearchItemPos := -1;
 end;
 
 //------------------------------------------------------------------------------
@@ -3083,23 +3093,77 @@ procedure TMainForm.ActionFindExecute(Sender: TObject);
 begin
   if not FindForm.Showing then
   begin
+    // Setup mode: subs/memo
+    if MemoTextPipe.Focused then
+      SearchItem := @MemoTextPipe
+    else
+      SearchItem := nil;
     ResetFind;
     FindForm.Show;
+    FindForm.SetMemoMode(SearchItem <> nil);
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ActionFindNextExecute(Sender: TObject);
+function TMainForm.SearchMemo(FindText : WideString) : Boolean;
+var RegExp : TRegExpr;
+    MatchLen : Integer;
+begin
+  Result := False;
+
+  RegExp := TRegExpr.Create;
+  RegExp.ModifierI := not FindForm.MatchCase;
+  RegExp.Expression := FindText;
+
+  if (SearchItemPos <= 0) and (not FindForm.FromCursor) then
+    SearchItemPos := 1
+  else
+    SearchItemPos := SearchItem.SelStart + 1 + SearchItem.SelLength;
+
+  if FindForm.UseRegExp then
+  begin
+    RegExp.InputString := SearchItem.Text;
+    if RegExp.ExecPos(SearchItemPos) then
+    begin
+      SearchItemPos := RegExp.MatchPos[0];
+      MatchLen := RegExp.MatchLen[0];
+    end
+    else
+      SearchItemPos := -1;
+  end
+  else
+  begin
+    SearchItemPos := WideStringFind(SearchItemPos, SearchItem.Text, FindText,
+      not FindForm.MatchCase, FindForm.WholeWord);
+    MatchLen := Length(FindText);
+  end;
+
+  if (SearchItemPos > 0) then
+  begin
+    SearchItem.SelStart := SearchItemPos - 1;
+    SearchItem.SelLength := MatchLen;
+    RegExp.Free;
+    Result := True;
+    Exit;
+  end;
+
+  RegExp.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.SearchSubtitles(FindText : WideString) : Boolean;
 var SearchNode : PVirtualNode;
     NodeData : PTreeData;
-    FindText : WideString;
     RegExp : TRegExpr;
     MatchLen : Integer;
 begin
-  FindText := FindForm.GetFindText;
-  if Length(FindText) <= 0 then
-    Exit;
+  Result := False;
+
+  RegExp := TRegExpr.Create;
+  RegExp.ModifierI := not FindForm.MatchCase;
+  RegExp.Expression := FindText;
 
   SearchNode := nil;
   if (SearchNodeIndex >= 0) and (SearchNodeIndex < WAVDisplayer.RangeList.Count) then
@@ -3118,9 +3182,6 @@ begin
     SearchNode := vtvSubsList.GetFirst;
   end;
 
-  RegExp := TRegExpr.Create;
-  RegExp.ModifierI := not FindForm.MatchCase;
-  RegExp.Expression := FindText;  
   while (SearchNode <> nil) do
   begin
     SearchNodeIndex := SearchNode.Index;
@@ -3152,6 +3213,7 @@ begin
       MemoSubtitleText.SelLength := MatchLen;
       Inc(SearchPos, MatchLen);
       RegExp.Free;      
+      Result := True;      
       Exit;
     end;
     SearchNode := vtvSubsList.GetNext(SearchNode);
@@ -3159,12 +3221,103 @@ begin
   end;
   RegExp.Free;
   SearchNodeIndex := -1;
-  ShowStatusBarMessage('No more items.');
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ReplaceAllText;
+procedure TMainForm.ActionFindNextExecute(Sender: TObject);
+var FindText : WideString;
+    IsFound : Boolean;
+begin
+  FindText := FindForm.GetFindText;
+  if Length(FindText) <= 0 then
+    Exit;
+
+  if Assigned(SearchItem) then
+  begin
+    IsFound := SearchMemo(FindText);
+  end
+  else
+  begin
+    IsFound := SearchSubtitles(FindText);
+  end;
+  
+  if (not IsFound) then
+  begin
+    ShowStatusBarMessage('No more items.');
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.ReplaceAllTextMemo(FindText : WideString) : Integer;
+var RegExpr : TRegExpr;
+    ReplaceFlags : TReplaceFlags;
+    TotalReplaceCount : Integer;
+begin
+  TotalReplaceCount := 0;
+
+  RegExpr := TRegExpr.Create;
+  RegExpr.ModifierI := (not FindForm.MatchCase);
+  RegExpr.ModifierG := True;
+  RegExpr.Expression := FindText;
+  
+  if (SearchItemPos <= 0) and (not FindForm.FromCursor) then
+    SearchItemPos := 1
+  else
+    SearchItemPos := SearchItem.SelStart + 1 + SearchItem.SelLength;
+
+  g_WebRWSynchro.BeginWrite;
+  try
+    if FindForm.UseRegExp then
+    begin
+      SearchItem.Text :=
+        Copy(SearchItem.Text, 1, SearchItemPos - 1)
+        + RegExpr.Replace(
+          Copy(SearchItem.Text,
+            SearchItemPos,
+            Length(SearchItem.Text) - SearchItemPos + 1),
+          FindForm.GetReplaceText,
+          True);
+      TotalReplaceCount := TotalReplaceCount + RegExpr.ReplaceCount;
+    end
+    else
+    begin
+      ReplaceFlags := [rfReplaceAll];
+      if (not FindForm.MatchCase) then
+        Include(ReplaceFlags, rfIgnoreCase);
+      TotalReplaceCount := TotalReplaceCount + WideStringCount(
+        Copy(SearchItem.Text,
+          SearchItemPos,
+          Length(SearchItem.Text) - SearchItemPos + 1),
+        FindForm.GetFindText,
+        not FindForm.MatchCase,
+        FindForm.WholeWord);
+      SearchItem.Text :=
+        Copy(SearchItem.Text, 1, SearchItemPos - 1)
+        + Tnt_WideStringReplace(
+          Copy(SearchItem.Text,
+            SearchItemPos,
+            Length(SearchItem.Text) - SearchItemPos + 1),
+          FindForm.GetFindText,
+          FindForm.GetReplaceText,
+          ReplaceFlags,
+          FindForm.WholeWord);
+    end;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+  RegExpr.Free;
+
+  if (TotalReplaceCount > 0) then
+    CurrentProject.IsDirty := True;
+
+  Result := TotalReplaceCount;
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.ReplaceAllTextSubs(FindText : WideString) : Integer;
 var Node : PVirtualNode;
     NodeData : PTreeData;
     RegExpr : TRegExpr;
@@ -3175,10 +3328,12 @@ var Node : PVirtualNode;
     SubRange : TSubtitleRange;
     TotalReplaceCount : Integer;
 begin
-  if Length(FindForm.GetFindText) <= 0 then
-    Exit;
-
   TotalReplaceCount := 0;
+
+  RegExpr := TRegExpr.Create;
+  RegExpr.ModifierI := (not FindForm.MatchCase);
+  RegExpr.ModifierG := True;
+  RegExpr.Expression := FindText;
 
   if FindForm.FromCursor then
     Node := vtvSubsList.FocusedNode
@@ -3186,10 +3341,6 @@ begin
     Node := vtvSubsList.GetFirst;
 
   MultiChangeTask := TUndoableMultiChangeTask.Create;
-  RegExpr := TRegExpr.Create;
-  RegExpr.ModifierI := (not FindForm.MatchCase);
-  RegExpr.ModifierG := True;
-  RegExpr.Expression := FindForm.GetFindText;
 
   g_WebRWSynchro.BeginWrite;
   try
@@ -3237,19 +3388,68 @@ begin
   begin
     FreeAndNil(MultiChangeTask);
   end;
+  Result := TotalReplaceCount;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ReplaceAllText;
+var TotalReplaceCount : Integer;
+    FindText : WideString;
+begin
+  FindText := FindForm.GetFindText;
+  if Length(FindText) <= 0 then
+    Exit;
+
+  if Assigned(SearchItem) then
+  begin
+    TotalReplaceCount := ReplaceAllTextMemo(FindText);
+  end
+  else
+  begin
+    TotalReplaceCount := ReplaceAllTextSubs(FindText);
+  end;
+
   ShowStatusBarMessage(IntToStr(TotalReplaceCount) + ' item(s) replaced.');
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.ReplaceText;
+procedure TMainForm.ReplaceTextMemo;
 var SelStart : Integer;
     NewText : WideString;
     RegExp : TRegExpr;
 begin
-  if (SearchNodeIndex = -1) then
-    Exit;
+  // Save selection start position
+  SelStart := SearchItem.SelStart;
 
+  if FindForm.UseRegExp then
+  begin
+    RegExp := TRegExpr.Create;
+    RegExp.ModifierI := (not FindForm.MatchCase);
+    RegExp.Expression := FindForm.GetFindText;
+    NewText := RegExp.Replace(SearchItem.SelText, FindForm.GetReplaceText, True);
+    RegExp.Free;
+  end
+  else
+  begin
+    NewText := FindForm.GetReplaceText;
+  end;
+
+  SearchItem.SelText := NewText;
+
+  // Restaure selection
+  SearchItem.SelStart := SelStart;
+  SearchItem.SelLength := Length(NewText);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ReplaceTextSubs;
+var SelStart : Integer;
+    NewText : WideString;
+    RegExp : TRegExpr;
+begin
   // Save selection start position
   SelStart := MemoSubtitleText.SelStart;
 
@@ -3277,8 +3477,28 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.ReplaceText;
+begin
+  if not LastFindSucceded then
+    Exit;
+
+  if Assigned(SearchItem) then
+  begin
+    ReplaceTextMemo;
+  end
+  else
+  begin
+    ReplaceTextSubs;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 function TMainForm.LastFindSucceded : Boolean;
 begin
+  if Assigned(SearchItem) then
+    Result := (SearchItemPos > 0)
+  else
   Result := (SearchNodeIndex <> -1);
 end;
 
@@ -4155,6 +4375,7 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
+
 //------------------------------------------------------------------------------
 
 procedure TMainForm.SwapSubList(SwapSizeAlso : Boolean);

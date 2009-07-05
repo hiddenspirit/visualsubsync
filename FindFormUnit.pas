@@ -70,6 +70,7 @@ type
     function FromCursor : Boolean;
     function UseRegExp : Boolean;
     function WholeWord : Boolean;
+    procedure SetMemoMode(MemoMode : Boolean);
   end;
 
 var
@@ -85,7 +86,8 @@ uses TntClasses, main;
 
 procedure TFindForm.bttCloseClick(Sender: TObject);
 begin
-  MainForm.ShowMatchingSubOnly(True);
+  if chkMatchingOnly.Enabled then
+    MainForm.ShowMatchingSubOnly(True);
   Close;
 end;
 
@@ -192,7 +194,7 @@ end;
 procedure TFindForm.cbFindChange(Sender: TObject);
 begin
   MainForm.ResetFind;
-  if chkMatchingOnly.Checked then
+  if chkMatchingOnly.Enabled and chkMatchingOnly.Checked then
     MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
   bttReplace.Enabled := MainForm.LastFindSucceded;
   bttReplaceFind.Enabled := MainForm.LastFindSucceded;
@@ -202,14 +204,15 @@ end;
 
 procedure TFindForm.chkMatchingOnlyClick(Sender: TObject);
 begin
-  MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
+  if chkMatchingOnly.Enabled then
+    MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TFindForm.chkMatchCaseClick(Sender: TObject);
 begin
-  if chkMatchingOnly.Checked then
+  if chkMatchingOnly.Enabled and chkMatchingOnly.Checked then
     MainForm.ShowMatchingSubOnly(not chkMatchingOnly.Checked);
 end;
 
@@ -252,9 +255,23 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
 procedure TFindForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  MainForm.ShowMatchingSubOnly(True);
+  if chkMatchingOnly.Enabled then
+    MainForm.ShowMatchingSubOnly(True);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.SetMemoMode(MemoMode : Boolean);
+begin
+  chkMatchingOnly.Enabled := not MemoMode;
+//  chkFromCursor.Checked := MemoMode;
+  if MemoMode then
+    Self.Caption := 'Find text'
+  else
+    Self.Caption := 'Find subtitle';
 end;
 
 //------------------------------------------------------------------------------
