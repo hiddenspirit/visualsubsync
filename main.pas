@@ -4031,7 +4031,7 @@ var
   NodeData: PTreeData;
   HaveNewSub : Boolean;
   Source : TTntStringList;
-  I, LineIndex, SubCountBefore : Integer;
+  I, LineIndex, SubCountBefore, fidx : Integer;
   UndoableMultiAddTask : TUndoableMultiAddTask;
   SRTParser : TSRTParser;
   SubList : TList;
@@ -4041,85 +4041,96 @@ begin
   TntOpenDialog1.Filter := 'Text files|*.TXT' + '|' +
     'Subtitle files (*.srt)|*.SRT' + '|' +
     'All files (*.*)|*.*';
+  TntOpenDialog1.Options := TntOpenDialog1.Options + [ofAllowMultiSelect];
   if not TntOpenDialog1.Execute then
+  begin
+    TntOpenDialog1.Options := TntOpenDialog1.Options - [ofAllowMultiSelect];
     Exit;
+  end;
+  TntOpenDialog1.Options := TntOpenDialog1.Options - [ofAllowMultiSelect];
 
   Source := nil;
   
   g_WebRWSynchro.BeginWrite;
   try
-    // TODO : insert SSA/ASS file
-    Ext := WideLowerCase(WideExtractFileExt(TntOpenDialog1.FileName));
-    if (Ext = '.srt') then
+    for fidx := 0 to TntOpenDialog1.Files.Count-1 do
     begin
-      SubList := TList.Create;
-      SRTParser := TSRTParser.Create;
-      SRTParser.Load(TntOpenDialog1.FileName);
-      for i := 0 to SRTParser.GetCount-1 do
-      begin
-        SRTSub := SRTParser.GetAt(i);
-        NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
-        TSubtitleRange(NewRange).Text := SRTSub.Text;
-        NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
-        SubList.Add(NewRange);
-      end;
-      SRTParser.Free;
+      TntOpenDialog1.FileName := TntOpenDialog1.Files[fidx];
 
-      if (SubList.Count > 0) then
+      // TODO : insert SSA/ASS file
+      Ext := WideLowerCase(WideExtractFileExt(TntOpenDialog1.FileName));
+      if (Ext = '.srt') then
       begin
-        UndoableMultiAddTask := TUndoableMultiAddTask.Create;
-        UndoableMultiAddTask.SetData(SubList);
-        UndoableMultiAddTask.DoTask;
-        PushUndoableTask(UndoableMultiAddTask);
-        CurrentProject.IsDirty := True;
-      end;
-      FreeAndNil(SubList);
-    end
-    else
-    begin
-      HaveNewSub := False;
-      Source := MyTTntStringList.Create;
-      Source.LoadFromFile(TntOpenDialog1.FileName);
+        SubList := TList.Create;
+        SRTParser := TSRTParser.Create;
+        SRTParser.Load(TntOpenDialog1.FileName);
+        for i := 0 to SRTParser.GetCount-1 do
+        begin
+          SRTSub := SRTParser.GetAt(i);
+          NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
+          TSubtitleRange(NewRange).Text := SRTSub.Text;
+          NewRange.UpdateSubTimeFromText(TSubtitleRange(NewRange).Text);
+          SubList.Add(NewRange);
+        end;
+        SRTParser.Free;
 
-      // Get start time for the first new subtitle
-      if (WAVDisplayer.RangeList.Count > 0) then
-      begin
-        LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
-        StartTime := LastRange.StopTime + 2000;
+        if (SubList.Count > 0) then
+        begin
+          UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+          UndoableMultiAddTask.SetData(SubList);
+          UndoableMultiAddTask.DoTask;
+          PushUndoableTask(UndoableMultiAddTask);
+          CurrentProject.IsDirty := True;
+        end;
+        FreeAndNil(SubList);
       end
       else
-        StartTime := 99 * 60 * 60 * 1000;
-
-      SubCountBefore := WAVDisplayer.RangeList.Count;
-      for LineIndex := 0 to Source.Count-1 do
       begin
-        Line := Source[LineIndex];
+        HaveNewSub := False;
+        Source := MyTTntStringList.Create;
+        Source.LoadFromFile(TntOpenDialog1.FileName);
 
-        NewRange := SubRangeFactory.CreateRangeSS(StartTime, StartTime+1000);
-        TSubtitleRange(NewRange).Text := Line;
-        WAVDisplayer.RangeList.AddAtEnd(NewRange);
-        Node := vtvSubsList.AddChild(nil);
-        NodeData := vtvSubsList.GetNodeData(Node);
-        NodeData.Range := TSubtitleRange(NewRange);
-        TSubtitleRange(NewRange).Node := Node;
-
-        Inc(StartTime, 2000);
-        HaveNewSub := True;
-      end;
-
-      if HaveNewSub then
-      begin
-        CurrentProject.IsDirty := True;
-        UndoableMultiAddTask := TUndoableMultiAddTask.Create;
-        UndoableMultiAddTask.SetCapacity(Source.Count);
-        for I := SubCountBefore to (SubCountBefore + Source.Count - 1) do
+        // Get start time for the first new subtitle
+        if (WAVDisplayer.RangeList.Count > 0) then
         begin
-          UndoableMultiAddTask.AddSubtitleIndex(I);
+          LastRange := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count-1];
+          StartTime := LastRange.StopTime + 2000;
+        end
+        else
+          StartTime := 99 * 60 * 60 * 1000;
+
+        SubCountBefore := WAVDisplayer.RangeList.Count;
+        for LineIndex := 0 to Source.Count-1 do
+        begin
+          Line := Source[LineIndex];
+
+          NewRange := SubRangeFactory.CreateRangeSS(StartTime, StartTime+1000);
+          TSubtitleRange(NewRange).Text := Line;
+          WAVDisplayer.RangeList.AddAtEnd(NewRange);
+          Node := vtvSubsList.AddChild(nil);
+          NodeData := vtvSubsList.GetNodeData(Node);
+          NodeData.Range := TSubtitleRange(NewRange);
+          TSubtitleRange(NewRange).Node := Node;
+
+          Inc(StartTime, 2000);
+          HaveNewSub := True;
         end;
-        // this is a lazy task so don't "do" the task now
-        PushUndoableTask(UndoableMultiAddTask);
+
+        if HaveNewSub then
+        begin
+          CurrentProject.IsDirty := True;
+          UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+          UndoableMultiAddTask.SetCapacity(Source.Count);
+          for I := SubCountBefore to (SubCountBefore + Source.Count - 1) do
+          begin
+            UndoableMultiAddTask.AddSubtitleIndex(I);
+          end;
+          // this is a lazy task so don't "do" the task now
+          PushUndoableTask(UndoableMultiAddTask);
+        end;
+        FreeAndNil(Source);
       end;
-      FreeAndNil(Source);
+
     end;
 
   finally
@@ -4129,7 +4140,6 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
-
 //------------------------------------------------------------------------------
 
 procedure TMainForm.SwapSubList(SwapSizeAlso : Boolean);
