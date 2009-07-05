@@ -2232,7 +2232,20 @@ begin
   else if (Ext = '.cue') then
     SaveSubtitlesAsCUE(Filename)
   else if (Ext = '.txt') then
-    SaveSubtitlesAsTXT(Filename, PreviousExt, InUTF8);
+    SaveSubtitlesAsTXT(Filename, PreviousExt, InUTF8)
+  else
+  begin
+    if Assigned(CurrentProject) and (Filename = CurrentProject.SubtitlesFile) then
+      MessageBoxW(Handle, PWideChar(WideString('Cannot save the file "' + Filename +
+        '". Please, specify a valid file extension in the "Project Properties" dialog ' +
+        'under the "File" menu.')),
+        PWideChar(WideString('Error')), MB_OK or MB_ICONERROR)
+    else
+      MessageBoxW(Handle, PWideChar(WideString('Cannot save the file "' + Filename +
+        '". Please, specify a valid file extension.')),
+        PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+    Exit;
+  end;
 
   if (not BackupOnly) then
   begin
@@ -3483,6 +3496,8 @@ begin
     begin
       SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
       SaveProject(CurrentProject, False);
+      if CurrentProject.IsDirty then
+        Result := False;
     end
     else if(res = IDCANCEL) then
       Result := False
