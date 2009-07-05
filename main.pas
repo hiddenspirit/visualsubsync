@@ -4683,6 +4683,7 @@ begin
     end;
 
     CurrentProject.TextPipeSource := TntOpenDialog1.FileName;
+    SaveProject(CurrentProject, True);
 
     if (MemoTextPipe.Visible = False) then
       ActionShowHideTextPipe.Execute;
@@ -4711,6 +4712,7 @@ begin
     MemoTextPipe.Lines.SaveToFile(TntSaveDialog1.FileName);
     MemoTextPipe.PlainText := False;
     CurrentProject.TextPipeSource := TntSaveDialog1.FileName;
+    SaveProject(CurrentProject, True);
   end;
 end;
 
@@ -8288,7 +8290,7 @@ begin
     if (CurrentProject.Dictionnary <> StartupDictionnary) then
     begin
       CurrentProject.Dictionnary := StartupDictionnary;
-      CurrentProject.IsDirty := True; 
+      SaveProject(CurrentProject, True);
     end;
   end;
 end;
