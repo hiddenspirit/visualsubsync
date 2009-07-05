@@ -4619,18 +4619,46 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionLoadTextPipeExecute(Sender: TObject);
+  const
+    INDEX_STRIPPED : Integer = 4;
+  var
+    SRTParser : TSRTParser;
+    SRTSub : TSRTSubtitle;
+    i : Integer;
+    StrippedLines : TTntStringList;
 begin
   TntOpenDialog1.Filter :=
     'Text files (*.txt)|*.TXT' + '|' +
     'RTF files (*.rtf)|*.RTF' + '|' +
     'Subtitle files (*.srt)|*.SRT' + '|' +
+    'Subtitle files stripped of timings (*.srt)|*.SRT' + '|' +
     'All files (*.*)|*.*';
-  // TODO : option to strip timestamps
   if TntOpenDialog1.Execute then
   begin
     MemoTextPipe.Clear;
-    MemoTextPipe.Lines.LoadFromFile(TntOpenDialog1.FileName);
+    if TntOpenDialog1.FilterIndex = INDEX_STRIPPED then
+    begin
+      SRTParser := TSRTParser.Create;
+      SRTParser.Load(TntOpenDialog1.Filename);
+      StrippedLines := TTntStringList.Create;
+      for i := 0 to SRTParser.GetCount-1 do
+      begin
+        SRTSub := SRTParser.GetAt(i);
+        StrippedLines.Add(SRTSub.Text);
+      end;
+      MemoTextPipe.Lines.AddStrings(StrippedLines);
+      MemoTextPipe.SelStart := 0;
+      MemoTextPipe.SelLength := 0;
+      FreeAndNil(SRTParser);
+      FreeAndNil(StrippedLines);
+    end
+    else
+    begin
+      MemoTextPipe.Lines.LoadFromFile(TntOpenDialog1.FileName);
+    end;
+
     CurrentProject.TextPipeSource := TntOpenDialog1.FileName;
+
     if (MemoTextPipe.Visible = False) then
       ActionShowHideTextPipe.Execute;
   end;
