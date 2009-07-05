@@ -601,6 +601,7 @@ type
     StartupShowVideo, StartupDetachVideo : Boolean;
 
     FSpellChecker : THunspellChecker;
+    StartupDictionnary : WideString;
 
     procedure InitVTV;
     procedure InitVTVExtraColumns;
@@ -713,6 +714,7 @@ type
     procedure LoadProject(Filename : WideString);
     procedure SwapSubList(SwapSizeAlso : Boolean = True);
     procedure FinishLoadSettings;
+    procedure LoadAfterParamsSettings;
     function CanFixError(PluginFilename : WideString) : Boolean;
     procedure FixErrorInList(ErrorList : TList);
     procedure RenameStyle(OldName, NewName : WideString);
@@ -1185,6 +1187,9 @@ begin
     IniFile.WriteBool('TextPipe', 'ShowTextPipe', MemoTextPipe.Visible);
     IniFile.WriteInteger('TextPipe', 'TextPipeAutoOption', GetTextPipeAutoOption);
 
+    // Default dictionnary
+    IniFile.WriteString('General', 'Dictionnary', StartupDictionnary);
+
     IniFile.Free;
   except
     on E: Exception do MessageBox(Handle, PChar(E.Message), nil, MB_OK or MB_ICONERROR);
@@ -1230,6 +1235,9 @@ begin
   StartupDetachVideo := IniFile.ReadBool('Windows', 'DetachedVideo', False);
   StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
 
+  // Default dictionnary
+  StartupDictionnary := IniFile.ReadString('General','Dictionnary','');
+
   // Text pipe
   if IniFile.ReadBool('TextPipe', 'ShowTextPipe', False) then
     ActionShowHideTextPipe.Execute;
@@ -1269,6 +1277,21 @@ begin
     Self.SwapSubList(False);
 
   ApplyAutoBackupSettings;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.LoadAfterParamsSettings;
+var Idx : Integer;
+begin
+  if (not Assigned(CurrentProject)) or (CurrentProject.Dictionnary = '') then
+  begin
+    Idx := FSpellChecker.GetDictIdx(StartupDictionnary);
+    if (Idx <> -1) then
+    begin
+      LoadDict(Idx);
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -2683,6 +2706,7 @@ begin
     ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',ProjectForm.EditSubtitleFilename.Text);
     ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
     ProjectFileIni.WriteBool('VisualSubsync','ShowVideo',StartupShowVideo);
+    ProjectFileIni.WriteString('VisualSubsync','Dictionnary',StartupDictionnary);
     ProjectFileIni.Free;
 
     // Load the project
@@ -8178,9 +8202,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnLoadDictionnary(Sender: TObject);
-//var CM : ICursorManager;
 begin
-//  CM := TCursorManager.Create(crHourGlass);
   FSpellChecker.Initialize((Sender as TBgThreadTask).Param);
 end;
 
@@ -8203,13 +8225,27 @@ begin
       SubMenuItemSpellcheck.Items[i].Enabled := True;
     end;
   end;
+
+  StartupDictionnary := FSpellChecker.GetCurrentDictName;
+  if Assigned(CurrentProject) and (CurrentProject.Filename <> '') then
+  begin
+    if (CurrentProject.Dictionnary <> StartupDictionnary) then
+    begin
+      CurrentProject.Dictionnary := StartupDictionnary;
+      CurrentProject.IsDirty := True; 
+    end;
+  end;
 end;
 
 procedure TMainForm.LoadDict(Idx : Integer);
-var i : Integer;
+var i, OldIdx : Integer;
     BgThreadTask : TBgThreadTask;
     Event1, Event2 : TNotifyEvent;
 begin
+  OldIdx := FSpellChecker.GetDictIdx(FSpellChecker.GetCurrentDictName);
+  if (Idx = OldIdx) then
+    Exit; // Already loaded
+
   // First remove previous dictionnary from memory
   FSpellChecker.Cleanup;
 
