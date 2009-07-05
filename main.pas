@@ -2220,6 +2220,8 @@ begin
   end;
 
   Ext := WideLowerCase(WideExtractFileExt(Filename));
+  if BackupOnly and (Ext = '.bak') then
+    Ext := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
   PreviousExt := WideLowerCase(WideExtractFileExt(PreviousFilename));
   if (Ext = '.srt') then
     SaveSubtitlesAsSRT(Filename, PreviousExt, InUTF8)
