@@ -46,7 +46,6 @@ type
     bttReplaceAll: TTntButton;
     bttClose: TTntButton;
     procedure bttCloseClick(Sender: TObject);
-    procedure TntButton1Click(Sender: TObject);
     procedure cbFindKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure FormActivate(Sender: TObject);
@@ -88,12 +87,6 @@ procedure TFindForm.bttCloseClick(Sender: TObject);
 begin
   MainForm.ShowMatchingSubOnly(True);
   Close;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TFindForm.TntButton1Click(Sender: TObject);
-begin
 end;
 
 //------------------------------------------------------------------------------
