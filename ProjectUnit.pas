@@ -222,11 +222,22 @@ end;
 //==============================================================================
 
 function TProjectForm.CheckData(AskForExtraction : Boolean) : Boolean;
-var res : Integer;
+var Ext : WideString;
     VideoFileExists : Boolean;
 begin
   Result := False;
   VideoFileExists := (Trim(EditVideoFilename.Text) <> '') and WideFileExists(EditVideoFilename.Text);
+
+  // We need a valid extension subtitle filename  
+  Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
+  if (Trim(EditSubtitleFilename.Text) <> '') and
+    (Ext <> '.srt') and (Ext <> '.ass') and (Ext <> '.ssa') then
+  begin
+    MessageBoxW(Handle, PWideChar(WideString('Invalid file extension.')),
+      PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+    EditSubtitleFilename.SetFocus;
+    Exit;
+  end;  
 
   // We need a least subtitle filename
   if not TryToCreateOrOpenFile(EditSubtitleFilename.Text) then
