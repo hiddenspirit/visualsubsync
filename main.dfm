@@ -133,10 +133,20 @@ object MainForm: TMainForm
     Caption = 'PanelBottom'
     FullRepaint = False
     TabOrder = 1
+    object SplitterSubtitleVO: TTntSplitter
+      Left = 368
+      Top = 0
+      Width = 4
+      Height = 65
+      Align = alRight
+      AutoSnap = False
+      ResizeStyle = rsUpdate
+      Visible = False
+    end
     object MemoSubtitleText: TTntRichEdit
       Left = 35
       Top = 0
-      Width = 737
+      Width = 333
       Height = 65
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -164,6 +174,24 @@ object MainForm: TMainForm
       ReadOnly = True
       TabOrder = 0
     end
+    object MemoSubtitleVO: TTntRichEdit
+      Left = 372
+      Top = 0
+      Width = 400
+      Height = 65
+      Align = alRight
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      HideSelection = False
+      ParentFont = False
+      ReadOnly = True
+      ScrollBars = ssVertical
+      TabOrder = 2
+      Visible = False
+    end
   end
   object PanelMiddle: TPanel
     Left = 0
@@ -186,6 +214,7 @@ object MainForm: TMainForm
       Font.Name = 'Arial'
       Font.Style = []
       Header.AutoSizeIndex = -1
+      Header.DefaultHeight = 17
       Header.Font.Charset = DEFAULT_CHARSET
       Header.Font.Color = clWindowText
       Header.Font.Height = -11
@@ -1443,6 +1472,12 @@ object MainForm: TMainForm
       object MenuItemVerticalScaling: TTntMenuItem
         Action = ActionZoomVertical
       end
+      object N25: TTntMenuItem
+        Caption = '-'
+      end
+      object MenuItemShowHideReferenceVO: TTntMenuItem
+        Action = ActionToggleVO
+      end
       object N3: TTntMenuItem
         Caption = '-'
       end
@@ -2061,6 +2096,13 @@ object MainForm: TMainForm
       Caption = 'Toggle between normal and timing mode'
       Hint = 'Choose between "Normal" or "Timing" mode'
       OnExecute = ActionToggleTimingModeExecute
+    end
+    object ActionToggleVO: TTntAction
+      Tag = 1
+      Caption = 'Show/Hide Reference VO'
+      GroupIndex = 2
+      Hint = 'Show/Hide reference VO subtitles'
+      OnExecute = ActionToggleVOExecute
     end
     object ActionSetEditorFocus: TTntAction
       Tag = 1

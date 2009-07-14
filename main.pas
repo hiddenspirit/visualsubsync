@@ -370,6 +370,11 @@ type
     ActionPaste: TTntAction;
     ActionPasteAtCursor: TTntAction;
     Pasteatcursor1: TTntMenuItem;
+    MemoSubtitleVO: TTntRichEdit;
+    SplitterSubtitleVO: TTntSplitter;
+    ActionToggleVO: TTntAction;
+    N25: TTntMenuItem;
+    MenuItemShowHideReferenceVO: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -555,6 +560,7 @@ type
     procedure ActionPasteExecute(Sender: TObject);
     procedure ActionPasteUpdate(Sender: TObject);
     procedure ActionPasteAtCursorExecute(Sender: TObject);
+    procedure ActionToggleVOExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -610,6 +616,7 @@ type
     procedure EnableControl(Enable : Boolean);
     procedure EnableStyleControls(Enable : Boolean);
     procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
+    procedure LoadVO(Filename: WideString);
     procedure SaveSubtitles(Filename: WideString; PreviousFilename : WideString;
       InUTF8 : Boolean; BackupOnly : Boolean);
     procedure SaveProject(Project : TVSSProject; SilentSave : Boolean);
@@ -650,6 +657,7 @@ type
     procedure SaveSubtitlesAsTXT(Filename, PreviousExt: WideString; InUTF8 : Boolean);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
+    function LoadVOSRT(Filename: WideString) : Boolean;
     function LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
     function LoadASS(Filename: WideString; var IsUTF8 : Boolean; IsSSA : Boolean) : Boolean;
     procedure AdvanceToNextSubtitleAfterFocus;
@@ -731,6 +739,11 @@ type
     function GetVideoRendererFiltersList(list : TStrings) : Boolean;
     procedure SetStatusBarPrimaryText(const Text : WideString);
     procedure ProcessParams;
+    procedure TurnOffVO;
+    procedure TurnOnVO;
+    procedure AdjustShowVO;
+    function GetVOText(NodeData: PTreeData; Enhanced : Boolean) : WideString;
+    procedure UpdateMemoVO(NodeData : PTreeData);
 
     function IsTimingMode : Boolean;
     function IsNormalMode : Boolean;
@@ -788,8 +801,12 @@ const
   STOP_COL_INDEX = 2;
   STYLE_COL_INDEX = 3;
   TEXT_COL_INDEX = 4;
-  LAST_CORE_COL_INDEX = TEXT_COL_INDEX;
+  VO_COL_INDEX = 5;
+  LAST_CORE_COL_INDEX = VO_COL_INDEX;
   COLUMN_COUNT = LAST_CORE_COL_INDEX + 1;
+  MemoVOMaxUnassigned : Integer = 100;
+  MemoVOMaxLength : Integer = 40;
+  MemoVOMaxRows : Integer = 4;
 
 var
   MainForm: TMainForm;
@@ -923,6 +940,9 @@ begin
   MemoSubtitleText.Font.Size := 10;
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
   MemoTextPipe.Font.Assign(MemoSubtitleText.Font);
+  MemoSubtitleVO.Font.Name := 'Arial';
+  MemoSubtitleVO.Font.Style := MemoSubtitleVO.Font.Style + [fsBold];
+  MemoSubtitleVO.Font.Size := 10;
 
   EnableControl(False);
   EnableStyleControls(False);
@@ -1192,6 +1212,8 @@ begin
     end;
     IniFile.WriteString('General', 'ColumnsPosition', ColumnsPositionList.CommaText);
     ColumnsPositionList.Free;
+    // VO textbox
+    IniFile.WriteInteger('Windows', 'MemoSubtitleVO_Width', MemoSubtitleVO.Width);
 
     // Text pipe
     IniFile.WriteBool('TextPipe', 'ShowTextPipe', MemoTextPipe.Visible);
@@ -1247,6 +1269,9 @@ begin
 
   // Default dictionnary
   StartupDictionnary := IniFile.ReadString('General','Dictionnary','');
+
+  // VO textbox
+  MemoSubtitleVO.Width := IniFile.ReadInteger('Windows', 'MemoSubtitleVO_Width', 400);
 
   // Text pipe
   if IniFile.ReadBool('TextPipe', 'ShowTextPipe', False) then
@@ -1321,7 +1346,7 @@ begin
       [toHideFocusRect, toShowHorzGridLines, toShowVertGridLines, toUseBlendedSelection
         {, toHotTrack, toAlwaysHideSelection}];
 
-    Header.Options := Header.Options + [hoVisible, hoAutoResize, hoDrag];
+    Header.Options := Header.Options + [hoVisible, hoAutoResize, hoAutoSpring, hoDrag];
     Header.Style := hsFlatButtons;
 
     Column := Header.Columns.Add;
@@ -1350,7 +1375,13 @@ begin
 
     Column := Header.Columns.Add;
     Column.Text := 'Text';
-    Column.Options := Column.Options - [coAllowClick];
+    Column.Options := Column.Options - [coAllowClick] + [coAutoSpring];
+    Column.Width := 500;
+    Column.MinWidth := 100;
+
+    Column := Header.Columns.Add;
+    Column.Text := 'VO';
+    Column.Options := Column.Options - [coAllowClick] - [coVisible] + [coAutoSpring];
     Column.Width := 500;
     Column.MinWidth := 100;
 
@@ -1428,6 +1459,7 @@ begin
   g_VSSCoreWrapper.Set_STOP_COL_IDX(STOP_COL_INDEX);
   g_VSSCoreWrapper.Set_STYLE_COL_IDX(STYLE_COL_INDEX);
   g_VSSCoreWrapper.Set_TEXT_COL_IDX(TEXT_COL_INDEX);
+  g_VSSCoreWrapper.Set_VO_COL_IDX(VO_COL_INDEX);
   g_VSSCoreWrapper.Set_LAST_CORE_COL_IDX(LAST_CORE_COL_INDEX);
 
   g_VSSCoreWrapper.OnSubtitleChangeStart := OnSubtitleRangeJSWrapperChangeStart;
@@ -1586,6 +1618,9 @@ begin
   MemoLinesCounter.Enabled := Enable;
   MemoSubtitleText.Enabled := Enable and
     ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
+  MemoSubtitleVO.Enabled := Enable and
+    ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
+  ActionToggleVO.Enabled := Enable;
 
   edSelBegin.Enabled := Enable;
   edSelEnd.Enabled := Enable;
@@ -1691,12 +1726,21 @@ end;
 
 procedure TMainForm.WAVDisplayer1SelectedRangeChange(Sender: TObject);
 var SubRange : TSubtitleRange;
+    NodeData : PTreeData;
 begin
   // Update subtitle timestamps
   if Assigned(WAVDisplayer.SelectedRange) then
   begin
     SubRange := TSubtitleRange(WAVDisplayer.SelectedRange);
     vtvSubsList.RepaintNode(SubRange.Node);
+
+    // Update VO
+    if (WAVDisplayer.RangeListVO.Count > 0) then
+    begin
+      NodeData := vtvSubsList.GetNodeData(SubRange.Node);
+      UpdateMemoVO(NodeData);
+    end;
+    
     DisableVideoUpdatePreview := True;
     CurrentProject.IsDirty := True;
     UpdateLinesCounter;
@@ -1857,6 +1901,57 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.LoadVO(Filename: WideString);
+begin
+  g_WebRWSynchro.BeginWrite;
+  try
+    vtvSubsList.BeginUpdate;
+    LoadVOSRT(Filename);
+    AdjustShowVO;
+    //UpdateColumnAutoSize;
+  finally
+    g_WebRWSynchro.EndWrite;
+    vtvSubsList.EndUpdate;
+  end;
+  vtvSubsList.Repaint;
+  if Assigned(vtvSubsList.FocusedNode) then
+    UpdateMemoVO(vtvSubsList.GetNodeData(vtvSubsList.FocusedNode));
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.LoadVOSRT(Filename: WideString) : Boolean;
+var
+  i : integer;
+  NewRange : TRange;
+  SRTParser : TSRTParser;
+  SRTSub : TSRTSubtitle;
+begin
+  Result := False;
+  if not WideFileExists(Filename) then
+  begin
+    Exit;
+  end;
+
+  WAVDisplayer.ClearRangeListVO;
+
+  SRTParser := TSRTParser.Create;
+  SRTParser.Load(Filename);
+  for i := 0 to SRTParser.GetCount-1 do
+  begin
+    SRTSub := SRTParser.GetAt(i);
+    NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
+    TSubtitleRange(NewRange).Text := SRTSub.Text;
+    WAVDisplayer.RangeListVO.AddAtEnd(NewRange);
+  end;
+  WAVDisplayer.RangeListVO.FullSort;
+
+  FreeAndNil(SRTParser);
+  Result := True;
+end;
+
+//------------------------------------------------------------------------------
+
 function TMainForm.LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
 var
   i : integer;
@@ -1982,6 +2077,256 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TMainForm.GetVOText(NodeData: PTreeData; Enhanced : Boolean) : WideString;
+
+  function SearchStartVO(timing : Integer) : Integer;
+  	var i : Integer;
+  begin
+  	if WAVDisplayer.RangeListVO.Count > 0 then
+    begin
+  		for i := 0 to (WAVDisplayer.RangeListVO.Count - 1) do
+      begin
+  			if WAVDisplayer.RangeListVO[i].StopTime >= timing then
+        begin
+  				Result := i;
+          exit;
+        end;
+      end;
+  	end;
+  	Result := WAVDisplayer.RangeListVO.Count;
+  end;
+
+  function SearchEndVO(timing : Integer) : Integer;
+  	var i : Integer;
+  begin
+  	if WAVDisplayer.RangeListVO.Count > 0 then
+    begin
+  		for i := (WAVDisplayer.RangeListVO.Count - 1) downto 0 do
+      begin
+  			if WAVDisplayer.RangeListVO[i].StartTime <= timing then
+        begin
+  				Result := i;
+          exit;
+        end;
+      end;
+  	end;
+  	Result := -1;
+  end;
+
+  var
+    CurrSub : Integer;
+    FirstVO : Integer;
+    LastVO : Integer;
+    PrevVO : Integer;
+    NextVO : Integer;
+    Text : WideString;
+    PrevText : WideString;
+    NextText : WideString;
+    i : Integer;
+begin
+  Result := '';
+  CurrSub := WAVDisplayer.RangeList.IndexOf(NodeData.Range);
+  if (CurrSub >= 0) and (WAVDisplayer.RangeListVO.Count > 0) then
+  begin
+    FirstVO := SearchStartVO(NodeData.Range.StartTime);
+    LastVO := SearchEndVO(NodeData.Range.StopTime);
+
+    if CurrSub > 0 then
+      PrevVO := SearchEndVO(WAVDisplayer.RangeList[CurrSub - 1].StopTime) + 1
+    else
+      PrevVO := 0;
+
+    if CurrSub < (WAVDisplayer.RangeList.Count - 1) then
+      NextVO := SearchStartVO(WAVDisplayer.RangeList[CurrSub + 1].StartTime) - 1
+    else
+      NextVO := WAVDisplayer.RangeListVO.Count - 1;
+
+    Text := '';
+    PrevText := '';
+    NextText := '';
+
+  	for i := FirstVO to LastVO do
+    begin
+  		if i > FirstVO then
+        Text := Text + '|';
+      Text := Text +
+        StringConvertCRLFToPipe(
+          StringConvertPipeToSpace(
+            StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text)));
+    end;
+
+  	for i := (FirstVO - 1) downto PrevVO do
+    begin
+  		if i < (FirstVO - 1) then
+        PrevText := ' ' + PrevText;
+      PrevText := StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text) + PrevText;
+      if Length(PrevText) > MemoVOMaxUnassigned then
+        break;
+    end;
+
+  	for i := (LastVO + 1) to NextVO do
+    begin
+  		if i > (LastVO + 1) then
+        NextText := NextText + ' ';
+      NextText := NextText + StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text);
+      if Length(NextText) > MemoVOMaxUnassigned then
+        break;
+    end;
+
+    if Enhanced then
+    begin
+      Text :=
+        StringConvertShrinkSpace(PrevText)
+        + '|'
+        + Text
+        + '|'
+        + StringConvertShrinkSpace(NextText);
+    end
+    else
+    begin
+      if PrevText <> '' then
+        Text := '[<<<] ' + Text;
+      if NextText <> '' then
+        Text := Text + ' [>>>]';
+      Text := StringConvertShrinkSpace(Text);
+    end;
+
+    Result := Text;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateMemoVO(NodeData : PTreeData);
+  var
+    EnhText : WideString;
+    PrevText : WideString;
+    CurrText : WideString;
+    NextText : WideString;
+    TextFirst : Integer;
+    TextLast : Integer;
+    CountRows : Integer;
+    StartCount : Integer;
+    RowAvail : Integer;
+    eventMask : Integer;
+begin
+
+  EnhText := GetVOText(NodeData, True);
+
+  for TextFirst := 1 to Length(EnhText) do
+    if EnhText[TextFirst] = '|' then
+      Break;
+
+  for TextLast := Length(EnhText) downto 1 do
+    if EnhText[TextLast] = '|' then
+      Break;
+
+  if TextLast <= TextFirst then // Something wrong
+  begin
+    MemoSubtitleVO.Text := EnhText;
+    exit;
+  end;
+
+  PrevText := Copy(EnhText, 1, TextFirst - 1);
+  If PrevText <> '' then
+    PrevText := PrevText + ' [<<<]';
+  CurrText := Copy(EnhText, TextFirst + 1, TextLast - TextFirst - 1);
+  NextText := Copy(EnhText, TextLast + 1, Length(EnhText) - TextLast);
+  If NextText <> '' then
+    NextText := '[>>>] ' + NextText;
+
+  // A little shrinking
+
+  if Length(PrevText) > MemoVOMaxLength then
+    PrevText := '[...]' + Copy(PrevText, Length(PrevText) - MemoVOMaxLength + 6, MemoVOMaxLength - 5);
+
+  if Length(NextText) > MemoVOMaxLength then
+    NextText := Copy(NextText, 0, MemoVOMaxLength - 5) + '[...]';
+
+  StartCount := 0;
+  CountRows := 1;
+
+  repeat
+    StartCount := PosEx('|', CurrText, StartCount + 1);
+    if StartCount > 0 then
+      Inc(CountRows);
+  until StartCount <= 0;
+
+  RowAvail := MemoVOMaxRows;
+  if PrevText <> '' then
+    Dec(RowAvail);
+  if NextText <> '' then
+    Dec(RowAvail);
+
+  if CountRows > RowAvail then
+  begin
+    CurrText := StringConvertShrinkSpace(CurrText);
+    StartCount := 0;
+    while RowAvail > 1 do
+    begin
+      StartCount := PosEx(' ', CurrText, StartCount + 1 + ((Length(CurrText) - StartCount - 1) div RowAvail));
+      if StartCount <= 0 then
+        break;
+      CurrText := Copy(CurrText, 1, StartCount - 1) + '|' + Copy(CurrText, StartCount + 1, Length(CurrText) - StartCount);
+      Dec(RowAvail);
+    end;
+  end;
+
+  CurrText := StringConvertPipeToCRLF(CurrText);
+
+  // Prepare text
+
+  if (PrevText <> '') and ((CurrText <> '') or (NextText <> '')) then
+    PrevText := PrevText + #13#10;
+
+  TextFirst := Length(PrevText);
+
+  if (CurrText <> '') and (NextText <> '') then
+    CurrText := CurrText + #13#10;
+
+  TextLast := TextFirst + Length(CurrText);
+
+  EnhText := PrevText + CurrText + NextText;
+
+  // Editbox
+
+  MemoSubtitleVO.Text := EnhText;
+
+  MemoSubtitleVO.Tag := 0;
+  eventMask := MemoSubtitleVO.Perform(EM_SETEVENTMASK, 0, 0);
+  MemoSubtitleVO.Lines.BeginUpdate;
+
+  MemoSubtitleVO.SelectAll;
+  SetRESelectionColor(MemoSubtitleVO, clWindowText);
+  SetReUnderline(MemoSubtitleVO, False);
+
+  if TextFirst > 0 then
+  begin
+    SetRESelection(MemoSubtitleVO, 0, TextFirst);
+    SetRESelectionColor(MemoSubtitleVO, clGrayText);
+  end;
+
+  if TextLast > TextFirst then
+  begin
+    SetRESelection(MemoSubtitleVO, TextFirst, TextLast - TextFirst);
+    SetRESelectionColor(MemoSubtitleVO, clWindowText);
+  end;
+
+  if Length(EnhText) > TextLast then
+  begin
+    SetRESelection(MemoSubtitleVO, TextLast, Length(EnhText) - TextLast);
+    SetRESelectionColor(MemoSubtitleVO, clGrayText);
+  end;
+
+  SetRESelection(MemoSubtitleVO, 0, 0);
+
+  MemoSubtitleVO.Lines.EndUpdate;
+  MemoSubtitleVO.Perform(EM_SETEVENTMASK, 0, eventMask);
+  MemoSubtitleVO.Tag := 1;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.vtvSubsListGetText(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: WideString);
@@ -1998,6 +2343,7 @@ begin
     STOP_COL_INDEX: CellText := TimeMsToString(NodeData.Range.StopTime);
     STYLE_COL_INDEX: CellText := NodeData.Range.Style;
     TEXT_COL_INDEX: CellText := StringConvertCRLFToPipe(NodeData.Range.Text);
+    VO_COL_INDEX: CellText := GetVOText(NodeData, False);
   end;
 
   if GeneralJSPlugin.HasColumnCustomText(Column) then
@@ -2432,6 +2778,10 @@ begin
     ShowStatusBarMessage('Loading subtitles...');
     LoadSubtitles(CurrentProject.SubtitlesFile,CurrentProject.IsUTF8);
 
+    // ----- Load VO
+    ShowStatusBarMessage('Loading reference VO...');
+    LoadVO(CurrentProject.SubtitlesVO);
+
     // ----- Load audio
     ShowStatusBarMessage('Loading audio file...');
     if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
@@ -2579,6 +2929,8 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync','WAVMode', Ord(Project.WAVMode));
   ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',
     WideMakeRelativePath(Project.Filename, Project.SubtitlesFile));
+  ProjectFileIni.WriteString('VisualSubsync','SubtitlesVO',
+    WideMakeRelativePath(Project.Filename, Project.SubtitlesVO));
 
   if Length(Trim(MemoTextPipe.Text)) > 0 then
   begin
@@ -2594,6 +2946,7 @@ begin
   ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelWidth', Project.VideoPanelWidth);
   ProjectFileIni.WriteInteger('VisualSubsync','VideoPanelHeight', Project.VideoPanelHeight);
   ProjectFileIni.WriteBool('VisualSubsync','ShowVideo', Project.ShowVideo);
+  ProjectFileIni.WriteBool('VisualSubsync','ShowVO', Project.ShowVO);
   ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo', Project.DetachedVideo);
 
   ProjectFileIni.WriteInteger('VisualSubsync','VideoWindowNormalLeft', DetachedVideoForm.NormalLeft);
@@ -2729,8 +3082,10 @@ begin
     ProjectFileIni.WriteString('VisualSubsync','PeakFile',ProjectForm.GetPeakFilename);
     ProjectFileIni.WriteInteger('VisualSubsync','WAVMode',Ord(ProjectForm.GetWAVMode));
     ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile',ProjectForm.EditSubtitleFilename.Text);
+    ProjectFileIni.WriteString('VisualSubsync','SubtitlesVO',ProjectForm.EditSubtitleVO.Text);
     ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
     ProjectFileIni.WriteBool('VisualSubsync','ShowVideo',StartupShowVideo);
+    ProjectFileIni.WriteBool('VisualSubsync','ShowVO',False);
     ProjectFileIni.WriteString('VisualSubsync','Dictionnary',StartupDictionnary);
     ProjectFileIni.Free;
 
@@ -2924,6 +3279,13 @@ begin
         
         ProjectHasChanged := True;
         SubtitleFileHasChanged := True;
+      end;
+
+      if (CurrentProject.SubtitlesVO <> ProjectForm.EditSubtitleVO.Text) then
+      begin
+        CurrentProject.SubtitlesVO := ProjectForm.EditSubtitleVO.Text;
+        LoadVO(CurrentProject.SubtitlesVO);
+        ProjectHasChanged := True;
       end;
 
       if (CurrentProject.VideoSource <> ProjectForm.EditVideoFilename.Text) then
@@ -3913,6 +4275,7 @@ begin
         TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
         MemoSubtitleText.Text := '';
         TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+        MemoSubtitleVO.Text := '';
       end;
       OldAutoScrollIdx := Idx;
     end;
@@ -4074,6 +4437,8 @@ begin
       Self.SwapSubList;
     MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
       ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
+    MemoSubtitleVO.Enabled := MemoLinesCounter.Enabled and
+      ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
     SetShortcut(IsTimingMode);
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
@@ -4173,6 +4538,7 @@ begin
     vtvSubsList.Clear;
 
     WAVDisplayer.ClearRangeList;
+    WAVDisplayer.ClearRangeListVO;
     WAVDisplayer.Enabled := False;
     WAVDisplayer.Close;
     WAVDisplayer.Invalidate;
@@ -4184,6 +4550,7 @@ begin
     CurrentProject.WAVFile := '';
     CurrentProject.PeakFile := '';
     CurrentProject.SubtitlesFile := '';
+    CurrentProject.SubtitlesVO := '';
     CurrentProject.IsDirty := False;
   finally
     g_WebRWSynchro.EndWrite;
@@ -4195,10 +4562,12 @@ begin
   TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
   MemoSubtitleText.Text := '';
   TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+  MemoSubtitleVO.Text := '';
 
   EnableControl(False);
   cbStyles.Clear;
   EnableStyleControls(False);
+  TurnOffVO;
 
   AudioOnlyRenderer.Close;
   VideoRenderer.Close;
@@ -4389,6 +4758,8 @@ begin
     vtvSubsList.Parent := PanelMiddle;
     MemoLinesCounter.Parent := PanelBottom;
     MemoSubtitleText.Parent := PanelBottom;
+    MemoSubtitleVO.Parent := PanelBottom;
+    SplitterSubtitleVO.Parent := PanelBottom;
 
     PanelBottom.Align := alBottom;
     Splitter1.Align := alBottom;
@@ -4405,6 +4776,8 @@ begin
     vtvSubsList.Parent := PanelBottom;
     MemoLinesCounter.Parent := PanelMiddle;
     MemoSubtitleText.Parent := PanelMiddle;
+    MemoSubtitleVO.Parent := PanelMiddle;
+    SplitterSubtitleVO.Parent := PanelMiddle;
 
     PanelMiddle.Align := alTop;
     Splitter1.Align := alTop;
@@ -5311,6 +5684,7 @@ begin
       TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex)
     else
       TagHighlight(MemoSubtitleText, -1);
+    UpdateMemoVO(NodeData);
     // Update styles combobox
     UpdateStylesComboboxFromSelection;
     CallJSOnSelectedSubtitle;
@@ -5321,6 +5695,7 @@ begin
     TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
     MemoSubtitleText.Text := '';
     TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+    MemoSubtitleVO.Text := '';
   end;
 end;
 
@@ -6916,6 +7291,8 @@ begin
   SetShortcut(IsTimingMode);
   MemoSubtitleText.Enabled := MemoLinesCounter.Enabled and
     ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
+  MemoSubtitleVO.Enabled := MemoLinesCounter.Enabled and
+    ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
 end;
 
 //------------------------------------------------------------------------------
@@ -8103,6 +8480,11 @@ begin
       Index := -1;
     end;
 
+    if WideFileExists(CurrentProject.SubtitlesVO) then
+    begin
+      ShowStatusBarMessage('Reloading VO reference subtitles...');
+      LoadVO(CurrentProject.SubtitlesVO);
+    end;
     ShowStatusBarMessage('Reloading subtitles...');
     LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
     SelectNodeAtIndex(Index);
@@ -8846,6 +9228,95 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.ActionToggleVOExecute(Sender: TObject);
+begin
+  if not Assigned(CurrentProject) then // just to be sure
+  begin
+    TurnOffVO;
+    Exit;
+  end;
+
+  if WAVDisplayer.RangeListVO.Count > 0 then // VO are available
+  begin
+    if CurrentProject.ShowVO then
+    begin
+      TurnOffVO;
+      CurrentProject.ShowVO := False;
+      SaveProject(CurrentProject, True);
+    end
+    else
+    begin
+      TurnOnVO;
+      CurrentProject.ShowVO := True;
+      SaveProject(CurrentProject, True);
+    end;
+  end
+  else // VO are unavailable
+  begin
+    // First of all try to reload
+    if CurrentProject.SubtitlesVO <> '' then
+      LoadVO(CurrentProject.SubtitlesVO);
+    // If failed then ask for the file
+    if WAVDisplayer.RangeListVO.Count <= 0 then
+    begin
+      TntOpenDialog1.FileName := CurrentProject.SubtitlesVO;
+      TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+        'All files (*.*)|*.*';
+      if TntOpenDialog1.Execute then
+      begin
+        if (CurrentProject.SubtitlesVO <> TntOpenDialog1.FileName) then
+        begin
+          CurrentProject.SubtitlesVO := TntOpenDialog1.FileName;
+          SaveProject(CurrentProject, True);
+        end;
+        LoadVO(CurrentProject.SubtitlesVO);
+      end;
+    end;
+    // Update preferences...
+    if (WAVDisplayer.RangeListVO.Count > 0) and (not CurrentProject.ShowVO) then
+    begin
+      CurrentProject.ShowVO := True;
+      SaveProject(CurrentProject, True);
+    end;
+    // ...and adjust the visual part
+    AdjustShowVO;
+  end;
+
+end;
+
+procedure TMainForm.TurnOffVO;
+var VOColumn : TVirtualTreeColumn;
+begin
+  //bttVO.Down := false;
+  SplitterSubtitleVO.Visible := False;
+  MemoSubtitleVO.Visible := False;
+  VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
+  VOColumn.Options := VOColumn.Options - [coVisible];
+  //UpdateColumnAutoSize;
+end;
+
+procedure TMainForm.TurnOnVO;
+var VOColumn : TVirtualTreeColumn;
+begin
+  //bttVO.Down := true;
+  MemoSubtitleVO.Visible := True;
+  SplitterSubtitleVO.Visible := True;
+  VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
+  VOColumn.Options := VOColumn.Options + [coVisible];
+  //UpdateColumnAutoSize;
+end;
+
+procedure TMainForm.AdjustShowVO;
+begin
+  if WAVDisplayer.RangeListVO.Count > 0 then
+    if CurrentProject.ShowVO then
+      TurnOnVO
+    else
+      TurnOffVO
+  else
+    TurnOffVO
+end;
 end.
 //------------------------------------------------------------------------------
 
