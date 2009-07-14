@@ -1487,6 +1487,9 @@ object MainForm: TMainForm
       object MenuItemShowHidesSeneChange: TTntMenuItem
         Action = ActionShowHideSceneChange
       end
+      object MenuShowHideSubtitles: TTntMenuItem
+        Action = ActionShowHideSubs
+      end
       object MenuItemDetachVideoWindow: TTntMenuItem
         Action = ActionDetachVideo
       end
@@ -2103,6 +2106,13 @@ object MainForm: TMainForm
       GroupIndex = 2
       Hint = 'Show/Hide reference VO subtitles'
       OnExecute = ActionToggleVOExecute
+    end
+    object ActionShowHideSubs: TTntAction
+      Tag = 1
+      Caption = 'Show/Hide subtitles'
+      GroupIndex = 3
+      Hint = 'Show/Hide subtitles on video'
+      OnExecute = ActionShowHideSubsExecute
     end
     object ActionSetEditorFocus: TTntAction
       Tag = 1

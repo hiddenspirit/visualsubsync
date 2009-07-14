@@ -102,6 +102,7 @@ type
     procedure ShowImageAt(TimeMs : Cardinal);
     procedure SetVolume(Vol : Integer); override;
     procedure SetSubtitleFilename(Filename : WideString);
+    procedure HideSubtitle(Hide : boolean);
     procedure SetAutoInsertCustomVSFilter(AutoInsert : Boolean);
     procedure UpdateImage;
     procedure CopyState(Renderer : TRenderer); override;
@@ -1092,6 +1093,22 @@ begin
       DirectVobSub.put_SubtitleReloader(TRUE);
       DirectVobSub.put_LoadSettings(2, FALSE, FALSE, FALSE);
       DirectVobSub.put_FileName(PWideChar(Filename));
+    end;
+    DirectVobSub := nil;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TDShowRenderer.HideSubtitle(Hide : boolean);
+var DirectVobSub :IDirectVobSub;
+begin
+  DirectVobSub := GetDirectVobSubInterface;
+  if Assigned(DirectVobSub) then
+  begin
+    if FCustomVSFilterIntallOk then
+    begin
+      DirectVobSub.put_HideSubtitles(Hide);
     end;
     DirectVobSub := nil;
   end;
