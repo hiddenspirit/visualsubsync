@@ -42,11 +42,13 @@ type
     WAVFile : WideString;
     PeakFile : WideString;
     SubtitlesFile : WideString;
+    SubtitlesVO : WideString;
     WAVMode : TProjectWAVMode;
     IsUTF8 : Boolean;
     TextPipeSource : WideString;
     TextPipePosition : Integer;
     ShowVideo : Boolean;
+    ShowVO : Boolean;
     VideoPanelWidth : Integer;
     VideoPanelHeight : Integer;
     VideoWindowNormalLeft : Integer;
@@ -91,6 +93,9 @@ type
     EditPeakFilename: TTntEdit;
     chkSaveAsUTF8: TTntCheckBox;
     cbSubtitleFormat: TTntComboBox;
+    gbVO: TTntGroupBox;
+    EditSubtitleVO: TTntEdit;
+    bttBrowseSubtitleVO: TSpeedButton;
     rbNoWaveform: TTntRadioButton;
     bttExtractWAVFromVideo: TTntButton;
     procedure bttCreateNewProjectClick(Sender: TObject);
@@ -99,6 +104,7 @@ type
     procedure bttBrowseWAVFileClick(Sender: TObject);
     procedure bttBrowseSubtitleFileClick(Sender: TObject);
     procedure bttBrowseProjectFileClick(Sender: TObject);
+    procedure bttBrowseVOFileClick(Sender: TObject);
     procedure bttExtractWAVFromVideoClick(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure rbInternalWAVClick(Sender: TObject);
@@ -190,12 +196,14 @@ begin
     PeakFile := ProjectFileIni.ReadString('VisualSubsync','PeakFile','');
     WAVMode := TProjectWAVMode(ProjectFileIni.ReadInteger('VisualSubsync','WAVMode',1));
     SubtitlesFile := ProjectFileIni.ReadString('VisualSubsync','SubtitlesFile','');
+    SubtitlesVO := ProjectFileIni.ReadString('VisualSubsync','SubtitlesVO','');
     TextPipeSource := ProjectFileIni.ReadString('VisualSubsync','TextPipeSource','');
     TextPipePosition := ProjectFileIni.ReadInteger('VisualSubsync','TextPipePosition',0);
 
     VideoPanelWidth := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelWidth', 0);
     VideoPanelHeight := ProjectFileIni.ReadInteger('VisualSubsync','VideoPanelHeight', 0);
     ShowVideo := ProjectFileIni.ReadBool('VisualSubsync','ShowVideo', False);
+    ShowVO := ProjectFileIni.ReadBool('VisualSubsync','ShowVO', False);
     DetachedVideo := ProjectFileIni.ReadBool('VisualSubsync','DetachedVideo', False);
     VideoWindowNormalLeft := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalLeft', 0);
     VideoWindowNormalTop := ProjectFileIni.ReadInteger('VisualSubsync', 'VideoWindowNormalTop', 0);
@@ -216,6 +224,7 @@ begin
     WAVFile := WideResolveRelativePath(Filename, WAVFile);
     PeakFile := WideResolveRelativePath(Filename, PeakFile);
     SubtitlesFile := WideResolveRelativePath(Filename, SubtitlesFile);
+    SubtitlesVO := WideResolveRelativePath(Filename, SubtitlesVO);
     TextPipeSource := WideResolveRelativePath(Filename, TextPipeSource);
 end;
 
@@ -428,6 +437,19 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TProjectForm.bttBrowseVOFileClick(Sender: TObject);
+begin
+  TntOpenDialog1.FileName := EditSubtitleVO.Text;
+  TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+    'All files (*.*)|*.*';
+  if TntOpenDialog1.Execute then
+  begin
+    EditSubtitleVO.Text := TntOpenDialog1.FileName;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 function TProjectForm.ShowExtractForm(extType : TWAVExtractionType) : Boolean;
 var
   ExtractWAVForm: TExtractWAVForm;
@@ -476,6 +498,7 @@ procedure TProjectForm.Clear;
 begin
   EditVideoFilename.Text := '';
   EditSubtitleFilename.Text := '';
+  EditSubtitleVO.Text := '';
   EditProjectFilename.Text := '';
   chkSaveAsUTF8.Checked := False;
   cbSubtitleFormat.ItemIndex := 0;
@@ -512,6 +535,7 @@ begin
   else
     EditWAVFilename.Text := Project.WAVFile;
   EditSubtitleFilename.Text := Project.SubtitlesFile;
+  EditSubtitleVO.Text := Project.SubtitlesVo;
   EditProjectFilename.Text := Project.Filename;
   if (Project.PeakFile = '') then
     EditPeakFilename.Text := LEAVE_EMPTY

@@ -102,6 +102,7 @@ type
     FSTOP_COL_IDX : Integer;
     FSTYLE_COL_IDX : Integer;
     FTEXT_COL_IDX : Integer;
+    FVO_COL_IDX : Integer;
     FLAST_CORE_COL_IDX : Integer;
 
     FMinimumBlank : Integer;
@@ -132,6 +133,7 @@ type
     procedure Set_STOP_COL_IDX(Value : Integer);
     procedure Set_STYLE_COL_IDX(Value : Integer);
     procedure Set_TEXT_COL_IDX(Value : Integer);
+    procedure Set_VO_COL_IDX(Value : Integer);
     procedure Set_LAST_CORE_COL_IDX(Value : Integer);
 
     procedure SetCpsTarget(Value : Integer);
@@ -177,6 +179,7 @@ type
     property STOP_COL_IDX : Integer read FSTOP_COL_IDX;
     property STYLE_COL_IDX : Integer read FSTYLE_COL_IDX;
     property TEXT_COL_IDX : Integer read FTEXT_COL_IDX;
+    property VO_COL_IDX : Integer read FVO_COL_IDX;
     property LAST_CORE_COL_IDX : Integer read FLAST_CORE_COL_IDX;
 
     property CpsTarget : Integer read FCpsTarget;
@@ -1732,6 +1735,11 @@ end;
 procedure TVSSCoreWrapper.Set_TEXT_COL_IDX(Value : Integer);
 begin
   FTEXT_COL_IDX := Value;
+end;
+
+procedure TVSSCoreWrapper.Set_VO_COL_IDX(Value : Integer);
+begin
+  FVO_COL_IDX := Value;
 end;
 
 procedure TVSSCoreWrapper.Set_LAST_CORE_COL_IDX(Value : Integer);

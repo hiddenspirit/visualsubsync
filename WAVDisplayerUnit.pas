@@ -156,6 +156,7 @@ type
     FOffscreenWAV : TBitmap;
 
     FRangeList : TRangeList;
+    FRangeListVO : TRangeList;
     FCursorMs : Integer;
     FPlayCursorMs : Integer;
     FOldPlayCursorMs : Integer;
@@ -323,6 +324,7 @@ type
     procedure SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 
     procedure ClearRangeList;
+    procedure ClearRangeListVO;
 
     procedure DetectSilentZone(List : TList; Threshold : Integer;
       WinSizeMS : Integer);
@@ -330,6 +332,7 @@ type
     procedure ClearPeakData;      
 
     property RangeList : TRangeList read FRangeList;
+    property RangeListVO : TRangeList read FRangeListVO;
     property SelectedRange : TRange read FSelectedRange write SetSelectedRange;
     property Selection : TRange read FSelection;
     property KaraokeSelectedIndex : Integer read FSelectedKaraokeIndex;
@@ -1069,6 +1072,7 @@ begin
   FOffscreenWAV.PixelFormat := pf32bit; // for faster drawing
 
   FRangeList := TRangeList.Create;
+  FRangeListVO := TRangeList.Create;
   FSelection := TRange.Create;
   FSelection.StartTime := 0;
   FSelection.StopTime := 0;
@@ -1116,6 +1120,7 @@ begin
   FUpdateCursorTimer.Free;
   FSelection.Free;
   FRangeList.Free;
+  FRangeListVO.Free;
   FOffscreenWAV.Free;
   FOffscreen.Free;
   FMinBlankInfo1.Free;
@@ -3582,6 +3587,7 @@ end;
 procedure TWAVDisplayer.Close;
 begin
   ClearRangeList;
+  ClearRangeListVO;
 
   if Assigned(FRenderer) then
   begin
@@ -3774,6 +3780,13 @@ begin
   FMinBlankInfo2.SetInfo(nil, mbipInvalid);
   FRangeList.Clear;
   ClearSelection;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.ClearRangeListVO;
+begin
+  FRangeListVO.Clear;
 end;
 
 //------------------------------------------------------------------------------

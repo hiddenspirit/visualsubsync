@@ -1,10 +1,10 @@
 object ProjectForm: TProjectForm
-  Left = 226
-  Top = 176
+  Left = 431
+  Top = 316
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'New Project'
-  ClientHeight = 407
+  ClientHeight = 438
   ClientWidth = 550
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,7 +18,7 @@ object ProjectForm: TProjectForm
   TextHeight = 13
   object bttCreateNewProject: TTntButton
     Left = 336
-    Top = 376
+    Top = 408
     Width = 131
     Height = 25
     Caption = 'Create new project'
@@ -27,7 +27,7 @@ object ProjectForm: TProjectForm
   end
   object bttCancel: TTntButton
     Left = 472
-    Top = 376
+    Top = 408
     Width = 75
     Height = 25
     Caption = 'Cancel'
@@ -70,7 +70,7 @@ object ProjectForm: TProjectForm
     Left = 8
     Top = 104
     Width = 537
-    Height = 121
+    Height = 105
     Caption = ' Audio waveform / Audio only preview (optional) : '
     TabOrder = 1
     object bttBrowseWAVFile: TSpeedButton
@@ -154,7 +154,7 @@ object ProjectForm: TProjectForm
   end
   object gbSubtitleFile: TTntGroupBox
     Left = 8
-    Top = 240
+    Top = 224
     Width = 537
     Height = 49
     Caption = ' Subtitle file : '
@@ -196,7 +196,7 @@ object ProjectForm: TProjectForm
   end
   object gbProjectFile: TTntGroupBox
     Left = 8
-    Top = 304
+    Top = 344
     Width = 537
     Height = 49
     Caption = ' Project file : '
@@ -219,7 +219,7 @@ object ProjectForm: TProjectForm
   end
   object bttOk: TTntButton
     Left = 392
-    Top = 376
+    Top = 408
     Width = 75
     Height = 25
     Caption = 'OK'
@@ -229,14 +229,37 @@ object ProjectForm: TProjectForm
   end
   object chkSaveAsUTF8: TTntCheckBox
     Left = 112
-    Top = 239
+    Top = 223
     Width = 92
     Height = 17
     Caption = 'Save as UTF8'
     TabOrder = 7
   end
+  object gbVO: TTntGroupBox
+    Left = 8
+    Top = 280
+    Width = 537
+    Height = 49
+    Caption = 'Reference VO : '
+    TabOrder = 8
+    object bttBrowseSubtitleVO: TSpeedButton
+      Left = 504
+      Top = 16
+      Width = 23
+      Height = 22
+      Caption = '...'
+      OnClick = bttBrowseVOFileClick
+    end
+    object EditSubtitleVO: TTntEdit
+      Left = 8
+      Top = 16
+      Width = 489
+      Height = 21
+      TabOrder = 0
+    end
+  end
   object TntOpenDialog1: TTntOpenDialog
-    Left = 128
-    Top = 368
+    Left = 40
+    Top = 400
   end
 end

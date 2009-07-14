@@ -51,6 +51,8 @@ type
   function TimeStringToMs(const Time : string) : Integer;
 
   function IsTimeStampsLine(const Line : string; var Start, Stop : Integer) : Boolean;  
+  function StringConvertShrinkSpace(const s : WideString) : WideString;
+  function StringConvertPipeToSpace(const s : WideString) : WideString;
   function StringConvertPipeToCRLF(const s : WideString) : WideString;
   function StringConvertPipeToBR(const s : WideString) : WideString;
   function StringConvertCRLFToPipe(const s : WideString) : WideString;
@@ -260,6 +262,50 @@ begin
     Stop := TimeStringToMs(SS);
     Result := (Start <> -1) and (Stop <> -1);
   end
+end;
+
+//------------------------------------------------------------------------------
+
+function StringConvertShrinkSpace(const s : WideString) : WideString;
+var i : integer;
+  LastSpace :  Boolean;
+  AddSpace :  Boolean;
+begin
+  Result := '';
+  LastSpace := True;
+  AddSpace := False;
+  for i:=1 to Length(s) do
+  begin
+    if (s[i] in [WideChar(' '), WideChar(#13), WideChar(#10), WideChar('|')]) then
+    begin
+      if not LastSpace then
+        AddSpace := True;
+      LastSpace := True;
+    end
+    else
+    begin
+      if AddSpace then
+        Result := Result + ' ';
+      AddSpace := False;
+      Result := Result + s[i];
+      LastSpace := False;
+    end;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+function StringConvertPipeToSpace(const s : WideString) : WideString;
+var i : integer;
+begin
+  Result := '';
+  for i:=1 to Length(s) do
+  begin
+    if (s[i] = '|') then
+      Result := Result + ' '
+    else
+      Result := Result + s[i]
+  end;
 end;
 
 //------------------------------------------------------------------------------
