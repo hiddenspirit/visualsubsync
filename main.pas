@@ -375,6 +375,8 @@ type
     ActionToggleVO: TTntAction;
     N25: TTntMenuItem;
     MenuItemShowHideReferenceVO: TTntMenuItem;
+    ActionShowHideSubs: TTntAction;
+    MenuShowHideSubtitles: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -561,6 +563,7 @@ type
     procedure ActionPasteUpdate(Sender: TObject);
     procedure ActionPasteAtCursorExecute(Sender: TObject);
     procedure ActionToggleVOExecute(Sender: TObject);
+    procedure ActionShowHideSubsExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -586,6 +589,7 @@ type
     PlayingMode : TPlayingModeType;
     ShowingVideo : Boolean;
     FormHasBeenActivated : Boolean;
+    ShowingSubs : Boolean;
 
     StartSubtitleTime : Integer;
     ToggleStartSubtitleTime : Integer;
@@ -903,6 +907,8 @@ begin
         TSpeedButton(PanelPlaybackControl.Controls[i]).Caption := '';
 
   bttWorkingMode.Caption := 'Normal';
+  ShowingSubs := True;
+  MenuShowHideSubtitles.Checked := ShowingSubs;
 
   SubRangeFactory := TSubtitleRangeFactory.Create;
 
@@ -1621,6 +1627,7 @@ begin
   MemoSubtitleVO.Enabled := Enable and
     ((not ConfigObject.DisableSubtitleEdition) or IsNormalMode);
   ActionToggleVO.Enabled := Enable;
+  ActionShowHideSubs.Enabled := Enable;
 
   edSelBegin.Enabled := Enable;
   edSelEnd.Enabled := Enable;
@@ -2808,6 +2815,8 @@ begin
         CurrentProject.VideoWindowNormalHeight);
       g_VSSCoreWrapper.SetVideoWidth(VideoRenderer.VideoWidth);
       g_VSSCoreWrapper.SetVideoHeight(VideoRenderer.VideoHeight);
+      if not ShowingSubs then
+        ActionShowHideSubsExecute(nil);
     end
     else
     begin
@@ -3309,6 +3318,8 @@ begin
           g_VSSCoreWrapper.SetVideoWidth(0);
           g_VSSCoreWrapper.SetVideoHeight(0);
         end;
+        if not ShowingSubs then
+          ActionShowHideSubsExecute(nil);
       end;
 
       if (CurrentProject.WAVMode <> ProjectForm.GetWAVMode) then
@@ -9285,6 +9296,8 @@ begin
 
 end;
 
+//------------------------------------------------------------------------------
+
 procedure TMainForm.TurnOffVO;
 var VOColumn : TVirtualTreeColumn;
 begin
@@ -9317,6 +9330,33 @@ begin
   else
     TurnOffVO
 end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionShowHideSubsExecute(Sender: TObject);
+begin
+  if ShowingSubs then
+  begin // Hide subs
+    //bttShowHideSubs.Down := True;
+    VideoRenderer.HideSubtitle(true);
+    //bttShowHideSubs.Caption := 'Show sub';
+    ShowingSubs := False;
+  end
+  else
+  begin // Show subs
+    //bttShowHideSubs.Down := False;
+    VideoRenderer.HideSubtitle(false);
+    //bttShowHideSubs.Caption := 'Hide sub';
+    ShowingSubs := True;
+  end;
+  if ShowingVideo and (not VideoRenderer.IsPlaying) then
+  begin
+    ActionShowStartFrameExecute(nil);
+  end;
+  MenuShowHideSubtitles.Checked := ShowingSubs;
+end;
+
+//------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
 
