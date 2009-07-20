@@ -1168,6 +1168,7 @@ var IniFile : TIniFile;
     i : Integer;
     VisibleExtraColumnsList : TStrings;
     ColumnsPositionList : TStrings;
+    ColumnsWidthList : TStrings;
     ColumnName : WideString;
     Column : TVirtualTreeColumn;
 begin
@@ -1211,13 +1212,18 @@ begin
     VisibleExtraColumnsList.Free;
 
     ColumnsPositionList := TStringList.Create;
+    ColumnsWidthList := TStringList.Create;
     for i := 0 to vtvSubsList.Header.Columns.Count-1 do
     begin
       Column := vtvSubsList.Header.Columns.Items[i];
       ColumnsPositionList.Add(IntToStr(Column.Position));
+      ColumnsWidthList.Add(IntToStr(Column.Width));
     end;
     IniFile.WriteString('General', 'ColumnsPosition', ColumnsPositionList.CommaText);
     ColumnsPositionList.Free;
+    IniFile.WriteString('General', 'ColumnsWidth', ColumnsWidthList.CommaText);
+    ColumnsWidthList.Free;
+        
     // VO textbox
     IniFile.WriteInteger('Windows', 'MemoSubtitleVO_Width', MemoSubtitleVO.Width);
 
@@ -1402,23 +1408,23 @@ end;
 
 procedure TMainForm.InitVTVExtraColumns;
 var Column : TVirtualTreeColumn;
-    i, NewPos : Integer;
+    i, NewPos, NewWidth : Integer;
     MenuItem : TTntMenuItem;
-    VisibleExtraColumnsList, ColumnsPositionList : TStrings;
+    VisibleExtraColumnsList, ColumnsPositionList, ColumnsWidthList : TStrings;
 
     IniFile : TIniFile;
     IniFilename : WideString;
-    StartupVisibleExtraColumns, StartupColumnsPosition : string;
+    StartupVisibleExtraColumns, StartupColumnsPosition, StartupColumnsWidth : string;
 begin
   IniFilename := GetIniFilename;
   IniFile := TIniFile.Create(IniFilename);
   StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
   StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
+  StartupColumnsWidth := IniFile.ReadString('General', 'ColumnsWidth', '');
   IniFile.Free;
 
   VisibleExtraColumnsList := TStringList.Create;
   VisibleExtraColumnsList.CommaText := StartupVisibleExtraColumns;
-
   for i := 0 to GeneralJSPlugin.ExtraColumnsCount-1 do
   begin
     Column := vtvSubsList.Header.Columns.Add;
@@ -1442,16 +1448,24 @@ begin
 
   ColumnsPositionList := TStringList.Create;
   ColumnsPositionList.CommaText := StartupColumnsPosition;
+  ColumnsWidthList := TStringList.Create;
+  ColumnsWidthList.CommaText := StartupColumnsWidth;
   for i := 0 to vtvSubsList.Header.Columns.Count-1 do
   begin
     Column := vtvSubsList.Header.Columns.Items[i];
     if (i < ColumnsPositionList.Count) then
     begin
-      NewPos := StrToIntDef(ColumnsPositionList[I], MaxInt);
+      NewPos := StrToIntDef(ColumnsPositionList[i], MaxInt);
       Column.Position := NewPos;
+    end;
+    if (i < ColumnsWidthList.Count) then
+    begin
+      NewWidth := StrToIntDef(ColumnsWidthList[i], Column.Width);
+      Column.Width := NewWidth;
     end;
   end;
   ColumnsPositionList.Free;
+  ColumnsWidthList.Free;
 end;
 
 //------------------------------------------------------------------------------
