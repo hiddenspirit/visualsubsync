@@ -622,7 +622,7 @@ type
     procedure LoadSubtitles(Filename: WideString; var IsUTF8 : Boolean);
     procedure LoadVO(Filename: WideString);
     procedure SaveSubtitles(Filename: WideString; PreviousFilename : WideString;
-      InUTF8 : Boolean; BackupOnly : Boolean);
+      InUTF8 : Boolean; BackupOnly : Boolean; TimingOnly : Boolean);
     procedure SaveProject(Project : TVSSProject; SilentSave : Boolean);
     procedure UpdateLinesCounter;
     function CheckSubtitlesAreSaved : Boolean;
@@ -654,7 +654,7 @@ type
     procedure OnSubtitleRangeJSWrapperChangeText(Sender : TSubtitleRangeJSWrapper;
       SubtitleRange : TSubtitleRange; NewValue : WideString);
 
-    procedure SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+    procedure SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
     procedure SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean);
     procedure SaveSubtitlesAsCUE(Filename: WideString);
@@ -2584,7 +2584,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.SaveSubtitles(Filename: WideString; PreviousFilename : WideString;
-  InUTF8 : Boolean; BackupOnly : Boolean);
+  InUTF8 : Boolean; BackupOnly : Boolean; TimingOnly : Boolean);
 var Ext, PreviousExt : WideString;
     BackupDstFilename : WideString;
 begin
@@ -2600,7 +2600,7 @@ begin
     Ext := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
   PreviousExt := WideLowerCase(WideExtractFileExt(PreviousFilename));
   if (Ext = '.srt') then
-    SaveSubtitlesAsSRT(Filename, PreviousExt, InUTF8)
+    SaveSubtitlesAsSRT(Filename, PreviousExt, InUTF8, TimingOnly)
   else if (Ext = '.ass') then
     SaveSubtitlesAsASS(Filename, PreviousExt, InUTF8)
   else if (Ext = '.ssa') then
@@ -3189,7 +3189,7 @@ begin
         PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
       CurrentProject.IsUTF8 := True;
     end;
-    SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
+    SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False, False);
     if VideoRenderer.IsOpen then
       VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
   end;
@@ -3202,7 +3202,9 @@ procedure TMainForm.ActionSaveAsExecute(Sender: TObject);
 var InputExt : WideString;
     NewExt : WideString;
 begin
-  TntSaveDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+  TntSaveDialog1.Filter :=
+    'SRT files (*.srt)|*.SRT' + '|' +
+    'SRT files stripped of text (*.srt)|*.SRT' + '|' +
     'SSA files (*.ssa)|*.SSA' + '|' +
     'ASS files (*.ass)|*.ASS' + '|' +
     'CUE files (*.cue)|*.CUE' + '|' +
@@ -3214,25 +3216,28 @@ begin
   if (InputExt = '.srt') then
     TntSaveDialog1.FilterIndex := 1
   else if (InputExt = '.ssa') then
-    TntSaveDialog1.FilterIndex := 2
-  else if (InputExt = '.ass') then
     TntSaveDialog1.FilterIndex := 3
+  else if (InputExt = '.ass') then
+    TntSaveDialog1.FilterIndex := 4
   else
-    TntSaveDialog1.FilterIndex := 6;
+    TntSaveDialog1.FilterIndex := 7;
 
   if TntSaveDialog1.Execute then
   begin
     // Force extension filter
+    NewExt := '';
     case TntSaveDialog1.FilterIndex of
       1 : NewExt := '.srt';
-      2 : NewExt := '.ssa';
-      3 : NewExt := '.ass';
-      4 : NewExt := '.cue';
-      5 : NewExt := '.txt';
+      2 : NewExt := '.srt';
+      3 : NewExt := '.ssa';
+      4 : NewExt := '.ass';
+      5 : NewExt := '.cue';
+      6 : NewExt := '.txt';
     end;
-    TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, NewExt);
+    if NewExt <> '' then
+      TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, NewExt);
     SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.SubtitlesFile,
-      CurrentProject.IsUTF8, False);
+      CurrentProject.IsUTF8, False, TntSaveDialog1.FilterIndex = 2);
   end;
 end;
 
@@ -3292,7 +3297,7 @@ begin
               CurrentProject.IsUTF8 := True;
             end;
             SaveSubtitles(CurrentProject.SubtitlesFile, PreviousSubtitlesFile,
-              CurrentProject.IsUTF8, False);
+              CurrentProject.IsUTF8, False, False);
           end;
         end;
 
@@ -4101,7 +4106,7 @@ begin
       MB_YESNOCANCEL or MB_ICONWARNING);
     if (res = IDYES) then
     begin
-      SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False);
+      SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False, False);
       SaveProject(CurrentProject, False);
       if CurrentProject.IsDirty then
         Result := False;
@@ -5452,7 +5457,7 @@ begin
     CheckBackupDirectory;
     BackupDstFilename := g_BackupDirectory +
       WideChangeFileExt(WideExtractFileName(CurrentProject.SubtitlesFile), '.bak');
-    SaveSubtitles(BackupDstFilename, '', CurrentProject.IsUTF8, True);
+    SaveSubtitles(BackupDstFilename, '', CurrentProject.IsUTF8, True, False);
   end;
 end;
 
@@ -6386,7 +6391,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+procedure TMainForm.SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
     FS : TTntFileStream;
@@ -6415,10 +6420,13 @@ begin
     WriteStringLnStream(IntToStr(i+1), FS);
     WriteStringLnStream(TimeMsToString(SubRange.StartTime,',') + ' --> ' +
       TimeMsToString(SubRange.StopTime,','), FS);
-    if InUTF8 then
-      WriteStringLnStream(UTF8Encode(ConvertFunc(Subrange.Text)), FS)
-    else
-      WriteStringLnStream(WC2MB(ConvertFunc(Subrange.Text)), FS);
+    if not TimingOnly then
+    begin
+      if InUTF8 then
+        WriteStringLnStream(UTF8Encode(ConvertFunc(Subrange.Text)), FS)
+      else
+        WriteStringLnStream(WC2MB(ConvertFunc(Subrange.Text)), FS);
+    end;
     WriteStringLnStream('', FS);
   end;
   FS.Free;
@@ -7387,7 +7395,7 @@ begin
   begin
     if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused or ForceUpdate) then
     begin
-      SaveSubtitles(TmpDstFilename, '', CurrentProject.IsUTF8, True);
+      SaveSubtitles(TmpDstFilename, '', CurrentProject.IsUTF8, True, False);
       VideoRenderer.SetSubtitleFilename(TmpDstFilename);
       if VideoRenderer.IsPaused then
       begin
