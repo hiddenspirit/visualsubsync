@@ -9359,22 +9359,27 @@ procedure TMainForm.ActionShowHideSubsExecute(Sender: TObject);
 begin
   if ShowingSubs then
   begin // Hide subs
-    //bttShowHideSubs.Down := True;
-    VideoRenderer.HideSubtitle(true);
-    //bttShowHideSubs.Caption := 'Show sub';
+    VideoRenderer.HideSubtitle(True);
     ShowingSubs := False;
   end
   else
   begin // Show subs
-    //bttShowHideSubs.Down := False;
-    VideoRenderer.HideSubtitle(false);
-    //bttShowHideSubs.Caption := 'Hide sub';
+    VideoRenderer.HideSubtitle(False);
     ShowingSubs := True;
   end;
-  if ShowingVideo and (not VideoRenderer.IsPlaying) then
+
+  if ShowingVideo then
   begin
-    ActionShowStartFrameExecute(nil);
+    if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused) then
+    begin
+      UpdateSubtitleForPreview(True);
+    end
+    else
+    begin
+      ActionShowStartFrameExecute(nil);
+    end;
   end;
+
   MenuShowHideSubtitles.Checked := ShowingSubs;
 end;
 
