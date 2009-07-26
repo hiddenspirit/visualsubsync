@@ -720,6 +720,8 @@ type
     function ReplaceAllTextMemo(FindText : WideString) : Integer;
     function ReplaceAllTextSubs(FindText : WideString) : Integer;
 
+    procedure UpdateDurationWithSubOnly;
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -2860,8 +2862,7 @@ begin
         end
         else
         begin
-          // TODO : field to enter duration or auto extend duration ?
-          WAVDisplayer.Length := 1 * 3600 * 1000; // 1 hour by default
+          WAVDisplayer.Length := 5 * 60 * 1000; // 5 minutes by default it will be automatically adapted later
         end;
       end;
     end;
@@ -4769,8 +4770,9 @@ begin
 
   finally
     g_WebRWSynchro.EndWrite;
-
   end;
+  
+  UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
@@ -4933,6 +4935,8 @@ begin
   // Update SearchNodeIndex (TODO : SearchPos)
   if (SearchNodeIndex >= NewNode.Index) then
     Inc(SearchNodeIndex);
+
+  UpdateDurationWithSubOnly;
 
   Result := NewNode;
 end;
@@ -7111,7 +7115,8 @@ begin
   begin
     AdvanceToNextSubtitleAfterFocus;
   end;
-
+  
+  UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
@@ -7757,6 +7762,7 @@ begin
   end;
   DelayedRangeList.Free;  
 
+  UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
@@ -7808,6 +7814,8 @@ begin
   begin
     FocusNode(NodeToFocus, False);
   end;
+
+  UpdateDurationWithSubOnly;
 end;
 
 //------------------------------------------------------------------------------
@@ -7859,6 +7867,7 @@ begin
     end;
   end;
 
+  UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
 end;
@@ -7940,6 +7949,8 @@ begin
   if (Length(SubRange.SubTime) > 0) then
     vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
+
+  UpdateDurationWithSubOnly;
 
   Result := SubRange.Node.Index;
 end;
@@ -8048,6 +8059,7 @@ begin
   end;
   ModifiedRangeList.Free;
 
+  UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
   vtvSubsList.Repaint;
@@ -9381,6 +9393,19 @@ begin
   end;
 
   MenuShowHideSubtitles.Checked := ShowingSubs;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.UpdateDurationWithSubOnly;
+var LastSub : TRange;
+begin
+  if (not (WAVDisplayer.IsPeakDataLoaded or VideoRenderer.IsOpen)) and (WAVDisplayer.RangeList.Count > 0) then
+  begin
+    // Use last subtitle stop time + 1 minute
+    LastSub := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count - 1];
+    WAVDisplayer.Length := LastSub.StopTime + (1 * 60 * 1000);
+  end;
 end;
 
 //------------------------------------------------------------------------------
