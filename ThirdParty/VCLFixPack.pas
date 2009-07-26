@@ -1,7 +1,7 @@
 {**************************************************************************************************}
 {                                                                                                  }
 { VCLFixPack unit - Unoffical bug fixes for Delphi/C++Builder                                      }
-{ Version 1.2 (2009-03-03)                                                                         }
+{ Version 1.3 (2009-05-30)                                                                         }
 {                                                                                                  }
 { The contents of this file are subject to the Mozilla Public License Version 1.1 (the "License"); }
 { you may not use this file except in compliance with the License. You may obtain a copy of the    }
@@ -14,7 +14,7 @@
 { The Original Code is VCLFixPack.pas.                                                             }
 {                                                                                                  }
 { The Initial Developer of the Original Code is Andreas Hausladen (Andreas.Hausladen@gmx.de).      }
-{ Portions created by Andreas Hausladen are Copyright (C) 2008 Andreas Hausladen.                  }
+{ Portions created by Andreas Hausladen are Copyright (C) 2008-2009 Andreas Hausladen.             }
 { All Rights Reserved.                                                                             }
 {                                                                                                  }
 {**************************************************************************************************}
@@ -28,10 +28,16 @@
 { If you define VCLFIXPACK_DEBUG the patches are compiled with debug information. }
 {$IFDEF VCLFIXPACK_DEBUG} {$D+} {$ENDIF}
 
-{ If you use Delphi 6/7 Personal you must disable the VCLFIXPACK_DB_SUPPORT define }
+{ If you use Delphi 6/7/2005 Personal you must disable the VCLFIXPACK_DB_SUPPORT define. }
 {.$DEFINE VCLFIXPACK_DB_SUPPORT}
 
 unit VCLFixPack;
+
+interface
+
+const
+  VCLFixPackRevision = '1.3';
+  VCLFixPackDate = '2009/04/30';  // yyyy/dd/mm
 
 {
  Usage
@@ -50,21 +56,17 @@ unit VCLFixPack;
 
  Fixes the following bug
  =======================
-   - [2006-2009]
+   - [2006-2009]  fixed in Delphi 2009 Update 3
      QC #68647: Infinite loop in Forms.GetNonToolWindowPopupParent
      (http://qc.codegear.com/wc/qcmain.aspx?d=68647)
 
-   - [2007-2009]
+   - [2007-2009]  fixed in Delphi 2009 Update 3
      QC #68740: Lost focus after TOpenDialog when MainFormOnTaskBar is set
      (http://qc.codegear.com/wc/qcmain.aspx?d=68740)
 
    - [2005-2009]
      QC #59963: Closing non-modal forms after a task switch can deactivate the application
      (http://qc.codegear.com/wc/qcmain.aspx?d=59963)
-
-   - [2009]
-     QC #66892: Closing forms deactivates the application (missing "stdcall")
-     (http://qc.codegear.com/wc/qcmain.aspx?d=66892)
 
    - [6-2007]
      Control resize bugfix for kernel stack overflow due to WH_CALLWNDPROC hook
@@ -89,7 +91,7 @@ unit VCLFixPack;
      QC #58938: MainForm Minimize minimizes in the background
      (http://qc.codegear.com/wc/qcmain.aspx?d=58938)
 
-   - [6-2009]
+   - [6-2009]     fixed in Delphi 2009 Update 3
      QC #64484: SysUtils.Abort can raise an AccessViolation
      (http://qc.codegear.com/wc/qcmain.aspx?d=64484)
 
@@ -97,7 +99,7 @@ unit VCLFixPack;
      QC #58939: No taskbar button when starting from ShellLink with Show=Minimized
      (http://qc.codegear.com/wc/qcmain.aspx?d=58939)
 
-   - [6-2009]
+   - [6-2009]     fixed in Delphi 2009 Update 3
      QC #35001: MDIChild's active control focus is not set correctly
      (http://qc.codegear.com/wc/qcmain.aspx?d=35001)
 
@@ -126,17 +128,18 @@ unit VCLFixPack;
      QC #52439: DbNavigator paints incorrectly when flat=true in themed mode
 
    - [2009]
-     QC #70441: ToUpper and ToLower modify a Const argument
-
-   - [2009]
-     QC #69752: ToUpper and ToLower with NullString
-
-   - [2009]
      QC #69875: StringBuilder.Replace is incorrect
      QC #67564: Error in TStringBuilder.Replace
 
+   - [6-2009]
+     QC #7393: App with no main form showing a form with hints freezes
+
 
  Changlog:
+   2009-05-30:
+     Changed: Disabled all patches that are fixed by Delphi 2009 Update 3
+     Added: QC #7393: App with no main form showing a form with hints freezes
+
    2009-03-03:
      Fixed: Rewritten patch for QC #59963 (AppDeActivateZOrderFix) to fix the cause instead of the symptom
      Added: QC #52439: DbNavigator paints incorrectly when flat=true in themed mode
@@ -153,26 +156,20 @@ unit VCLFixPack;
 
 }
 
-interface
-
 { ---------------------------------------------------------------------------- }
 
 {$DEFINE DBTextColorBugFix} // Delphi 6+
 
-{$IF CompilerVersion >= 18.0} // Delphi 2006+
+{$IF (CompilerVersion >= 18.0) and (CompilerVersion < 20.0)} // Delphi 2006-2009, fixed in Delphi 2009 Update 3
   {$DEFINE GetNonToolWindowPopupParentFix}
 {$IFEND}
 
-{$IF CompilerVersion >= 18.5} // Delphi 2007+
+{$IF CompilerVersion = 18.5} // Delphi 2007-2009, fixed in Delphi 2009 Update 3
   {$DEFINE TaskModalDialogFix}
 {$IFEND}
 
 {$IF CompilerVersion >= 16.0} // Delphi 2005
   {$DEFINE AppDeActivateZOrderFix}
-{$IFEND}
-
-{$IF CompilerVersion = 20.0} // Delphi 2009
-  {$DEFINE HideStackTrashingFix}
 {$IFEND}
 
 {$IF CompilerVersion < 20.0} // Delphi 6-2007
@@ -197,7 +194,9 @@ interface
 
 {$DEFINE MkObjInstLeakFix} // Delphi 6+
 
-{$DEFINE SysUtilsAbortFix} // Delphi 6+
+{$IF CompilerVersion < 20.0}
+  {$DEFINE SysUtilsAbortFix} // Delphi 6-2009, fixed in Delphi 2009 Update 3
+{$IFEND}
 
 {$IF CompilerVersion = 18.5} // Delphi 2007
   {$DEFINE AppMinimizeFix}
@@ -207,7 +206,9 @@ interface
   {$DEFINE CmdShowMinimizeFix}
 {$IFEND}
 
-{$DEFINE MDIChildFocusFix} // Delphi 6+
+{$IF CompilerVersion < 20.0}
+  {$DEFINE MDIChildFocusFix} // Delphi 6-2009, fixed in Delphi 2009 Update 3
+{$IFEND}
 
 {$IF CompilerVersion >= 15} // Delphi 7+
   {$DEFINE PageControlPaintingFix}
@@ -226,11 +227,11 @@ interface
 {$IFEND}
 
 {$IF CompilerVersion = 20.0} // Delphi 2009
-  {$DEFINE CharacterFix}
+  {$DEFINE StringBuilderFix}
 {$IFEND}
 
-{$IF CompilerVersion = 20.0} // Delphi 2009
-  {$DEFINE StringBuilderFix}
+{$IF CompilerVersion <= 20.0} // Delphi 6-2009
+  {$DEFINE CancelHintDeadlockFix}
 {$IFEND}
 
 {$IF (CompilerVersion >= 18.5) and (CompilerVersion <= 20.0)} // Delphi 2007-2009
@@ -307,41 +308,6 @@ type
     OpCode: Word;   //$FF25(Jmp, FF /4)
     Addr: PPointer;
   end;
-
-var
-  TaskActiveWindow: HWND;
-  TaskFirstWindow: HWND;
-  TaskFirstTopMost: HWND;
-
-function DoFindWindow(Window: HWND; Param: LPARAM): Bool; stdcall;
-begin
-  if (Window <> TaskActiveWindow) and (Window <> Application.Handle) and
-     IsWindowVisible(Window) and IsWindowEnabled(Window) then
-  begin
-    if GetWindowLong(Window, GWL_EXSTYLE) and WS_EX_TOPMOST = 0 then
-    begin
-      if TaskFirstWindow = 0 then
-        TaskFirstWindow := Window;
-    end else
-    begin
-      if TaskFirstTopMost = 0 then
-        TaskFirstTopMost := Window;
-    end;
-  end;
-  Result := True;
-end;
-
-function FindTopMostWindow(ActiveWindow: HWND): HWND;
-begin
-  TaskActiveWindow := ActiveWindow;
-  TaskFirstWindow := 0;
-  TaskFirstTopMost := 0;
-  EnumThreadWindows(GetCurrentThreadID, @DoFindWindow, 0);
-  if TaskFirstWindow <> 0 then
-    Result := TaskFirstWindow
-  else
-    Result := TaskFirstTopMost;
-end;
 
 { Hooking }
 
@@ -591,83 +557,6 @@ begin
 end;
 
 {$ENDIF AppDeActivateZOrderFix}
-{ ---------------------------------------------------------------------------- }
-
-
-
-{ ---------------------------------------------------------------------------- }
-{ QC #66892: Closing forms deactivates the application (missing "stdcall") }
-{$IFDEF HideStackTrashingFix}
-var
-  FindTopMostWindowHook: TXRedirCode;
-  FindTopMostWindowProc: Pointer;
-
-{
-Forms.pas.1880: begin
-53               push ebx
-Forms.pas.1881: TaskActiveWindow := ActiveWindow;
-A3D8784700       mov [$004778d8],eax
-Forms.pas.1882: TaskFirstWindow := 0;
-33C0             xor eax,eax
-A3DC784700       mov [$004778dc],eax
-Forms.pas.1883: TaskFirstTopMost := 0;
-33C0             xor eax,eax
-A3E0784700       mov [$004778e0],eax
-Forms.pas.1884: EnumProc := @DoFindWindow;
-BBBCB64500       mov ebx,$0045b6bc
-Forms.pas.1885: EnumThreadWindows(GetCurrentThreadID, EnumProc, 0);
-6A00             push $00
-53               push ebx
-E8DBCBFAFF       call GetCurrentThreadId
-50               push eax
-E821D1FAFF       call EnumThreadWindows
-
-}
-function GetAddrOfFindTopMostWindow: Pointer;
-var
-  P: PByte;
-  Len: Integer;
-  NeedsFix: Boolean;
-begin
-  NeedsFix := False;
-  P := GetActualAddr(@EnableTaskWindows);
-  Len := 0;
-  while Len < 2048 do
-  begin
-    {  DoFindWindow "begin" }
-    if (P[0] = $53) and
-       (P[1] = $8B) and (P[2] = $D8) then
-    begin
-      if (P[3] = $3B) and (P[4] = $1D) and
-         (P[9] = $74) and ({Release}(P[10] = $4D) or {Debug}(P[10] = $4F)) then
-      begin
-        NeedsFix := True;
-      end
-    end
-    else { FindTopMostWindow "begin", Release & Debug }
-    if (P[0] = $53) and
-       (P[1] = $A3) then
-    begin
-      if (P[6] = $33) and (P[7] = $C0) and
-         (P[8] = $A3) and
-         (P[13] = $33) and (P[14] = $C0) and
-         (P[15] = $A3) and
-         (P[20] = $BB) and
-         (P[25] = $6A) and (P[26] = $00) and
-         (P[27] = $53) then
-      begin
-        Result := nil;
-        if NeedsFix then
-          Result := P;
-        Exit;
-      end;
-    end;
-    Inc(P);
-    Inc(Len);
-  end;
-  Result := nil;
-end;
-{$ENDIF HideStackTrashingFix}
 { ---------------------------------------------------------------------------- }
 
 
@@ -2077,58 +1966,6 @@ end;
 { ---------------------------------------------------------------------------- }
 
 
-{ ---------------------------------------------------------------------------- }
-{ QC #70441: ToUpper and ToLower modify a Const argument
-  QC #69752: ToUpper and ToLower with NullString }
-{$IFDEF CharacterFix}
-var
-  TCharacter_ToLowerHook, TCharacter_ToUpperHook: TXRedirCode;
-
-function TCharacter_ToLower(const S: string): string;
-var
-  Len: Integer;
-begin
-  if S <> '' then
-  begin
-    Len := Length(S);
-    SetLength(Result, Len);
-    if LCMapString(GetThreadLocale, LCMAP_LOWERCASE, PChar(S), Len, PChar(Result), Len) = 0 then
-      RaiseLastOSError;
-  end
-  else
-    Result := S;
-end;
-
-function TCharacter_ToUpper(const S: string): string;
-var
-  Len: Integer;
-begin
-  if S <> '' then
-  begin
-    Len := Length(S);
-    SetLength(Result, Len);
-    if LCMapString(GetThreadLocale, LCMAP_UPPERCASE, PChar(S), Len, PChar(Result), Len) = 0 then
-      RaiseLastOSError;
-  end
-  else
-    Result := S;
-end;
-
-procedure InitCharacterFix;
-begin
-  DebugLog('CharacterFix');
-  HookProc(@TCharacter.ToLower, @TCharacter_ToLower, TCharacter_ToLowerHook);
-  HookProc(@TCharacter.ToUpper, @TCharacter_ToUpper, TCharacter_ToUpperHook);
-end;
-
-procedure FiniCharacterFix;
-begin
-  UnhookProc(@TCharacter.ToLower, TCharacter_ToLowerHook);
-  UnhookProc(@TCharacter.ToUpper, TCharacter_ToUpperHook);
-end;
-{$ENDIF CharacterFix}
-{ ---------------------------------------------------------------------------- }
-
 
 { ---------------------------------------------------------------------------- }
 { QC #69875: StringBuilder.Replace is incorrect
@@ -2292,6 +2129,316 @@ end;
 
 
 { ---------------------------------------------------------------------------- }
+{ }
+{$IFDEF CancelHintDeadlockFix}
+{ QC #7393: App with no main form showing a form with hints freezes }
+
+{TApplication.CancelHint (Optimized):
+
+Forms.pas.10438: begin
+ 53               push ebx
+ 8BD8             mov ebx,eax
+Forms.pas.10439: if FHintControl <> nil then
+ 837B5C00         cmp dword ptr [ebx+$5c],$00
+ 741C             jz $00487de9
+Forms.pas.10441: HideHint;
+ 8BC3             mov eax,ebx
+ E87CFFFFFF       call TApplication.HideHint
+Forms.pas.10442: FHintControl := nil;
+ 33C0             xor eax,eax
+ 89435C           mov [ebx+$5c],eax
+Forms.pas.10443: FHintActive := False;
+ C6435400         mov byte ptr [ebx+$54],$00
+Forms.pas.10444: UnhookHintHooks;
+ E8B6D0FFFF       call UnhookHintHooks
+Forms.pas.10445: StopHintTimer;
+ 8BC3             mov eax,ebx
+ E8F7FDFFFF       call TApplication.StopHintTimer
+Forms.pas.10447: end;
+ 5B               pop ebx
+ C3               ret
+}
+type
+  PAppCancelHint = ^TAppCancelHint;
+  TAppCancelHint = packed record
+    PushEbx: Byte;                       // $53
+    MovEbxEax: Word;                     // $D88B
+    CmpMem0: packed record
+      Op: Word;                          // $7B83
+      Offset: Shortint;                  // $xx
+      Value: Byte;                       // $00
+    end;
+    Jz: Word;                            // $1C74
+    MovEaxEbx: Word;                     // $C38B
+    CallHideHint: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    XorEaxEax: Word;                     // $C033
+    MovMemEax: array[0..2] of Shortint;  // $89 $43 $xx
+    MovMem0: array[0..3] of Shortint;    // $C6 $43 $xx $00
+    CallUnhookHintHooks: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    MovEaxEbx_2: Word;                   // $C38B
+    CallStopHintTimer: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    // ..
+  end;
+
+{TApplication.CancelHint (Unoptimized):
+Forms.pas.7419: begin
+ 55               push ebp
+ 8BEC             mov ebp,esp
+ 51               push ecx
+ 8945FC           mov [ebp-$04],eax
+Forms.pas.7420: if FHintControl <> nil then
+ 8B45FC           mov eax,[ebp-$04]
+ 83786000         cmp dword ptr [eax+$60],$00
+ 7424             jz +$24
+Forms.pas.7422: HideHint;
+ 8B45FC           mov eax,[ebp-$04]
+ E890FFFFFF       call TApplication.HideHint
+Forms.pas.7423: FHintControl := nil;
+ 8B45FC           mov eax,[ebp-$04]
+ 33D2             xor edx,edx
+ 895060           mov [eax+$60],edx
+Forms.pas.7424: FHintActive := False;
+ 8B45FC           mov eax,[ebp-$04]
+ C6405800         mov byte ptr [eax+$58],$00
+Forms.pas.7425: UnhookHintHooks;
+ E84CD4FFFF       call UnhookHintHooks
+Forms.pas.7426: StopHintTimer;
+ 8B45FC           mov eax,[ebp-$04]
+ E8C0FDFFFF       call TApplication.StopHintTimer
+}
+type
+  PAppCancelHintUnoptimized = ^TAppCancelHintUnoptimized;
+  TAppCancelHintUnoptimized = packed record
+    PushEbp: Byte;                       // $55
+    MovEbpEsp: Word;                     // $EC8B
+    PushEcx: Byte;                       // $51
+    MovP1Eax: array[0..2] of Byte;       // $89 $45 $FC
+    MovEaxP1: array[0..2] of Byte;       // $8B $45 $FC
+    CmpMem0: packed record
+      Op: Word;                          // $7883
+      Offset: Shortint;                  // $xx
+      Value: Byte;                       // $00
+    end;
+    Jz: Word;                            // $2474
+    MovEaxP1_2: array[0..2] of Byte;     // $8B $45 $FC
+    CallHideHint: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    MovEaxP1_3: array[0..2] of Byte;     // $8B $45 $FC
+    XorEdxEdx: Word;                     // $D233
+    MovMemEdx: array[0..2] of Shortint;  // $89 $50 $xx
+    MovEaxP1_4: array[0..2] of Byte;     // $8B $45 $FC
+    MovMem0: array[0..3] of Shortint;    // $C6 $40 $xx $00
+    CallUnhookHintHooks: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    MovEaxP1_5: array[0..2] of Byte;     // $8B $45 $FC
+    CallStopHintTimer: packed record
+      Op: Byte;                          // $E8
+      Offset: Longint;                   // $xxxxxxxx
+    end;
+    // ..
+  end;
+
+{UnhookHintHooks:
+
+Forms.pas.8355: if HintHook <> 0 then UnhookWindowsHookEx(HintHook);
+ 833D20A14D0000   cmp dword ptr [$004da120],$00
+ 740B             jz $004620b0
+ A120A14D00       mov eax,[$004da120]
+ 50               push eax
+ E8506DFAFF       call UnhookWindowsHookEx
+Forms.pas.8356: HintHook := 0;
+ 33C0             xor eax,eax
+ A320A14D00       mov [$004da120],eax
+Forms.pas.8357: if HintThread <> 0 then
+ 833D24A14D0000   cmp dword ptr [$004da124],$00
+ 7437             jz $004620f7
+Forms.pas.8362: SetEvent(HintDoneEvent);
+ A11CA14D00       mov eax,[$004da11c]
+ 50               push eax
+ E81564FAFF       call SetEvent
+Forms.pas.8364: if GetCurrentThreadId <> HintThreadID then
+ E84C62FAFF       call GetCurrentThreadId
+ 3B0518A14D00     cmp eax,[$004da118]
+...
+}
+type
+  PUnhookHintHooks = ^TUnhookHintHooks;
+  TUnhookHintHooks = packed record
+    CmpHintHook0: packed record
+      Op: Word;                             // $3D83
+      HintHook: Pointer;                    // $xxxxxxxx
+      Value: Byte;                          // $00
+    end;
+    Jz1: Word;                              // 0B74
+    MovEaxHintHook: packed record
+      Op: Byte;                             // $A1
+      HintHook: Pointer;                    // $xxxxxxxx
+    end;
+    PushEax1: Byte;                         // $50
+    CallUnhookWindowsHookEx: array[0..4] of Byte; // $E8 $xxxxxxxx
+    XorEaxEax: Word;                        // $C033
+    MovHintHook: packed record
+      Op: Byte;                             // $A3
+      HintHook: Pointer;                    // $xxxxxxxx
+    end;
+    CmpHintThread0: packed record
+      Op: Word;                             // $3D83
+      HintThread: Pointer;                  // $xxxxxxxx
+      Value: Byte;                          // $00
+    end;
+    Jz2: Word;                              // $3774
+    MovEaxHintDoneEvent: packed record
+      Op: Byte;                             // $A1
+      HintDoneEvent: Pointer;               // $xxxxxxxx
+    end;
+    PushEax2: Byte;                         // $50
+    CallSetEvent: array[0..4] of Byte;      // $E8 $xxxxxxxx
+    CallGetCurrentThreadId: array[0..4] of Byte; // $E8 $xxxxxxxx
+    CmpEaxHintThreadID: packed record
+      Op: Word;                             // $053B
+      HintThreadID: Pointer;                // $xxxxxxxx
+    end;
+  end;
+
+var
+  AppCancelHintHook: TXRedirCode;
+  HintControlOfs: Shortint;
+  HintActiveOfs: Shortint;
+  StopHintTimerMethod: procedure(Self: TApplication);
+
+  HintHook: ^HHOOK;
+  HintThread: ^THandle;
+  HintThreadID: ^DWORD;
+  HintDoneEvent: ^THandle;
+
+procedure UnhookHintHooks;
+var
+  LHintThread: Integer;
+begin
+  if HintHook^ <> 0 then UnhookWindowsHookEx(HintHook^);
+  HintHook^ := 0;
+  LHintThread := InterlockedExchange(Integer(HintThread^), 0);
+  if LHintThread <> 0 then
+  begin
+    SetEvent(HintDoneEvent^);
+    if GetCurrentThreadId <> HintThreadID^ then
+      while MsgWaitForMultipleObjects(1, LHintThread, False, INFINITE, QS_ALLINPUT) = WAIT_OBJECT_0 + 1 do
+        Application.HandleMessage;
+    CloseHandle(LHintThread);
+  end;
+end;
+
+procedure Application_CancelHint(Self: TApplication);
+var
+  HintControl: ^TControl;
+  HintActive: ^Boolean;
+begin
+  HintControl := Pointer(PAnsiChar(Self) + HintControlOfs);
+  if InterlockedExchange(Integer(HintControl^), 0) <> 0 then
+  begin
+    Self.HideHint;
+    HintActive := Pointer(PAnsiChar(Self) + HintActiveOfs);
+    HintActive^ := False;
+    UnhookHintHooks;
+    StopHintTimerMethod(Self);
+  end;
+end;
+
+procedure InitCancelHintDeadlockFix;
+var
+  CH: PAppCancelHint;
+  CH2: PAppCancelHintUnoptimized;
+  UHH: PUnhookHintHooks;
+begin
+  CH := GetActualAddr(@TApplication.CancelHint);
+  if CH <> nil then
+  begin
+    UHH := nil;
+    CH2 := Pointer(CH);
+    { Optimized Code }
+    if (CH.PushEbx = $53) and (CH.MovEbxEax = $D88B) and
+       (CH.CmpMem0.Op = $7B83) and (CH.CmpMem0.Value = $00) and
+       (CH.Jz = $1C74) and
+       (CH.MovEaxEbx = $C38B) and
+       (CH.XorEaxEax = $C033) and
+       (CH.CallUnhookHintHooks.Op = $E8) and
+       (CH.MovEaxEbx_2 = $C38B) and
+       (CH.CallStopHintTimer.Op = $E8) then
+    begin
+      HintControlOfs := CH.CmpMem0.Offset;
+      HintActiveOfs := CH.MovMem0[2];
+      StopHintTimerMethod := Pointer(PAnsiChar(@CH.CallStopHintTimer) + CH.CallStopHintTimer.Offset + 5);
+      UHH := Pointer(PAnsiChar(@CH.CallUnhookHintHooks) + CH.CallUnhookHintHooks.Offset + 5);
+    end
+    else
+    { Unoptimized Code }
+    if (CH2.PushEbp = $55) and (CH2.MovEbpEsp = $EC8B) and
+       (CH2.PushEcx = $51) and
+       (CH2.MovP1Eax[0] = $89) and (CH2.MovP1Eax[1] = $45) and (CH2.MovP1Eax[2] = $FC) and
+       (CH2.MovEaxP1[0] = $8B) and (CH2.MovEaxP1[1] = $45) and (CH2.MovEaxP1[2] = $FC) and
+       (CH2.CmpMem0.Op = $7883) and (CH2.CmpMem0.Value = $00) and
+       (CH2.Jz = $2474) and
+       (CH2.MovEaxP1_2[0] = $8B) and (CH2.MovEaxP1_2[1] = $45) and (CH2.MovEaxP1_2[2] = $FC) and
+       (CH2.MovEaxP1_3[0] = $8B) and (CH2.MovEaxP1_3[1] = $45) and (CH2.MovEaxP1_3[2] = $FC) and
+       (CH2.XorEdxEdx = $D233) and
+       (CH2.CallUnhookHintHooks.Op = $E8) and
+       (CH2.MovEaxP1_4[0] = $8B) and (CH2.MovEaxP1_4[1] = $45) and (CH2.MovEaxP1_4[2] = $FC) and
+       (CH2.CallStopHintTimer.Op = $E8) then
+    begin
+      HintControlOfs := CH2.CmpMem0.Offset;
+      HintActiveOfs := CH2.MovMem0[2];
+      StopHintTimerMethod := Pointer(PAnsiChar(@CH2.CallStopHintTimer) + CH2.CallStopHintTimer.Offset + 5);
+      UHH := Pointer(PAnsiChar(@CH2.CallUnhookHintHooks) + CH2.CallUnhookHintHooks.Offset + 5);
+    end;
+
+    if UHH <> nil then
+    begin
+      { Optimized and Unoptimized Code are the same }
+      if (UHH.CmpHintHook0.Op = $3D83) and (UHH.CmpHintHook0.Value = $0000) and
+         (UHH.Jz1 = $0B74) and
+         (UHH.MovEaxHintHook.Op = $A1) and
+         (UHH.PushEax1 = $50) and
+         (UHH.MovHintHook.Op = $A3) and
+         (UHH.CmpHintThread0.Op = $3D83) and
+         (UHH.MovEaxHintDoneEvent.Op = $A1) and
+         (UHH.CallGetCurrentThreadId[0] = $E8) and
+         (UHH.CmpEaxHintThreadID.Op = $053B) then
+      begin
+        HintHook := UHH.CmpHintHook0.HintHook;
+        HintThread := UHH.CmpHintThread0.HintThread;
+        HintDoneEvent := UHH.MovEaxHintDoneEvent.HintDoneEvent;
+        HintThreadID := UHH.CmpEaxHintThreadID.HintThreadID;
+
+        DebugLog('CancelHintDeadlockFix');
+        HookProc(CH, @Application_CancelHint, AppCancelHintHook);
+      end;
+    end;
+  end;
+end;
+
+procedure FiniCancelHintDeadlockFix;
+begin
+  UnhookProc(GetActualAddr(@TApplication.CancelHint), AppCancelHintHook);
+end;
+
+{$ENDIF CancelHintDeadlockFix}
+{ ---------------------------------------------------------------------------- }
+
+
+{ ---------------------------------------------------------------------------- }
 { Workaround for Windows Vista CompareString bug }
 {$IFDEF VistaCompareStringFix}
 
@@ -2322,6 +2469,7 @@ end;
 { The Ü/ü ($DC/$FC) and the UE/ue are treated equal in all locales, but they aren't equal. There   }
 { was a bugfix intended for Vista SP1 but it was removed before SP1 was released.                  }
 { Windows 2008 Server still includes this bugfix but Vista will never get this bugfix.             }
+{                                                                                                  }
 { Microsoft: new versions are for correctness; service packs are for consistency and compatibility }
 {**************************************************************************************************}
 
@@ -2667,15 +2815,6 @@ initialization
   InitAppDeActivateZOrderFix;
   {$ENDIF AppDeActivateZOrderFix}
 
-  {$IFDEF HideStackTrashingFix}
-  FindTopMostWindowProc := GetAddrOfFindTopMostWindow;
-  if FindTopMostWindowProc <> nil then
-  begin
-    DebugLog('HideStackTrashingFix');
-    HookProc(FindTopMostWindowProc, @FindTopMostWindow, FindTopMostWindowHook);
-  end;
-  {$ENDIF HideStackTrashingFix}
-
   {$IFDEF ControlResizeFix}
   InitControlResizeFix;
   {$ENDIF ControlResizeFix}
@@ -2728,13 +2867,13 @@ initialization
   InitDBNavigatorFix;
   {$ENDIF DBNavigatorFix}
 
-  {$IFDEF CharacterFix}
-  InitCharacterFix;
-  {$ENDIF CharacterFix}
-
   {$IFDEF StringBuilderFix}
   InitStringBuilderFix;
   {$ENDIF StringBuilderFix}
+
+  {$IFDEF CancelHintDeadlockFix}
+  InitCancelHintDeadlockFix;
+  {$ENDIF CancelHintDeadlockFix}
 
   {$IFDEF VistaCompareStringFix}
   InitCompareStringFix;
@@ -2747,13 +2886,13 @@ finalization
   FiniCompareStringFix;
   {$ENDIF VistaCompareStringFix}
 
+  {$IFDEF CancelHintDeadlockFix}
+  FiniCancelHintDeadlockFix;
+  {$ENDIF CancelHintDeadlockFix}
+
   {$IFDEF StringBuilderFix}
   FiniStringBuilderFix;
   {$ENDIF StringBuilderFix}
-
-  {$IFDEF CharacterFix}
-  FiniCharacterFix;
-  {$ENDIF CharacterFix}
 
   {$IFDEF DBNavigatorFix}
   FiniDBNavigatorFix;
@@ -2806,11 +2945,6 @@ finalization
   {$IFDEF ControlResizeFix}
   FiniControlResizeFix;
   {$ENDIF ControlResizeFix}
-
-  {$IFDEF HideStackTrashingFix}
-  if FindTopMostWindowProc <> nil then
-    UnhookProc(FindTopMostWindowProc, FindTopMostWindowHook);
-  {$ENDIF HideStackTrashingFix}
 
   {$IFDEF TaskModalDialogFix}
   FiniTaskModalDialogFix;
