@@ -329,7 +329,8 @@ type
     procedure DetectSilentZone(List : TList; Threshold : Integer;
       WinSizeMS : Integer);
 
-    procedure ClearPeakData;      
+    procedure ClearPeakData;
+    function IsPeakDataLoaded : Boolean;      
 
     property RangeList : TRangeList read FRangeList;
     property RangeListVO : TRangeList read FRangeListVO;
@@ -3798,17 +3799,23 @@ begin
   if (FLengthMs <> LenghtMs) then
   begin
     FLengthMs := LenghtMs;
+    if (FPositionMs + FPageSizeMs > LenghtMs) then
+    begin
+      if (FPageSizeMs < LenghtMs) then
+      begin
+        FPositionMs := LenghtMs - FPageSizeMs;
+      end
+      else
+      begin
+        FPositionMs := 0;
+        FPageSizeMs := LenghtMs;
+      end;
+    end;
 
-    FPageSizeMs := FLengthMs;
-    FPositionMs := 0;
-    FSelection.StartTime := 0;
-    FSelection.StopTime := 0;
-
-    FScrollBar.Min := 0;
-    FScrollBar.Max := FLengthMs;
-    FScrollBar.Position := 0;
-    FScrollBar.PageSize := FLengthMs;
-
+    FScrollBar.Max := LenghtMs;
+    FScrollBar.PageSize := FPageSizeMs;
+    FScrollBar.Position := FPositionMs;
+    
     UpdateView([uvfPageSize]);
     if Assigned(FOnSelectionChange) then
       FOnSelectionChange(Self);
@@ -3826,6 +3833,13 @@ begin
   FPeakTabSize := 0;
   FSamplesPerPeak := 0;
   ZeroMemory(@FWavFormat,SizeOf(FWavFormat));
+end;
+
+//------------------------------------------------------------------------------
+
+function TWAVDisplayer.IsPeakDataLoaded : Boolean;
+begin
+  Result := FPeakDataLoaded;
 end;
 
 //------------------------------------------------------------------------------
