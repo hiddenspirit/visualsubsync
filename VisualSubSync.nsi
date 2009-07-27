@@ -3,7 +3,7 @@
 ; ---------------------------------------------------------------------------
 
 !define NAME "VisualSubSync"
-!define VERSION "0.9.18"
+!define VERSION "0.9.19"
 !define OUTFILE "Redist\VisualSubSync-${VERSION}-Setup.exe"
 !define INPUT_PATH "Release\"
 
