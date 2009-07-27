@@ -24,15 +24,17 @@ object AboutForm: TAboutForm
     Top = 0
     Width = 345
     Height = 33
+    Cursor = crHandPoint
     Alignment = taCenter
     AutoSize = False
     Caption = 'VisualSubSync'
     Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
+    Font.Color = clBlue
     Font.Height = -24
     Font.Name = 'Arial'
-    Font.Style = [fsBold]
+    Font.Style = [fsBold, fsUnderline]
     ParentFont = False
+    OnClick = TntLabel1Click
   end
   object Bevel1: TBevel
     Left = 0
@@ -46,7 +48,7 @@ object AboutForm: TAboutForm
     Top = 72
     Width = 109
     Height = 14
-    Caption = 'Copyright 2003-2008'
+    Caption = 'Copyright 2003-2009'
   end
   object TntLabel3: TTntLabel
     Left = 8
