@@ -19,6 +19,27 @@
 
 <br>
 
+<div class="Title">Version 0.9.19 (2009-07-27)</div>
+In this version, there is now the possibility to display a second subtitle file for translation purpose (no edition allowed).<br>
+As the timing can be slightly different between two versions, there are special symbols ([&gt;&gt;&gt;] and [&lt;&lt;&lt;]) to indicate that 
+subtitles are inserted before or after the translated subtitle.<br>
+Also several subtitles can be merged together in the original version column.<br>
+You can use the <i>View&gt;Show/Hide Reference VO</i> menu item to show or hide the original version file.<br>
+This feature (and others below) is a great contribution by kickaha from <a href="italiansubs.net">italiansubs.net</a>.<br>
+Another important feature is that now only the subtitle file is mandatory in projects, which makes video and audio files optional. Subtitle files can be associated directly to VSS.</br>
+<ul>
+  <li>Translation mode (Contribution by kickaha)</li>
+  <li>Reworked project handling so only the subtitle file is required in projects (video or audio is now optional)</li>
+  <li>Added <i>View&gt;Show/Hide subtitles</i> menu item to show or add subtitles on video (Contribution by kickaha)</li>
+  <li>Added search support in the text pipe, you must put the text cursor in it before opening the find dialog (Contribution by kickaha)</li>
+  <li>Added load support for timing stripped .SRT file in the text pipe (Contribution by kickaha)</li>
+  <li>Added save support for timing-only .SRT, text is stripped (Contribution by kickaha)</li>
+  <li>Added columns size and default dictionnary in saved preferences (Contribution by kickaha)</li>
+  <li>Fixed several bug related to extension handling in backup mode or with unsupported extensions (Contribution by kickaha)</li>
+  <li>Fixed some project preferences were not immediately saved and could be lost: text pipe filename, dictionary (Contribution by kickaha)</li>
+</ul>
+<br>
+
 <div class="Title">Version 0.9.18 (2009-02-01)</div>
 You can now copy/paste subtitles from 2 VSS instances or from a text editor (SSA support is limited, you need to copy the full [Event] section)<br>
 Double clicking on a subtitle start time or stop time, now fix overlapping and try to improve the reading speed.<br>
