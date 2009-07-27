@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 //  VisualSubSync
 // -----------------------------------------------------------------------------
-//  Copyright (C) 2003-2008 Christophe Paris
+//  Copyright (C) 2003-2009 Christophe Paris
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -45,6 +45,7 @@ type
     procedure bttOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TntLabel3Click(Sender: TObject);
+    procedure TntLabel1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -82,6 +83,13 @@ begin
     ApplicationName +
     ' ' +
     LabelVersion.Caption;
+  ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
+end;
+
+procedure TAboutForm.TntLabel1Click(Sender: TObject);
+var s : string;
+begin
+  s := 'http://www.visualsubsync.org';
   ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
 end;
 
