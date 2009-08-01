@@ -789,6 +789,8 @@ procedure TPreferencesForm.FormCreate(Sender: TObject);
 begin
   PageControlPreferences.ActivePage := tsGeneral;
   ListPluginParam.NodeDataSize := SizeOf(TParamData);
+  ListPluginParam.TreeOptions.MiscOptions := ListPluginParam.TreeOptions.MiscOptions
+    + [toEditOnDblClick] - [toToggleOnDblClick];
 end;
 
 //------------------------------------------------------------------------------
