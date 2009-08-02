@@ -3769,8 +3769,11 @@ end;
 procedure TWAVDisplayer.SetSceneChangeList(SceneChangeList : TIntegerDynArray);
 begin
   SetLength(FSceneChangeList, System.Length(SceneChangeList));
-  CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
-    System.Length(SceneChangeList) * SizeOf(Integer));
+  if (System.Length(FSceneChangeList) > 0) then
+  begin
+    CopyMemory(@FSceneChangeList[0], @SceneChangeList[0],
+      System.Length(SceneChangeList) * SizeOf(Integer));
+  end;
 end;
 
 //------------------------------------------------------------------------------
