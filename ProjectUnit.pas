@@ -112,12 +112,14 @@ type
     procedure cbSubtitleFormatChange(Sender: TObject);
     procedure EditPeakFilenameEnter(Sender: TObject);
     procedure EditPeakFilenameExit(Sender: TObject);
+    procedure EditUpdateColor(Sender: TObject);
   private
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
     procedure UpdateFormatCombobox;
     function ShowExtractForm(extType : TWAVExtractionType) : Boolean;
     function CheckData(AskForExtraction : Boolean) : Boolean;
+    procedure UpdateColor;    
   public
     { Public declarations }
     procedure Clear;
@@ -348,16 +350,16 @@ begin
     // If external wav file exists with the same name use it
     WAVFilename := WideChangeFileExt(EditVideoFilename.Text,'.wav');
     PeakFilename := WideChangeFileExt(EditVideoFilename.Text,'.peak');
-    if (Trim(EditWAVFilename.Text) = '') and WideFileExists(WAVFilename) then
+    if (Trim(GetWAVFilename) = '') and WideFileExists(WAVFilename) then
     begin
-      WAVSelectMode(pwmExternal);
       EditWAVFilename.Text := WAVFilename;
+      WAVSelectMode(pwmExternal);
     end
     // else if peak file exists with the same name use it
-    else if (Trim(EditPeakFilename.Text) = '') and WideFileExists(PeakFilename) then
+    else if (Trim(GetPeakFilename) = '') and WideFileExists(PeakFilename) then
     begin
-      WAVSelectMode(pwmPeakOnly);
       EditPeakFilename.Text := PeakFilename;
+      WAVSelectMode(pwmPeakOnly);
     end
     // else choose peak file
     else
@@ -384,7 +386,7 @@ end;
 
 procedure TProjectForm.bttBrowseWAVFileClick(Sender: TObject);
 begin
-  TntOpenDialog1.FileName := EditWAVFilename.Text;
+  TntOpenDialog1.FileName := GetWAVFilename;
   TntOpenDialog1.Filter := 'WAV files (*.wav)|*.WAV' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
@@ -557,6 +559,21 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TProjectForm.UpdateColor;
+begin
+  if (GetWAVFilename <> '') then
+    EditWAVFilename.Font.Color := clWindowText
+  else
+    EditWAVFilename.Font.Color := clInactiveCaption;
+
+  if (GetPeakFilename <> '') then
+    EditPeakFilename.Font.Color := clWindowText
+  else
+    EditPeakFilename.Font.Color := clInactiveCaption;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TProjectForm.WAVSelectMode(WavMode : TProjectWAVMode);
 begin
   rbNoWaveform.Checked := (WavMode = pwmNoWaveform);
@@ -581,7 +598,7 @@ end;
 
 procedure TProjectForm.bttBrowsePeakFileClick(Sender: TObject);
 begin
-  TntOpenDialog1.FileName := EditPeakFilename.Text;
+  TntOpenDialog1.FileName := GetPeakFilename;
   TntOpenDialog1.Filter := 'Peak files (*.peak)|*.PEAK' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
@@ -681,6 +698,13 @@ begin
     Result := ''
   else
     Result := EditWAVFilename.Text
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.EditUpdateColor(Sender: TObject);
+begin
+  UpdateColor;
 end;
 
 //------------------------------------------------------------------------------

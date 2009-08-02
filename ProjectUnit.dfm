@@ -95,6 +95,7 @@ object ProjectForm: TProjectForm
       Width = 409
       Height = 21
       TabOrder = 0
+      OnChange = EditUpdateColor
       OnEnter = EditPeakFilenameEnter
       OnExit = EditPeakFilenameExit
     end
@@ -134,6 +135,7 @@ object ProjectForm: TProjectForm
       Width = 409
       Height = 21
       TabOrder = 3
+      OnChange = EditUpdateColor
       OnEnter = EditPeakFilenameEnter
       OnExit = EditPeakFilenameExit
     end

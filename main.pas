@@ -2175,14 +2175,14 @@ begin
       Text := Text +
         StringConvertCRLFToPipe(
           StringConvertPipeToSpace(
-            StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text)));
+            TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text));
     end;
 
   	for i := (FirstVO - 1) downto PrevVO do
     begin
   		if i < (FirstVO - 1) then
         PrevText := ' ' + PrevText;
-      PrevText := StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text) + PrevText;
+      PrevText := TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text + PrevText;
       if Length(PrevText) > MemoVOMaxUnassigned then
         break;
     end;
@@ -2191,7 +2191,7 @@ begin
     begin
   		if i > (LastVO + 1) then
         NextText := NextText + ' ';
-      NextText := NextText + StripTags(TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text);
+      NextText := NextText + TSubtitleRange(WAVDisplayer.RangeListVO[i]).Text;
       if Length(NextText) > MemoVOMaxUnassigned then
         break;
     end;
@@ -3347,13 +3347,13 @@ begin
         CurrentProject.WAVMode := ProjectForm.GetWAVMode;
         if (CurrentProject.WAVMode = pwmExternal) then
         begin
-          CurrentProject.WAVFile := ProjectForm.EditWAVFilename.Text;
+          CurrentProject.WAVFile := ProjectForm.GetWAVFilename;
           WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
           AudioOnlyRenderer.Open(CurrentProject.WAVFile);
         end
         else if (CurrentProject.WAVMode = pwmPeakOnly) then
         begin
-          CurrentProject.PeakFile := ProjectForm.EditPeakFilename.Text;
+          CurrentProject.PeakFile := ProjectForm.GetPeakFilename;
           WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile, '.wav'));
           if AudioOnlyRenderer.Open(CurrentProject.VideoSource) then
             AudioOnlyRenderer.KillVideo;
@@ -3365,9 +3365,9 @@ begin
         ProjectHasChanged := True;
       end;
 
-      if (CurrentProject.WAVFile <> ProjectForm.EditWAVFilename.Text) then
+      if (CurrentProject.WAVFile <> ProjectForm.GetWAVFilename) then
       begin
-        CurrentProject.WAVFile := ProjectForm.EditWAVFilename.Text;
+        CurrentProject.WAVFile := ProjectForm.GetWAVFilename;
         WAVDisplayer.LoadWAV(CurrentProject.WAVFile);
         if not AudioOnlyRenderer.Open(CurrentProject.WAVFile) then
         begin
@@ -3380,9 +3380,9 @@ begin
         ProjectHasChanged := True;
       end;
 
-      if (CurrentProject.PeakFile <> ProjectForm.EditPeakFilename.Text) then
+      if (CurrentProject.PeakFile <> ProjectForm.GetPeakFilename) then
       begin
-        CurrentProject.PeakFile := ProjectForm.EditPeakFilename.Text;
+        CurrentProject.PeakFile := ProjectForm.GetPeakFilename;
         WAVDisplayer.LoadWAV(ChangeFileExt(CurrentProject.PeakFile, '.wav'));
         ProjectHasChanged := True;
       end;
