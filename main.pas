@@ -4507,8 +4507,9 @@ begin
   SuggestionForm.UpdateFonts;
 
   String2Font(ConfigObject.SubTextFont, MemoSubtitleText.Font);
-  // TODO : check why MemoSubtitleText font is not updated automatically (need to select a new subtitle)
+  // TODO : check why MemoSubtitleText & MemoSubtitleVO font is not updated automatically (need to select a new subtitle)
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
+  MemoSubtitleVO.Font.Assign(MemoSubtitleText.Font);
 
   // Update line counter size so we have at least 3 digit
   DC := GetDC(MemoLinesCounter.Handle);
@@ -9335,23 +9336,23 @@ end;
 procedure TMainForm.TurnOffVO;
 var VOColumn : TVirtualTreeColumn;
 begin
-  //bttVO.Down := false;
   SplitterSubtitleVO.Visible := False;
   MemoSubtitleVO.Visible := False;
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
   VOColumn.Options := VOColumn.Options - [coVisible];
-  //UpdateColumnAutoSize;
+  WAVDisplayer.ShowVO(False);
+  WAVDisplayer.UpdateView([uvfRange]);
 end;
 
 procedure TMainForm.TurnOnVO;
 var VOColumn : TVirtualTreeColumn;
 begin
-  //bttVO.Down := true;
   MemoSubtitleVO.Visible := True;
   SplitterSubtitleVO.Visible := True;
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
   VOColumn.Options := VOColumn.Options + [coVisible];
-  //UpdateColumnAutoSize;
+  WAVDisplayer.ShowVO(True);
+  WAVDisplayer.UpdateView([uvfRange]);
 end;
 
 procedure TMainForm.AdjustShowVO;
