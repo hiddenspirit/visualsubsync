@@ -6511,11 +6511,11 @@ begin
       [SubRange.Marked, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style, SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
+    s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
     if InUTF8 then
-      s := s + UTF8Encode(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]))
+      WriteStringLnStream(UTF8Encode(s), FS)
     else
-      s := s + WC2MB(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]));
-    WriteStringLnStream(s, FS);
+      WriteStringLnStream(WC2MB(s), FS);
   end;
 
   if (SubtitleFileFooter <> '') then
@@ -6601,11 +6601,11 @@ begin
       [SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style,SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
+    s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
     if InUTF8 then
-      s := s + UTF8Encode(Tnt_WideStringReplace(ConvertFunc(Subrange.Text) ,CRLF, '\N', [rfReplaceAll]))
+      WriteStringLnStream(UTF8Encode(s), FS)
     else
-      s := s + WC2MB(Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]));
-    WriteStringLnStream(s, FS);
+      WriteStringLnStream(WC2MB(s), FS);
   end;
   
   if (SubtitleFileFooter <> '') then
