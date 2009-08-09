@@ -178,4 +178,13 @@ object AboutForm: TAboutForm
     TabOrder = 0
     OnClick = bttOkClick
   end
+  object pnlCrashTest: TPanel
+    Left = 328
+    Top = 208
+    Width = 17
+    Height = 17
+    BevelOuter = bvNone
+    TabOrder = 1
+    OnClick = panelCrashTestClick
+  end
 end

@@ -42,10 +42,12 @@ type
     lblJS: TTntLabel;
     TntLabel8: TTntLabel;
     TntLabel5: TTntLabel;
+    pnlCrashTest: TPanel;
     procedure bttOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TntLabel3Click(Sender: TObject);
     procedure TntLabel1Click(Sender: TObject);
+    procedure panelCrashTestClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -91,6 +93,14 @@ var s : string;
 begin
   s := 'http://www.visualsubsync.org';
   ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
+end;
+
+procedure TAboutForm.panelCrashTestClick(Sender: TObject);
+var DummyPointer : PInteger;
+begin
+  // To test the exception hook
+  DummyPointer := nil;
+  DummyPointer^ := 0;
 end;
 
 end.
