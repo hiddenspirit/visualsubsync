@@ -238,10 +238,11 @@ type
     procedure PaintWavOnCanvas(ACanvas : TCanvas; TryOptimize : Boolean);
     procedure PaintOnCanvas(ACanvas : TCanvas);
     procedure PaintRulerOnCanvas(ACanvas : TCanvas);
+    procedure PaintAlternateWavColor(ACanvas : TCanvas; x1, x2 : Integer);
     procedure PaintSceneChange(ACanvas : TCanvas; ARangeList : TRangeList; rangeTop, rangeBottom : Integer);
     procedure PaintMinimumBlank(ACanvas : TCanvas; rangeTop, rangeBottom : Integer);
     procedure PaintRange(ACanvas : TCanvas; ARangeList : TRangeList;
-      rangeTop, rangeBottom : Integer);
+      rangeTop, rangeBottom : Integer; DrawTopHLine, DrawBottomHLine : Boolean);
     procedure PaintSelection(ACanvas : TCanvas);
     procedure PaintCursor(ACanvas : TCanvas);
     procedure PaintPlayCursor(ACanvas : TCanvas);
@@ -1263,6 +1264,49 @@ begin
   ACanvas.Pen.Color := ZERO_LINE_COLOR;
   ACanvas.MoveTo(0, Middle);
   ACanvas.LineTo(Width, Middle);
+
+  PaintAlternateWavColor(ACanvas, x1_update, x2_update);
+end;
+
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.PaintAlternateWavColor(ACanvas : TCanvas; x1, x2 : Integer);
+type
+   pRGBQuadArray = ^TRGBQuadArray;
+   TRGBQuadArray = array[Word] of TRGBQuad;
+var i, CanvasHeight, y1, y2 : Integer;
+    SubCanvasHeight : Double;
+    Row : pRGBQuadArray;
+    line, pixel : Cardinal;
+    WAVColorRGB : Integer;
+const NewColor : TRGBQuad = (rgbBlue: 88; rgbGreen: 127; rgbRed: 39; rgbReserved: 0);
+begin
+  CanvasHeight := GetWavCanvasHeight;
+  SubCanvasHeight := CanvasHeight / FDisplayRangeLists.Count;
+  WAVColorRGB := ((WAV_COLOR and $000000FF) shl 16) or
+    ((WAV_COLOR and $0000FF00) shr 0) or
+    ((WAV_COLOR and $00FF0000) shr 16);
+
+  for i := 0 to FDisplayRangeLists.Count-1 do
+  begin
+    y1 := Round(SubCanvasHeight * i);
+    y2 := Round(SubCanvasHeight * (i+1));
+    if ((i mod 2) = 1) then
+    begin
+      for line := y1 to y2-1 do
+      begin
+        Row := FOffscreenWAV.Scanline[line];
+        for pixel := x1 to x2 DO
+        begin
+          if Integer(Row[pixel]) = WAVColorRGB then
+          begin
+            Row[pixel] := NewColor;
+          end;
+        end;
+      end;
+    end;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1387,7 +1431,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TWAVDisplayer.PaintRange(ACanvas : TCanvas; ARangeList : TRangeList;
-  rangeTop, rangeBottom : Integer);
+  rangeTop, rangeBottom : Integer; DrawTopHLine, DrawBottomHLine : Boolean);
 var i, j : Integer;
     r : TRange;
     x1, x2, y1, y2 : Integer;
@@ -1472,10 +1516,18 @@ begin
         x2 := Width-1;
       ACanvas.Pen.Style := psSolid;
       ACanvas.Pen.Width := 2;
-      ACanvas.MoveTo(x1, y1);
-      ACanvas.LineTo(x2, y1);
-      ACanvas.MoveTo(x1, y2);
-      ACanvas.LineTo(x2, y2);
+      // Draw top h-line
+      if DrawTopHLine then
+      begin
+        ACanvas.MoveTo(x1, y1);
+        ACanvas.LineTo(x2, y1);
+      end;
+      // Draw bottom h-line
+      if DrawBottomHLine then
+      begin
+        ACanvas.MoveTo(x1, y2);
+        ACanvas.LineTo(x2, y2);
+      end;
       ACanvas.Pen.Width := 1;
 
       // Custom draw
@@ -1534,7 +1586,7 @@ begin
     ACanvas.Pen.Color := clWhite;
     ACanvas.Pen.Mode := pmXor;
     ACanvas.Pen.Style := psSolid;
-    
+
     x1 := TimeToPixel(FSelection.StartTime - FPositionMs);
     x2 := TimeToPixel(FSelection.StopTime - FPositionMs);
 
@@ -1625,6 +1677,7 @@ end;
 procedure TWAVDisplayer.PaintOnCanvas(ACanvas : TCanvas);
 var i, CanvasHeight, y1, y2 : Integer;
     SubCanvasHeight : Double;
+    DrawTopHLine, DrawBottomHLine : Boolean;
 begin
   CanvasHeight := GetWavCanvasHeight;
   SubCanvasHeight := CanvasHeight / FDisplayRangeLists.Count;
@@ -1645,7 +1698,9 @@ begin
   begin
     y1 := Round(SubCanvasHeight * i);
     y2 := Round(SubCanvasHeight * (i+1));
-    PaintRange(ACanvas, FDisplayRangeLists[i], y1, y2);
+    DrawTopHLine := (i = 0);
+    DrawBottomHLine := (i = (FDisplayRangeLists.Count-1));
+    PaintRange(ACanvas, FDisplayRangeLists[i], y1, y2, DrawTopHLine, DrawBottomHLine);
   end;
 
   PaintSelection(ACanvas);
