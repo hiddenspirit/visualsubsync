@@ -6658,6 +6658,7 @@ end;
 
 procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
   ACanvas: TCanvas; Range : TRange; Rect : TRect);
+//var RectShadow : TRect;
 begin
   if (not ConfigObject.ShowTextInWAVDisplay) then
     Exit;
@@ -6671,8 +6672,17 @@ begin
     if (Rect.Right - Rect.Left) > 25 then
     begin
       ACanvas.Font.Assign(MemoSubtitleText.Font);
+
+      {RectShadow.Top := Rect.Top + 1;
+      RectShadow.Bottom := Rect.Bottom + 1;
+      RectShadow.Left := Rect.Left + 1;
+      RectShadow.Right := Rect.Right + 1;
+      ACanvas.Font.Color := ChangeColorLuminance(ACanvas.Pen.Color, 0.25);
+      WideCanvasDrawText(ACanvas, RectShadow, TSubtitleRange(Range).Text);}
+
       ACanvas.Font.Color := ACanvas.Pen.Color;
       WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
+
     end;
   end;
 end;
@@ -9341,7 +9351,7 @@ begin
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
   VOColumn.Options := VOColumn.Options - [coVisible];
   WAVDisplayer.ShowVO(False);
-  WAVDisplayer.UpdateView([uvfRange]);
+  WAVDisplayer.UpdateView([uvfPageSize]);
 end;
 
 procedure TMainForm.TurnOnVO;
@@ -9352,7 +9362,7 @@ begin
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
   VOColumn.Options := VOColumn.Options + [coVisible];
   WAVDisplayer.ShowVO(True);
-  WAVDisplayer.UpdateView([uvfRange]);
+  WAVDisplayer.UpdateView([uvfPageSize]);
 end;
 
 procedure TMainForm.AdjustShowVO;
