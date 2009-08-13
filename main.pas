@@ -6486,7 +6486,11 @@ begin
     // Make sure to write "ScriptType: v4.00"
     s := ReplaceRegExpr('ScriptType: v4\.00\+?', SubtitleFileHeader,
       'ScriptType: v4.00');
-    WriteStringLnStream(Trim(s), FS);
+    s := Trim(s);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(s), FS)
+    else
+      WriteStringLnStream(WC2MB(s), FS);
   end;
 
   // Write Styles
@@ -6496,7 +6500,10 @@ begin
   for i:=0 to StyleFormInstance.GetCount-1 do
   begin
     style := StyleFormInstance.GetStyleAt(i);
-    WriteStringLnStream(style.getAsSSA, FS);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(style.getAsSSA), FS)
+    else
+      WriteStringLnStream(WC2MB(style.getAsSSA), FS);
   end;
 
   WriteStringLnStream('', FS);
@@ -6522,7 +6529,10 @@ begin
   if (SubtitleFileFooter <> '') then
   begin
     WriteStringLnStream('', FS);
-    WriteStringLnStream(Trim(SubtitleFileFooter), FS);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(Trim(SubtitleFileFooter)), FS)
+    else
+      WriteStringLnStream(WC2MB(Trim(SubtitleFileFooter)), FS);
   end;
   
   FS.Free;
@@ -6578,7 +6588,11 @@ begin
     // Make sure to write "ScriptType: v4.00+"
     s := ReplaceRegExpr('ScriptType: v4\.00\+?', SubtitleFileHeader,
       'ScriptType: v4.00+');
-    WriteStringLnStream(Trim(s), FS);
+    s := Trim(s);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(s), FS)
+    else
+      WriteStringLnStream(WC2MB(s), FS);
   end;
 
   // Write Styles
@@ -6588,7 +6602,10 @@ begin
   for i:=0 to StyleFormInstance.GetCount-1 do
   begin
     style := StyleFormInstance.GetStyleAt(i);
-    WriteStringLnStream(style.getAsASS, FS);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(style.getAsASS), FS)
+    else
+      WriteStringLnStream(WC2MB(style.getAsASS), FS);
   end;
 
   WriteStringLnStream('', FS);
@@ -6612,7 +6629,10 @@ begin
   if (SubtitleFileFooter <> '') then
   begin
     WriteStringLnStream('', FS);
-    WriteStringLnStream(Trim(SubtitleFileFooter), FS);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(Trim(SubtitleFileFooter)), FS)
+    else
+      WriteStringLnStream(WC2MB(Trim(SubtitleFileFooter)), FS);
   end;
 
   FS.Free;
