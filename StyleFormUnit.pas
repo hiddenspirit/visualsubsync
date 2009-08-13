@@ -21,8 +21,8 @@ type
   TStyleFormMode = (sfmSSA,sfmASS);
 
   TSSAStyle = class
-    name : string;
-    fontname : string;
+    name : WideString;
+    fontname : WideString;
     fontsize : double;
     primaryColor : cardinal;
     secondaryColor : cardinal;
@@ -48,8 +48,8 @@ type
 
     constructor Create;
     procedure Assign(style : TSSAStyle);
-    function getAsSSA : string;
-    function getAsASS : string;
+    function getAsSSA : WideString;
+    function getAsASS : WideString;
     function Equals(style : TSSAStyle) : Boolean;
   end;
 
@@ -260,7 +260,7 @@ begin
   encoding := style.encoding;
 end;
 
-function TSSAStyle.getAsSSA : string;
+function TSSAStyle.getAsSSA : WideString;
 var SSAAlignment : Integer;
 begin
   SSAAlignment := Ord(ASSToSSAAlignment(TASSAlignment(alignment)));
@@ -272,7 +272,7 @@ begin
       marginL, marginR, marginV, alphaLevel, encoding]);
 end;
 
-function TSSAStyle.getAsASS : string;
+function TSSAStyle.getAsASS : WideString;
 var ssaFormat : TFormatSettings;
 begin
   GetLocaleFormatSettings(0,ssaFormat);
