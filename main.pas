@@ -362,8 +362,8 @@ type
     MenuItemGetMoreDictionaries: TTntMenuItem;
     ActionSpellCheck: TTntAction;
     MenuItemSpellcheck: TTntMenuItem;
-    StatusBarPanel1: TPanel;
-    StatusBarPanel2: TPanel;
+    StatusBarPanel1: TTntPanel;
+    StatusBarPanel2: TTntPanel;
     N24: TTntMenuItem;
     ActionInsertSceneChange: TTntAction;
     pmiInsertSC: TTntMenuItem;

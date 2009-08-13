@@ -1255,7 +1255,7 @@ object MainForm: TMainForm
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 3
-    object StatusBarPanel1: TPanel
+    object StatusBarPanel1: TTntPanel
       Left = 0
       Top = 0
       Width = 250
@@ -1265,7 +1265,7 @@ object MainForm: TMainForm
       BevelOuter = bvLowered
       TabOrder = 0
     end
-    object StatusBarPanel2: TPanel
+    object StatusBarPanel2: TTntPanel
       Left = 250
       Top = 0
       Width = 522
