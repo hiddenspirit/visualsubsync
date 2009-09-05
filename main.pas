@@ -646,6 +646,7 @@ type
     procedure ApplyAutoBackupSettings;
     procedure UpdateVideoRendererWindow;
     procedure ApplyFontSettings;
+    procedure AutoFitSubsListColumns;
 
     procedure OnSubtitleRangeJSWrapperChangeStart(Sender : TSubtitleRangeJSWrapper;
       SubtitleRange : TSubtitleRange; NewValue : Integer);
@@ -1389,7 +1390,7 @@ begin
 
     Column := Header.Columns.Add;
     Column.Text := 'Text';
-    Column.Options := Column.Options - [coAllowClick] + [coAutoSpring];
+    Column.Options := Column.Options - [coAllowClick]  + [coAutoSpring];
     Column.Width := 500;
     Column.MinWidth := 100;
 
@@ -1914,7 +1915,7 @@ begin
     vtvSubsList.EndUpdate;
   end;
   WAVDisplayer.UpdateView([uvfRange]);
-  vtvSubsList.Header.AutoFitColumns(False);
+  AutoFitSubsListColumns;
   vtvSubsList.Repaint;
   
   UpdateStylesComboBox;
@@ -2410,7 +2411,7 @@ var savSelStart, savSelLength : Integer;
     TextToSpell, AWord : WideString;
     Offset : Integer;
     SpellOk : Boolean;
-    WordInfo : TWordInfo;    
+    WordInfo : TWordInfo;
 begin
   RichEdit.Tag := 0;
   savSelStart := RichEdit.SelStart;
@@ -3109,7 +3110,7 @@ begin
     ProjectFileIni.WriteString('VisualSubsync','SubtitlesVO',ProjectForm.EditSubtitleVO.Text);
     ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
     ProjectFileIni.WriteBool('VisualSubsync','ShowVideo',StartupShowVideo);
-    ProjectFileIni.WriteBool('VisualSubsync','ShowVO',False);
+    ProjectFileIni.WriteBool('VisualSubsync','ShowVO',WideFileExists(ProjectForm.EditSubtitleVO.Text));
     ProjectFileIni.WriteString('VisualSubsync','Dictionnary',StartupDictionnary);
     ProjectFileIni.Free;
 
@@ -4480,15 +4481,27 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.AutoFitSubsListColumns;
+begin
+  vtvSubsList.Header.AutoFitColumns(False, smaNoColumn, INDEX_COL_INDEX, STYLE_COL_INDEX);
+  vtvSubsList.Header.AutoFitColumns(False, smaNoColumn, VO_COL_INDEX + 1);
+  vtvSubsList.Invalidate;  
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.ApplyFontSettings;
 var DC : HDC;
     MLCanvas : TCanvas;
     TxtWidth : Integer;
     Node : PVirtualNode;
+    TmpText : WideString;
+    TmpSelStart, TmpSelLen, TmpTag : Integer;
+    TmpTextVO : WideString;
 begin
   // Update subtitle list font
   String2Font(ConfigObject.SubListFont, vtvSubsList.Font);
-  vtvSubsList.Header.AutoFitColumns(False);
+  AutoFitSubsListColumns;
   vtvSubsList.Canvas.Font.Assign(vtvSubsList.Font);
   // Update subtitle node height
   vtvSubsList.DefaultNodeHeight := Round(vtvSubsList.Canvas.TextHeight('Tj') * 1.1);
@@ -4506,11 +4519,30 @@ begin
   SuggestionForm.MemoSuggPreview.Font.Name := vtvSubsList.Font.Name;
   SuggestionForm.UpdateFonts;
 
+
+  // Workaround to apply font
+  TmpTextVO := MemoSubtitleVO.Text;
+  MemoSubtitleVO.Clear;
+  TmpTag := MemoSubtitleText.Tag;
+  MemoSubtitleText.Tag := 0;
+  TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := True;
+  TmpText := MemoSubtitleText.Text;
+  TmpSelStart := MemoSubtitleText.SelStart;
+  TmpSelLen := MemoSubtitleText.SelLength;
+  MemoSubtitleText.Clear;
+
   String2Font(ConfigObject.SubTextFont, MemoSubtitleText.Font);
-  // TODO : check why MemoSubtitleText & MemoSubtitleVO font is not updated automatically (need to select a new subtitle)
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
   MemoSubtitleVO.Font.Assign(MemoSubtitleText.Font);
 
+  MemoSubtitleText.Text := TmpText;
+  MemoSubtitleText.SelStart := TmpSelStart;
+  MemoSubtitleText.SelLength := TmpSelLen;
+  TTntRichEditCustomUndo(MemoSubtitleText).UndoDisabled := False;
+  MemoSubtitleText.Tag := TmpTag;
+  MemoSubtitleVO.Text := TmpTextVO;
+
+  
   // Update line counter size so we have at least 3 digit
   DC := GetDC(MemoLinesCounter.Handle);
   if(DC <> 0) then
@@ -5023,6 +5055,12 @@ begin
 
   if IsNormalMode and MemoSubtitleText.Enabled then
     MemoSubtitleText.SetFocus;
+
+  // Adjust column size when adding the first subtitle
+  if vtvSubsList.RootNodeCount = 1 then
+  begin
+    AutoFitSubsListColumns;
+  end;
 end;
 
 //------------------------------------------------------------------------------
