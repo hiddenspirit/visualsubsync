@@ -6735,9 +6735,10 @@ type
   TAccessCanvas = class(TCanvas);
 
 procedure WideCanvasDrawText(Canvas: TCanvas; Rect: TRect;
-  const Text: WideString; AllowLineBreak : Boolean = False);
+  const Text: WideString; AllowLineBreak : Boolean = False; AlignBottom : Boolean = True);
 var
   Options: Cardinal;
+  ExpectedTextHeight, OriginalRectBottom, OriginalRectRight, BottomDiff : Integer;
 begin
   with TAccessCanvas(Canvas) do begin
     Changing;
@@ -6745,6 +6746,18 @@ begin
     Options := DT_END_ELLIPSIS or DT_NOPREFIX or DT_EDITCONTROL;
     if AllowLineBreak then
       Options := Options or DT_WORDBREAK;
+    if AlignBottom then
+    begin
+      OriginalRectBottom := Rect.Bottom;
+      OriginalRectRight := Rect.Right;
+      Windows.DrawTextW(Handle, PWideChar(Text), Length(Text), Rect, Options or DT_CALCRECT);
+      BottomDiff := OriginalRectBottom - Rect.Bottom;
+      if (BottomDiff > 0) then
+        OffsetRect(Rect, 0, BottomDiff)
+      else
+        Rect.Bottom := OriginalRectBottom;
+      Rect.Right := OriginalRectRight;
+    end;
     Windows.DrawTextW(Handle, PWideChar(Text), Length(Text), Rect, Options);
     Changed;
   end;
@@ -6753,6 +6766,10 @@ end;
 procedure TMainForm.WAVDisplayer1CustomDrawRange(Sender: TObject;
   ACanvas: TCanvas; Range : TRange; Rect : TRect);
 //var RectShadow : TRect;
+const MINIMAL_SPACE : Integer = 25;
+      TEXT_MARGINS : Integer = 5;
+var WAVZoneHeight : Integer;
+    AlignBottom : Boolean;
 begin
   if (not ConfigObject.ShowTextInWAVDisplay) then
     Exit;
@@ -6762,20 +6779,23 @@ begin
   end
   else
   begin
-    InflateRect(Rect, -5, -5);
-    if (Rect.Right - Rect.Left) > 25 then
+    InflateRect(Rect, -TEXT_MARGINS, -TEXT_MARGINS);
+    if (Rect.Right - Rect.Left) > MINIMAL_SPACE then
     begin
       ACanvas.Font.Assign(MemoSubtitleText.Font);
+
+      WAVZoneHeight := WAVDisplayer.Height - WAVDisplayer.RulerHeight;
+      AlignBottom := (Rect.Top > WAVZoneHeight div 2);
 
       {RectShadow.Top := Rect.Top + 1;
       RectShadow.Bottom := Rect.Bottom + 1;
       RectShadow.Left := Rect.Left + 1;
       RectShadow.Right := Rect.Right + 1;
       ACanvas.Font.Color := ChangeColorLuminance(ACanvas.Pen.Color, 0.25);
-      WideCanvasDrawText(ACanvas, RectShadow, TSubtitleRange(Range).Text);}
+      WideCanvasDrawText(ACanvas, RectShadow, TSubtitleRange(Range).Text, False, AlignBottom);}
 
       ACanvas.Font.Color := ACanvas.Pen.Color;
-      WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text);
+      WideCanvasDrawText(ACanvas, Rect, TSubtitleRange(Range).Text, False, AlignBottom);
 
     end;
   end;

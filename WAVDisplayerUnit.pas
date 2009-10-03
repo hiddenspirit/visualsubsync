@@ -395,6 +395,7 @@ type
     property SceneChangeFilterOffset : Integer read FSceneChangeFilterOffset write FSceneChangeFilterOffset;
     property ShowMinimumBlank : Boolean read FShowMinimumBlank write FShowMinimumBlank;
     property SnappingEnabled : Boolean read FSnappingEnabled write FSnappingEnabled;
+    property RulerHeight : Integer read FDisplayRulerHeight; 
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -1669,7 +1670,7 @@ begin
   SubCanvasHeight := CanvasHeight / FDisplayRangeLists.Count;
   i := Floor(y / SubCanvasHeight);
   Constrain(i, 0, FDisplayRangeLists.Count-1);
-  Result := FDisplayRangeLists[i];
+  Result := FDisplayRangeLists[FDisplayRangeLists.Count - i - 1];
 end;
 
 //------------------------------------------------------------------------------
@@ -1689,7 +1690,7 @@ begin
   begin
     y1 := Round(SubCanvasHeight * i);
     y2 := Round(SubCanvasHeight * (i+1));
-    PaintSceneChange(ACanvas, FDisplayRangeLists[i], y1, y2);
+    PaintSceneChange(ACanvas, FDisplayRangeLists[FDisplayRangeLists.Count - i - 1], y1, y2);
   end;
 
   PaintMinimumBlank(ACanvas, 0, CanvasHeight);
@@ -1700,7 +1701,7 @@ begin
     y2 := Round(SubCanvasHeight * (i+1));
     DrawTopHLine := (i = 0);
     DrawBottomHLine := (i = (FDisplayRangeLists.Count-1));
-    PaintRange(ACanvas, FDisplayRangeLists[i], y1, y2, DrawTopHLine, DrawBottomHLine);
+    PaintRange(ACanvas, FDisplayRangeLists[FDisplayRangeLists.Count - i - 1], y1, y2, DrawTopHLine, DrawBottomHLine);
   end;
 
   PaintSelection(ACanvas);
