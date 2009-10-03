@@ -377,6 +377,8 @@ type
     MenuItemShowHideReferenceVO: TTntMenuItem;
     ActionShowHideSubs: TTntAction;
     MenuShowHideSubtitles: TTntMenuItem;
+    ActionTranslationTemplate: TTntAction;
+    MenuItemTranslationTemplate: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -564,6 +566,7 @@ type
     procedure ActionPasteAtCursorExecute(Sender: TObject);
     procedure ActionToggleVOExecute(Sender: TObject);
     procedure ActionShowHideSubsExecute(Sender: TObject);
+    procedure ActionTranslationTemplateExecute(Sender: TObject);
    
   private
     { Private declarations }
@@ -656,13 +659,13 @@ type
       SubtitleRange : TSubtitleRange; NewValue : WideString);
 
     procedure SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
-    procedure SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean);
-    procedure SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+    procedure SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
+    procedure SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
     procedure SaveSubtitlesAsCUE(Filename: WideString);
     procedure SaveSubtitlesAsTXT(Filename, PreviousExt: WideString; InUTF8 : Boolean);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
-    function LoadVOSRT(Filename: WideString) : Boolean;
+    function LoadVOSubs(Filename: WideString) : Boolean;
     function LoadSRT(Filename: WideString; var IsUTF8 : Boolean) : Boolean;
     function LoadASS(Filename: WideString; var IsUTF8 : Boolean; IsSSA : Boolean) : Boolean;
     procedure AdvanceToNextSubtitleAfterFocus;
@@ -1659,8 +1662,8 @@ begin
 
   ActionClose.Enabled := Enable;
   ActionSave.Enabled := False;
-  ActionOpenProjectFolder.Enabled := Enable;  
-
+  ActionOpenProjectFolder.Enabled := Enable;
+  ActionTranslationTemplate.Enabled := Enable;
 
   lblVolume.Enabled := Enable;
   tbVolume.Enabled := Enable;
@@ -1930,9 +1933,8 @@ begin
   g_WebRWSynchro.BeginWrite;
   try
     vtvSubsList.BeginUpdate;
-    LoadVOSRT(Filename);
+    LoadVOSubs(Filename);
     AdjustShowVO;
-    //UpdateColumnAutoSize;
   finally
     g_WebRWSynchro.EndWrite;
     vtvSubsList.EndUpdate;
@@ -1944,12 +1946,14 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.LoadVOSRT(Filename: WideString) : Boolean;
+function TMainForm.LoadVOSubs(Filename: WideString) : Boolean;
 var
-  i : integer;
+  i, Start, Stop : Integer;
   NewRange : TRange;
   SRTParser : TSRTParser;
   SRTSub : TSRTSubtitle;
+  SSAParser : TSSAParser;
+  Ext, SubText : WideString;
 begin
   Result := False;
   if not WideFileExists(Filename) then
@@ -1959,18 +1963,41 @@ begin
 
   WAVDisplayer.ClearRangeListVO;
 
-  SRTParser := TSRTParser.Create;
-  SRTParser.Load(Filename);
-  for i := 0 to SRTParser.GetCount-1 do
+  Ext := WideLowerCase(WideExtractFileExt(Filename));
+  if (Ext = '.srt') then
   begin
-    SRTSub := SRTParser.GetAt(i);
-    NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
-    TSubtitleRange(NewRange).Text := SRTSub.Text;
-    WAVDisplayer.RangeListVO.AddAtEnd(NewRange);
+    SRTParser := TSRTParser.Create;
+    SRTParser.Load(Filename);
+    for i := 0 to SRTParser.GetCount-1 do
+    begin
+      SRTSub := SRTParser.GetAt(i);
+      NewRange := SubRangeFactory.CreateRangeSS(SRTSub.Start, SRTSub.Stop);
+      TSubtitleRange(NewRange).Text := SRTSub.Text;
+      WAVDisplayer.RangeListVO.AddAtEnd(NewRange);
+    end;
+    FreeAndNil(SRTParser);
+  end
+  else if (Ext = '.ass') or (Ext = '.ssa') then
+  begin
+    SSAParser := TSSAParser.Create;
+    SSAParser.Load(Filename);
+    for i := 0 to SSAParser.GetDialoguesCount-1 do
+    begin
+      Start := TimeStringToMS_SSA(SSAParser.GetDialogueValueAsString(i, 'Start'));
+      Stop := TimeStringToMS_SSA(SSAParser.GetDialogueValueAsString(i, 'End'));
+      if (Start <> -1) and (Stop <> -1) then
+      begin
+        NewRange := SubRangeFactory.CreateRangeSS(Start, Stop);
+        SubText := SSAParser.GetDialogueValueAsString(i, 'Text');
+        TSubtitleRange(NewRange).Text := Tnt_WideStringReplace(SubText, '\N', CRLF,[rfReplaceAll]);
+        WAVDisplayer.RangeListVO.AddAtEnd(NewRange);
+      end;
+    end;
+    FreeAndNil(SSAParser);
   end;
+
   WAVDisplayer.RangeListVO.FullSort;
 
-  FreeAndNil(SRTParser);
   Result := True;
 end;
 
@@ -2605,9 +2632,9 @@ begin
   if (Ext = '.srt') then
     SaveSubtitlesAsSRT(Filename, PreviousExt, InUTF8, TimingOnly)
   else if (Ext = '.ass') then
-    SaveSubtitlesAsASS(Filename, PreviousExt, InUTF8)
+    SaveSubtitlesAsASS(Filename, PreviousExt, InUTF8, TimingOnly)
   else if (Ext = '.ssa') then
-    SaveSubtitlesAsSSA(Filename, PreviousExt, InUTF8)
+    SaveSubtitlesAsSSA(Filename, PreviousExt, InUTF8, TimingOnly)
   else if (Ext = '.cue') then
     SaveSubtitlesAsCUE(Filename)
   else if (Ext = '.txt') then
@@ -4158,12 +4185,15 @@ end;
 
 procedure TMainForm.SelectNode(Node : PVirtualNode);
 begin
-  vtvSubsList.FocusedNode := Node;
-  vtvSubsList.ClearSelection;
-  vtvSubsList.Selected[Node] := True;
-  vtvSubsList.ScrollIntoView(Node,True);
-  vtvSubsListDblClick(nil);
-  vtvSubsList.Repaint;
+  if Assigned(Node) then
+  begin
+    vtvSubsList.FocusedNode := Node;
+    vtvSubsList.ClearSelection;
+    vtvSubsList.Selected[Node] := True;
+    vtvSubsList.ScrollIntoView(Node,True);
+    vtvSubsListDblClick(nil);
+    vtvSubsList.Repaint;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -6477,7 +6507,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+procedure TMainForm.SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
     FS : TTntFileStream;
@@ -6557,7 +6587,10 @@ begin
       [SubRange.Marked, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style, SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
-    s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+    if not TimingOnly then
+    begin
+      s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+    end;
     if InUTF8 then
       WriteStringLnStream(UTF8Encode(s), FS)
     else
@@ -6578,7 +6611,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+procedure TMainForm.SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
 var i : integer;
     Subrange : TSubtitleRange;
     FS : TTntFileStream;
@@ -6657,7 +6690,10 @@ begin
       [SubRange.Layer, TimeMsToSSAString(SubRange.StartTime),
        TimeMsToSSAString(SubRange.StopTime), SubRange.Style,SubRange.Actor,
        Subrange.LeftMarg, Subrange.RightMarg, SubRange.VertMarg, Subrange.Effect]);
-    s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+    if not TimingOnly then
+    begin
+      s := s + Tnt_WideStringReplace(ConvertFunc(Subrange.Text), CRLF, '\N', [rfReplaceAll]);
+    end;
     if InUTF8 then
       WriteStringLnStream(UTF8Encode(s), FS)
     else
@@ -9376,6 +9412,7 @@ begin
     begin
       TntOpenDialog1.FileName := CurrentProject.SubtitlesVO;
       TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+        'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
         'All files (*.*)|*.*';
       if TntOpenDialog1.Execute then
       begin
@@ -9474,6 +9511,47 @@ begin
     // Use last subtitle stop time + 1 minute
     LastSub := WAVDisplayer.RangeList[WAVDisplayer.RangeList.Count - 1];
     WAVDisplayer.Length := LastSub.StopTime + (1 * 60 * 1000);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ActionTranslationTemplateExecute(Sender: TObject);
+var Ext, TranslatedFilename : WideString;
+begin
+  if CheckSubtitlesAreSaved then
+  begin
+    Ext := WideExtractFileExt(CurrentProject.SubtitlesFile);
+    TranslatedFilename := Copy(CurrentProject.SubtitlesFile, 1,
+      Length(CurrentProject.SubtitlesFile) - Length(Ext)) + '.translated' + Ext;
+    TntSaveDialog1.Filter := 'All files (*.*)|*.*';
+    TntSaveDialog1.FileName := TranslatedFilename;
+    if TntSaveDialog1.Execute then
+    begin
+      SaveSubtitles(TranslatedFilename, CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False, True);
+      
+      ErrorReportForm.Clear;
+
+      CurrentProject.SubtitlesVO := CurrentProject.SubtitlesFile;
+      CurrentProject.SubtitlesFile := TranslatedFilename;
+
+      LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+      LoadVO(CurrentProject.SubtitlesVO);
+
+      if (VideoRenderer.IsOpen) then
+        VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+
+      SelectNode(vtvSubsList.GetFirst);
+
+      TurnOnVO;
+      CurrentProject.ShowVO := True;
+      SaveProject(CurrentProject, True);
+
+      ClearStack(RedoStack);
+      ClearStack(UndoStack);
+      ActionUndo.Enabled := False;
+      ActionRedo.Enabled := False;
+    end;
   end;
 end;
 
