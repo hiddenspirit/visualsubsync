@@ -1320,6 +1320,10 @@ object MainForm: TMainForm
         Action = ActionSaveAs
         Caption = 'Save As...'
       end
+      object MenuItemTranslationTemplate: TTntMenuItem
+        Action = ActionTranslationTemplate
+        Caption = 'Translate...'
+      end
       object MenuItemExportToWAV: TTntMenuItem
         Action = ActionExportToWAV
         Caption = 'Export to WAV...'
@@ -2289,6 +2293,10 @@ object MainForm: TMainForm
     object ActionPasteAtCursor: TTntAction
       Caption = 'Paste at cursor'
       OnExecute = ActionPasteAtCursorExecute
+    end
+    object ActionTranslationTemplate: TTntAction
+      Caption = 'Translate'
+      OnExecute = ActionTranslationTemplateExecute
     end
   end
   object ImageList1: TImageList
