@@ -8009,8 +8009,8 @@ begin
   NewSubRange := TSubtitleRange(SubRangeFactory.CreateRange);
   NewSubRange.Assign(SubRange);
 
-  SplitTime1 := SplitTime - (BlankTime div 2);
-  SplitTime2 := SplitTime + (BlankTime div 2);
+  SplitTime1 := SplitTime - BlankTime;
+  SplitTime2 := SplitTime;
   // Make sure there is enough space for the blank time
   if (SplitTime1 < SubRange.StartTime) or (SplitTime2 > SubRange.StopTime) then
   begin
