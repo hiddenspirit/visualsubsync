@@ -2621,7 +2621,7 @@ begin
   else
   begin
     // To clear min blank info
-    if SetMinBlankAt(CursorPosMs, ARangeList) then
+    if SetMinBlankAt(-1, ARangeList) then
     begin
       Include(UpdateFlags, uvfRange);
     end;
