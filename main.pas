@@ -3551,7 +3551,10 @@ begin
       MatchLen := RegExp.MatchLen[0];
     end
     else
+    begin
       SearchItemPos := -1;
+      MatchLen := 0;
+    end;
   end
   else
   begin
@@ -6738,7 +6741,7 @@ procedure WideCanvasDrawText(Canvas: TCanvas; Rect: TRect;
   const Text: WideString; AllowLineBreak : Boolean = False; AlignBottom : Boolean = True);
 var
   Options: Cardinal;
-  ExpectedTextHeight, OriginalRectBottom, OriginalRectRight, BottomDiff : Integer;
+  OriginalRectBottom, OriginalRectRight, BottomDiff : Integer;
 begin
   with TAccessCanvas(Canvas) do begin
     Changing;
