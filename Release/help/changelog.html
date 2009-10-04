@@ -19,13 +19,26 @@
 
 <br>
 
+<div class="Title">Version 0.9.20 (2009-10-04)</div>
+This version improve translation mode and fix a few bugs.
+<ul>
+  <li>Added VO display on waveform</li>
+  <li>Added new menu to create translation template : <i>File&gt;Translate</i></li>
+  <li><i>Split at cursor</i> now puts all the blank at left of the cursor instead of 50/50</li>
+  <li>Added a builtin crash reporter</li>
+  <li>Fixed Unicode support for SSA/ASS</li>
+  <li>Fixed waveform disappearance when changing subtitle file</li>
+  <li>Fixed plugins parameters edition on double click</li>
+</ul>
+<br>
+
 <div class="Title">Version 0.9.19 (2009-07-27)</div>
 In this version, there is now the possibility to display a second subtitle file for translation purpose (no edition allowed).<br>
 As the timing can be slightly different between two versions, there are special symbols ([&gt;&gt;&gt;] and [&lt;&lt;&lt;]) to indicate that 
 subtitles are inserted before or after the translated subtitle.<br>
 Also several subtitles can be merged together in the original version column.<br>
 You can use the <i>View&gt;Show/Hide Reference VO</i> menu item to show or hide the original version file.<br>
-This feature (and others below) is a great contribution by kickaha from <a href="italiansubs.net">italiansubs.net</a>.<br>
+This feature (and others below) is a great contribution by kickaha from <a href="http://italiansubs.net">italiansubs.net</a>.<br>
 Another important feature is that now only the subtitle file is mandatory in projects, which makes video and audio files optional. Subtitle files can be associated directly to VSS.</br>
 <ul>
   <li>Translation mode (Contribution by kickaha)</li>
@@ -44,8 +57,6 @@ Another important feature is that now only the subtitle file is mandatory in pro
 You can now copy/paste subtitles from 2 VSS instances or from a text editor (SSA support is limited, you need to copy the full [Event] section)<br>
 Double clicking on a subtitle start time or stop time, now fix overlapping and try to improve the reading speed.<br>
 The <i>Insert text file</i> menu is renamed in <i>Insert file...</i> and can now also be used to insert the content of an .SRT file.<br>
-
-
 <ul>
   <li>Added copy/paste support (Ctrl+C/Ctrl+V in subtitles list, <i>Paste here</i> in audio waveform)<li>
   <li>Added double click javascript event (Contribution by Spirit)</li>
