@@ -12,6 +12,7 @@
 !define FILE3 "js3215R.dll"
 !define FILE4 "VSSCustomVSFilter.dll"
 !define FILE5 "libhunspell.dll"
+!define FILE6 "VisualSubSync.map"
 
 !define DIR_WEB "web\"
 !define FILE_WEB1 "index.shtml"
@@ -110,6 +111,7 @@ Section "Main (required)" SecMain
   File "${INPUT_PATH}${FILE3}"
   File "${INPUT_PATH}${FILE4}"
   File "${INPUT_PATH}${FILE5}"
+  File "${INPUT_PATH}${FILE6}"
 
 	; Web files
   SetOutPath "$INSTDIR\${DIR_WEB}"
@@ -195,6 +197,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${FILE3}"
   Delete "$INSTDIR\${FILE4}"
   Delete "$INSTDIR\${FILE5}"
+  Delete "$INSTDIR\${FILE6}"
   
   ; Delete web files and directory if empty
   Delete "$INSTDIR\${DIR_WEB}${FILE_WEB1}"
