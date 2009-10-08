@@ -166,7 +166,7 @@ VSSPlugin = {
   // Get the size of each extra-column (called only at VSS startup)
   GetColumnSize : function(Index) {
     switch(Index) {
-      case this.RS_COL_IDX: return 40;
+      case this.RS_COL_IDX: return 30;
       default: return '';
     }
   },

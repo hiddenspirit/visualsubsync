@@ -1370,19 +1370,19 @@ begin
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
-    Column.MinWidth := 50;
+    Column.MinWidth := 25;
     Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Start';
     Column.Width := 100;
-    Column.MinWidth := 100;
+    Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
     Column.Text := 'Stop';
     Column.Width := 100;
-    Column.MinWidth := 100;
+    Column.MinWidth := 50;
     Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
