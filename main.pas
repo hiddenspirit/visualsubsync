@@ -2412,6 +2412,14 @@ var
   Msg : TCMMouseWheel;
   TargetControl : HWND;
 begin
+  if (WheelDelta = 0) then
+  begin
+    // When there is a lot of things to display the mouse driver seems to be going behind
+    // and WheelDelta = 0, this is getting us in a stack overflow !
+    Handled := True;
+    Exit;
+  end;
+    
   // Recreate original CM_MOUSEWHEEL Message
   Msg.ShiftState := Shift;
   Msg.WheelDelta := WheelDelta;
