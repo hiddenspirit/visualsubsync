@@ -618,6 +618,8 @@ type
     FSpellChecker : THunspellChecker;
     StartupDictionnary : WideString;
 
+    HiddenByUserCoreColumnsList : TStrings;
+
     procedure InitVTV;
     procedure InitVTVExtraColumns;
     procedure EnableControl(Enable : Boolean);
@@ -725,6 +727,8 @@ type
     function ReplaceAllTextSubs(FindText : WideString) : Integer;
 
     procedure UpdateDurationWithSubOnly;
+
+    procedure ShowColumn(Column : TVirtualTreeColumn; Show : Boolean = True; FromUser : Boolean = False);
 
   public
     { Public declarations }
@@ -883,6 +887,8 @@ begin
   MemoSubtitleText := CustomMemo;
   CustomMemo.OnUndo := OnUndo;
 
+  HiddenByUserCoreColumnsList := TStringList.Create;
+
   // Enable/disable experimental karaoke stuff
   pmiCreateKaraoke.Visible := EnableExperimentalKaraoke;
   pmiClearKaraoke.Visible := EnableExperimentalKaraoke;
@@ -1038,6 +1044,7 @@ begin
   FreeAndNil(UndoStack);
   if Assigned(LogForm) then
     FreeAndNil(LogForm);
+  FreeAndNil(HiddenByUserCoreColumnsList);
 end;
 
 //------------------------------------------------------------------------------
@@ -1172,6 +1179,7 @@ procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
     IniFilename : WideString;
     i : Integer;
+    HiddenCoreColumnsList : TStrings;
     VisibleExtraColumnsList : TStrings;
     ColumnsPositionList : TStrings;
     ColumnsWidthList : TStrings;
@@ -1215,7 +1223,7 @@ begin
       end;
     end;
     IniFile.WriteString('General', 'VisibleExtraColumns', VisibleExtraColumnsList.CommaText);
-    VisibleExtraColumnsList.Free;
+    FreeAndNil(VisibleExtraColumnsList);
 
     ColumnsPositionList := TStringList.Create;
     ColumnsWidthList := TStringList.Create;
@@ -1226,10 +1234,12 @@ begin
       ColumnsWidthList.Add(IntToStr(Column.Width));
     end;
     IniFile.WriteString('General', 'ColumnsPosition', ColumnsPositionList.CommaText);
-    ColumnsPositionList.Free;
+    FreeAndNil(ColumnsPositionList);
     IniFile.WriteString('General', 'ColumnsWidth', ColumnsWidthList.CommaText);
-    ColumnsWidthList.Free;
-        
+    FreeAndNil(ColumnsWidthList);
+    
+    IniFile.WriteString('General', 'HiddenByUserCoreColumns', HiddenByUserCoreColumnsList.CommaText);
+
     // VO textbox
     IniFile.WriteInteger('Windows', 'MemoSubtitleVO_Width', MemoSubtitleVO.Width);
 
@@ -1420,10 +1430,11 @@ var Column : TVirtualTreeColumn;
 
     IniFile : TIniFile;
     IniFilename : WideString;
-    StartupVisibleExtraColumns, StartupColumnsPosition, StartupColumnsWidth : string;
+    StartupHiddenByUserCoreColumns, StartupVisibleExtraColumns, StartupColumnsPosition, StartupColumnsWidth : string;
 begin
   IniFilename := GetIniFilename;
   IniFile := TIniFile.Create(IniFilename);
+  StartupHiddenByUserCoreColumns := IniFile.ReadString('General', 'HiddenByUserCoreColumns', '');
   StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
   StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
   StartupColumnsWidth := IniFile.ReadString('General', 'ColumnsWidth', '');
@@ -1441,21 +1452,14 @@ begin
     begin
       Column.Options := Column.Options - [coVisible];
     end;
-    MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
-    MenuItem.Caption := Column.Text;
-    MenuItem.OnClick := pmiToggleColumn;
-    MenuItem.Checked := (coVisible in Column.Options);
-    MenuItem.Tag := Integer(Column);
-    Column.Tag := Integer(MenuItem);
-    SubListHeaderPopupMenu.Items.Add(MenuItem);
   end;
-
   VisibleExtraColumnsList.Free;
 
   ColumnsPositionList := TStringList.Create;
   ColumnsPositionList.CommaText := StartupColumnsPosition;
   ColumnsWidthList := TStringList.Create;
   ColumnsWidthList.CommaText := StartupColumnsWidth;
+  HiddenByUserCoreColumnsList.CommaText := StartupHiddenByUserCoreColumns;
   for i := 0 to vtvSubsList.Header.Columns.Count-1 do
   begin
     Column := vtvSubsList.Header.Columns.Items[i];
@@ -1469,6 +1473,17 @@ begin
       NewWidth := StrToIntDef(ColumnsWidthList[i], Column.Width);
       Column.Width := NewWidth;
     end;
+    if (HiddenByUserCoreColumnsList.IndexOf(Column.Text) <> -1) then
+    begin
+      Column.Options := Column.Options - [coVisible];
+    end;
+    MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
+    MenuItem.Caption := Column.Text;
+    MenuItem.OnClick := pmiToggleColumn;
+    MenuItem.Checked := (coVisible in Column.Options);
+    MenuItem.Tag := Integer(Column);
+    Column.Tag := Integer(MenuItem);
+    SubListHeaderPopupMenu.Items.Add(MenuItem);
   end;
   ColumnsPositionList.Free;
   ColumnsWidthList.Free;
@@ -1897,20 +1912,20 @@ begin
     if (Ext = '.srt') then
     begin
       LoadSRT(Filename, IsUTF8);
-      StyleColumn.Options := StyleColumn.Options - [coVisible];
+      ShowColumn(StyleColumn, False);
     end
     else if (Ext = '.ass') then
     begin
       EnableStyle := True;
       LoadASS(Filename, IsUTF8, False);
-      StyleColumn.Options := StyleColumn.Options + [coVisible];
+      ShowColumn(StyleColumn, True);
       StyleFormInstance.ConfigureMode(sfmASS);
     end
     else if (Ext = '.ssa') then
     begin
       EnableStyle := True;
       LoadASS(Filename, IsUTF8, True);
-      StyleColumn.Options := StyleColumn.Options + [coVisible];
+      ShowColumn(StyleColumn, True);
       StyleFormInstance.ConfigureMode(sfmSSA);
     end;
   finally
@@ -1918,12 +1933,54 @@ begin
     vtvSubsList.EndUpdate;
   end;
   WAVDisplayer.UpdateView([uvfRange]);
-  AutoFitSubsListColumns;
+  //AutoFitSubsListColumns;
   vtvSubsList.Repaint;
   
   UpdateStylesComboBox;
 
   EnableStyleControls(EnableStyle);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.ShowColumn(Column : TVirtualTreeColumn; Show, FromUser : Boolean);
+var i : Integer;
+    MenuItem : TMenuItem;
+    HiddenByUser : Boolean; 
+begin
+  HiddenByUser := HiddenByUserCoreColumnsList.IndexOf(Column.Text) <> -1;
+
+  if (FromUser = True) then
+  begin
+    // User force this column to always be displayed or hidden
+    if (Show) then
+    begin
+      Column.Options := Column.Options + [coVisible];
+      if (HiddenByUser) then
+        HiddenByUserCoreColumnsList.Delete(i);
+    end
+    else
+    begin
+      Column.Options := Column.Options - [coVisible];
+      if (not HiddenByUser) then
+        HiddenByUserCoreColumnsList.Add(Column.Text);
+    end;
+  end
+  else
+  begin
+    if (Show) and (not HiddenByUser) then
+      Column.Options := Column.Options + [coVisible]
+    else
+      Column.Options := Column.Options - [coVisible];
+  end;
+
+  // Update the popup menu
+  for i := 0 to SubListHeaderPopupMenu.Items.Count-1 do
+  begin
+    MenuItem := SubListHeaderPopupMenu.Items[i];
+    Column := (TObject(MenuItem.Tag) as TVirtualTreeColumn);
+    MenuItem.Checked := (coVisible in Column.Options);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -4487,8 +4544,12 @@ end;
 procedure TMainForm.ShowPreferences(TabSheet : TTntTabSheet);
 var OldSwapState : Boolean;
     IniFile : TIniFile;
+    OldSubListFont, OldSubTextFont : string;
+
 begin
   OldSwapState := ConfigObject.SwapSubtitlesList;
+  OldSubListFont := ConfigObject.SubListFont;
+  OldSubTextFont := ConfigObject.SubTextFont;
   PreferencesFormInstance.LoadConfig(ConfigObject);
   if (TabSheet <> nil) then
     PreferencesFormInstance.PageControlPreferences.ActivePage := TabSheet;
@@ -4515,7 +4576,10 @@ begin
     SetShortcut(IsTimingMode);
     ApplyMouseSettings;
     ApplyAutoBackupSettings;
-    ApplyFontSettings;
+    if (ConfigObject.SubListFont <> OldSubListFont) or (ConfigObject.SubTextFont <> OldSubTextFont) then
+    begin
+      ApplyFontSettings;
+    end;
     ApplyMiscSettings;
   end;
 end;
@@ -4524,8 +4588,13 @@ end;
 
 procedure TMainForm.AutoFitSubsListColumns;
 begin
-  vtvSubsList.Header.AutoFitColumns(False, smaNoColumn, INDEX_COL_INDEX, STYLE_COL_INDEX);
-  vtvSubsList.Header.AutoFitColumns(False, smaNoColumn, VO_COL_INDEX + 1);
+  // Take into account all the lines to fit the index column
+  vtvSubsList.Header.AutoFitColumns(False, smaNoColumn, INDEX_COL_INDEX, INDEX_COL_INDEX);
+  // From start to style only use visible node
+  vtvSubsList.Header.AutoFitColumns(False, smaAllColumns, START_COL_INDEX, STYLE_COL_INDEX);
+  // Skip the text and VO column and autofit the rest of the columns only using visible node
+  vtvSubsList.Header.AutoFitColumns(False, smaAllColumns, VO_COL_INDEX + 1);
+
   vtvSubsList.Invalidate;  
 end;
 
@@ -8566,21 +8635,19 @@ end;
 
 procedure TMainForm.pmiToggleColumn(Sender: TObject);
 var Column : TVirtualTreeColumn;
-    SelectedMenuItem : TTntMenuItem;
+    SelectedMenuItem : TMenuItem;
 begin
   if (Sender is TTntMenuItem) then
   begin
-    SelectedMenuItem := (Sender as TTntMenuItem);
+    SelectedMenuItem := (Sender as TMenuItem);
     Column := (TObject(SelectedMenuItem.Tag) as TVirtualTreeColumn);
-    if (coVisible in Column.Options) then
+    if (SelectedMenuItem.Checked) then
     begin
-      Column.Options := Column.Options - [coVisible];
-      SelectedMenuItem.Checked := False;
+      ShowColumn(Column, False, True);
     end
     else
     begin
-      Column.Options := Column.Options + [coVisible];
-      SelectedMenuItem.Checked := True;
+      ShowColumn(Column, True, True);
     end;
   end;
 end;
@@ -9475,7 +9542,7 @@ begin
   SplitterSubtitleVO.Visible := False;
   MemoSubtitleVO.Visible := False;
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
-  VOColumn.Options := VOColumn.Options - [coVisible];
+  ShowColumn(VOColumn, False);
   WAVDisplayer.ShowVO(False);
   WAVDisplayer.UpdateView([uvfPageSize]);
 end;
@@ -9486,7 +9553,7 @@ begin
   MemoSubtitleVO.Visible := True;
   SplitterSubtitleVO.Visible := True;
   VOColumn := vtvSubsList.Header.Columns.Items[VO_COL_INDEX];
-  VOColumn.Options := VOColumn.Options + [coVisible];
+  ShowColumn(VOColumn, True);
   WAVDisplayer.ShowVO(True);
   WAVDisplayer.UpdateView([uvfPageSize]);
 end;
