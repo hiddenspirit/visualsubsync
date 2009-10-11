@@ -1,7 +1,7 @@
 program VisualSubSync;
 
 uses
-  FastMM4,
+  //FastMM4,
   VCLFixPack,
   Windows,
   Forms,
@@ -46,6 +46,7 @@ uses
   SilentZoneFormUnit in 'SilentZoneFormUnit.pas' {SilentZoneForm},
   LibHunspellUnit in 'LibHunspellUnit.pas',
   BgThreadTaskUnit in 'BgThreadTaskUnit.pas',
+  //ExceptDlg in 'ThirdParty\jcl\ExceptDlg.pas' {ExceptionDialog},
   SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm},
   VSSClipboardUnit in 'VSSClipboardUnit.pas';
 
@@ -67,9 +68,9 @@ begin
   Application.CreateForm(TErrorReportForm, ErrorReportForm);
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
-  MainForm.InitGeneralJSPlugin;
   MainForm.LoadSettings;
   MainForm.FinishLoadSettings;
+  MainForm.InitGeneralJSPlugin;
   Application.ProcessMessages;
   MainForm.ProcessParams;
   MainForm.LoadAfterParamsSettings;
