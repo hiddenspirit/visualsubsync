@@ -1,7 +1,7 @@
 {**************************************************************************************************}
 {                                                                                                  }
 { VCLFixPack unit - Unoffical bug fixes for Delphi/C++Builder                                      }
-{ Version 1.3 (2009-05-30)                                                                         }
+{ Version 1.4 (2009-09-03)                                                                         }
 {                                                                                                  }
 { The contents of this file are subject to the Mozilla Public License Version 1.1 (the "License"); }
 { you may not use this file except in compliance with the License. You may obtain a copy of the    }
@@ -36,8 +36,8 @@ unit VCLFixPack;
 interface
 
 const
-  VCLFixPackRevision = '1.3';
-  VCLFixPackDate = '2009/04/30';  // yyyy/dd/mm
+  VCLFixPackRevision = '1.4';
+  VCLFixPackDate = '2009/03/09';  // yyyy/dd/mm
 
 {
  Usage
@@ -56,6 +56,10 @@ const
 
  Fixes the following bug
  =======================
+   - [2006-2009]
+     QC #74646: Buffer overflow in TCustomClientDataSet.DataConvert with ftWideString
+     (http://qc.codegear.com/wc/qcmain.aspx?d=74646)
+
    - [2006-2009]  fixed in Delphi 2009 Update 3
      QC #68647: Infinite loop in Forms.GetNonToolWindowPopupParent
      (http://qc.codegear.com/wc/qcmain.aspx?d=68647)
@@ -136,6 +140,10 @@ const
 
 
  Changlog:
+   2009-09-03:
+     Added: QC #74646: Buffer overflow in TCustomClientDataSet.DataConvert with ftWideString
+     Fixed: TTabSheet looked stange if used with SilverThemes.
+
    2009-05-30:
      Changed: Disabled all patches that are fixed by Delphi 2009 Update 3
      Added: QC #7393: App with no main form showing a form with hints freezes
@@ -157,6 +165,12 @@ const
 }
 
 { ---------------------------------------------------------------------------- }
+
+{$IF (CompilerVersion >= 18.0) and (CompilerVersion <= 20.0)}
+  {$IFDEF VCLFIXPACK_DB_SUPPORT}
+    {$DEFINE CDSDataConvertFix}
+  {$ENDIF VCLFIXPACK_DB_SUPPORT}
+{$IFEND}
 
 {$DEFINE DBTextColorBugFix} // Delphi 6+
 
@@ -271,7 +285,7 @@ uses
   Character,
   {$IFEND}
   {$IFDEF VCLFIXPACK_DB_SUPPORT}
-  DBGrids, DBCtrls,
+  DB, DBClient, DBGrids, DBCtrls,
   {$ENDIF VCLFIXPACK_DB_SUPPORT}
   Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Buttons,
   CommCtrl;
@@ -1606,6 +1620,7 @@ end;
 procedure TFlickerlessTabSheet.WMEraseBkgnd(var Message: TWMEraseBkgnd);
 var
   R: TRect;
+  BorderSize: Integer;
 begin
   if (PageControl <> nil) and (PageControl.Style = tsTabs) and ThemeServices.ThemesEnabled then
   begin
@@ -1613,7 +1628,9 @@ begin
       And fill it in WM_ERASEBKGND where it belongs instead of WM_PRINTCLIENT. }
     GetWindowRect(Handle, R);
     OffsetRect(R, -R.Left, -R.Top);
-    ThemeServices.DrawElement(Message.DC, ThemeServices.GetElementDetails(ttBody), R);
+    BorderSize := ClientToParent(Point(0, 0)).X; // ttPane includes the border that we don't want
+    InflateRect(R, BorderSize, BorderSize);
+    ThemeServices.DrawElement(Message.DC, ThemeServices.GetElementDetails(ttPane), R);
     Message.Result := 1;
   end
   else
@@ -2438,6 +2455,75 @@ end;
 { ---------------------------------------------------------------------------- }
 
 
+
+{ ---------------------------------------------------------------------------- }
+{ QC # }
+{$IFDEF CDSDataConvertFix}
+type
+  TFixedCustomClientDataSet = class(TDataSet)
+  protected
+    procedure DataConvertFix(Field: TField; Source, Dest: Pointer; ToNative: Boolean);
+  end;
+
+  TOpenCustomClientDataSet = class(TCustomClientDataSet);
+
+var
+  CDS_DataConvertHook: TXRedirCode;
+
+procedure TFixedCustomClientDataSet.DataConvertFix(Field: TField; Source, Dest: Pointer; ToNative: Boolean);
+
+  function WStrLen(F: PWideChar): Cardinal;
+  var
+    P: PWideChar;
+  begin
+    P := F;
+    while P[0] <> #0 do
+      Inc(P);
+    Result := P - F;
+  end;
+
+var
+  Len: Integer;
+begin
+  if Field.DataType = ftWideString then
+  begin
+    if ToNative then
+    begin
+      Len := WStrLen(PWideChar(Source)) * SizeOf(WideChar);
+
+      { If it doesn't fit into the buffer then truncate it }
+      if Len > High(Word) then
+        Len := High(Word);
+      if Len > Field.DataSize - SizeOf(Word) then
+        Len := Field.DataSize - SizeOf(Word);
+
+      Word(Dest^) := Len;
+      Move(PWideChar(Source)^, (PWideChar(Dest) + 1)^, Word(Dest^));
+    end else
+    begin
+      Len := Word(Source^);
+      Move((PWideChar(Source) + 1)^, PWideChar(Dest)^, Len);
+      (PWideChar(Dest) + (Len div SizeOf(WideChar)))^ := #$00;
+    end;
+  end else
+    inherited DataConvert(Field, Source, Dest, ToNative);
+end;
+
+procedure InitCDSDataConvertFix;
+begin
+  DebugLog('CDSDataConvertFix');
+  HookProc(@TOpenCustomClientDataSet.DataConvert, @TFixedCustomClientDataSet.DataConvertFix, CDS_DataConvertHook);
+end;
+
+procedure FiniCDSDataConvertFix;
+begin
+  UnhookProc(@TOpenCustomClientDataSet.DataConvert, CDS_DataConvertHook);
+end;
+{$ENDIF CDSDataConvertFix}
+{ ---------------------------------------------------------------------------- }
+
+
+
 { ---------------------------------------------------------------------------- }
 { Workaround for Windows Vista CompareString bug }
 {$IFDEF VistaCompareStringFix}
@@ -2875,6 +2961,10 @@ initialization
   InitCancelHintDeadlockFix;
   {$ENDIF CancelHintDeadlockFix}
 
+  {$IFDEF CDSDataConvertFix}
+  InitCDSDataConvertFix;
+  {$ENDIF CDSDataConvertFix}
+
   {$IFDEF VistaCompareStringFix}
   InitCompareStringFix;
   {$ENDIF VistaCompareStringFix}
@@ -2885,6 +2975,10 @@ finalization
   {$IFDEF VistaCompareStringFix}
   FiniCompareStringFix;
   {$ENDIF VistaCompareStringFix}
+
+  {$IFDEF CDSDataConvertFix}
+  FiniCDSDataConvertFix;
+  {$ENDIF CDSDataConvertFix}
 
   {$IFDEF CancelHintDeadlockFix}
   FiniCancelHintDeadlockFix;
