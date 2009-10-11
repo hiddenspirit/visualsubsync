@@ -83,6 +83,8 @@ type
     procedure pmiSelectAllXXXClick(Sender: TObject);
     procedure pmiSelectAllYYYClick(Sender: TObject);
     procedure miExportToHTMLClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     BoldFont : HFONT;
@@ -646,6 +648,17 @@ begin
     WriteStringLnStream('</body>', FS);
     WriteStringLnStream('</html>', FS);
     FS.Free;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TErrorReportForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
   end;
 end;
 

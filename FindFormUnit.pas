@@ -59,6 +59,8 @@ type
     procedure chkRegExpClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     procedure HistorizeComboBox(ComboBox : TTntComboBox);    
@@ -272,6 +274,17 @@ begin
     Self.Caption := 'Find text'
   else
     Self.Caption := 'Find subtitle';
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TFindForm.FormKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 //------------------------------------------------------------------------------

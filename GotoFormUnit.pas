@@ -74,8 +74,10 @@ end;
 procedure TGotoForm.FormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
-  if Key = VK_RETURN then
-    ModalResult := mrOk;
+  if (Key = VK_RETURN) then
+    ModalResult := mrOk
+  else if (Key = VK_ESCAPE) then
+    Close
 end;
 
 procedure TGotoForm.MaskEditTimeChange(Sender: TObject);

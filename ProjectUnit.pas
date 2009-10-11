@@ -113,6 +113,8 @@ type
     procedure EditPeakFilenameEnter(Sender: TObject);
     procedure EditPeakFilenameExit(Sender: TObject);
     procedure EditUpdateColor(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     procedure WAVSelectMode(WavMode : TProjectWAVMode);
@@ -705,6 +707,17 @@ end;
 procedure TProjectForm.EditUpdateColor(Sender: TObject);
 begin
   UpdateColor;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TProjectForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 //------------------------------------------------------------------------------

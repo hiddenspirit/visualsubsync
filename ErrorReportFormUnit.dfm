@@ -14,10 +14,12 @@ object ErrorReportForm: TErrorReportForm
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   FormStyle = fsStayOnTop
+  KeyPreview = True
   Menu = TntMainMenu1
   OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
   PixelsPerInch = 96
   TextHeight = 13
   object vtvErrorList: TVirtualDrawTree

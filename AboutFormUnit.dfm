@@ -14,9 +14,11 @@ object AboutForm: TAboutForm
   Font.Height = -11
   Font.Name = 'Arial'
   Font.Style = [fsBold]
+  KeyPreview = True
   OldCreateOrder = False
   Position = poOwnerFormCenter
   OnCreate = FormCreate
+  OnKeyDown = FormKeyDown
   PixelsPerInch = 96
   TextHeight = 14
   object TntLabel1: TTntLabel
