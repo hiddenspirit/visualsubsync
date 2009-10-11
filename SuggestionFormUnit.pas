@@ -52,6 +52,8 @@ type
     procedure pmiClearSelectedClick(Sender: TObject);
     procedure vtvSuggestionsLstFocusChanged(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     FCriticalSection : TRtlCriticalSection;
@@ -353,6 +355,17 @@ begin
   end
   else
     MemoSuggPreview.Text := '';
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TSuggestionForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 // -----------------------------------------------------------------------------

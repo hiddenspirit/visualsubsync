@@ -118,6 +118,8 @@ type
     procedure bttResetClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure bttHSLButtonClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     FStylesChanged : Boolean;
@@ -931,6 +933,15 @@ begin
   FSecondaryColor := pnlSecondaryColor.Color;
   FOutlineColor := pnlOutlineColor.Color;
   FBackColor := pnlBackColor.Color;
+end;
+
+procedure TStyleForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 // =============================================================================

@@ -48,6 +48,8 @@ type
     procedure TntLabel3Click(Sender: TObject);
     procedure TntLabel1Click(Sender: TObject);
     procedure panelCrashTestClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -101,6 +103,15 @@ begin
   // To test the exception hook
   DummyPointer := nil;
   DummyPointer^ := 0;
+end;
+
+procedure TAboutForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 end.

@@ -19,6 +19,8 @@ type
     procedure bttResetClick(Sender: TObject);
     procedure ScalingTrackBarChange(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     FWAVDisplayer : TWAVDisplayer;
@@ -55,6 +57,15 @@ end;
 procedure TVerticalScalingForm.FormShow(Sender: TObject);
 begin
   ScalingTrackBar.Position := FWAVDisplayer.VerticalScaling;
+end;
+
+procedure TVerticalScalingForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 end.

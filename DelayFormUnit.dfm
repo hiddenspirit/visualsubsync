@@ -13,8 +13,10 @@ object DelayForm: TDelayForm
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
+  KeyPreview = True
   OldCreateOrder = False
   Position = poOwnerFormCenter
+  OnKeyUp = FormKeyUp
   PixelsPerInch = 96
   TextHeight = 13
   object meDelay: TMaskEdit

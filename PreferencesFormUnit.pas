@@ -270,6 +270,8 @@ type
     procedure chkAssociateExtSRTClick(Sender: TObject);
     procedure chkAssociateExtSSAClick(Sender: TObject);
     procedure chkAssociateExtASSClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
 
   private
     { Private declarations }
@@ -1564,6 +1566,17 @@ begin
   else
   begin
     ShellUnRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) and (not ListPluginParam.IsEditing) and (not HotKey1.Focused) then
+  begin
+    Close;
   end;
 end;
 

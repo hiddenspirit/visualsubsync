@@ -44,6 +44,8 @@ type
     procedure bttReplaceAllClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure lbSuggestionsClick(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     Sub : TSubtitleRange;
@@ -289,6 +291,15 @@ begin
   if (lbSuggestions.ItemIndex <> -1) then
   begin
     edReplaceBy.Text := lbSuggestions.Items.Strings[lbSuggestions.ItemIndex];
+  end;
+end;
+
+procedure TSpellCheckForm.FormKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
   end;
 end;
 

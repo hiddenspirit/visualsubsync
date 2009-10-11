@@ -22,6 +22,8 @@ type
     procedure lbSilentZonesDblClick(Sender: TObject);
     procedure bttUpdateClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     FWAVDisplayer : TWAVDisplayer;
@@ -120,6 +122,15 @@ begin
   Clear;
   FWAVDisplayer.DetectSilentZone(FZoneList, GetThreshold, 100);
   SilentZoneForm.FillZone(FZoneList);
+end;
+
+procedure TSilentZoneForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 end.

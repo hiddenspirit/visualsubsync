@@ -37,6 +37,8 @@ type
     rgShift: TTntRadioGroup;
     procedure bttApplyClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -128,6 +130,17 @@ begin
   localizedText[3] := TimeSeparator;
   localizedText[6] := TimeSeparator;
   meDelay.Text := localizedText;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TDelayForm.FormKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
