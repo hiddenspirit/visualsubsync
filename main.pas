@@ -9028,6 +9028,7 @@ begin
     MenuItem := Sender as TTntMenuItem;
     LoadPresetFile(g_PresetsPath + MenuItem.Hint);
     CurrentProject.Presets := MenuItem.Hint;
+    CurrentProject.IsDirty := True;
   end;
 end;
 
