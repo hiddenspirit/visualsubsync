@@ -264,9 +264,10 @@ begin
   // External WAV file mode
   if (rbExternal.Checked) then
   begin
-    if (not WideFileExists(EditWAVFilename.Text)) then
+
+    if (not WideFileExists(GetWAVFilename)) then
     begin
-      if (AskForExtraction and VideoFileExists) then
+      if ((AskForExtraction or (EditWAVFilename.Text = LEAVE_EMPTY)) and VideoFileExists) then
       begin
         if ShowExtractForm(wetFastConversion) = False then
           Exit;
@@ -284,9 +285,9 @@ begin
   // Peak file only mode
   if (rbPeakOnly.Checked) then
   begin
-    if (not WideFileExists(EditPeakFilename.Text)) then
+    if (not WideFileExists(GetPeakFilename)) then
     begin
-      if (AskForExtraction and VideoFileExists) then
+      if ((AskForExtraction or (EditPeakFilename.Text = LEAVE_EMPTY)) and VideoFileExists) then
       begin
         if ShowExtractForm(wetOnlyPeakFile) = False then
           Exit;
