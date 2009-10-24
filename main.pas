@@ -9626,12 +9626,12 @@ begin
     TntSaveDialog1.FileName := TranslatedFilename;
     if TntSaveDialog1.Execute then
     begin
-      SaveSubtitles(TranslatedFilename, CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False, True);
+      SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False, True);
       
       ErrorReportForm.Clear;
 
       CurrentProject.SubtitlesVO := CurrentProject.SubtitlesFile;
-      CurrentProject.SubtitlesFile := TranslatedFilename;
+      CurrentProject.SubtitlesFile := TntSaveDialog1.FileName;
 
       LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
       LoadVO(CurrentProject.SubtitlesVO);
