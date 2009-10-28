@@ -2222,6 +2222,7 @@ object MainForm: TMainForm
       OnExecute = ActionDeleteSceneChangeExecute
     end
     object ActionReload: TTntAction
+      Tag = 1
       Caption = 'Reload'
       OnExecute = ActionReloadExecute
     end
