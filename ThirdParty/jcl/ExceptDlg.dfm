@@ -41,9 +41,9 @@ object ExceptionDialog: TExceptionDialog
     Top = 69
     Width = 75
     Height = 25
-    Hint = 'Send bug report using default mail client'
+    Hint = 'Create an email using default mail client'
     Anchors = [akTop, akRight]
-    Caption = '&Send'
+    Caption = '&Create email'
     TabOrder = 0
     OnClick = SendBtnClick
   end

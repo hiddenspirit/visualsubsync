@@ -68,7 +68,7 @@ implementation
 
 {$R *.dfm}
 
-uses CursorManager;
+uses CursorManager, GlobalUnit;
 
 // -----------------------------------------------------------------------------
 
@@ -81,6 +81,7 @@ begin
   begin
     DSWavExtractor.Close;
     DSWavExtractor.Open(VideoFilename);
+    g_WavExtractorGraphDebugInfo := DSWavExtractor.GetFiltersAsString;    
   end;
 
   bttStop.Enabled := True;
@@ -88,6 +89,8 @@ begin
   DSWavExtractor.WAVExtractionType := CurrentExtractionType;
   DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
   AudioPinIsSelected := True;
+
+  g_WavExtractorGraphDebugInfo := DSWavExtractor.GetFiltersAsString;
 
   DSWavExtractor.Go;
   Timer1.Enabled := True;
@@ -137,6 +140,7 @@ begin
   MemoVideoInfo.Lines.Add('Please wait...');
   Application.ProcessMessages;
   DSWavExtractor.Open(VideoFilename);
+  g_WavExtractorGraphDebugInfo := DSWavExtractor.GetFiltersAsString;
   MemoVideoInfo.Lines.Add(IntToStr(DSWavExtractor.AudioStreamCount) +
     ' audio stream found.');
   cbStreamIndex.Clear;

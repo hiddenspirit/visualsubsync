@@ -53,6 +53,8 @@ var
   g_ApplicationPath : WideString;
   g_PresetsPath : WideString;
   g_DictPath : WideString;
+  g_WavExtractorGraphDebugInfo : WideString;
+  g_VideoGraphDebugInfo : WideString;
 
 implementation
 

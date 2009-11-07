@@ -2912,6 +2912,7 @@ begin
     ShowStatusBarMessage('Loading video file...');
     if VideoRenderer.Open(CurrentProject.VideoSource) then
     begin
+      g_VideoGraphDebugInfo := VideoRenderer.GetFiltersAsString;
       if (CurrentProject.DetachedVideo <> MenuItemDetachVideoWindow.Checked) then
         ActionDetachVideoExecute(nil);
       if (CurrentProject.ShowVideo <> ShowingVideo) then
@@ -3417,6 +3418,7 @@ begin
         VideoHasChanged := True;
         if VideoRenderer.Open(CurrentProject.VideoSource) then
         begin
+          g_VideoGraphDebugInfo := VideoRenderer.GetFiltersAsString;
           CurrentProject.VideoPanelWidth := 0;
           CurrentProject.VideoPanelHeight := 0;
           UpdateVideoRendererWindow;
@@ -3427,6 +3429,7 @@ begin
         else
         begin
           VideoRenderer.Close;
+          g_VideoGraphDebugInfo := '';
           ClearVideoSceneChange;
           g_VSSCoreWrapper.SetVideoWidth(0);
           g_VSSCoreWrapper.SetVideoHeight(0);
@@ -4745,6 +4748,8 @@ begin
 
   AudioOnlyRenderer.Close;
   VideoRenderer.Close;
+  g_VideoGraphDebugInfo := '';
+  g_WavExtractorGraphDebugInfo := '';
 
   g_VSSCoreWrapper.SetVideoWidth(0);
   g_VSSCoreWrapper.SetVideoHeight(0);
