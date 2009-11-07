@@ -95,7 +95,8 @@ implementation
 
 uses
   ClipBrd, Math, JclSecurity,
-  JclBase, JclFileUtils, JclHookExcept, JclPeImage, JclStrings, JclSysInfo, JclWin32;
+  JclBase, JclFileUtils, JclHookExcept, JclPeImage, JclStrings, JclSysInfo, JclWin32,
+  GlobalUnit;
 
 resourcestring
   RsAppError = '%s - application error';
@@ -112,14 +113,23 @@ resourcestring
   RsThread = 'Thread: %s';
   RsMissingVersionInfo = '(no module version info)';
 
+                  
   RsErrorMessage = 'There was an error during the execution of this program.' + NativeLineBreak +
                    'The application might become unstable and even useless.' + NativeLineBreak +
                    'It''s recommended that you save your work and close this application.' + NativeLineBreak + NativeLineBreak;
+
   RsDetailsIntro = 'Exception log with detailed tech info. Generated on %s.' + NativeLineBreak +
-                   'You may send it to the application vendor, helping him to understand what had happened.' + NativeLineBreak +
-                   'A copy is saved in %s' + NativeLineBreak +
-                   '  Application title: %s' + NativeLineBreak +
-                   '  Application file: %s';
+                   'A copy is saved in %s'  + NativeLineBreak +
+                   'You may send it to the application vendor, helping him to understand what had happened.';
+
+  RsDescription = 'What steps will reproduce the problem?' + NativeLineBreak +
+                  '1.' + NativeLineBreak +
+                  '2. ' + NativeLineBreak +
+                  '3. ' + NativeLineBreak +
+                  ' ' + NativeLineBreak +
+                  'Please provide any additional information below.' + NativeLineBreak +
+                  '' + NativeLineBreak;                   
+                   
   RsUnitVersioningIntro = 'Unit versioning information:';
 
 var
@@ -255,7 +265,7 @@ begin
     ParentWnd := Application.Handle;
     Recipients.Add('christophe.paris' +  // avoid spam maybe
       '@' + 'free.fr');
-    Subject := '[VisualSubSync] crash report';
+    Subject := '[VisualSubSync] crash report (' + g_ApplicationVersion.VersionString + ')';
     Body := AnsiString(ReportAsText);
     SaveTaskWindows;
     try
@@ -454,6 +464,13 @@ begin
       NextDetailBlock;
     end;
 
+    // Get info about loaded video file
+    DetailsMemo.Lines.Add('Video graph :');
+    DetailsMemo.Lines.Add(g_VideoGraphDebugInfo);
+    DetailsMemo.Lines.Add('WAV Extractor graph :');
+    DetailsMemo.Lines.Add(g_WavExtractorGraphDebugInfo);
+    NextDetailBlock;
+
   finally
     SL.Free;
   end;
@@ -577,7 +594,7 @@ end;
 
 function TExceptionDialog.GetReportAsText: string;
 begin
-  Result := StrEnsureSuffix(NativeCrLf, TextMemo.Text) + NativeCrLf + DetailsMemo.Text;
+  Result := DetailsMemo.Text;
 end;
 
 //--------------------------------------------------------------------------------------------------
@@ -663,7 +680,9 @@ begin
       UpdateTextMemoScrollbars;
       NextDetailBlock;
       //Arioch: some header for possible saving to txt-file/e-mail/clipboard/NTEvent...
-      DetailsMemo.Lines.Add(Format(RsDetailsIntro, [DateTimeToStr(Now), FSimpleLog.LogFileName, Application.Title, Application.ExeName]));
+      DetailsMemo.Lines.Add(Format(RsDetailsIntro, [DateTimeToStr(Now), FSimpleLog.LogFileName]));
+      DetailsMemo.Lines.Add('');
+      DetailsMemo.Lines.Add(RsDescription);
       NextDetailBlock;
       DetailsMemo.Lines.Add(Format(RsExceptionClass, [E.ClassName]));
       if E is Exception then

@@ -108,6 +108,7 @@ type
     procedure CopyState(Renderer : TRenderer); override;
     function GetVSFilterFPS : Double;
     function GetFilters(list : TStrings) : Boolean;
+    function GetFiltersAsString : string;
         
   published
     property OnStopPlaying;
@@ -159,6 +160,7 @@ type
     function IsFinished : Boolean;
     procedure Close;
     function GetFilters(list : TStrings) : Boolean;
+    function GetFiltersAsString : string;
 
   published
     property AudioStreamCount : Integer read FAudioStreamCount;
@@ -536,6 +538,17 @@ end;
 function TDShowRenderer.GetFilters(list : TStrings) : Boolean;
 begin
   Result := GetFiltersList(FGraphBuilder, list);
+end;
+
+//------------------------------------------------------------------------------
+
+function TDShowRenderer.GetFiltersAsString : string;
+var strList : TStringList;
+begin
+  strList := TStringList.Create;
+  GetFiltersList(FGraphBuilder, strList);
+  Result := strList.Text;
+  FreeAndNil(strList);
 end;
 
 //------------------------------------------------------------------------------
@@ -1598,6 +1611,17 @@ end;
 function TDSWavExtractor.GetFilters(list : TStrings) : Boolean;
 begin
   Result := GetFiltersList(FGraphBuilder, list);
+end;
+
+// -----------------------------------------------------------------------------
+
+function TDSWavExtractor.GetFiltersAsString : string;
+var strList : TStringList;
+begin
+  strList := TStringList.Create;
+  GetFiltersList(FGraphBuilder, strList);
+  Result := strList.Text;
+  FreeAndNil(strList);
 end;
 
 //------------------------------------------------------------------------------
