@@ -64,6 +64,7 @@ type
 
   function URLDecode(ASrc: string): string;
 
+  function IsRegistryClassesRootKeyWritable : Boolean;
   procedure ShellRegisterExtension(Extension, AppName, DocType, Executable : string; IconIndex : Integer = -1);
   function ShellIsExtensionRegistered(Extension, AppName, DocType, Executable : string) : Boolean;
   procedure ShellUnRegisterExtension(Extension, AppName, DocType, Executable : string);
@@ -560,6 +561,20 @@ end;
 // =============================================================================
 // Shell extension registration
 // =============================================================================
+
+function IsRegistryClassesRootKeyWritable : Boolean;
+var hResultKey : HKEY;
+    OpenResult :Integer;
+begin
+  OpenResult := RegOpenKeyEx(HKEY_CLASSES_ROOT, nil, 0, KEY_WRITE, hResultKey);
+  if (OpenResult = ERROR_SUCCESS) then
+  begin
+    Result := True;
+    RegCloseKey(hResultKey);
+  end
+  else
+    Result := False;
+end;
 
 procedure ShellRegisterExtension(Extension, AppName, DocType, Executable : string; IconIndex : Integer);
 var
