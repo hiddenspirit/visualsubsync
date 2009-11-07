@@ -283,6 +283,8 @@ type
     procedure SetCurrentModeShortCutFromList(ShortCut : TShortCut);
     procedure WMEndEditing(var Message: TMessage); message WM_ENDEDITING;
     procedure ClearErrorList;
+    procedure UpdateAssociationCheckBoxes;
+    function CheckRegistryAccess : Boolean;
   public
     { Public declarations }
     procedure LoadConfig(Config : TConfigObject);
@@ -817,7 +819,7 @@ begin
   end;
 end;
 
-procedure TPreferencesForm.FormActivate(Sender: TObject);
+procedure TPreferencesForm.UpdateAssociationCheckBoxes;
 var IsExtReged : Boolean;
 begin
   IsExtReged := ShellIsExtensionRegistered('vssprj', ApplicationName, 'Document', Application.ExeName);
@@ -831,6 +833,11 @@ begin
 
   IsExtReged := ShellIsExtensionRegistered('ass', ApplicationName, 'Document.ass', Application.ExeName);
   SetCheckedState(chkAssociateExtASS, IsExtReged);
+end;
+
+procedure TPreferencesForm.FormActivate(Sender: TObject);
+begin
+  UpdateAssociationCheckBoxes;
 end;
 
 //------------------------------------------------------------------------------
@@ -1515,8 +1522,29 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TPreferencesForm.CheckRegistryAccess : Boolean;
+begin
+  // TODO : On Vista and later version, ask for rights elevation by creating a separate executable
+  // with a special manifest. This executable will do all the administration work.
+  // More details : http://stackoverflow.com/questions/923350/delphi-prompt-for-uac-elevation-when-needed
+  if not IsRegistryClassesRootKeyWritable then
+  begin
+    MessageBoxW(Handle, PWideChar(WideString('Sorry, but Administrator access rights are needed to change file association. Nothing has been changed.')),
+        PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
+    UpdateAssociationCheckBoxes;
+    Result := False;
+  end
+  else
+    Result := True;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TPreferencesForm.chkAssociateExtVSSPRJClick(Sender: TObject);
 begin
+  if not CheckRegistryAccess then
+    Exit;
+
   if chkAssociateExtVSSPRJ.Checked then
   begin
     ShellRegisterExtension('vssprj', ApplicationName, 'Document', Application.ExeName, VSSPRJ_ICON_INDEX);
@@ -1531,6 +1559,9 @@ end;
 
 procedure TPreferencesForm.chkAssociateExtSRTClick(Sender: TObject);
 begin
+  if not CheckRegistryAccess then
+    Exit;
+
   if chkAssociateExtSRT.Checked then
   begin
     ShellRegisterExtension('srt', ApplicationName, 'Document.srt', Application.ExeName, SRT_ICON_INDEX);
@@ -1545,6 +1576,9 @@ end;
 
 procedure TPreferencesForm.chkAssociateExtSSAClick(Sender: TObject);
 begin
+  if not CheckRegistryAccess then
+    Exit;
+
   if chkAssociateExtSSA.Checked then
   begin
     ShellRegisterExtension('ssa', ApplicationName, 'Document.ssa', Application.ExeName, SSA_ICON_INDEX);
@@ -1559,6 +1593,9 @@ end;
 
 procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
 begin
+  if not CheckRegistryAccess then
+    Exit;
+    
   if chkAssociateExtASS.Checked then
   begin
     ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, ASS_ICON_INDEX);
