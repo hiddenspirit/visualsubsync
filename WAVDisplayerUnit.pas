@@ -164,6 +164,8 @@ type
     FPlayCursorMs : Integer;
     FOldPlayCursorMs : Integer;
     FAutoScrolling : Boolean;
+    FPreviousAutoScrolling : Boolean;
+    FPreviousAutoScrollingSaved : Boolean;
     FPositionMs : Integer;
     FPageSizeMs : Integer;
     FLengthMs : Integer;
@@ -262,6 +264,8 @@ type
     procedure SetSelectedRangeEx(Value : TRange; UpdateDisplay : Boolean = True);
     procedure SetPlayCursorPos(NewPos : Integer);
     procedure SetAutoScroll(const Value : Boolean);
+    procedure SetAutoScrollInternal(const Value : Boolean);
+    procedure RestoreAutoScroll;
     procedure SetVerticalScaling(Value : Integer);
     function CheckSubtitleForDynamicSelection(Range : TRange;
       CursorPosMs, RangeSelWindow : Integer; X,Y : Integer; ARangeList : TRangeList) : Boolean;
@@ -2556,7 +2560,7 @@ begin
     if (ssMiddle in Shift) then
     begin
       // pseudo "pixel accurate" scrolling
-      SetAutoScroll(False);
+      SetAutoScrollInternal(False);
       if (ssShift in Shift) then DiffMuliplier := 4 else DiffMuliplier := 1;
       ScrollDiff := PixelToTime(X) - FScrollOrigin;
       SetPositionMs(FPositionMs - (ScrollDiff*DiffMuliplier));
@@ -2700,6 +2704,9 @@ begin
   FMinSelTime := -1;
   FMaxSelTime := -1;
   ClipCursor(nil);
+
+  // TODO : make this configurable (disabled for now)
+  //RestoreAutoScroll;
 end;
 
 //------------------------------------------------------------------------------
@@ -3769,13 +3776,39 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TWAVDisplayer.SetAutoScrollInternal(const Value : Boolean);
+begin
+  if (Value <> FAutoScrolling) then
+  begin
+    FPreviousAutoScrolling := FAutoScrolling;
+    FPreviousAutoScrollingSaved := True;
+    FAutoScrolling := Value;
+    if Assigned(FOnAutoScrollChange) then
+      FOnAutoScrollChange(Self);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TWAVDisplayer.SetAutoScroll(const Value : Boolean);
 begin
+  FPreviousAutoScrollingSaved := False;
   if (Value <> FAutoScrolling) then
   begin
     FAutoScrolling := Value;
     if Assigned(FOnAutoScrollChange) then
       FOnAutoScrollChange(Self);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TWAVDisplayer.RestoreAutoScroll;
+begin
+  if FPreviousAutoScrollingSaved then
+  begin
+    SetAutoScrollInternal(FPreviousAutoScrolling);
+    FPreviousAutoScrollingSaved := False;
   end;
 end;
 
