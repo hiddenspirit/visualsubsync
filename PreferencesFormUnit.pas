@@ -806,19 +806,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure SetCheckedState(const checkBox : TCheckBox; const check : Boolean) ;
-var
-  onClickHandler : TNotifyEvent;
-begin
-  with checkBox do
-  begin
-    onClickHandler := OnClick;
-    OnClick := nil;
-    Checked := check;
-    OnClick := onClickHandler;
-  end;
-end;
-
 procedure TPreferencesForm.UpdateAssociationCheckBoxes;
 var IsExtReged : Boolean;
 begin

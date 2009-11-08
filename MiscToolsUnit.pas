@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes, Graphics, Types, Richedit, TntComCtrls, TntClasses;
+uses Classes, Graphics, Types, Richedit, TntComCtrls, TntClasses, StdCtrls, TntStdCtrls;
 
 type
   TFileVersion = class
@@ -122,6 +122,8 @@ type
   function WC2MB(S : WideString) : string;
   function MB2WC(S : string) : WideString;
 
+  procedure SetCheckedState(const checkBox : TCheckBox; const check : Boolean); overload;
+  procedure SetCheckedState(const checkBox : TTntCheckBox; const check : Boolean); overload;
 
 type
   MyTTntStringList = class(TTntStringList)
@@ -1460,6 +1462,33 @@ begin
   end;
 end;
 
+// -----------------------------------------------------------------------------
+
+procedure SetCheckedState(const checkBox : TCheckBox; const check : Boolean);
+var
+  onClickHandler : TNotifyEvent;
+begin
+  with checkBox do
+  begin
+    onClickHandler := OnClick;
+    OnClick := nil;
+    Checked := check;
+    OnClick := onClickHandler;
+  end;
+end;
+
+procedure SetCheckedState(const checkBox : TTntCheckBox; const check : Boolean);
+var
+  onClickHandler : TNotifyEvent;
+begin
+  with checkBox do
+  begin
+    onClickHandler := OnClick;
+    OnClick := nil;
+    Checked := check;
+    OnClick := onClickHandler;
+  end;
+end;
 
 // -----------------------------------------------------------------------------
 end.
