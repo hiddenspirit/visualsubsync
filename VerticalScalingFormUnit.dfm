@@ -35,7 +35,7 @@ object VerticalScalingForm: TVerticalScalingForm
     ParentFont = False
     TabOrder = 0
     object Label2: TLabel
-      Left = 15
+      Left = 14
       Top = 70
       Width = 12
       Height = 13
@@ -48,7 +48,7 @@ object VerticalScalingForm: TVerticalScalingForm
       ParentFont = False
     end
     object Label3: TLabel
-      Left = 50
+      Left = 30
       Top = 70
       Width = 18
       Height = 13
@@ -61,8 +61,8 @@ object VerticalScalingForm: TVerticalScalingForm
       ParentFont = False
     end
     object Label5: TLabel
-      Left = 129
-      Top = 69
+      Left = 67
+      Top = 70
       Width = 18
       Height = 13
       Caption = '200'
@@ -74,7 +74,7 @@ object VerticalScalingForm: TVerticalScalingForm
       ParentFont = False
     end
     object Label6: TLabel
-      Left = 209
+      Left = 103
       Top = 70
       Width = 18
       Height = 13
@@ -91,7 +91,59 @@ object VerticalScalingForm: TVerticalScalingForm
       Top = 70
       Width = 18
       Height = 13
+      Caption = '800'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object Label1: TLabel
+      Left = 140
+      Top = 70
+      Width = 18
+      Height = 13
       Caption = '400'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object Label7: TLabel
+      Left = 214
+      Top = 70
+      Width = 18
+      Height = 13
+      Caption = '600'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object Label8: TLabel
+      Left = 176
+      Top = 70
+      Width = 18
+      Height = 13
+      Caption = '500'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object Label9: TLabel
+      Left = 249
+      Top = 71
+      Width = 18
+      Height = 11
+      Caption = '700'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -11
@@ -104,11 +156,12 @@ object VerticalScalingForm: TVerticalScalingForm
       Top = 35
       Width = 297
       Height = 33
-      Max = 400
+      LineSize = 10
+      Max = 800
       Min = 50
-      PageSize = 10
-      Frequency = 25
-      Position = 50
+      PageSize = 50
+      Frequency = 50
+      Position = 700
       TabOrder = 0
       OnChange = ScalingTrackBarChange
     end
