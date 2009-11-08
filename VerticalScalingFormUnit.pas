@@ -16,6 +16,10 @@ type
     Label6: TLabel;
     Label4: TLabel;
     bttReset: TButton;
+    Label1: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
     procedure bttResetClick(Sender: TObject);
     procedure ScalingTrackBarChange(Sender: TObject);
     procedure FormShow(Sender: TObject);
