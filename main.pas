@@ -1179,7 +1179,6 @@ procedure TMainForm.SaveSettings;
 var IniFile : TIniFile;
     IniFilename : WideString;
     i : Integer;
-    HiddenCoreColumnsList : TStrings;
     VisibleExtraColumnsList : TStrings;
     ColumnsPositionList : TStrings;
     ColumnsWidthList : TStrings;
@@ -1839,7 +1838,7 @@ end;
 
 procedure TMainForm.WAVDisplayer1AutoScrollChange(Sender: TObject);
 begin
-  chkAutoScrollWAVDisp.Checked := WAVDisplayer.AutoScrolling;
+  SetCheckedState(chkAutoScrollWAVDisp, WAVDisplayer.AutoScrolling);
 end;
 
 //------------------------------------------------------------------------------
