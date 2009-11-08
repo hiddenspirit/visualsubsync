@@ -22,6 +22,8 @@ type
     FColorDown : TColor;
     FRepeatTimer : TTimer;
     FLastXOnMouse : Integer;
+    FOnBeginScrolling : TNotifyEvent;
+    FOnEndScrolling : TNotifyEvent;
 
     procedure OnThumbMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -54,6 +56,8 @@ type
     property PageSize : Integer read FPageSize write SetPageSize;
     property Position : Integer read FPosition write SetPosition;
     property OnChange : TNotifyEvent read FOnChange write FOnChange;
+    property OnBeginScrolling : TNotifyEvent read FOnChange write FOnChange;
+    property OnEndScrolling : TNotifyEvent read FOnChange write FOnChange;
   end;
 
 implementation
@@ -131,6 +135,8 @@ begin
   inherited;
   if (FMax = FMin) and (FMax = 0) then
     Exit;
+  if Assigned(FOnBeginScrolling) then
+    FOnBeginScrolling(Self);
   if X > FThumb.Left then
     Position := Position + PageSize
   else if X < FThumb.Left then
@@ -154,6 +160,8 @@ end;
 procedure TMiniScrollBar.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
+  if FRepeatTimer.Enabled and Assigned(FOnEndScrolling) then
+    FOnEndScrolling(Self);
   FRepeatTimer.Enabled := False;
 end;
 
@@ -170,6 +178,8 @@ begin
     FTrackStartPointX := X;
     FThumb.Color := FColorDown;
     FThumb.MouseCapture := True;
+    if Assigned(FOnBeginScrolling) then
+      FOnBeginScrolling(Self);
   end;
 end;
 
@@ -196,7 +206,7 @@ begin
       assert(FPosition >= FMin);
       assert(FPosition <= FMax);
 
-      Constrain(FPosition,FMin,FMax - Math.Max(FPageSize-1,0));
+      Constrain(FPosition, FMin, FMax - Math.Max(FPageSize-1,0));
       if Assigned(FOnChange) then
         FOnChange(Self);
     end;
@@ -214,6 +224,8 @@ begin
   FTracking := False;
   FThumb.Color := clBlue;
   FThumb.Color := FColorNormal;
+  if Assigned(FOnEndScrolling) then
+    FOnEndScrolling(Self);
 end;
 
 //------------------------------------------------------------------------------
