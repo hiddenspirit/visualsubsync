@@ -646,6 +646,7 @@ type
     procedure OffsetCurrentSubtitleStopTime(Offset : Integer);
 
     function ColorizeOrDeleteTextPipe : TUndoableTask;
+    procedure LoadColumnsSettings(IniFile : TIniFile);
     procedure ApplyMiscSettings;
     procedure ApplyMouseSettings;
     procedure ApplyAutoBackupSettings;
@@ -1305,7 +1306,57 @@ begin
     ActionShowHideTextPipe.Execute;
   SetTextPipeAutoOption(IniFile.ReadInteger('TextPipe', 'TextPipeAutoOption', 0));
 
+  LoadColumnsSettings(IniFile);
+
   IniFile.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.LoadColumnsSettings(IniFile : TIniFile);
+var Column : TVirtualTreeColumn;
+    i, NewPos, NewWidth : Integer;
+    MenuItem : TTntMenuItem;
+    ColumnsPositionList, ColumnsWidthList : TStrings;
+
+    StartupHiddenByUserCoreColumns, StartupColumnsPosition, StartupColumnsWidth : string;
+begin
+  StartupHiddenByUserCoreColumns := IniFile.ReadString('General', 'HiddenByUserCoreColumns', '');
+  StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
+  StartupColumnsWidth := IniFile.ReadString('General', 'ColumnsWidth', '');
+
+  ColumnsPositionList := TStringList.Create;
+  ColumnsPositionList.CommaText := StartupColumnsPosition;
+  ColumnsWidthList := TStringList.Create;
+  ColumnsWidthList.CommaText := StartupColumnsWidth;
+  HiddenByUserCoreColumnsList.CommaText := StartupHiddenByUserCoreColumns;
+  for i := 0 to vtvSubsList.Header.Columns.Count-1 do
+  begin
+    Column := vtvSubsList.Header.Columns.Items[i];
+    if (i < ColumnsPositionList.Count) then
+    begin
+      NewPos := StrToIntDef(ColumnsPositionList[i], MaxInt);
+      Column.Position := NewPos;
+    end;
+    if (i < ColumnsWidthList.Count) then
+    begin
+      NewWidth := StrToIntDef(ColumnsWidthList[i], Column.Width);
+      Column.Width := NewWidth;
+    end;
+    if (HiddenByUserCoreColumnsList.IndexOf(Column.Text) <> -1) then
+    begin
+      Column.Options := Column.Options - [coVisible];
+    end;
+    MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
+    MenuItem.Caption := Column.Text;
+    MenuItem.OnClick := pmiToggleColumn;
+    MenuItem.Checked := (coVisible in Column.Options);
+    MenuItem.Tag := Integer(Column);
+    Column.Tag := Integer(MenuItem);
+    SubListHeaderPopupMenu.Items.Add(MenuItem);
+  end;
+  ColumnsPositionList.Free;
+  ColumnsWidthList.Free;
 end;
 
 //------------------------------------------------------------------------------
@@ -1423,20 +1474,15 @@ end;
 
 procedure TMainForm.InitVTVExtraColumns;
 var Column : TVirtualTreeColumn;
-    i, NewPos, NewWidth : Integer;
-    MenuItem : TTntMenuItem;
-    VisibleExtraColumnsList, ColumnsPositionList, ColumnsWidthList : TStrings;
-
+    i : Integer;
+    VisibleExtraColumnsList : TStrings;
     IniFile : TIniFile;
     IniFilename : WideString;
-    StartupHiddenByUserCoreColumns, StartupVisibleExtraColumns, StartupColumnsPosition, StartupColumnsWidth : string;
+    StartupVisibleExtraColumns : string;
 begin
   IniFilename := GetIniFilename;
   IniFile := TIniFile.Create(IniFilename);
-  StartupHiddenByUserCoreColumns := IniFile.ReadString('General', 'HiddenByUserCoreColumns', '');
   StartupVisibleExtraColumns := IniFile.ReadString('General', 'VisibleExtraColumns', '');
-  StartupColumnsPosition := IniFile.ReadString('General', 'ColumnsPosition', '');
-  StartupColumnsWidth := IniFile.ReadString('General', 'ColumnsWidth', '');
   IniFile.Free;
 
   VisibleExtraColumnsList := TStringList.Create;
@@ -1453,42 +1499,10 @@ begin
     end;
   end;
   VisibleExtraColumnsList.Free;
-
-  ColumnsPositionList := TStringList.Create;
-  ColumnsPositionList.CommaText := StartupColumnsPosition;
-  ColumnsWidthList := TStringList.Create;
-  ColumnsWidthList.CommaText := StartupColumnsWidth;
-  HiddenByUserCoreColumnsList.CommaText := StartupHiddenByUserCoreColumns;
-  for i := 0 to vtvSubsList.Header.Columns.Count-1 do
-  begin
-    Column := vtvSubsList.Header.Columns.Items[i];
-    if (i < ColumnsPositionList.Count) then
-    begin
-      NewPos := StrToIntDef(ColumnsPositionList[i], MaxInt);
-      Column.Position := NewPos;
-    end;
-    if (i < ColumnsWidthList.Count) then
-    begin
-      NewWidth := StrToIntDef(ColumnsWidthList[i], Column.Width);
-      Column.Width := NewWidth;
-    end;
-    if (HiddenByUserCoreColumnsList.IndexOf(Column.Text) <> -1) then
-    begin
-      Column.Options := Column.Options - [coVisible];
-    end;
-    MenuItem := TTntMenuItem.Create(SubListHeaderPopupMenu);
-    MenuItem.Caption := Column.Text;
-    MenuItem.OnClick := pmiToggleColumn;
-    MenuItem.Checked := (coVisible in Column.Options);
-    MenuItem.Tag := Integer(Column);
-    Column.Tag := Integer(MenuItem);
-    SubListHeaderPopupMenu.Items.Add(MenuItem);
-  end;
-  ColumnsPositionList.Free;
-  ColumnsWidthList.Free;
 end;
 
 //------------------------------------------------------------------------------
+
 
 procedure TMainForm.InitGeneralJSPlugin;
 var GeneralJSFilename : WideString;
@@ -1947,7 +1961,8 @@ var i : Integer;
     MenuItem : TMenuItem;
     HiddenByUser : Boolean; 
 begin
-  HiddenByUser := HiddenByUserCoreColumnsList.IndexOf(Column.Text) <> -1;
+  i := HiddenByUserCoreColumnsList.IndexOf(Column.Text);
+  HiddenByUser := (i <> -1);
 
   if (FromUser = True) then
   begin
