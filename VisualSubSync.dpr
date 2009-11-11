@@ -68,9 +68,9 @@ begin
   Application.CreateForm(TErrorReportForm, ErrorReportForm);
   Application.CreateForm(TSuggestionForm, SuggestionForm);
   Application.CreateForm(TDetachedVideoForm, DetachedVideoForm);
+  MainForm.InitGeneralJSPlugin;
   MainForm.LoadSettings;
   MainForm.FinishLoadSettings;
-  MainForm.InitGeneralJSPlugin;
   Application.ProcessMessages;
   MainForm.ProcessParams;
   MainForm.LoadAfterParamsSettings;
