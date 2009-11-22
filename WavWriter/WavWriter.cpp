@@ -799,11 +799,9 @@ STDMETHODIMP CWavWriterFilter::GetCurrentPosition(LONGLONG *pCurrent)
     m_pPin->ConnectionMediaType(&mt);
 
     WAVEFORMATEX *wf = NULL;
-    if(mt.FormatLength() == sizeof(WAVEFORMATEX))
+    if(mt.FormatLength() >= sizeof(WAVEFORMATEX))
     {
         wf = (WAVEFORMATEX *)mt.Format();
-    } else if(mt.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
-        wf = &((WAVEFORMATEXTENSIBLE*)mt.Format())->Format;
     }
     
     if(wf)
@@ -909,14 +907,14 @@ HRESULT CWavWriterInputPin::CheckMediaType(const CMediaType *mtIn)
     {
         WAVEFORMATEX *wf = NULL;
         WAVEFORMATEXTENSIBLE *wfe = NULL;
-        if(mtIn->FormatLength() == sizeof(WAVEFORMATEX))
+        ULONG formatLen = mtIn->FormatLength();
+        if(formatLen >= sizeof(WAVEFORMATEX)) // 18
         {
             wf = (WAVEFORMATEX *) mtIn->Format();
-        } else if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
+        }
+        if(formatLen >= sizeof(WAVEFORMATEXTENSIBLE) && wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE) { //40
             wf = &((WAVEFORMATEXTENSIBLE*) mtIn->Format())->Format;
             wfe = (WAVEFORMATEXTENSIBLE*) mtIn->Format();
-        } else {
-            return S_FALSE;
         }
 
 		if (wf->wFormatTag == WAVE_FORMAT_PCM &&
@@ -926,7 +924,7 @@ HRESULT CWavWriterInputPin::CheckMediaType(const CMediaType *mtIn)
 		if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT && wf->wBitsPerSample == 32) {
 			return S_OK;
 		}
-        if(mtIn->FormatLength() == sizeof(WAVEFORMATEXTENSIBLE) && wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+        if(formatLen >= sizeof(WAVEFORMATEXTENSIBLE) && wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
             if(wfe->SubFormat == MEDIASUBTYPE_PCM &&
                 (wf->wBitsPerSample == 8 || wf->wBitsPerSample == 16 || wf->wBitsPerSample == 32)) {
                 return S_OK;
@@ -956,14 +954,15 @@ HRESULT CWavWriterInputPin::CompleteConnect(IPin *pReceivePin)
     }
     
     // Keep info on input media type, and set info for output
-    pReceivePin->ConnectionMediaType(&m_pFilter->m_OutType);
+    hr = pReceivePin->ConnectionMediaType(&m_pFilter->m_OutType);
     
-    if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEX))
+    m_pFilter->m_OutputWF = NULL;
+    if(m_pFilter->m_OutType.FormatLength() >= sizeof(WAVEFORMATEX))
     {
         m_pFilter->m_OutputWF = (WAVEFORMATEX *) m_pFilter->m_OutType.Format();
         m_pFilter->m_IsPCM = (m_pFilter->m_OutputWF->wFormatTag == WAVE_FORMAT_PCM) ? 1 : 0;
-
-    } else if(m_pFilter->m_OutType.FormatLength() == sizeof(WAVEFORMATEXTENSIBLE)) {
+    }
+    if(m_pFilter->m_OutType.FormatLength() >= sizeof(WAVEFORMATEXTENSIBLE) && m_pFilter->m_OutputWF->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
         WAVEFORMATEXTENSIBLE* wfe = (WAVEFORMATEXTENSIBLE*) m_pFilter->m_OutType.Format();
         m_pFilter->m_OutputWF = &wfe->Format;
         if(wfe->SubFormat == MEDIASUBTYPE_PCM) {
@@ -971,8 +970,6 @@ HRESULT CWavWriterInputPin::CompleteConnect(IPin *pReceivePin)
         } else if(wfe->SubFormat == MEDIASUBTYPE_IEEE_FLOAT) {
             m_pFilter->m_IsPCM = 0;
         }
-    } else {
-        m_pFilter->m_OutputWF = NULL; // not good :>
     }
     
     m_pFilter->m_InputSampleRate = m_pFilter->m_OutputWF->nSamplesPerSec;
