@@ -666,6 +666,7 @@ type
     procedure SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean; TimingOnly : Boolean);
     procedure SaveSubtitlesAsCUE(Filename: WideString);
     procedure SaveSubtitlesAsTXT(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+    procedure SaveSubtitlesAsCSV(Filename, PreviousExt: WideString; InUTF8 : Boolean);
     procedure SelectPreviousSub;
     procedure SelectNextSub;
     function LoadVOSubs(Filename: WideString) : Boolean;
@@ -2718,6 +2719,8 @@ begin
     SaveSubtitlesAsCUE(Filename)
   else if (Ext = '.txt') then
     SaveSubtitlesAsTXT(Filename, PreviousExt, InUTF8)
+  else if (Ext = '.csv') then
+    SaveSubtitlesAsCSV(Filename, PreviousExt, InUTF8)
   else
   begin
     if Assigned(CurrentProject) and (Filename = CurrentProject.SubtitlesFile) then
@@ -3318,6 +3321,7 @@ begin
     'ASS files (*.ass)|*.ASS' + '|' +
     'CUE files (*.cue)|*.CUE' + '|' +
     'TXT files (*.txt)|*.TXT' + '|' +
+    'CSV files (*.csv)|*.CSV' + '|' +
     'All files (*.*)|*.*';
   TntSaveDialog1.FileName := CurrentProject.SubtitlesFile;
   // Preselect format
@@ -3342,6 +3346,7 @@ begin
       4 : NewExt := '.ass';
       5 : NewExt := '.cue';
       6 : NewExt := '.txt';
+      7 : NewExt := '.csv';
     end;
     if NewExt <> '' then
       TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, NewExt);
@@ -7905,6 +7910,48 @@ begin
       WriteStringLnStream(UTF8Encode(Text), FS)
     else
       WriteStringLnStream(WC2MB(Text), FS);
+  end;
+  FS.Free;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.SaveSubtitlesAsCSV(Filename, PreviousExt: WideString; InUTF8 : Boolean);
+var i : integer;
+    SubRange : TSubtitleRange;
+    FS : TTntFileStream;
+    SubText, LineText : WideString;
+
+    procedure WriteStringLnStream(str : string; Stream : TStream);
+    begin
+      str := str + #13#10;
+      Stream.Write(str[1], Length(str));
+    end;
+begin
+  FS := TTntFileStream.Create(Filename, fmCreate);
+  if InUTF8 then
+  begin
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
+  end;
+
+  WriteStringLnStream('Index,Start,Stop,Text', FS);
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    SubText := Subrange.Text;
+    // Remove line breaks
+    SubText := Tnt_WideStringReplace(SubText, ' ' + CRLF + ' ', ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, ' ' + CRLF, ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, CRLF + ' ', ' ', [rfReplaceAll]);
+    SubText := Tnt_WideStringReplace(SubText, CRLF, ' ', [rfReplaceAll]);
+    // Double quotes
+    SubText := Tnt_WideStringReplace(SubText, '"', '""', [rfReplaceAll]);
+    LineText := Format('%d,%s,%s,"%s"',[i+1, TimeMsToString(SubRange.StartTime),
+      TimeMsToString(SubRange.StopTime),SubText]);
+    if InUTF8 then
+      WriteStringLnStream(UTF8Encode(LineText), FS)
+    else
+      WriteStringLnStream(WC2MB(LineText), FS);
   end;
   FS.Free;
 end;
