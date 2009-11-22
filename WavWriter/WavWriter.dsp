@@ -126,7 +126,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W4 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "DUMP_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /Gz /MDd /W4 /Zi /Od /I "..\..\BaseClasses" /I "..\..\..\..\..\include" /D DBG=1 /D "DEBUG" /D "_DEBUG" /D "INC_OLE2" /D "STRICT" /D _WIN32_WINNT=0x0400 /D "_WIN32" /D "_MT" /D "_DLL" /D _X86_=1 /D WINVER=0x0400 /D "WIN32" /D "UNICODE" /D "_UNICODE" /YX"streams.h" /FD /GZ /c
+# ADD CPP /nologo /Gz /MDd /W4 /Zi /Od /I "..\..\BaseClasses" /I "..\..\..\..\..\include" /D DBG=1 /D "DEBUG" /D "_DEBUG" /D "INC_OLE2" /D "STRICT" /D _WIN32_WINNT=0x0400 /D "_WIN32" /D "_MT" /D "_DLL" /D _X86_=1 /D WINVER=0x0400 /D "WIN32" /D "UNICODE" /D "_UNICODE" /FR /YX"streams.h" /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -174,6 +174,10 @@ SOURCE=.\WavWriter.def
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=.\WavWriter.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"
