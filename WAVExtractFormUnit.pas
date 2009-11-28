@@ -52,11 +52,16 @@ type
     procedure rbOnlyPeakClick(Sender: TObject);
     procedure bttDebugClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     DSWavExtractor : TDSWavExtractor;
     AudioPinIsSelected : Boolean;
     CurrentExtractionType : TWAVExtractionType;
+
+    procedure CancelAndClose;
   public
     { Public declarations }
     VideoFilename : WideString;
@@ -98,12 +103,19 @@ end;
 
 // -----------------------------------------------------------------------------
 
-procedure TExtractWAVForm.bttCloseClick(Sender: TObject);
+procedure TExtractWAVForm.CancelAndClose;
 begin
   Timer1.Enabled := False;
   if Assigned(DSWavExtractor) then
     DSWavExtractor.Free;
   ModalResult := mrCancel;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.bttCloseClick(Sender: TObject);
+begin
+  Close;
 end;
 
 // -----------------------------------------------------------------------------
@@ -229,6 +241,25 @@ end;
 procedure TExtractWAVForm.FormCreate(Sender: TObject);
 begin
   SetExtractionType(wetOnlyPeakFile);
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  CancelAndClose;
+end;
+
+// -----------------------------------------------------------------------------
+
+procedure TExtractWAVForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) then
+  begin
+    Close;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
