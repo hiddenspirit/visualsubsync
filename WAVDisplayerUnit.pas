@@ -4078,9 +4078,10 @@ end;
 
 procedure TWAVDisplayer.ShowVO(Show : Boolean);
 begin
-  if Show and (FDisplayRangeLists.IndexOf(FRangeListVO) = -1) then
+  if Show then
   begin
-    FDisplayRangeLists.Add(FRangeListVO)
+    if (FDisplayRangeLists.IndexOf(FRangeListVO) = -1) then
+      FDisplayRangeLists.Add(FRangeListVO);
   end
   else
   begin
