@@ -107,7 +107,9 @@ procedure TExtractWAVForm.CancelAndClose;
 begin
   Timer1.Enabled := False;
   if Assigned(DSWavExtractor) then
-    DSWavExtractor.Free;
+  begin
+    FreeAndNil(DSWavExtractor);
+  end;
   ModalResult := mrCancel;
 end;
 
@@ -184,8 +186,10 @@ begin
     ProgressBar1.Position := 0;
 
     if Assigned(DSWavExtractor) then
-      DSWavExtractor.Free;
-    ModalResult := mrOk;      
+    begin
+      FreeAndNil(DSWavExtractor);
+    end;
+    ModalResult := mrOk;
   end;
 end;
 
