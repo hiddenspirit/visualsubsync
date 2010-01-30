@@ -60,6 +60,7 @@ type
     DSWavExtractor : TDSWavExtractor;
     AudioPinIsSelected : Boolean;
     CurrentExtractionType : TWAVExtractionType;
+    SuccessfullExtraction : Boolean;
 
     procedure CancelAndClose;
   public
@@ -94,6 +95,7 @@ begin
   DSWavExtractor.WAVExtractionType := CurrentExtractionType;
   DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
   AudioPinIsSelected := True;
+  SuccessfullExtraction := False;
 
   g_WavExtractorGraphDebugInfo := DSWavExtractor.GetFiltersAsString;
 
@@ -140,6 +142,7 @@ var i : integer;
 begin
   CM := TCursorManager.Create(crHourGlass);
 
+  SuccessfullExtraction := False;
   bttExtract.Enabled := False;
   bttStop.Enabled := False;
   bttClose.Enabled := False;
@@ -189,6 +192,7 @@ begin
     begin
       FreeAndNil(DSWavExtractor);
     end;
+    SuccessfullExtraction := True;
     ModalResult := mrOk;
   end;
 end;
@@ -203,6 +207,7 @@ begin
   bttStop.Enabled := False;
   MemoVideoInfo.Lines.Add('Extraction aborted by user.');
   ProgressBar1.Position := 0;
+  SuccessfullExtraction := False;
 end;
 
 // -----------------------------------------------------------------------------
@@ -244,6 +249,7 @@ end;
 
 procedure TExtractWAVForm.FormCreate(Sender: TObject);
 begin
+  SuccessfullExtraction := False;
   SetExtractionType(wetOnlyPeakFile);
 end;
 
@@ -252,7 +258,8 @@ end;
 procedure TExtractWAVForm.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
-  CancelAndClose;
+  if not SuccessfullExtraction then
+    CancelAndClose;
 end;
 
 // -----------------------------------------------------------------------------
