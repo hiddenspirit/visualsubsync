@@ -146,12 +146,11 @@ uses WAVExtractFormUnit, TntSysUtils, MiscToolsUnit, TntIniFiles, TntWindows;
 
 //==============================================================================
 
-function TryToCreateOrOpenFile(const fileName : WideString) : Boolean;
+function CheckFileCanBeOpened(const fileName : WideString) : Boolean;
 var fileHandle : THandle;
 begin
-  // Try to create it
   fileHandle := Tnt_CreateFileW(PWideChar(fileName), GENERIC_READ,
-    FILE_SHARE_READ	, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    FILE_SHARE_READ	, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (fileHandle <> INVALID_HANDLE_VALUE) then
   begin
     CloseHandle(fileHandle);
@@ -159,6 +158,27 @@ begin
   end
   else
     Result := False;
+end;
+
+function CheckFileCanBeCreated(const fileName : WideString) : Boolean;
+var fileHandle : THandle;
+begin
+  if CheckFileCanBeOpened(fileName) then
+  begin
+    Result := True
+  end
+  else
+  begin
+    fileHandle := Tnt_CreateFileW(PWideChar(fileName), GENERIC_READ,
+      FILE_SHARE_READ	, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL or FILE_FLAG_DELETE_ON_CLOSE, 0);
+    if (fileHandle <> INVALID_HANDLE_VALUE) then
+    begin
+      CloseHandle(fileHandle);
+      Result := True;
+    end
+    else
+      Result := False;
+  end;
 end;
 
 //==============================================================================
@@ -253,7 +273,7 @@ begin
   end;  
 
   // We need a least subtitle filename
-  if not TryToCreateOrOpenFile(EditSubtitleFilename.Text) then
+  if not CheckFileCanBeCreated(EditSubtitleFilename.Text) then
   begin
     MessageBoxW(Handle, PWideChar(WideString('The subtitle file name is missing or is invalid.')),
       PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
