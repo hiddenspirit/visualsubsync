@@ -1344,6 +1344,7 @@ begin
   if Assigned(FGraphBuilder) then
     Close;
 
+  OutputDebugStringW('TDSWavExtractor.Open: Creating Graph builder');
   FLastResult := CoCreateInstance(TGUID(CLSID_FilterGraph), nil, CLSCTX_INPROC,
     TGUID(IID_IGraphBuilder), FGraphBuilder);
   GetLastErrorString;
@@ -1355,10 +1356,12 @@ begin
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaEventEx, FMediaEventEx);
   if (FLastResult <> S_OK) then Exit;
 
+  OutputDebugStringW(PWideChar('TDSWavExtractor.Open: Adding source filter ' + Filename));
   FLastResult := FGraphBuilder.AddSourceFilter(@Filename[1],nil,Filter);
   if (FLastResult <> S_OK) then Exit;
 
   // Try to render all pins on the filter
+  OutputDebugStringW('TDSWavExtractor.Open: Rendering all source filter pins');
   Filter.EnumPins(EnumPins);
   while (FLastResult = S_OK) and (EnumPins.Next(1,Pin1, @ul) = S_OK) do
   begin
@@ -1369,12 +1372,15 @@ begin
   if Failed(FLastResult) then Exit;
 
   // Get the duration
+  OutputDebugStringW('TDSWavExtractor.Open: Getting duration');
   FLastResult := FMediaSeeking.GetDuration(FDuration);
 
   // Check if this is a source/splitter filter
+  OutputDebugStringW('TDSWavExtractor.Open: Getting audio output pin count');
   FAudioStreamCount := GetOutputAudioPinCount(Filter);
   if FAudioStreamCount = 0 then
   begin
+    OutputDebugStringW('TDSWavExtractor.Open: Getting audio output pin count on next filter');  
     // No audio stream available, this is probably the File source filter
     // Next filter is probably a splitter
     FLastResult := GetFilterPin(Filter,PINDIR_OUTPUT,Pin1);
@@ -1411,6 +1417,34 @@ end;
 
 //------------------------------------------------------------------------------
 
+function GetFilterName(Filter : IBaseFilter) : WideString;
+var FilterInfo : TFilterInfo;
+    Res : HRESULT;
+begin
+  FilterInfo.achName[0] := #0;
+  Res := Filter.QueryFilterInfo(FilterInfo);
+  if Succeeded(Res) then
+    Result := '<' + WideString(FilterInfo.achName) + '>'
+  else
+    Result := '<Filter = null>';
+end;
+
+function GetPinName(Pin : IPin) : WideString;
+var PinInfo : TPinInfo;
+    Res : HRESULT;
+begin
+  PinInfo.achName[0] := #0;
+  Res := Pin.QueryPinInfo(PinInfo);
+  if Succeeded(Res) then
+  begin
+    Result := GetFilterName(PinInfo.pFilter) + '.<' + PinInfo.achName + '>';
+  end
+  else
+  begin
+    Result := '<Pin = null>';
+  end;
+end;
+
 function TDSWavExtractor.SelectAudioPin(Index : Integer) : Boolean;
 var
   EnumPins : IEnumPins;
@@ -1423,7 +1457,8 @@ begin
   Result := False;
   AudioPinCurrentIndex := 0;
   FSplitter.EnumPins(EnumPins);
-  while (EnumPins.Next(1,Pin, @ul) = S_OK) do
+  OutputDebugStringW(PWideChar('TDSWavExtractor.SelectAudioPin: Enumerating audio output pins on ' + GetFilterName(FSplitter)));
+  while (EnumPins.Next(1, Pin, @ul) = S_OK) do
   begin
     Pin.QueryDirection(PinDir);
     if (PinDir = PINDIR_OUTPUT) then
@@ -1491,6 +1526,7 @@ begin
     Pin.QueryDirection(PinDir);
     if (PinDir = PINDIR_OUTPUT) and PinSupportPCMMediaType(Pin) then
     begin
+      OutputDebugStringW(PWideChar('TDSWavExtractor.GetPCMOutputPin: Found PCM pin ' + GetPinName(Pin)));
       Result := Pin;
       Break;
     end;
@@ -1511,19 +1547,25 @@ var
   WavWriterInterface : IWavWriterInterface;
   DestinationFilenamePeak : WideString;
 begin
+  OutputDebugStringW(PWideChar('TDSWavExtractor.InstallWriter: InstallWriter on ' + GetPinName(Pin)));
   if PinSupportPCMMediaType(Pin) then
-    PCMPin := Pin
+  begin
+    OutputDebugStringW('TDSWavExtractor.InstallWriter: PCMPin OK');
+    PCMPin := Pin;
+  end
   else
   begin
+    OutputDebugStringW('TDSWavExtractor.InstallWriter: No PCM support on this pin, getting next filter pin.');
     // We need a pin with wformattag which is probably after a decoder :)
     Pin.ConnectedTo(PinConnectedTo);
     if not Assigned(PinConnectedTo) then
     begin
       // TODO : Do something here or add more error checking
-
+      OutputDebugStringW('TDSWavExtractor.InstallWriter: PinConnectedTo is nil');
     end;
     PinConnectedTo.QueryPinInfo(PinInfo);
     Filter := PinInfo.pFilter;
+    OutputDebugStringW(PWideChar('TDSWavExtractor.SelectAudioPin: Get PCM output pin on ' + GetFilterName(Filter)));
     PCMPin := GetPCMOutputPin(Filter);
   end;
   PinConnectedTo := nil;
@@ -1532,6 +1574,7 @@ begin
   // TODO : better error handling here
   NukeDownstream(FGraphBuilder, PCMPin);
 
+  OutputDebugStringW('TDSWavExtractor.InstallWriter: Creating and adding WAVWriter to graph');  
   // We are ready to connect, the WAV writer filter and the File Writer
   FLastResult := CreateFilterFromFile(FHWavWriterInst,CLSID_WavWriter, WavWriterFilter);
   FLastResult := WavWriterFilter.QueryInterface(IID_IFileSinkFilter, FileSinkFilter);
@@ -1542,6 +1585,7 @@ begin
   WavWriterFilter.QueryInterface(IID_IWavWriter,WavWriterInterface);
   if WavWriterInterface <> nil then
   begin
+    OutputDebugStringW('TDSWavExtractor.InstallWriter: Configuring WAVWriter');
       if (FWAVExtractionType = wetOnlyPeakFile) then
         WavWriterInterface.SetWriteWavFile(0)
       else if (FWAVExtractionType = wetFastConversion) then
@@ -1553,7 +1597,16 @@ begin
       WavWriterInterface := nil;
   end;
 
+  OutputDebugStringW('TDSWavExtractor.InstallWriter: Rendering PCMPin');
   FLastResult := FGraphBuilder.Render(PCMPin);
+  if Failed(FLastResult) then
+    OutputDebugStringW('TDSWavExtractor.InstallWriter: Rendering PCMPin failed.');
+
+  FLastResult := PCMPin.ConnectedTo(PinConnectedTo);
+  if Failed(FLastResult) then
+    OutputDebugStringW('TDSWavExtractor.InstallWriter: PCMPin ConnectedTo failed.')
+  else
+    OutputDebugStringW(PWideChar('TDSWavExtractor.InstallWriter: PCMPin is now connected to ' + GetPinName(PinConnectedTo))) ;
 
   FLastResult := WavWriterFilter.QueryInterface(IID_IMediaSeeking, FMediaSeeking);
 
