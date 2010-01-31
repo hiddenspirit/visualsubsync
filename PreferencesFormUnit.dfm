@@ -695,9 +695,9 @@ object PreferencesForm: TPreferencesForm
           Alignment = taCenter
           AutoSize = False
           Caption = 'Actions'
-          Color = clBtnText
+          Color = clWindowText
           Font.Charset = DEFAULT_CHARSET
-          Font.Color = clHighlightText
+          Font.Color = clWindow
           Font.Height = -11
           Font.Name = 'MS Sans Serif'
           Font.Style = [fsBold]
@@ -713,9 +713,9 @@ object PreferencesForm: TPreferencesForm
           Alignment = taCenter
           AutoSize = False
           Caption = 'Modifiers'
-          Color = clBtnText
+          Color = clWindowText
           Font.Charset = DEFAULT_CHARSET
-          Font.Color = clHighlightText
+          Font.Color = clWindow
           Font.Height = -11
           Font.Name = 'MS Sans Serif'
           Font.Style = [fsBold]
