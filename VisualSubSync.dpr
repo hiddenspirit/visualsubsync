@@ -48,7 +48,8 @@ uses
   BgThreadTaskUnit in 'BgThreadTaskUnit.pas',
   //ExceptDlg in 'ThirdParty\jcl\ExceptDlg.pas' {ExceptionDialog},
   SpellCheckFormUnit in 'SpellCheckFormUnit.pas' {SpellCheckForm},
-  VSSClipboardUnit in 'VSSClipboardUnit.pas';
+  VSSClipboardUnit in 'VSSClipboardUnit.pas',
+  TranslateFormUnit in 'TranslateFormUnit.pas' {TranslateForm};
 
 {$R *.res}
 {$R Resources\resources.RES}

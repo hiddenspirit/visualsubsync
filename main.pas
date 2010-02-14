@@ -836,7 +836,7 @@ uses ActiveX, Math, StrUtils, FindFormUnit, AboutFormUnit,
   tom_TLB, RichEdit, StyleFormUnit, SSAParserUnit, TntWideStrings, TntClasses,
   TntIniFiles, TntGraphics, TntSystem, TntRichEditCustomUndoUnit, RGBHSLColorUnit,
   SceneChangeUnit, SilentZoneFormUnit, RegExpr, SRTParserUnit, ShellAPI,
-  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd, DeCAL;
+  VSSClipboardUnit, BgThreadTaskUnit, SpellCheckFormUnit, TntClipBrd, DeCAL, TranslateFormUnit;
 
 {$R *.dfm}
 
@@ -9684,17 +9684,41 @@ end;
 procedure TMainForm.ActionTranslationTemplateExecute(Sender: TObject);
 var Ext, TranslatedFilename : WideString;
 begin
-  if CheckSubtitlesAreSaved then
+  if not CheckSubtitlesAreSaved then
   begin
+    Exit;
+  end;
+
+  TranslateForm := TTranslateForm.Create(nil);
+
+  // Prefill the dialog
+  if (vtvSubsList.SelectedCount > 1) then
+  begin
+    TranslateForm.SetTranslateSelectionType(tstSelectedOnly);
+  end;
+
+  if (CurrentProject.SubtitlesVO <> '') then
+  begin
+    TranslateForm.SetHasVO(True);
+    TranslateForm.SetTargetFile(CurrentProject.SubtitlesVO);
+  end
+  else
+  begin
+    TranslateForm.SetHasVO(False);
     Ext := WideExtractFileExt(CurrentProject.SubtitlesFile);
     TranslatedFilename := Copy(CurrentProject.SubtitlesFile, 1,
       Length(CurrentProject.SubtitlesFile) - Length(Ext)) + '.translated' + Ext;
-    TntSaveDialog1.Filter := 'All files (*.*)|*.*';
-    TntSaveDialog1.FileName := TranslatedFilename;
-    if TntSaveDialog1.Execute then
+    TranslateForm.SetTargetFile(TranslatedFilename);
+  end;
+
+  if TranslateForm.ShowModal = mrOk then
+  begin
+    // TODO : selection only, missing only
+    // TODO : different export formats
+    if (TranslateForm.GetTranslateSelectionType = tstAll) then
     begin
       SaveSubtitles(TntSaveDialog1.FileName, CurrentProject.SubtitlesFile, CurrentProject.IsUTF8, False, True);
-      
+
       ErrorReportForm.Clear;
 
       CurrentProject.SubtitlesVO := CurrentProject.SubtitlesFile;
@@ -9717,7 +9741,9 @@ begin
       ActionUndo.Enabled := False;
       ActionRedo.Enabled := False;
     end;
+
   end;
+  FreeAndNil(TranslateForm);
 end;
 
 //------------------------------------------------------------------------------
