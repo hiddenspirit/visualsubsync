@@ -466,6 +466,7 @@ procedure TProjectForm.bttBrowseVOFileClick(Sender: TObject);
 begin
   TntOpenDialog1.FileName := EditSubtitleVO.Text;
   TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+    'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
