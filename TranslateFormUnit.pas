@@ -10,6 +10,34 @@ type
   TTranslateSelectionType = (tstAll, tstSelectedOnly, tstMissingOnly);
   TTranslateTextType = (tttEmpty, tttCopyOriginal, tttCopyTagsOnly, tttCustomText);
 
+  TTranslator = class
+  public
+    function Translate(Text : WideString) : WideString;  dynamic; abstract;
+  end;
+
+  TTranslatorEmpty = class(TTranslator)
+  public
+    function Translate(Text : WideString) : WideString;  override;
+  end;
+
+  TTranslatorCopyOriginal = class(TTranslator)
+  public
+    function Translate(Text : WideString) : WideString;  override;
+  end;
+
+  TTranslatorCopyTagsOnly = class(TTranslator)
+  public
+    function Translate(Text : WideString) : WideString;  override;
+  end;
+
+  TTranslatorCustomText = class(TTranslator)
+  private
+    FCustomText : WideString;
+  public
+    constructor Create(CustomText : WideString);
+    function Translate(Text : WideString) : WideString;  override;
+  end;
+
   TTranslateForm = class(TForm)
     bttOK: TTntButton;
     bttCancel: TTntButton;
@@ -41,7 +69,11 @@ type
 
     function GetTargetFile : WideString;
     procedure SetTargetFile(Value : WideString);
+
+    function GetTranslator : TTranslator;
   end;
+
+  function GetTranslatorCopyOriginalCommon : TTranslator;
 
 var
   TranslateForm: TTranslateForm;
@@ -49,6 +81,48 @@ var
 implementation
 
 {$R *.dfm}
+
+var
+  TranslatorCopyOriginalCommon : TTranslator;
+
+// -------------------------------------------------------------------------------------------------
+
+function GetTranslatorCopyOriginalCommon : TTranslator;
+begin
+  if (TranslatorCopyOriginalCommon = nil) then
+    TranslatorCopyOriginalCommon := TTranslatorCopyOriginal.Create;
+  Result := TranslatorCopyOriginalCommon;
+end;
+
+// -------------------------------------------------------------------------------------------------
+
+function TTranslatorEmpty.Translate(Text : WideString) : WideString;
+begin
+  Result := '';
+end;
+
+function TTranslatorCopyOriginal.Translate(Text : WideString) : WideString;
+begin
+  Result := Text;
+end;
+
+function TTranslatorCustomText.Translate(Text : WideString) : WideString;
+begin
+  Result := FCustomText;
+end;
+
+constructor TTranslatorCustomText.Create(CustomText : WideString);
+begin
+  FCustomText := CustomText;
+end;
+
+function TTranslatorCopyTagsOnly.Translate(Text : WideString) : WideString;
+begin
+  // TODO
+  Result := Text;
+end;
+
+// -------------------------------------------------------------------------------------------------
 
 function TTranslateForm.GetTranslateSelectionType : TTranslateSelectionType;
 begin
@@ -146,4 +220,24 @@ begin
   RadioGroupButton(Ord(tstMissingOnly), rgSelectionType).Enabled := Value;
 end;
 
+function TTranslateForm.GetTranslator : TTranslator;
+begin
+  case GetTranslateTextType of
+    tttEmpty: Result := TTranslatorEmpty.Create;
+    tttCopyOriginal: Result := TTranslatorCopyOriginal.Create;
+    tttCopyTagsOnly: Result := TTranslatorCopyTagsOnly.Create;
+    tttCustomText: Result := TTranslatorCustomText.Create(edCustomText.Text);
+  end;
+end;
+
+initialization
+  TranslatorCopyOriginalCommon := nil;
+
+finalization
+  if (TranslatorCopyOriginalCommon <> nil) then
+    FreeAndNil(TranslatorCopyOriginalCommon);
+
+// -------------------------------------------------------------------------------------------------
 end.
+// -------------------------------------------------------------------------------------------------
+
