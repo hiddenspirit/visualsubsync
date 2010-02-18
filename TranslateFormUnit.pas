@@ -7,7 +7,7 @@ uses
   Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, TntDialogs;
 
 type
-  TTranslateSelectionType = (tstAll, tstSelectedOnly, tstMissingOnly);
+  TTranslateSelectionType = (tstAll, tstMissingOnly);
   TTranslateTextType = (tttEmpty, tttCopyOriginal, tttCopyTagsOnly, tttCustomText);
 
   TTranslator = class
@@ -216,7 +216,6 @@ end;
 
 procedure TTranslateForm.SetHasVO(Value : Boolean);
 begin
-  RadioGroupButton(Ord(tstSelectedOnly), rgSelectionType).Enabled := Value;
   RadioGroupButton(Ord(tstMissingOnly), rgSelectionType).Enabled := Value;
 end;
 
