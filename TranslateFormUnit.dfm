@@ -43,7 +43,6 @@ object TranslateForm: TTranslateForm
     Caption = ' Subtitles to translate '
     Items.Strings = (
       'All (create a new file)'
-      'Selected only (enrich current file)'
       'Missing only (enrich current file)')
     TabOrder = 2
     OnClick = rgSelectionTypeClick
