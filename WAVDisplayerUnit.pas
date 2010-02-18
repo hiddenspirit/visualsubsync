@@ -59,6 +59,8 @@ type
     function UpdateSubTimeFromText(const Text : WideString) : Boolean;
     function SetTimes(Start,Stop : Integer) : Boolean; // Return true if changed
     function ToString : string;
+    function GetDuration : Integer;
+    function GetMiddle : Integer;
   end;
 
   TRangeFactory = class
@@ -797,6 +799,16 @@ end;
 function TRange.ToString : string;
 begin
   Result := Format('[%d,%d]', [StartTime, StopTime]);
+end;
+
+function TRange.GetDuration : Integer;
+begin
+  Result := StopTime - StartTime;
+end;
+
+function TRange.GetMiddle : Integer;
+begin
+  Result := StartTime + (GetDuration div 2);
 end;
 
 // =============================================================================
