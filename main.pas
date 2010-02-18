@@ -9704,6 +9704,10 @@ end;
 procedure TMainForm.ActionTranslationTemplateExecute(Sender: TObject);
 var Ext, TranslatedFilename : WideString;
     Translator : TTranslator;
+    Node : PVirtualNode;
+    NodeData: PTreeData;
+    SubtitleRange, NewRange : TSubtitleRange;
+    i : integer;
 begin
   if not CheckSubtitlesAreSaved then
   begin
@@ -9713,11 +9717,6 @@ begin
   TranslateForm := TTranslateForm.Create(nil);
 
   // Prefill the dialog
-  if (vtvSubsList.SelectedCount > 1) then
-  begin
-    TranslateForm.SetTranslateSelectionType(tstSelectedOnly);
-  end;
-
   if (CurrentProject.SubtitlesVO <> '') then
   begin
     TranslateForm.SetHasVO(True);
@@ -9734,7 +9733,6 @@ begin
 
   if TranslateForm.ShowModal = mrOk then
   begin
-    // TODO : selection only, missing only
     if (TranslateForm.GetTranslateSelectionType = tstAll) then
     begin
       // TODO : if file already exists ask for replacement    
@@ -9746,7 +9744,7 @@ begin
       ErrorReportForm.Clear;
 
       CurrentProject.SubtitlesVO := CurrentProject.SubtitlesFile;
-      CurrentProject.SubtitlesFile := TntSaveDialog1.FileName;
+      CurrentProject.SubtitlesFile := TranslateForm.GetTargetFile;
 
       LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
       LoadVO(CurrentProject.SubtitlesVO);
@@ -9764,8 +9762,26 @@ begin
       ClearStack(UndoStack);
       ActionUndo.Enabled := False;
       ActionRedo.Enabled := False;
+    end
+    else if (TranslateForm.GetTranslateSelectionType = tstMissingOnly) then
+    begin
+      // TODO : undo support
+      Translator := TranslateForm.GetTranslator;
+      for i:=0 to WAVDisplayer.RangeListVO.Count-1 do
+      begin
+        SubtitleRange := TSubtitleRange(WAVDisplayer.RangeListVO[i]);
+        if WAVDisplayer.RangeList.GetRangeIdxAt(SubtitleRange.GetMiddle) = -1 then
+        begin
+          Node := AddSubtitle(SubtitleRange);
+          NodeData := vtvSubsList.GetNodeData(Node);
+          NewRange := NodeData.Range;
+          NewRange.Text := Translator.Translate(SubtitleRange.Text);
+        end;
+      end;
+      FreeAndNil(Translator);
+      WAVDisplayer.UpdateView([uvfRange]);
+      vtvSubsList.Repaint;
     end;
-
   end;
   FreeAndNil(TranslateForm);
 end;
