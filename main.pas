@@ -766,10 +766,10 @@ type
 
     procedure ApplyDelay(var Indexes : array of Integer;
       DelayInMs : Integer; DelayShiftType : TDelayShiftType);
-    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode; overload;
-    function AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode; overload;
+    function AddSubtitle(StartTime, StopTime : Integer; Text : WideString; UpdateDisplay : Boolean) : PVirtualNode; overload;
+    function AddSubtitle(SubRange : TSubtitleRange; UpdateDisplay : Boolean) : PVirtualNode; overload;
     function AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
-      AutoSelect : Boolean) : PVirtualNode; overload;
+      UpdateDisplay : Boolean; AutoSelect : Boolean) : PVirtualNode; overload;
     procedure DeleteSubtitle(Index : Integer);
     procedure DeleteSubtitles(var Indexes : array of Integer);
     procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
@@ -5087,7 +5087,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.AddSubtitle(StartTime, StopTime : Integer; Text : WideString) : PVirtualNode;
+function TMainForm.AddSubtitle(StartTime, StopTime : Integer; Text : WideString; UpdateDisplay : Boolean) : PVirtualNode;
 var NewRange, SiblingRange : TRange;
     NewNode, SiblingNode: PVirtualNode;
     NodeData: PTreeData;
@@ -5113,7 +5113,7 @@ begin
     TSubtitleRange(NewRange).Text := Text;
   end;
   // TODO improvement : use the previously calculated InsertPos
-  WAVDisplayer.AddRange(NewRange);
+  WAVDisplayer.AddRange(NewRange, UpdateDisplay);
 
   // Update SearchNodeIndex (TODO : SearchPos)
   if (SearchNodeIndex >= NewNode.Index) then
@@ -5126,12 +5126,12 @@ end;
 
 //------------------------------------------------------------------------------
 
-function TMainForm.AddSubtitle(SubRange : TSubtitleRange) : PVirtualNode;
+function TMainForm.AddSubtitle(SubRange : TSubtitleRange; UpdateDisplay : Boolean) : PVirtualNode;
 var NewRange : TSubtitleRange;
     NewNode: PVirtualNode;
     NodeData: PTreeData;
 begin
-  NewNode := AddSubtitle(SubRange.StartTime, SubRange.StopTime, '');
+  NewNode := AddSubtitle(SubRange.StartTime, SubRange.StopTime, '', UpdateDisplay);
   NodeData := vtvSubsList.GetNodeData(NewNode);
   NewRange := TSubtitleRange(NodeData.Range);
   NewRange.Assign(SubRange);
@@ -5175,12 +5175,12 @@ end;
 //------------------------------------------------------------------------------
 
 function TMainForm.AddSubtitle(StartTime, StopTime : Integer; Text : WideString;
-  AutoSelect : Boolean) : PVirtualNode;
+  UpdateDisplay : Boolean; AutoSelect : Boolean) : PVirtualNode;
 var NewNode : PVirtualNode;
 begin
   g_WebRWSynchro.BeginWrite;
   try
-    NewNode := AddSubtitle(StartTime, StopTime, Text);
+    NewNode := AddSubtitle(StartTime, StopTime, Text, UpdateDisplay);
     CurrentProject.IsDirty := True;
   finally
     g_WebRWSynchro.EndWrite;
@@ -6137,7 +6137,7 @@ begin
   if WAVDisplayer.IsPlaying and (StartSubtitleTime <> -1) and
     (WAVDisplayer.GetPlayCursorPos > (StartSubtitleTime + 400)) then
   begin
-    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
+    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', True, False);
     StartSubtitleTime := -1;
   end
   else
@@ -6151,7 +6151,7 @@ begin
   if WAVDisplayer.IsPlaying and (StartSubtitleTime <> -1) and
     (WAVDisplayer.GetPlayCursorPos > (StartSubtitleTime + 400)) then
   begin
-    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
+    AddSubtitle(StartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', True, False);
     StartSubtitleTime := WAVDisplayer.GetPlayCursorPos + 1;
   end
   else
@@ -6200,7 +6200,7 @@ begin
       begin
         if (WAVDisplayer.GetPlayCursorPos > (ToggleStartSubtitleTime + 400)) then
         begin
-          AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', False);
+          AddSubtitle(ToggleStartSubtitleTime, WAVDisplayer.GetPlayCursorPos, '', True, False);
         end;
       end;
       ToggleStartSubtitleTime := -1;
@@ -8145,7 +8145,7 @@ begin
   for i := List.Count-1 downto 0 do
   begin
     Range := List[i];
-    Node := AddSubtitle(Range);
+    Node := AddSubtitle(Range, False);
     Range.Node := Node;
   end;
 
@@ -9704,10 +9704,10 @@ end;
 procedure TMainForm.ActionTranslationTemplateExecute(Sender: TObject);
 var Ext, TranslatedFilename : WideString;
     Translator : TTranslator;
-    Node : PVirtualNode;
-    NodeData: PTreeData;
     SubtitleRange, NewRange : TSubtitleRange;
     i : integer;
+    UndoableMultiAddTask : TUndoableMultiAddTask;
+    SubList : TList;
 begin
   if not CheckSubtitlesAreSaved then
   begin
@@ -9717,25 +9717,16 @@ begin
   TranslateForm := TTranslateForm.Create(nil);
 
   // Prefill the dialog
-  if (CurrentProject.SubtitlesVO <> '') then
-  begin
-    TranslateForm.SetHasVO(True);
-    TranslateForm.SetTargetFile(CurrentProject.SubtitlesVO);
-  end
-  else
-  begin
-    TranslateForm.SetHasVO(False);
-    Ext := WideExtractFileExt(CurrentProject.SubtitlesFile);
-    TranslatedFilename := Copy(CurrentProject.SubtitlesFile, 1,
-      Length(CurrentProject.SubtitlesFile) - Length(Ext)) + '.translated' + Ext;
-    TranslateForm.SetTargetFile(TranslatedFilename);
-  end;
+  Ext := WideExtractFileExt(CurrentProject.SubtitlesFile);
+  TranslatedFilename := Copy(CurrentProject.SubtitlesFile, 1,
+    Length(CurrentProject.SubtitlesFile) - Length(Ext)) + '.translated' + Ext;
+  TranslateForm.SetTargetFile(TranslatedFilename);
+  TranslateForm.SetHasVO(CurrentProject.SubtitlesVO <> '');
 
   if TranslateForm.ShowModal = mrOk then
   begin
     if (TranslateForm.GetTranslateSelectionType = tstAll) then
     begin
-      // TODO : if file already exists ask for replacement    
       Translator := TranslateForm.GetTranslator;
       SaveSubtitles(TranslateForm.GetTargetFile, CurrentProject.SubtitlesFile, CurrentProject.IsUTF8,
         False, Translator);
@@ -9765,20 +9756,36 @@ begin
     end
     else if (TranslateForm.GetTranslateSelectionType = tstMissingOnly) then
     begin
-      // TODO : undo support
-      Translator := TranslateForm.GetTranslator;
-      for i:=0 to WAVDisplayer.RangeListVO.Count-1 do
-      begin
-        SubtitleRange := TSubtitleRange(WAVDisplayer.RangeListVO[i]);
-        if WAVDisplayer.RangeList.GetRangeIdxAt(SubtitleRange.GetMiddle) = -1 then
+      g_WebRWSynchro.BeginWrite;
+      try
+        Translator := TranslateForm.GetTranslator;
+        SubList := TList.Create;
+        for i:=0 to WAVDisplayer.RangeListVO.Count-1 do
         begin
-          Node := AddSubtitle(SubtitleRange);
-          NodeData := vtvSubsList.GetNodeData(Node);
-          NewRange := NodeData.Range;
-          NewRange.Text := Translator.Translate(SubtitleRange.Text);
+          SubtitleRange := TSubtitleRange(WAVDisplayer.RangeListVO[i]);
+          if WAVDisplayer.RangeList.GetRangeIdxAt(SubtitleRange.GetMiddle) = -1 then
+          begin
+            NewRange := TSubtitleRange(SubRangeFactory.CreateRange);
+            NewRange.Assign(SubtitleRange);
+            NewRange.Text := Translator.Translate(SubtitleRange.Text);
+            SubList.Add(NewRange);
+          end;
         end;
+        FreeAndNil(Translator);
+
+        if (SubList.Count > 0) then
+        begin
+          UndoableMultiAddTask := TUndoableMultiAddTask.Create;
+          UndoableMultiAddTask.SetData(SubList);
+          UndoableMultiAddTask.DoTask;
+          PushUndoableTask(UndoableMultiAddTask);
+          CurrentProject.IsDirty := True;
+        end;
+        FreeAndNil(SubList);
+      finally
+        g_WebRWSynchro.EndWrite;
       end;
-      FreeAndNil(Translator);
+      UpdateDurationWithSubOnly;
       WAVDisplayer.UpdateView([uvfRange]);
       vtvSubsList.Repaint;
     end;

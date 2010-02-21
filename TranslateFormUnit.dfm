@@ -2,7 +2,7 @@ object TranslateForm: TTranslateForm
   Left = 306
   Top = 321
   Width = 600
-  Height = 339
+  Height = 274
   Caption = 'Translate'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,7 +19,7 @@ object TranslateForm: TTranslateForm
   TextHeight = 13
   object bttOK: TTntButton
     Left = 432
-    Top = 280
+    Top = 216
     Width = 75
     Height = 25
     Caption = 'OK'
@@ -28,7 +28,7 @@ object TranslateForm: TTranslateForm
   end
   object bttCancel: TTntButton
     Left = 512
-    Top = 280
+    Top = 216
     Width = 75
     Height = 25
     Caption = 'Cancel'
@@ -69,32 +69,25 @@ object TranslateForm: TTranslateForm
     TabOrder = 4
     Text = '** untranslated **'
   end
-  object TntGroupBox1: TTntGroupBox
-    Left = 8
-    Top = 216
-    Width = 577
-    Height = 49
-    Caption = ' Target file '
+  object edTargetFile: TTntEdit
+    Left = 144
+    Top = 26
+    Width = 401
+    Height = 21
     TabOrder = 5
-    object edTargetFile: TTntEdit
-      Left = 8
-      Top = 20
-      Width = 521
-      Height = 21
-      TabOrder = 0
-    end
-    object bttBrowseTargetFile: TTntButton
-      Left = 536
-      Top = 16
-      Width = 35
-      Height = 25
-      Caption = '...'
-      TabOrder = 1
-      OnClick = bttBrowseTargetFileClick
-    end
+  end
+  object bttBrowseTargetFile: TTntButton
+    Left = 544
+    Top = 24
+    Width = 35
+    Height = 25
+    Caption = '...'
+    TabOrder = 6
+    OnClick = bttBrowseTargetFileClick
   end
   object TntSaveDialog1: TTntSaveDialog
-    Left = 392
-    Top = 272
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist, ofEnableSizing]
+    Left = 552
+    Top = 56
   end
 end

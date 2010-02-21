@@ -44,10 +44,9 @@ type
     rgSelectionType: TTntRadioGroup;
     rgTextType: TTntRadioGroup;
     edCustomText: TTntEdit;
-    TntGroupBox1: TTntGroupBox;
+    TntSaveDialog1: TTntSaveDialog;
     edTargetFile: TTntEdit;
     bttBrowseTargetFile: TTntButton;
-    TntSaveDialog1: TTntSaveDialog;
     procedure bttOKClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -58,6 +57,7 @@ type
     procedure rgSelectionTypeClick(Sender: TObject);
   private
     { Private declarations }
+    HasBrowsedForFile : Boolean;
   public
     { Public declarations }
     function GetTranslateSelectionType : TTranslateSelectionType;
@@ -71,6 +71,7 @@ type
     procedure SetTargetFile(Value : WideString);
 
     function GetTranslator : TTranslator;
+    function GetHasBrowsedForFile : Boolean;
   end;
 
   function GetTranslatorCopyOriginalCommon : TTranslator;
@@ -81,6 +82,8 @@ var
 implementation
 
 {$R *.dfm}
+
+uses TntSysUtils, MiscToolsUnit;
 
 var
   TranslatorCopyOriginalCommon : TTranslator;
@@ -118,8 +121,7 @@ end;
 
 function TTranslatorCopyTagsOnly.Translate(Text : WideString) : WideString;
 begin
-  // TODO
-  Result := Text;
+  Result := StripText(Text);
 end;
 
 // -------------------------------------------------------------------------------------------------
@@ -158,8 +160,24 @@ begin
 end;
 
 procedure TTranslateForm.bttOKClick(Sender: TObject);
+var res : Integer;
 begin
-  ModalResult := mrOk;
+  if (TranslateForm.GetTranslateSelectionType = tstAll) and (not GetHasBrowsedForFile)
+      and WideFileExists(TranslateForm.GetTargetFile) then
+  begin
+    res := MessageBoxW(Handle, PWideChar(WideFormat(
+    'The subtitle file "%s" already exists, do you want to overwrite it?',
+      [TranslateForm.GetTargetFile])),
+      PWideChar(WideString('Warning')),
+      MB_YESNOCANCEL or MB_ICONWARNING);
+    case res of
+      IDYES: ModalResult := mrOk;
+      IDNO: Exit;
+      IDCANCEL: ModalResult := mrCancel;
+    end;
+  end
+  else
+    ModalResult := mrOk;
 end;
 
 procedure TTranslateForm.bttCancelClick(Sender: TObject);
@@ -171,6 +189,7 @@ procedure TTranslateForm.FormCreate(Sender: TObject);
 begin
   SetTranslateSelectionType(tstAll);
   SetTranslateTextType(tttEmpty);
+  HasBrowsedForFile := False;
 end;
 
 procedure TTranslateForm.rgSelectionTypeClick(Sender: TObject);
@@ -190,6 +209,7 @@ begin
     TntSaveDialog1.FileName := GetTargetFile;
     if TntSaveDialog1.Execute then
     begin
+      HasBrowsedForFile := True;
       SetTargetFile(TntSaveDialog1.FileName);
     end;
 end;
@@ -217,6 +237,7 @@ end;
 procedure TTranslateForm.SetHasVO(Value : Boolean);
 begin
   RadioGroupButton(Ord(tstMissingOnly), rgSelectionType).Enabled := Value;
+  SetTranslateSelectionType(tstMissingOnly);
 end;
 
 function TTranslateForm.GetTranslator : TTranslator;
@@ -226,7 +247,14 @@ begin
     tttCopyOriginal: Result := TTranslatorCopyOriginal.Create;
     tttCopyTagsOnly: Result := TTranslatorCopyTagsOnly.Create;
     tttCustomText: Result := TTranslatorCustomText.Create(edCustomText.Text);
+  else
+    Result := TTranslatorEmpty.Create;
   end;
+end;
+
+function TTranslateForm.GetHasBrowsedForFile : Boolean;
+begin
+  Result := HasBrowsedForFile;
 end;
 
 initialization
