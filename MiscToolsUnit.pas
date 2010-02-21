@@ -78,6 +78,7 @@ type
 
   procedure TagSplit(const Text : WideString; var WordArray : TWideStringDynArray);
   function StripTags(const Text : WideString) : WideString;
+  function StripText(const Text : WideString) : WideString;
   function StripTagsKeepNL(const Text : WideString) : WideString;
 
   function WideIsAbsolutePath(const Path : WideString) : Boolean;
@@ -925,6 +926,19 @@ begin
   for i:=0 to Length(WordArray)-1 do
   begin
     if (i mod 2) = 0 then
+      Result := Result + WordArray[i];
+  end;
+end;
+
+function StripText(const Text : WideString) : WideString;
+var i : Integer;
+    WordArray : TWideStringDynArray;
+begin
+  TagSplit(Text, WordArray);
+  Result := '';
+  for i:=0 to Length(WordArray)-1 do
+  begin
+    if (i mod 2) = 1 then
       Result := Result + WordArray[i];
   end;
 end;
