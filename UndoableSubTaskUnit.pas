@@ -318,7 +318,7 @@ end;
 procedure TUndoableAddTask.DoTask;
 var NewNode : PVirtualNode;
 begin
-  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FText, FAutoSelect);
+  NewNode := MainForm.AddSubtitle(FStartTime, FStopTime, FText, True, FAutoSelect);
   FIndex := NewNode.Index;
 end;
 
@@ -511,7 +511,7 @@ begin
   // Now delete them
   MainForm.DeleteSubtitles(FIndexes);
   // Add back the merged subtitle
-  Node := MainForm.AddSubtitle(SubRange);
+  Node := MainForm.AddSubtitle(SubRange, False);
   // Focus the merged node
   MainForm.FocusNode(Node, False);
   // Free temporarily created merged sub
