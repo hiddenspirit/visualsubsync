@@ -986,7 +986,7 @@ end;
 
 function WideResolvePath(Filename : WideString) : WideString;
 var i, j, p : integer;
-    PathElem : string;
+    PathElem : WideString;
 begin
   i := 1;
   p := 1;
