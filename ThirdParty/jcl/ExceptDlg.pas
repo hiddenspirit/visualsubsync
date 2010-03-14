@@ -120,9 +120,10 @@ resourcestring
 
   RsDetailsIntro = 'Exception log with detailed tech info. Generated on %s.' + NativeLineBreak +
                    'A copy is saved in %s'  + NativeLineBreak +
-                   'You may send it to the application vendor, helping him to understand what had happened.';
+                   'You may send it to the application author, helping him to understand what had happened.';
 
-  RsDescription = 'What steps will reproduce the problem?' + NativeLineBreak +
+  RsDescription = '<Describe the problem here>' + NativeLineBreak + NativeLineBreak +
+                  'What steps will reproduce the problem?' + NativeLineBreak +
                   '1.' + NativeLineBreak +
                   '2. ' + NativeLineBreak +
                   '3. ' + NativeLineBreak +
