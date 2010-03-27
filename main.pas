@@ -5860,6 +5860,7 @@ begin
     PushUndoableTask(UndoableMultiChangeTask);
     // Do not free the task, it's on the stack now
     UndoableMultiChangeTask := nil;
+    CurrentProject.IsDirty := True;
   end
   else
   begin
@@ -5944,7 +5945,6 @@ begin
       WavDisplayer.Selection.StartTime := NewValue;
     end;
   end;
-  CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -5969,7 +5969,6 @@ begin
       WavDisplayer.Selection.StopTime := NewValue;
     end;
   end;
-  CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -5989,7 +5988,6 @@ begin
     ChangeSubData.OldText := SubtitleRange.Text;
     ChangeSubData.NewText := NewValue;
   end;
-  CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -6084,6 +6082,7 @@ begin
     PushUndoableTask(UndoableMultiChangeTask);
     // Do not free the task, it's on the stack now
     UndoableMultiChangeTask := nil;
+    CurrentProject.IsDirty := True;
   end
   else
   begin
@@ -7671,7 +7670,6 @@ procedure TMainForm.CurrentProjectOnDirtySet(Sender: TObject);
 begin
   UpdateSubtitleForPreview(False);
   VideoPreviewNeedSubtitleUpdate := True;
-  CallJSOnSubtitleModification;
 end;
 
 //------------------------------------------------------------------------------
@@ -7762,7 +7760,7 @@ end;
 procedure TMainForm.WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
-  if Assigned(vtvSubsList.FocusedNode) then
+  if Assigned(Range) then
   begin
     UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
 
@@ -7771,7 +7769,7 @@ begin
     GeneralJSPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
     GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
 
-    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
+    GetCurrentPreviousNextSubtitles(TSubtitleRange(Range).Node, CurrentSub, PreviousSub, NextSub);
     GeneralJSPlugin.NotifyRangeStartDblClick(CurrentSub, PreviousSub, NextSub);
 
     GeneralJSPlugin.OnSubtitleChangeStart := nil;
@@ -7797,7 +7795,7 @@ end;
 procedure TMainForm.WAVDisplayer1RangeStopDblClick(Sender: TObject; Range : TRange);
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
-  if Assigned(vtvSubsList.FocusedNode) then
+  if Assigned(Range) then
   begin
     UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
 
@@ -7806,7 +7804,7 @@ begin
     GeneralJSPlugin.OnSubtitleChangeStop := OnSubtitleRangeJSWrapperChangeStop;
     GeneralJSPlugin.OnSubtitleChangeText := OnSubtitleRangeJSWrapperChangeText;
 
-    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
+    GetCurrentPreviousNextSubtitles(TSubtitleRange(Range).Node, CurrentSub, PreviousSub, NextSub);
     GeneralJSPlugin.NotifyRangeStopDblClick(CurrentSub, PreviousSub, NextSub);
 
     GeneralJSPlugin.OnSubtitleChangeStart := nil;
@@ -8930,6 +8928,7 @@ begin
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   WAVDisplayer1SelectionChange(WAVDisplayer);
+  CurrentProject.IsDirty := True;  
 end;
 
 //------------------------------------------------------------------------------
@@ -9366,13 +9365,16 @@ procedure TMainForm.OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
 var TextBegin, TextEnd : WideString;
     P : TPoint;
     WordInfo : TWordInfo;
+    SelStart : Integer;
 begin
   P := MemoSubPopupMenu.PopupPoint;
   if not GetWordAt(MemoSubtitleText, P.X, P.Y, WordInfo) then
     Exit;
   TextBegin := Copy(MemoSubtitleText.Text, 1, WordInfo.Position - 1);
   TextEnd := Copy(MemoSubtitleText.Text, WordInfo.Position + WordInfo.Length, MaxInt);
+  SelStart := MemoSubtitleText.SelStart;
   MemoSubtitleText.Text := TextBegin + (Sender as TTntMenuItem).Hint + TextEnd;
+  MemoSubtitleText.SelStart := SelStart;
   CurrentProject.IsDirty := True;
 end;
 
