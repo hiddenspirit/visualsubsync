@@ -7670,6 +7670,7 @@ procedure TMainForm.CurrentProjectOnDirtySet(Sender: TObject);
 begin
   UpdateSubtitleForPreview(False);
   VideoPreviewNeedSubtitleUpdate := True;
+  CallJSOnSubtitleModification;
 end;
 
 //------------------------------------------------------------------------------
@@ -7735,10 +7736,16 @@ end;
 
 procedure TMainForm.CallJSOnSubtitleModification;
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+    Selected : PVirtualNode;
 begin
-  if Assigned(vtvSubsList.FocusedNode) then
+  Selected := nil;
+  if Assigned(WAVDisplayer.SelectedRange) then
+    Selected := TSubtitleRange(WAVDisplayer.SelectedRange).Node
+  else if Assigned(vtvSubsList.FocusedNode) then
+    Selected := vtvSubsList.FocusedNode;
+  if Assigned(Selected) then
   begin
-    GetCurrentPreviousNextSubtitles(vtvSubsList.FocusedNode, CurrentSub, PreviousSub, NextSub);
+    GetCurrentPreviousNextSubtitles(Selected, CurrentSub, PreviousSub, NextSub);
     GeneralJSPlugin.NotifySubtitleModification(CurrentSub, PreviousSub, NextSub);
   end;
 end;
