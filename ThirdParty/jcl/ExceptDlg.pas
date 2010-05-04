@@ -468,6 +468,8 @@ begin
     // Get info about loaded video file
     DetailsMemo.Lines.Add('Video graph :');
     DetailsMemo.Lines.Add(g_VideoGraphDebugInfo);
+    DetailsMemo.Lines.Add('Audio graph :');
+    DetailsMemo.Lines.Add(g_AudioGraphDebugInfo);
     DetailsMemo.Lines.Add('WAV Extractor graph :');
     DetailsMemo.Lines.Add(g_WavExtractorGraphDebugInfo);
     NextDetailBlock;

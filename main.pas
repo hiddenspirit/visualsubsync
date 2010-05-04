@@ -2934,6 +2934,10 @@ begin
         AudioOnlyRenderer.KillVideo;
       end;
     end;
+    if AudioOnlyRenderer.IsOpen then
+      g_AudioGraphDebugInfo := AudioOnlyRenderer.GetFiltersAsString
+    else
+      g_AudioGraphDebugInfo := '';
 
     // ----- Load video
     ShowStatusBarMessage('Loading video file...');
@@ -3493,6 +3497,8 @@ begin
         begin
           WAVDisplayer.ClearPeakData;
         end;
+        if AudioOnlyRenderer.IsOpen then
+          g_AudioGraphDebugInfo := AudioOnlyRenderer.GetFiltersAsString;
         ProjectHasChanged := True;
       end;
 
@@ -3531,6 +3537,11 @@ begin
 
       if (ProjectHasChanged) then
       begin
+        if AudioOnlyRenderer.IsOpen then
+          g_AudioGraphDebugInfo := AudioOnlyRenderer.GetFiltersAsString
+        else
+          g_AudioGraphDebugInfo := '';
+          
         SaveProject(CurrentProject, False);
       end;
 
@@ -4785,6 +4796,7 @@ begin
   VideoRenderer.Close;
   g_VideoGraphDebugInfo := '';
   g_WavExtractorGraphDebugInfo := '';
+  g_AudioGraphDebugInfo := '';
 
   g_VSSCoreWrapper.SetVideoWidth(0);
   g_VSSCoreWrapper.SetVideoHeight(0);
