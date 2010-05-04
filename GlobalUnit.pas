@@ -55,6 +55,7 @@ var
   g_DictPath : WideString;
   g_WavExtractorGraphDebugInfo : WideString;
   g_VideoGraphDebugInfo : WideString;
+  g_AudioGraphDebugInfo : WideString;
 
 implementation
 
