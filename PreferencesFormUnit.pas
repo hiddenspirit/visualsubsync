@@ -686,10 +686,11 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TConfigObject.LoadIni(IniFile : TIniFile; IsPresets : Boolean);
-var i, j : integer;
+var i, j, IntValue : integer;
     HLID : THotkeyListItemData;
     JSPluginInfo : TJSPluginInfo;
     pPluginParam : PJSPluginParam;
+    KeyName : string;
 begin
   // Misc
   SwapSubtitlesList := IniFile.ReadBool('Misc','SwapSubtitlesList',SwapSubtitlesList);
@@ -733,12 +734,18 @@ begin
     for i:=0 to ListHotkeys.Count-1 do
     begin
       HLID := ListHotkeys[i];
-      HLID.NormalShortCut := IniFile.ReadInteger('Hotkeys',
-          HLID.Action.Name + '[Normal]',
-          HLID.NormalShortCut);
-      HLID.TimingShortCut := IniFile.ReadInteger('Hotkeys',
-          HLID.Action.Name + '[Timing]',
-          HLID.TimingShortCut);
+      
+      KeyName := HLID.Action.Name + '[Normal]';
+      if IniFile.ValueExists('Hotkeys', KeyName) then
+      begin
+        HLID.NormalShortCut := IniFile.ReadInteger('Hotkeys', KeyName, HLID.NormalShortCut);
+      end;
+
+      KeyName := HLID.Action.Name + '[Timing]';
+      if IniFile.ValueExists('Hotkeys', KeyName) then
+      begin
+        HLID.TimingShortCut := IniFile.ReadInteger('Hotkeys', KeyName, HLID.TimingShortCut);
+      end;
     end;
   end
   else
@@ -746,14 +753,21 @@ begin
     for i:=0 to ListHotkeys.Count-1 do
     begin
       HLID := ListHotkeys[i];
-      HLID.NormalShortCut := TextToShortCut(
-        IniFile.ReadString('Hotkeys',
-          HLID.Action.Name + '[Normal]',
-          ShortCutToText(HLID.NormalShortCut)));
-      HLID.TimingShortCut := TextToShortCut(
-        IniFile.ReadString('Hotkeys',
-          HLID.Action.Name + '[Timing]',
-          ShortCutToText(HLID.TimingShortCut)));
+
+      KeyName := HLID.Action.Name + '[Normal]';
+      // Check if value really exists
+      if IniFile.ValueExists('Hotkeys', KeyName) then
+      begin
+        HLID.NormalShortCut := TextToShortCut(
+          IniFile.ReadString('Hotkeys', KeyName, ShortCutToText(HLID.NormalShortCut)));
+      end;
+
+      KeyName := HLID.Action.Name + '[Timing]';
+      if IniFile.ValueExists('Hotkeys', KeyName) then
+      begin
+        HLID.TimingShortCut := TextToShortCut(
+          IniFile.ReadString('Hotkeys', KeyName, ShortCutToText(HLID.TimingShortCut)));
+      end;
     end;
   end;
 
