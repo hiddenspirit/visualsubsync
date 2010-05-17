@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, TntDialogs;
+  Dialogs, StdCtrls, TntStdCtrls, TntExtCtrls, TntDialogs, ExtCtrls;
 
 type
   TTranslateSelectionType = (tstAll, tstMissingOnly);
@@ -39,14 +39,16 @@ type
   end;
 
   TTranslateForm = class(TForm)
+    PanelBottom: TPanel;
     bttOK: TTntButton;
     bttCancel: TTntButton;
+    PanelClient: TPanel;
     rgSelectionType: TTntRadioGroup;
     rgTextType: TTntRadioGroup;
     edCustomText: TTntEdit;
-    TntSaveDialog1: TTntSaveDialog;
     edTargetFile: TTntEdit;
     bttBrowseTargetFile: TTntButton;
+    TntSaveDialog1: TTntSaveDialog;
     procedure bttOKClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
