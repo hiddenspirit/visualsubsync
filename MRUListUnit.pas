@@ -42,6 +42,7 @@ type
     procedure AddFile(Filename : WideString);
     procedure SaveIni(IniFile : TIniFile; SectionName : string);
     procedure LoadIni(IniFile : TIniFile; SectionName : string);
+    function GetMRUFilename : WideString;
   published
     property OnRecentMenuItemClick : TNotifyEvent read FOnRecentMenuItemClick write FOnRecentMenuItemClick;
   end;
@@ -166,6 +167,20 @@ begin
     end;
   end;
   FillMenuItem(FRootMenuItem);
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMRUList.GetMRUFilename : WideString;
+begin
+  if (FFileList.Count > 0) then
+  begin
+    Result := FFileList[0];
+  end
+  else
+  begin
+    Result := '';
+  end;
 end;
 
 // -----------------------------------------------------------------------------

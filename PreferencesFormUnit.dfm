@@ -158,6 +158,14 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 4
           OnClick = chkAssociateExtASSClick
         end
+        object chkLoadMostRecentProjectOnStartup: TCheckBox
+          Left = 16
+          Top = 104
+          Width = 409
+          Height = 17
+          Caption = 'Load most recent project on startup'
+          TabOrder = 5
+        end
       end
       object GroupBoxBackup: TGroupBox
         Left = 0
