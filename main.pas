@@ -7911,6 +7911,15 @@ begin
 
       MainForm.LoadProject(NewProjectName);
     end;
+  end
+  else if ConfigObject.LoadMostRecentProjectOnStartup then
+  begin
+    // Try to load most recent project
+    ArgFilename := MRUList.GetMRUFilename;
+    if WideFileExists(ArgFilename) then
+    begin
+      MainForm.LoadProject(ArgFilename);
+    end;
   end;
 end;
 
