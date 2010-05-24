@@ -2028,12 +2028,11 @@ var
   Ext, SubText : WideString;
 begin
   Result := False;
+  WAVDisplayer.ClearRangeListVO;
   if not WideFileExists(Filename) then
   begin
     Exit;
   end;
-
-  WAVDisplayer.ClearRangeListVO;
 
   Ext := WideLowerCase(WideExtractFileExt(Filename));
   if (Ext = '.srt') then
