@@ -3527,12 +3527,13 @@ begin
       if (CurrentProject.Filename <> ProjectForm.EditProjectFilename.Text) then
       begin
         CurrentProject.Filename := ProjectForm.EditProjectFilename.Text;
+        ProjectHasChanged := True;
       end;
 
       if (CurrentProject.IsUTF8 <> ProjectForm.chkSaveAsUTF8.Checked) then
       begin
         CurrentProject.IsUTF8 := ProjectForm.chkSaveAsUTF8.Checked;
-        CurrentProject.IsDirty := True;
+        ProjectHasChanged := True;
       end;
 
       if (ProjectHasChanged) then
