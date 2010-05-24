@@ -8185,6 +8185,7 @@ begin
     end;
   end;
 
+  CurrentProject.IsDirty := True;
   UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
