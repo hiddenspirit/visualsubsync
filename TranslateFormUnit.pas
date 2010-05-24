@@ -239,7 +239,10 @@ end;
 procedure TTranslateForm.SetHasVO(Value : Boolean);
 begin
   RadioGroupButton(Ord(tstMissingOnly), rgSelectionType).Enabled := Value;
-  SetTranslateSelectionType(tstMissingOnly);
+  if (Value) then
+    SetTranslateSelectionType(tstMissingOnly)
+  else
+    SetTranslateSelectionType(tstAll);
 end;
 
 function TTranslateForm.GetTranslator : TTranslator;
