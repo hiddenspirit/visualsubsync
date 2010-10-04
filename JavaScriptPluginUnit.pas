@@ -174,6 +174,11 @@ type
     function MeasureStringWidth(FontName : WideString; FontSize : Integer;
       Bold : Boolean; Text : WideString) : Integer;
 
+    function GetTextSelectionStart : Integer;
+    function GetTextSelectionLength : Integer;
+
+    function GetAudioCursorPosition : Integer; 
+
     property INDEX_COL_IDX : Integer read FINDEX_COL_IDX;
     property START_COL_IDX : Integer read FSTART_COL_IDX;
     property STOP_COL_IDX : Integer read FSTOP_COL_IDX;
@@ -1795,6 +1800,11 @@ begin
 
   VSSCoreJSObj.SetMethodInfo('MeasureStringWidth', 4, rtInteger);
 
+  VSSCoreJSObj.SetMethodInfo('GetTextSelectionStart', 0, rtInteger);
+  VSSCoreJSObj.SetMethodInfo('GetTextSelectionLength', 0, rtInteger);
+
+  VSSCoreJSObj.SetMethodInfo('GetAudioCursorPosition', 0, rtInteger);
+
   for i := Low(FSubRangeWrapperPool) to High(FSubRangeWrapperPool) do
   begin
     JSParent.AddNativeObject(FSubRangeWrapperPool[i],
@@ -1958,6 +1968,21 @@ begin
   DeleteDC(DC);
   DeleteObject(Font);
   Result := xysize.cx;
+end;
+
+function TVSSCoreWrapper.GetTextSelectionStart : Integer;
+begin
+  Result := FVSSCoreEngine.GetTextSelectionStart;
+end;
+
+function TVSSCoreWrapper.GetTextSelectionLength : Integer;
+begin
+  Result := FVSSCoreEngine.GetTextSelectionLength;
+end;
+
+function TVSSCoreWrapper.GetAudioCursorPosition : Integer;
+begin
+  Result := FVSSCoreEngine.GetAudioCursorPosition;
 end;
 
 //==============================================================================

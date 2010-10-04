@@ -805,7 +805,11 @@ type
     function GetSelectedCount : Integer;
     function GetFirstSelected : TSubtitleRange;
     function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
-    function GetAt(Index : Integer) : TSubtitleRange;    
+    function GetAt(Index : Integer) : TSubtitleRange;
+    function GetTextSelectionStart : Integer;
+    function GetTextSelectionLength : Integer;
+    function GetAudioCursorPosition : Integer;
+
   end;
 
 const
@@ -9822,6 +9826,23 @@ begin
     end;
   end;
   FreeAndNil(TranslateForm);
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.GetTextSelectionStart : Integer;
+begin
+  Result := MemoSubtitleText.SelStart;
+end;
+
+function TMainForm.GetTextSelectionLength : Integer;
+begin
+  Result := MemoSubtitleText.SelLength;
+end;
+
+function TMainForm.GetAudioCursorPosition : Integer;
+begin
+  Result := WAVDisplayer.GetCursorPos;
 end;
 
 //------------------------------------------------------------------------------
