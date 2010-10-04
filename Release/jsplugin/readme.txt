@@ -37,6 +37,9 @@ VSSCore.GetPrevious(Subtitle) : Return the subtitle previous to the specified on
 VSSCore.GetFirstSelected() : Return the first selected subtitle
 VSSCore.GetNextSelected(Subtitle) : Return the next selected subtitle after the specified one
 VSSCore.MeasureStringWidth(FontName, FontSize, IsBold, Text) : Return the width of the text in pixels.
+VSSCore.GetTextSelectionStart() : Return the position of the first selected character in the text.
+VSSCore.GetTextSelectionLength() : Return the number of characters that are selected.
+VSSCore.GetAudioCursorPosition() : Return the position of the yellow audio cursor in ms.
 
 Subtitle.Index : Index of the subtitle
 Subtitle.Start : Start time in ms of the subtitle

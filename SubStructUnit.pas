@@ -77,6 +77,11 @@ type
     function GetNextSelected(SubtitleRange : TSubtitleRange) : TSubtitleRange;
 
     function GetAt(Index : Integer) : TSubtitleRange;
+
+    function GetTextSelectionStart : Integer;
+    function GetTextSelectionLength : Integer;
+
+    function GetAudioCursorPosition : Integer;    
   end;  
 
   function Sub2SrtString(SubRange : TSubtitleRange) : WideString;  
