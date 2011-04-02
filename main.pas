@@ -1953,7 +1953,11 @@ begin
   WAVDisplayer.UpdateView([uvfRange]);
   //AutoFitSubsListColumns;
   vtvSubsList.Repaint;
-  
+
+  if StyleFormInstance.GetCount = 0 then
+  begin
+    StyleFormInstance.AddDefaultStyle;
+  end;
   UpdateStylesComboBox;
 
   EnableStyleControls(EnableStyle);
