@@ -417,19 +417,18 @@ begin
     style.Free;
     lstStyles.DeleteSelected;
     FStylesChanged := True;
+    if (lstStyles.Count = 0) then
+    begin
+      // There is no more style ? Add back a default style.
+      AddDefaultStyle;
+    end;
     // calculate new selection index
     if (index >= lstStyles.Count) then
+    begin
       index := lstStyles.Count-1;
-    if (index >= 0) then
-    begin
-      lstStyles.ItemIndex := index;
-      ShowSelection;
-    end
-    else
-    begin
-      ClearForm;
-      EnableControls(False);
     end;
+    lstStyles.ItemIndex := index;
+    ShowSelection;
   end
 end;
 
@@ -775,12 +774,15 @@ end;
 procedure TStyleForm.CheckChange;
 var MaybeChangedStyle : TSSAStyle;
 begin
-  MaybeChangedStyle := TSSAStyle.Create;
-  MaybeChangedStyle.Assign(GetSelectedStyle);
-  FormToData(maybeChangedStyle);
-  bttApply.Enabled := not MaybeChangedStyle.Equals(GetSelectedStyle);
-  bttReset.Enabled := bttApply.Enabled;
-  MaybeChangedStyle.Free;
+  if lstStyles.Count > 0 then
+  begin
+    MaybeChangedStyle := TSSAStyle.Create;
+    MaybeChangedStyle.Assign(GetSelectedStyle);
+    FormToData(maybeChangedStyle);
+    bttApply.Enabled := not MaybeChangedStyle.Equals(GetSelectedStyle);
+    bttReset.Enabled := bttApply.Enabled;
+    MaybeChangedStyle.Free;
+  end;
 end;
 
 procedure TStyleForm.checkChangedSender(Sender: TObject);
