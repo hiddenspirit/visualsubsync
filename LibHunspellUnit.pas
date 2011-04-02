@@ -154,9 +154,15 @@ uses TntSysUtils, Types, Messages, TntWideStrings;
 // -----------------------------------------------------------------------------
 
 function IsWordDelimiter(wc : WideChar) : Boolean;
-const WordDelimiters : array [0..29] of WideChar = (
+const WordDelimiters : array [0..39] of WideChar = (
   ' ', '.', ',', '?', '!', ':', ';', '(', ')', '[', ']', '{', '}',
-  #13, #10, #9, '"', '/', '\', '|', '+', '-', '*', '=', '%', '&', '>', '<', '¡', '¿');
+  #13, #10, #9, '"', '/', '\', '|', '+', '-', '*', '=', '%', '&', '>', '<', '¡', '¿',
+  #160, #8239,              // Non-breaking spaces
+  #8230,                    // Suspension points
+  #8216, //#8217,             // Single quotes
+  #171, #187, #8220, #8221, // Double quotes
+  #8211, #8212              // Dashes
+  );
 var i : Integer;
 begin
   for i := Low(WordDelimiters) to High(WordDelimiters) do
@@ -399,6 +405,7 @@ end;
 function THunspellChecker.Spell(Word : WideString) : Boolean;
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   if (FIgnoreList.IndexOf(Word) <> -1) then
   begin
     Result := True;
