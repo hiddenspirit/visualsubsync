@@ -19,6 +19,34 @@
 
 <br>
 
+<div class="Title">Version 1.0.0 (2011-04-03)</div>
+Finally here is version 1.0.0 after 7 years of developments. I'm no sure at this point if I will continue to work on this project,
+even though there is still lots of features or improvements that I would like to add. There is at least two reasons for that:
+Firstly I've moved to Linux as my main OS, and secondly the developement environment used for VSS is getting very old (Delphi 7)
+and in newer releases there is no more free available version.
+Of course any developer is welcome to join and continue the project which I remind is opensource from the start.<br>
+No new big features in this version but a lot of small bugs fixed.
+<ul>
+  <li>Implemented feature request #2998396 : Open most recent project on startup</li>
+  <li>Fixed bug #2988478 : Display problem with "Translate" dialog this dialog is now re-sizable and should display correctly.</li>
+  <li>Fixed shortcut overwrite problem when loading preset</li>
+  <li>Fixed bug #2970734 : Double click on stop time change the next subtitle.</li>
+  <li>Fixed unicode option change : auto save project</li>
+  <li>Fixed undo delete action : mark project as dirty</li>
+  <li>Fixed translate dialog : now use "translate all subtitles" when there is no VO file</li>
+  <li>Fixed VO file loading : always clear current VO file before trying to load new VO file which can be empty</li>
+  <li>Added jsplugin function VSSCore.GetTextSelectionStart() : Return the position of the first selected character in the text.</li>
+  <li>Added jsplugin function VSSCore.GetTextSelectionLength() : Return the number of characters that are selected.</li>
+  <li>Added jsplugin function VSSCore.GetAudioCursorPosition() : Return the position of the yellow audio cursor in ms.</li>
+  <li>Fixed spell checking handling of typographic characters (non-breaking spaces, quotes, dashes, apostrophe ...) (patch by spirit)</li>
+  <li>Fixed SSA/ASS export : make sure there is a default style when saving as SSA or ASS format. (reported by spirit)</li>
+  <li>Added *.FLV to the open video file dialog filter.</li>
+  <li>Improved GUI splitter display (based on code by Anders Melander)</li>
+  <li>Added a check for AVI file with lots of key frame (if >=100 consecutive KF then disable scene change display)</li>
+  <li>Fixed some possible crash when no adequate splitter can be found</li>
+</ul>
+<br>
+
 <div class="Title">Version 0.9.22 (2010-03-14)</div>
 This version bring some bug fix and more options for the creation of the translation template (File&gt;Translate...)<br>
 A little reminder, VisualSubSync's website is editable (<a href="http://www.visualsubsync.org/home?do=register">register now</a>), 
