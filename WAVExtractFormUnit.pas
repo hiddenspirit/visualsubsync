@@ -233,8 +233,8 @@ begin
 
   DSWavExtractor.DestinationFilename := DestinationFilename;
   DSWavExtractor.WAVExtractionType := CurrentExtractionType;
-  DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
-  AudioPinIsSelected := True;
+
+  AudioPinIsSelected := DSWavExtractor.SelectAudioPin(cbStreamIndex.ItemIndex);
 
   slist := TStringList.Create;
   DSWavExtractor.GetFilters(slist);

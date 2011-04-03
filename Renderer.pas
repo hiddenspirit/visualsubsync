@@ -1453,8 +1453,11 @@ var
   PinDir: TPinDirection;
   AudioPinCurrentIndex : Integer;
 begin
-  assert(FSplitter <> nil);
   Result := False;
+  if not Assigned(FSplitter) then
+  begin
+    Exit;
+  end;
   AudioPinCurrentIndex := 0;
   FSplitter.EnumPins(EnumPins);
   OutputDebugStringW(PWideChar('TDSWavExtractor.SelectAudioPin: Enumerating audio output pins on ' + GetFilterName(FSplitter)));
