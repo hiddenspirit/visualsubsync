@@ -57,9 +57,9 @@ object MainForm: TMainForm
     FullRepaint = False
     TabOrder = 0
     object SplitterWAVDisplay_Video: TSplitter
-      Left = 565
+      Left = 566
       Top = 1
-      Width = 5
+      Width = 4
       Height = 223
       Align = alRight
       AutoSnap = False
@@ -97,7 +97,7 @@ object MainForm: TMainForm
     object PanelWAVDisplay: TPanel
       Left = 255
       Top = 1
-      Width = 310
+      Width = 311
       Height = 223
       Align = alClient
       BevelOuter = bvNone
@@ -133,7 +133,7 @@ object MainForm: TMainForm
     Caption = 'PanelBottom'
     FullRepaint = False
     TabOrder = 1
-    object SplitterSubtitleVO: TTntSplitter
+    object SplitterSubtitleVO: TSplitter
       Left = 368
       Top = 0
       Width = 4
