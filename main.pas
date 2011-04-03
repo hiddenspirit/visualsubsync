@@ -35,7 +35,7 @@ uses
   PeakCreationProgressFormUnit, ProjectUnit, ServerUnit, TntExtCtrls, IniFiles,
   PreferencesFormUnit, MRUListUnit, StdActns, TntStdActns, TntButtons, TntForms,
   DetachedVideoFormUnit, XPMan, JavaScriptPluginUnit, Contnrs, DelayFormUnit,
-  UndoableTaskUnit, UndoableSubTaskUnit, Types, LibHunspellUnit, TranslateFormUnit;
+  UndoableTaskUnit, UndoableSubTaskUnit, Types, LibHunspellUnit, TranslateFormUnit, amSplitter;
 
 type
   // -----
@@ -371,7 +371,7 @@ type
     ActionPasteAtCursor: TTntAction;
     Pasteatcursor1: TTntMenuItem;
     MemoSubtitleVO: TTntRichEdit;
-    SplitterSubtitleVO: TTntSplitter;
+    SplitterSubtitleVO: TSplitter;
     ActionToggleVO: TTntAction;
     N25: TTntMenuItem;
     MenuItemShowHideReferenceVO: TTntMenuItem;
