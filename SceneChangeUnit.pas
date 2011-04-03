@@ -65,7 +65,7 @@ var hr : HRESULT;
     ppfile : IAVIFile;
     psi : TAVIStreamInfo;
     ppavi : IAVIStream;
-    FramePos : Integer;
+    FramePos, PreviousFramePos, ConsecutiveKF : Integer;
     FrameRate : Double;
 begin
   AVIFileInit;
@@ -78,6 +78,8 @@ begin
       AVIStreamInfo(ppavi, psi, SizeOf(TAVIStreamInfo));
       Framerate := (psi.dwRate / psi.dwScale);
       FramePos := 0;
+      PreviousFramePos := 0;
+      ConsecutiveKF := 0;
       while True do
       begin
         FramePos := AVIStreamFindSample(ppavi, framePos, FIND_KEY or FIND_NEXT);
@@ -85,7 +87,24 @@ begin
           Break;
         SetLength(KFArray, Length(KFArray) + 1);
         KFArray[Length(KFArray) - 1] := Trunc(FramePos / Framerate * 1000);
-        Inc(FramePos);
+
+        // Check for keyframe only files
+        if (FramePos - PreviousFramePos = 1) then
+        begin
+          Inc(ConsecutiveKF);
+          if (ConsecutiveKF = 100) then
+          begin
+            SetLength(KFArray, 0);
+            Break;
+          end;
+        end
+        else
+        begin
+          ConsecutiveKF := 0;
+        end;
+        
+        PreviousFramePos := FramePos;
+        Inc(FramePos);        
       end;
       //AVIStreamRelease(ppavi);
     end;
