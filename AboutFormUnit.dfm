@@ -50,15 +50,15 @@ object AboutForm: TAboutForm
     Top = 72
     Width = 109
     Height = 14
-    Caption = 'Copyright 2003-2010'
+    Caption = 'Copyright 2003-2011'
   end
   object TntLabel3: TTntLabel
     Left = 8
     Top = 88
-    Width = 137
+    Width = 152
     Height = 14
     Cursor = crHandPoint
-    Caption = 'christophe.paris@free.fr'
+    Caption = 'christophe.paris@free.com'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clBlue
     Font.Height = -11
