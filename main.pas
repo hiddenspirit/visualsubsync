@@ -964,6 +964,7 @@ begin
   MemoSubtitleText.Font.Size := 10;
   MemoLinesCounter.Font.Assign(MemoSubtitleText.Font);
   MemoTextPipe.Font.Assign(MemoSubtitleText.Font);
+  MemoTextPipe.MaxLength := System.MaxInt-2; // Fix some weird behaviour when loading files > 64k
   MemoSubtitleVO.Font.Name := 'Arial';
   MemoSubtitleVO.Font.Style := MemoSubtitleVO.Font.Style + [fsBold];
   MemoSubtitleVO.Font.Size := 10;
@@ -5597,8 +5598,7 @@ begin
   if pmiAutoColorizeText.Checked then
   begin
     ActionType := 0;
-    if (Assigned(vtvSubsList.FocusedNode)) and
-       ((vtvSubsList.AbsoluteIndex(vtvSubsList.FocusedNode) mod 2) <> 0) then
+    if ((vtvSubsList.TotalCount mod 2) <> 0) then
       NewColor := $00FF8000;
   end
   else if pmiAutoDeleteText.Checked then
