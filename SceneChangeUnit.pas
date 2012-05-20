@@ -11,7 +11,7 @@ procedure LoadSceneChange(Filename : WideString; var SCArray : TIntegerDynArray)
 implementation
 
 uses Windows, VFW, SysUtils, TntClasses, TntSysUtils, MiscToolsUnit,
-  MatroskaHelper, LogWriterIntf;
+  FileReaderUnit, MatroskaHelper, LogWriterIntf, MP4File;
 
 // -----------------------------------------------------------------------------
 
@@ -150,6 +150,58 @@ begin
   LogWriterNull.Free;
 end;
 
+procedure ExtractKeyFramesMP4(Filename : WideString; var KFArray : TIntegerDynArray);
+var MP4File : TMP4File;
+    FileReader : TFileReader;
+    LogWriterNull : TLogWriterNull;
+    ParseResult : Boolean;
+    trackIdx, sampleIdx : Integer;
+    track : TMP4Track;
+    sample : TMP4Sample;
+    ts : Extended;
+begin
+  LogWriterNull := TLogWriterNull.Create;
+  FileReader := TFileReader.Create(Filename);
+  MP4File := TMP4File.Create(FileReader, LogWriterNull);
+
+  ParseResult := False;
+  try
+    ParseResult := MP4File.Parse;
+  except
+    on E: Exception do
+      begin
+        //Writer.AddTextLine(E.Message);
+        //ParsingLogWriter.AddTextLine(E.Message);
+      end;
+  end;
+  if ParseResult then
+  begin
+    for trackIdx := 0 to MP4File.TrackList.Count-1 do
+    begin
+      track := MP4File.TrackList.Items[trackIdx];
+      if track.handlerType = 'vide' then
+      begin
+        for sampleIdx := 0 to Length(track.samples)-1 do
+        begin
+          sample := track.samples[sampleIdx];
+          if sample.Sync then
+          begin
+            SetLength(KFArray, Length(KFArray) + 1);
+            ts := Int64(sample.DecodingTime);
+            ts := ts / Int64(track.timescale);
+            ts := ts * 1000.0;
+            KFArray[Length(KFArray) - 1] := Trunc(ts);
+          end;
+        end;
+        Break;
+      end;
+    end;
+  end;
+  MP4File.Free;
+  FileReader.Free;
+  LogWriterNull.Free;
+end;
+
 procedure ExtractSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 var Ext : WideString;
 begin
@@ -162,6 +214,10 @@ begin
   else if (Ext = '.mkv') then
   begin
     ExtractKeyFramesMKV(Filename, SCArray);
+  end
+  else if (Ext = '.mp4') then
+  begin
+    ExtractKeyFramesMP4(Filename, SCArray);
   end;
 end;
 
