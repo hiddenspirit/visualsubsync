@@ -24,7 +24,7 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 447
+    Top = 439
     Width = 772
     Height = 4
     Cursor = crVSplit
@@ -125,7 +125,7 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 451
+    Top = 443
     Width = 772
     Height = 65
     Align = alBottom
@@ -197,7 +197,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 772
-    Height = 218
+    Height = 210
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -206,7 +206,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 772
-      Height = 148
+      Height = 140
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -840,7 +840,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttShowSuggestions: TSpeedButton
-        Left = 656
+        Left = 657
         Top = 0
         Width = 25
         Height = 25
@@ -994,7 +994,7 @@ object MainForm: TMainForm
         ShowHint = True
       end
       object bttShowPreferences: TSpeedButton
-        Left = 680
+        Left = 682
         Top = 0
         Width = 25
         Height = 25
@@ -1249,7 +1249,7 @@ object MainForm: TMainForm
   end
   object StatusBarMainPanel: TPanel
     Left = 0
-    Top = 516
+    Top = 508
     Width = 772
     Height = 19
     Align = alBottom

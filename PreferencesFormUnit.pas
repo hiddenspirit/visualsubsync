@@ -218,7 +218,7 @@ type
     pmErrorChecking: TPopupMenu;
     pmiSelectAll: TMenuItem;
     pmiUnselectAll: TMenuItem;
-    Panel3: TPanel;
+    plHotkeysCtrl: TPanel;
     TntLabel5: TTntLabel;
     ComboHotkeyMode: TTntComboBox;
     HotKey1: THotKey;
@@ -237,6 +237,8 @@ type
     chkAssociateExtSSA: TCheckBox;
     chkAssociateExtASS: TCheckBox;
     chkLoadMostRecentProjectOnStartup: TCheckBox;
+    plHotkeysButtons: TPanel;
+    plHotkeysEdit: TPanel;
     procedure FormCreate(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
