@@ -4673,6 +4673,8 @@ begin
   vtvSubsList.Canvas.Font.Assign(vtvSubsList.Font);
   // Update subtitle node height
   vtvSubsList.DefaultNodeHeight := Round(vtvSubsList.Canvas.TextHeight('Tj') * 1.1);
+  vtvSubsList.Header.DefaultHeight := vtvSubsList.DefaultNodeHeight;
+  vtvSubsList.Header.Height := vtvSubsList.DefaultNodeHeight;
   vtvSubsList.BeginUpdate;
   Node := vtvSubsList.GetFirst;
   while Assigned(Node) do

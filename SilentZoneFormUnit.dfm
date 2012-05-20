@@ -31,7 +31,7 @@ object SilentZoneForm: TSilentZoneForm
     Left = 0
     Top = 53
     Width = 298
-    Height = 243
+    Height = 236
     Align = alClient
     ItemHeight = 13
     TabOrder = 0
@@ -45,9 +45,6 @@ object SilentZoneForm: TSilentZoneForm
     Align = alTop
     Caption = ' Settings '
     TabOrder = 1
-    DesignSize = (
-      298
-      49)
     object TntLabel1: TTntLabel
       Left = 8
       Top = 20
@@ -112,7 +109,6 @@ object SilentZoneForm: TSilentZoneForm
       Top = 16
       Width = 47
       Height = 25
-      Anchors = [akTop, akRight]
       Caption = 'Update'
       TabOrder = 4
       OnClick = bttUpdateClick
