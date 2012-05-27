@@ -27,7 +27,7 @@ object PreferencesForm: TPreferencesForm
     Top = 0
     Width = 584
     Height = 354
-    ActivePage = tsHotKeys
+    ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
     object tsGeneral: TTntTabSheet
@@ -112,12 +112,14 @@ object PreferencesForm: TPreferencesForm
         object chkAssociateExtVSSPRJ: TCheckBox
           Left = 16
           Top = 24
-          Width = 400
+          Width = 440
           Height = 17
           Hint = 
             'Double click on a .vssprj file will automatically open the proje' +
             'ct in VisualSubSync'
-          Caption = 'Associate project file (*.vssprj) with VisualSubSync'
+          Caption = 
+            'Associate project file (*.vssprj) with VisualSubSync (admin righ' +
+            'ts required)'
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
@@ -126,7 +128,7 @@ object PreferencesForm: TPreferencesForm
         object chkSwapSubList: TCheckBox
           Left = 16
           Top = 88
-          Width = 400
+          Width = 440
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
@@ -134,34 +136,34 @@ object PreferencesForm: TPreferencesForm
         object chkAssociateExtSRT: TCheckBox
           Left = 16
           Top = 40
-          Width = 400
+          Width = 440
           Height = 17
-          Caption = 'Associate .SRT file with VisualSubSync'
+          Caption = 'Associate .SRT file with VisualSubSync (admin rights required)'
           TabOrder = 2
           OnClick = chkAssociateExtSRTClick
         end
         object chkAssociateExtSSA: TCheckBox
           Left = 16
           Top = 56
-          Width = 400
+          Width = 440
           Height = 17
-          Caption = 'Associate .SSA file with VisualSubSync'
+          Caption = 'Associate .SSA file with VisualSubSync (admin rights required)'
           TabOrder = 3
           OnClick = chkAssociateExtSSAClick
         end
         object chkAssociateExtASS: TCheckBox
           Left = 16
           Top = 72
-          Width = 400
+          Width = 440
           Height = 17
-          Caption = 'Associate .ASS file with VisualSubSync'
+          Caption = 'Associate .ASS file with VisualSubSync (admin rights required)'
           TabOrder = 4
           OnClick = chkAssociateExtASSClick
         end
         object chkLoadMostRecentProjectOnStartup: TCheckBox
           Left = 16
           Top = 104
-          Width = 400
+          Width = 440
           Height = 17
           Caption = 'Load most recent project on startup'
           TabOrder = 5
@@ -515,7 +517,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 204
+            Width = 200
             WideText = 'Value'
           end
           item
