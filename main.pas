@@ -379,6 +379,7 @@ type
     MenuShowHideSubtitles: TTntMenuItem;
     ActionTranslationTemplate: TTntAction;
     MenuItemTranslationTemplate: TTntMenuItem;
+    MenuItemHelpCodecsInstallation: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
@@ -567,6 +568,7 @@ type
     procedure ActionToggleVOExecute(Sender: TObject);
     procedure ActionShowHideSubsExecute(Sender: TObject);
     procedure ActionTranslationTemplateExecute(Sender: TObject);
+    procedure MenuItemHelpCodecsInstallationClick(Sender: TObject);
    
   private
     { Private declarations }
@@ -9849,6 +9851,13 @@ end;
 function TMainForm.GetAudioCursorPosition : Integer;
 begin
   Result := WAVDisplayer.GetCursorPos;
+end;
+
+procedure TMainForm.MenuItemHelpCodecsInstallationClick(Sender: TObject);
+var s : string;
+begin
+  s := 'http://www.visualsubsync.org/tutorials/codecs';
+  ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
 end;
 
 //------------------------------------------------------------------------------
