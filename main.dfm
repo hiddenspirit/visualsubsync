@@ -1596,6 +1596,10 @@ object MainForm: TMainForm
           Caption = 'WAV Display Control'
           OnClick = MenuItemHelpIndexWAVDisplayControlClick
         end
+        object MenuItemHelpCodecsInstallation: TTntMenuItem
+          Caption = 'Codecs installation'
+          OnClick = MenuItemHelpCodecsInstallationClick
+        end
       end
       object N8: TTntMenuItem
         Caption = '-'

@@ -1565,6 +1565,9 @@ begin
     begin
       // TODO : Do something here or add more error checking
       OutputDebugStringW('TDSWavExtractor.InstallWriter: PinConnectedTo is nil');
+      MessageBox(0, 'VisualSubSync failed to render the audio stream. See http://www.visualsubsync.org/tutorials/codecs for more information about codecs installation.', 'Error', MB_OK);
+      Result := False;
+      Exit;
     end;
     PinConnectedTo.QueryPinInfo(PinInfo);
     Filter := PinInfo.pFilter;
