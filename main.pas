@@ -6684,11 +6684,11 @@ begin
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00', FS);
-    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
-    begin
-      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
-      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
-    end;
+    { if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin }
+      WriteStringLnStream(Format('PlayResX: %d',[384]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[288]), FS);
+    { end; }
     WriteStringLnStream('PlayDepth: 0', FS);
     WriteStringLnStream('Timer: 100.0', FS);    
   end
@@ -6790,11 +6790,12 @@ begin
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00+', FS);
-    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
-    begin
-      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
-      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
-    end;
+    { if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin }
+      WriteStringLnStream(Format('PlayResX: %d',[384]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[288]), FS);
+    { end; }
+    WriteStringLnStream('ScaledBorderAndShadow: yes', FS);
     WriteStringLnStream('PlayDepth: 0', FS);
     WriteStringLnStream('Timer: 100.0', FS);
     WriteStringLnStream('WrapStyle: 0', FS);
