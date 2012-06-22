@@ -8226,6 +8226,7 @@ var SubRange, NewSubRange : TSubtitleRange;
     NewNode : PVirtualNode;
     NodeData : PTreeData;
     SplitTime1, SplitTime2 : Integer;
+    SelStart, SelLength : Integer;
 begin
   SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
   NewSubRange := TSubtitleRange(SubRangeFactory.CreateRange);
@@ -8271,8 +8272,15 @@ begin
   // Update MemoSubtitleText if focused on the changed subtitle
   if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
   begin
-    MemoSubtitleText.Text := SubRange.Text;
+    SelStart := MemoSubtitleText.SelStart;
+    SelLength := MemoSubtitleText.SelLength;
+
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+    MemoSubtitleText.SelStart := SelStart;
+    MemoSubtitleText.SelLength := SelLength;
   end;
+  UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
 end;
 
 // -----------------------------------------------------------------------------
@@ -8317,6 +8325,7 @@ end;
 
 function TMainForm.SetSubtitleText(Index : Integer; SubText : WideString) : Integer;
 var SubRange : TSubtitleRange;
+    SelStart, SelLength : Integer;
 begin
   try
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
@@ -8334,7 +8343,13 @@ begin
   // Update MemoSubtitleText if focused on the changed subtitle
   if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
   begin
-    MemoSubtitleText.Text := SubRange.Text;
+    SelStart := MemoSubtitleText.SelStart;
+    SelLength := MemoSubtitleText.SelLength;
+
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+    MemoSubtitleText.SelStart := SelStart;
+    MemoSubtitleText.SelLength := SelLength;
   end;
 
   Result := SubRange.Node.Index;
