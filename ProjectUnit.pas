@@ -364,7 +364,7 @@ begin
   TntOpenDialog1.FileName := EditVideoFilename.Text;
   TntOpenDialog1.Filter :=
     'Video files|*.AVI;*.OGM;*.MKV;*.MKA;*.MP4;*.DIVX;*.RM;' +
-    '*.RMVB;*.MPEG;*.MPG;*.VOB;*.AVS;*.WMV;*.MOV;*.FLV' + '|' +
+    '*.RMVB;*.MPEG;*.MPG;*.VOB;*.AVS;*.WMV;*.MOV;*.FLV;*.TS' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
