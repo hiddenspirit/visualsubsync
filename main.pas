@@ -1438,7 +1438,7 @@ begin
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
-    Column.MinWidth := 25;
+    Column.MinWidth := 35;
     Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
