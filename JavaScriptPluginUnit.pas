@@ -301,6 +301,7 @@ type
   private
     FNotifySubtitleModificationFunc : TJSFunction;
     FNotifySelectionModificationFunc : TJSFunction;
+    FNotifySplitSubtitleFunc : TJSFunction;
     FNotifyRangeStartDblClickFunc : TJSFunction;
     FNotifyRangeStopDblClickFunc : TJSFunction;
     FCurrentSub, FPreviousSub, FNextSub : TSubtitleRangeJSWrapper;
@@ -345,6 +346,7 @@ type
     function LoadScript(Filename : WideString) : Boolean;
     function NotifySubtitleModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifySelectionModification(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
+    function NotifySplitSubtitle(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifyRangeStartDblClick(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
     function NotifyRangeStopDblClick(CurrentSub, PreviousSub, NextSub : TSubtitleRange) : WideString;
 
@@ -1175,6 +1177,7 @@ begin
   FVSSPluginObject := nil;
   FNotifySubtitleModificationFunc := nil;
   FNotifySelectionModificationFunc := nil;
+  FNotifySplitSubtitleFunc := nil;
   FNotifyRangeStartDblClickFunc := nil;
   FNotifyRangeStopDblClickFunc := nil;
 
@@ -1200,6 +1203,8 @@ begin
     FreeAndNil(FNotifySubtitleModificationFunc);
   if Assigned(FNotifySelectionModificationFunc) then
     FreeAndNil(FNotifySelectionModificationFunc);
+  if Assigned(FNotifySplitSubtitleFunc) then
+    FreeAndNil(FNotifySplitSubtitleFunc);
   if Assigned(FNotifyRangeStartDblClickFunc) then
     FreeAndNil(FNotifyRangeStartDblClickFunc);
   if Assigned(FNotifyRangeStopDblClickFunc) then
@@ -1287,6 +1292,18 @@ end;
 
 //------------------------------------------------------------------------------
 
+function TSimpleJavascriptWrapper.NotifySplitSubtitle(CurrentSub,
+  PreviousSub, NextSub : TSubtitleRange) : WideString;
+begin
+  if Assigned(FNotifySplitSubtitleFunc) then
+  begin
+    FillParamArray(CurrentSub, PreviousSub, NextSub);
+    FNotifySplitSubtitleFunc.Call(FParamArray, Result);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 function TSimpleJavascriptWrapper.NotifyRangeStartDblClick(CurrentSub,
   PreviousSub, NextSub : TSubtitleRange) : WideString;
 begin
@@ -1330,6 +1347,7 @@ begin
 
     FNotifySubtitleModificationFunc := FVSSPluginObject.GetFunction('OnSubtitleModification');
     FNotifySelectionModificationFunc := FVSSPluginObject.GetFunction('OnSelectedSubtitle');
+    FNotifySplitSubtitleFunc := FVSSPluginObject.GetFunction('OnSplitSubtitle');
     FNotifyRangeStartDblClickFunc := FVSSPluginObject.GetFunction('OnRangeStartDblClick');
     FNotifyRangeStopDblClickFunc := FVSSPluginObject.GetFunction('OnRangeStopDblClick');
 

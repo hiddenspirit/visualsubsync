@@ -693,6 +693,7 @@ type
     // General JS plugins
     procedure CallJSOnSubtitleModification;
     procedure CallJSOnSelectedSubtitle;
+    procedure CallJSOnSplitSubtitle(Node : PVirtualNode);
     procedure GetCurrentPreviousNextSubtitles(CurrentNode : PVirtualNode; var CurrentSub,
       PreviousSub, NextSub : TSubtitleRange);
     procedure UpdateStatusBar;
@@ -777,6 +778,7 @@ type
     procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
     procedure RestoreSubtitles(List : TList; Indexes : TIntegerDynArray = nil);
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
+    function SetSubtitleText(Index : Integer; SubText : WideString) : Integer;
     procedure SplitSubtitle(Index, SplitTime, BlankTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer; MergeType : TMergeType) : TSubtitleRange;
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
@@ -1911,7 +1913,8 @@ begin
     UndoableSplitTask := TUndoableSplitTask.Create;
     Range := WAVDisplayer.RangeList[Idx];
     UndoableSplitTask.SetData(Idx, Range.StartTime, Range.StopTime,
-      WAVDisplayer.GetCursorPos, ConfigObject.SpaceKeyBlankBetweenSubtitles);
+      WAVDisplayer.GetCursorPos, ConfigObject.SpaceKeyBlankBetweenSubtitles,
+      TSubtitleRange(Range).Text);
     UndoableSplitTask.DoTask;
     PushUndoableTask(UndoableSplitTask);
   end;
@@ -7789,6 +7792,19 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.CallJSOnSplitSubtitle(Node : PVirtualNode);
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+    Selected : PVirtualNode;
+begin
+  if Assigned(Node) then
+  begin
+    GetCurrentPreviousNextSubtitles(Node, CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifySplitSubtitle(CurrentSub, PreviousSub, NextSub);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
@@ -8224,7 +8240,7 @@ begin
     SplitTime1 := SplitTime - 1;
     SplitTime2 := SplitTime;
   end;
-  // Make sur there is no overlapping
+  // Make sure there is no overlapping
   if (SplitTime1 = SplitTime2) then
   begin
     SplitTime1 := SplitTime1 - 1;
@@ -8245,7 +8261,18 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
+  CallJSOnSplitSubtitle(SubRange.Node);
+
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
+  VideoPreviewNeedSubtitleUpdate := True;
   vtvSubsList.Repaint;
+
+  // Update MemoSubtitleText if focused on the changed subtitle
+  if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
+  begin
+    MemoSubtitleText.Text := SubRange.Text;
+  end;
 end;
 
 // -----------------------------------------------------------------------------
@@ -8282,6 +8309,33 @@ begin
   vtvSubsList.Repaint;
 
   UpdateDurationWithSubOnly;
+
+  Result := SubRange.Node.Index;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMainForm.SetSubtitleText(Index : Integer; SubText : WideString) : Integer;
+var SubRange : TSubtitleRange;
+begin
+  try
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+    SubRange.Text := SubText;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
+  VideoPreviewNeedSubtitleUpdate := True;
+  vtvSubsList.Repaint;
+
+  // Update MemoSubtitleText if focused on the changed subtitle
+  if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
+  begin
+    MemoSubtitleText.Text := SubRange.Text;
+  end;
 
   Result := SubRange.Node.Index;
 end;
