@@ -2818,6 +2818,7 @@ end;
 procedure TMainForm.LoadVideoSceneChange;
 var SceneChangeFileName : WideString;
     SCArray :TIntegerDynArray;
+    Ext : WideString;
 begin
   // Check for a '.scenechange' file
   SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
@@ -2830,9 +2831,21 @@ begin
   else
   begin
     // Extract scene change
+    SetLength(SCArray, 0);
+    Ext := WideLowerCase(WideExtractFileExt(CurrentProject.VideoSource));
+    if (not ConfigObject.AlwaysGenerateSceneChangeFile) and
+       ((Ext = '.avi') or (Ext = '.mkv') or (Ext = '.mp4')) then
+    begin
     ShowStatusBarMessage('Extracting keyframes...');
     ExtractSceneChange(CurrentProject.VideoSource, SCArray);
     SaveSceneChange(SceneChangeFileName, SCArray);
+    end
+    else
+    begin
+      ShowStatusBarMessage('Generating scene change file...');
+      GenerateSceneChangeFile(CurrentProject.VideoSource);
+      LoadSceneChange(SceneChangeFileName, SCArray);
+    end;
   end;
 
   WAVDisplayer.SetSceneChangeList(SCArray);
@@ -8280,6 +8293,7 @@ begin
     MemoSubtitleText.SelStart := SelStart;
     MemoSubtitleText.SelLength := SelLength;
   end;
+
   UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
 end;
 
@@ -9952,5 +9966,3 @@ TODO : test wav extraction with divx installed
 DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
 
 }
-
-
