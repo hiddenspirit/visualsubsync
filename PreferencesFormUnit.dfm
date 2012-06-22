@@ -168,6 +168,16 @@ object PreferencesForm: TPreferencesForm
           Caption = 'Load most recent project on startup'
           TabOrder = 5
         end
+        object chkAlwaysGenerateSceneChangeFile: TCheckBox
+          Left = 16
+          Top = 120
+          Width = 440
+          Height = 17
+          Caption = 
+            'Always generate scene change file instead of extracting keyframe' +
+            's'
+          TabOrder = 6
+        end
       end
       object GroupBoxBackup: TGroupBox
         Left = 0

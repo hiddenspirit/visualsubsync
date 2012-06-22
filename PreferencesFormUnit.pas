@@ -81,6 +81,7 @@ type
     SpaceKeyBlankBetweenSubtitles : Integer;
     MaximumSubtitleDuration : Integer;
     LoadMostRecentProjectOnStartup : Boolean;
+    AlwaysGenerateSceneChangeFile : Boolean;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -237,6 +238,7 @@ type
     chkAssociateExtSSA: TCheckBox;
     chkAssociateExtASS: TCheckBox;
     chkLoadMostRecentProjectOnStartup: TCheckBox;
+    chkAlwaysGenerateSceneChangeFile: TCheckBox;
     plHotkeysButtons: TPanel;
     plHotkeysEdit: TPanel;
     procedure FormCreate(Sender: TObject);
@@ -503,6 +505,7 @@ begin
   SpaceKeyBlankBetweenSubtitles := 120;
   MaximumSubtitleDuration := 6000;
   LoadMostRecentProjectOnStartup := False;
+  AlwaysGenerateSceneChangeFile := False;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -629,6 +632,7 @@ begin
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   IniFile.WriteInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
   IniFile.WriteBool('Misc','LoadMostRecentProjectOnStartup',LoadMostRecentProjectOnStartup);
+  IniFile.WriteBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -710,6 +714,7 @@ begin
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   MaximumSubtitleDuration := IniFile.ReadInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
   LoadMostRecentProjectOnStartup := IniFile.ReadBool('Misc','LoadMostRecentProjectOnStartup',LoadMostRecentProjectOnStartup);
+  AlwaysGenerateSceneChangeFile := IniFile.ReadBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
 
   // Web server
   if (not IsPresets) then
@@ -879,6 +884,7 @@ begin
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
   UpDownMaximumDuration.Position := Config.MaximumSubtitleDuration;
   chkLoadMostRecentProjectOnStartup.Checked := Config.LoadMostRecentProjectOnStartup;
+  chkAlwaysGenerateSceneChangeFile.Checked := Config.AlwaysGenerateSceneChangeFile;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -970,6 +976,7 @@ begin
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
   Config.MaximumSubtitleDuration := UpDownMaximumDuration.Position;
   Config.LoadMostRecentProjectOnStartup := chkLoadMostRecentProjectOnStartup.Checked;
+  Config.AlwaysGenerateSceneChangeFile := chkAlwaysGenerateSceneChangeFile.Checked;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
@@ -1630,4 +1637,3 @@ end;
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
-
