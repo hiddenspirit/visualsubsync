@@ -693,6 +693,7 @@ type
     // General JS plugins
     procedure CallJSOnSubtitleModification;
     procedure CallJSOnSelectedSubtitle;
+    procedure CallJSOnSplitSubtitle(Node : PVirtualNode);
     procedure GetCurrentPreviousNextSubtitles(CurrentNode : PVirtualNode; var CurrentSub,
       PreviousSub, NextSub : TSubtitleRange);
     procedure UpdateStatusBar;
@@ -777,6 +778,7 @@ type
     procedure CloneSubtitles(var Indexes : array of Integer; List : TList);
     procedure RestoreSubtitles(List : TList; Indexes : TIntegerDynArray = nil);
     function SetSubtitleTime(Index, NewStartTime, NewStopTime : Integer) : Integer;
+    function SetSubtitleText(Index : Integer; SubText : WideString) : Integer;
     procedure SplitSubtitle(Index, SplitTime, BlankTime : Integer);
     function MergeSubtitles(var FIndexes : array of Integer; MergeType : TMergeType) : TSubtitleRange;
     procedure FocusNode(Node : PVirtualNode; WAVDisplaySelect : Boolean); overload;
@@ -1438,7 +1440,7 @@ begin
     Column := Header.Columns.Add;
     Column.Text := '#';
     Column.Width := 50;
-    Column.MinWidth := 25;
+    Column.MinWidth := 35;
     Column.Options := Column.Options - [coAllowClick];
 
     Column := Header.Columns.Add;
@@ -1911,7 +1913,8 @@ begin
     UndoableSplitTask := TUndoableSplitTask.Create;
     Range := WAVDisplayer.RangeList[Idx];
     UndoableSplitTask.SetData(Idx, Range.StartTime, Range.StopTime,
-      WAVDisplayer.GetCursorPos, ConfigObject.SpaceKeyBlankBetweenSubtitles);
+      WAVDisplayer.GetCursorPos, ConfigObject.SpaceKeyBlankBetweenSubtitles,
+      TSubtitleRange(Range).Text);
     UndoableSplitTask.DoTask;
     PushUndoableTask(UndoableSplitTask);
   end;
@@ -2815,6 +2818,7 @@ end;
 procedure TMainForm.LoadVideoSceneChange;
 var SceneChangeFileName : WideString;
     SCArray :TIntegerDynArray;
+    Ext : WideString;
 begin
   // Check for a '.scenechange' file
   SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
@@ -2827,9 +2831,21 @@ begin
   else
   begin
     // Extract scene change
+    SetLength(SCArray, 0);
+    Ext := WideLowerCase(WideExtractFileExt(CurrentProject.VideoSource));
+    if (not ConfigObject.AlwaysGenerateSceneChangeFile) and
+       ((Ext = '.avi') or (Ext = '.mkv') or (Ext = '.mp4')) then
+    begin
     ShowStatusBarMessage('Extracting keyframes...');
     ExtractSceneChange(CurrentProject.VideoSource, SCArray);
     SaveSceneChange(SceneChangeFileName, SCArray);
+    end
+    else
+    begin
+      ShowStatusBarMessage('Generating scene change file...');
+      GenerateSceneChangeFile(CurrentProject.VideoSource);
+      LoadSceneChange(SceneChangeFileName, SCArray);
+    end;
   end;
 
   WAVDisplayer.SetSceneChangeList(SCArray);
@@ -6684,11 +6700,11 @@ begin
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00', FS);
-    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
-    begin
-      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
-      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
-    end;
+    { if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin }
+      WriteStringLnStream(Format('PlayResX: %d',[384]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[288]), FS);
+    { end; }
     WriteStringLnStream('PlayDepth: 0', FS);
     WriteStringLnStream('Timer: 100.0', FS);    
   end
@@ -6790,11 +6806,12 @@ begin
     WriteStringLnStream('Title: <untitled>', FS);
     WriteStringLnStream('Original Script: <unknown>', FS);
     WriteStringLnStream('ScriptType: v4.00+', FS);
-    if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
-    begin
-      WriteStringLnStream(Format('PlayResX: %d',[VideoRenderer.VideoWidth]), FS);
-      WriteStringLnStream(Format('PlayResY: %d',[VideoRenderer.VideoHeight]), FS);
-    end;
+    { if VideoRenderer.IsOpen and (VideoRenderer.VideoWidth > 0) and (VideoRenderer.VideoHeight > 0) then
+    begin }
+      WriteStringLnStream(Format('PlayResX: %d',[384]), FS);
+      WriteStringLnStream(Format('PlayResY: %d',[288]), FS);
+    { end; }
+    WriteStringLnStream('ScaledBorderAndShadow: yes', FS);
     WriteStringLnStream('PlayDepth: 0', FS);
     WriteStringLnStream('Timer: 100.0', FS);
     WriteStringLnStream('WrapStyle: 0', FS);
@@ -7788,6 +7805,19 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.CallJSOnSplitSubtitle(Node : PVirtualNode);
+var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
+    Selected : PVirtualNode;
+begin
+  if Assigned(Node) then
+  begin
+    GetCurrentPreviousNextSubtitles(Node, CurrentSub, PreviousSub, NextSub);
+    GeneralJSPlugin.NotifySplitSubtitle(CurrentSub, PreviousSub, NextSub);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
 var CurrentSub, PreviousSub, NextSub : TSubtitleRange;
 begin
@@ -8209,6 +8239,7 @@ var SubRange, NewSubRange : TSubtitleRange;
     NewNode : PVirtualNode;
     NodeData : PTreeData;
     SplitTime1, SplitTime2 : Integer;
+    SelStart, SelLength : Integer;
 begin
   SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
   NewSubRange := TSubtitleRange(SubRangeFactory.CreateRange);
@@ -8223,7 +8254,7 @@ begin
     SplitTime1 := SplitTime - 1;
     SplitTime2 := SplitTime;
   end;
-  // Make sur there is no overlapping
+  // Make sure there is no overlapping
   if (SplitTime1 = SplitTime2) then
   begin
     SplitTime1 := SplitTime1 - 1;
@@ -8244,7 +8275,26 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
+  CallJSOnSplitSubtitle(SubRange.Node);
+
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
+  VideoPreviewNeedSubtitleUpdate := True;
   vtvSubsList.Repaint;
+
+  // Update MemoSubtitleText if focused on the changed subtitle
+  if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
+  begin
+    SelStart := MemoSubtitleText.SelStart;
+    SelLength := MemoSubtitleText.SelLength;
+
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+    MemoSubtitleText.SelStart := SelStart;
+    MemoSubtitleText.SelLength := SelLength;
+  end;
+
+  UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
 end;
 
 // -----------------------------------------------------------------------------
@@ -8281,6 +8331,40 @@ begin
   vtvSubsList.Repaint;
 
   UpdateDurationWithSubOnly;
+
+  Result := SubRange.Node.Index;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMainForm.SetSubtitleText(Index : Integer; SubText : WideString) : Integer;
+var SubRange : TSubtitleRange;
+    SelStart, SelLength : Integer;
+begin
+  try
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[Index]);
+    SubRange.Text := SubText;
+    CurrentProject.IsDirty := True;
+  finally
+    g_WebRWSynchro.EndWrite;
+  end;
+
+  WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
+  WAVDisplayer1SelectionChange(WAVDisplayer);
+  VideoPreviewNeedSubtitleUpdate := True;
+  vtvSubsList.Repaint;
+
+  // Update MemoSubtitleText if focused on the changed subtitle
+  if Assigned(vtvSubsList.FocusedNode) and (vtvSubsList.FocusedNode = SubRange.Node) and (MemoSubtitleText.Text <> SubRange.Text) then
+  begin
+    SelStart := MemoSubtitleText.SelStart;
+    SelLength := MemoSubtitleText.SelLength;
+
+    vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
+
+    MemoSubtitleText.SelStart := SelStart;
+    MemoSubtitleText.SelLength := SelLength;
+  end;
 
   Result := SubRange.Node.Index;
 end;
@@ -9882,5 +9966,3 @@ TODO : test wav extraction with divx installed
 DivX Demux - 85516702-9C45-4A9C-861B-BC4492D355DC - C:\WINDOWS\system32\DivXMedia.ax ( 0.0.0.28)
 
 }
-
-

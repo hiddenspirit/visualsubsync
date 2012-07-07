@@ -1,0 +1,19 @@
+syntax: glob
+*.~*
+*.dcu
+*.bpl
+*.dcp
+*.ddp
+*.dsm
+*.gex
+*.bkm
+*.dsk
+Backup
+archives
+Release/VisualSubSync.*
+Release/jsplugin/
+.svn
+*.drc
+*.res
+*.RES
+.cvsignore
