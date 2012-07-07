@@ -134,6 +134,10 @@ VSSPlugin = {
         CurrentSub.Stop = stop;
     }
   },
+
+  // Called after "split at cursor"
+  OnSplitSubtitle : function(CurrentSub, PreviousSub, NextSub) {
+  },
   
   // COLUMNS -----------------------------------------------------------------
 

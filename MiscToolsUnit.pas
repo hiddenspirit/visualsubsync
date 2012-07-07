@@ -453,7 +453,7 @@ function TFileVersion.GetVersionString : string;
 begin
   if not FFileParsed then
     ParseFile;
-  Result := FVersionString;
+  Result := FVersionString + ' (spirit''s custom build)';
 end;
 
 //------------------------------------------------------------------------------

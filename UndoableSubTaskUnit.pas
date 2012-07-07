@@ -112,12 +112,13 @@ type
   private
     FIndex : Integer;
     FStartTime, FStopTime, FSplitTime, FBlankTime : Integer;
+    FSubText : WideString;
   public
     procedure DoTask; override;
     function GetName : WideString; override;
     procedure UndoTask; override;
 
-    procedure SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
+    procedure SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer; SubText : WideString);
   end;
 
   TMergeType = (mtNormal, mtDialog, mtOneLine);
@@ -472,15 +473,17 @@ procedure TUndoableSplitTask.UndoTask;
 begin
   MainForm.DeleteSubtitle(FIndex + 1);
   MainForm.SetSubtitleTime(FIndex, FStartTime, FStopTime);
+  MainForm.SetSubtitleText(FIndex, FSubText);
 end;
 
-procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer);
+procedure TUndoableSplitTask.SetData(Index, StartTime, StopTime, SplitTime, BlankTime : Integer; SubText : WideString);
 begin
   FIndex := Index;
   FStartTime := StartTime;
   FStopTime := StopTime;
   FSplitTime := SplitTime;
   FBlankTime := BlankTime;
+  FSubText := SubText;
 end;
 
 //------------------------------------------------------------------------------
