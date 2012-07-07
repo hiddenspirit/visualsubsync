@@ -38,11 +38,11 @@ type
   private
     FMP4File : TMP4File;
   public
-    Position : Int64; // Box position in file
-    Len : Cardinal; // Box length including header
-    DataLen : Cardinal; // Box length without header
+    Position : UInt64; // Box position in file
+    Len : UInt64; // Box length including header
+    DataLen : UInt64; // Box length without header
     Name : string;  // Box name
-    DataLeft : Cardinal; // Data left to read.
+    DataLeft : UInt64; // Data left to read.
 
     Next : TMP4Box; // To build linked list of TMP4Box
 
@@ -257,6 +257,17 @@ begin
   SetLength(Name, 4);
   if FMP4File.FFileReader.Read(Name[1], 4) <> 4 then
     Exit;
+
+  if (Len = 1) then
+  begin
+    // big box using a 64 bits length.
+    Len := ReadUINT64;
+  end
+  else if (Len = 0) then
+  begin
+    // box extends to end of file.
+    Len := FMP4File.FFileReader.Size - Position;
+  end;
   
   DataLen := Len - 8;
   DataLeft := DataLen;
