@@ -399,7 +399,7 @@ type
         Range : TRange);
     procedure WAVDisplayer1CustomDrawRange(Sender: TObject; ACanvas: TCanvas; Range : TRange; Rect : TRect);
     procedure WAVDisplayer1RangeStartDblClick(Sender: TObject; Range : TRange);
-    procedure WAVDisplayer1RangeStopDblClick(Sender: TObject; Range : TRange);    
+    procedure WAVDisplayer1RangeStopDblClick(Sender: TObject; Range : TRange);
     procedure vtvSubsListGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
       var CellText: WideString);
@@ -569,7 +569,7 @@ type
     procedure ActionShowHideSubsExecute(Sender: TObject);
     procedure ActionTranslationTemplateExecute(Sender: TObject);
     procedure MenuItemHelpCodecsInstallationClick(Sender: TObject);
-   
+
   private
     { Private declarations }
     WAVDisplayer : TWAVDisplayer;
@@ -1247,7 +1247,7 @@ begin
     FreeAndNil(ColumnsPositionList);
     IniFile.WriteString('General', 'ColumnsWidth', ColumnsWidthList.CommaText);
     FreeAndNil(ColumnsWidthList);
-    
+
     IniFile.WriteString('General', 'HiddenByUserCoreColumns', HiddenByUserCoreColumnsList.CommaText);
 
     // VO textbox
@@ -1384,6 +1384,7 @@ begin
     ConfigObject.SceneChangeFilterOffset);
   g_SceneChangeWrapper.SetVisible(ConfigObject.ShowSceneChange);
 
+  g_VSSCoreWrapper.SetRsTargetIndex(ConfigObject.SpaceKeyRSTargetIndex);
   g_VSSCoreWrapper.SetCpsTarget(ConfigObject.SpaceKeyCPSTarget);
   g_VSSCoreWrapper.SetMinimumDuration(ConfigObject.SpaceKeyMinimalDuration);
   g_VSSCoreWrapper.SetMinimumBlank(ConfigObject.SpaceKeyBlankBetweenSubtitles);
@@ -1649,7 +1650,7 @@ begin
   ActionSetPlaybackRate80.Enabled := ActionPlay.Enabled;
   ActionSetPlaybackRate90.Enabled := ActionPlay.Enabled;
   ActionSetPlaybackRate100.Enabled := ActionPlay.Enabled;
-  
+
   ActionToggleTimingMode.Enabled := ActionPlay.Enabled;
   bttWorkingMode.Enabled := ActionToggleTimingMode.Enabled;
 
@@ -1805,7 +1806,7 @@ begin
       NodeData := vtvSubsList.GetNodeData(SubRange.Node);
       UpdateMemoVO(NodeData);
     end;
-    
+
     DisableVideoUpdatePreview := True;
     CurrentProject.IsDirty := True;
     UpdateLinesCounter;
@@ -1974,7 +1975,7 @@ end;
 procedure TMainForm.ShowColumn(Column : TVirtualTreeColumn; Show, FromUser : Boolean);
 var i : Integer;
     MenuItem : TMenuItem;
-    HiddenByUser : Boolean; 
+    HiddenByUser : Boolean;
 begin
   i := HiddenByUserCoreColumnsList.IndexOf(Column.Text);
   HiddenByUser := (i <> -1);
@@ -2108,7 +2109,7 @@ begin
   SubtitleFileHeader := '';
   SubtitleFileFooter := '';
   WAVDisplayer.ClearRangeList;
-  
+
   SRTParser := TSRTParser.Create;
   SRTParser.Load(Filename);
   IsUTF8 := SRTParser.IsUTF8;
@@ -2504,7 +2505,7 @@ begin
     Handled := True;
     Exit;
   end;
-    
+
   // Recreate original CM_MOUSEWHEEL Message
   Msg.ShiftState := Shift;
   Msg.WheelDelta := WheelDelta;
@@ -2585,11 +2586,11 @@ begin
         end;
       end;
     end;
-    
+
     Inc(j, len);
   end;
   SetRESelection(RichEdit, savSelStart, savSelLength);
-  
+
   RichEdit.Lines.EndUpdate;
 
   RichEdit.Perform(EM_SETEVENTMASK, 0, eventMask);
@@ -2649,7 +2650,7 @@ begin
       TUndoableTextTask(TUndoableSubTextTask(TopTask).GetSubTask).DisableMerge;
     end;
   end;}
-  
+
 end;
 
 //------------------------------------------------------------------------------
@@ -2795,7 +2796,7 @@ begin
   begin
     PanelVideo.Width := (VideoRenderer.VideoWidth * PanelVideo.Height) div VideoRenderer.VideoHeight;
   end;
-  
+
   if MenuItemDetachVideoWindow.Checked then
     VideoRenderer.SetDisplayWindow(DetachedVideoForm.Handle)
   else
@@ -2823,7 +2824,7 @@ begin
   // Check for a '.scenechange' file
   SceneChangeFileName := WideChangeFileExt(CurrentProject.VideoSource,
     '.scenechange');
-  
+
   if WideFileExists(SceneChangeFileName) then
   begin
     LoadSceneChange(SceneChangeFileName, SCArray);
@@ -2940,7 +2941,7 @@ begin
       end;
     end;
     // TODO : report invalid wav file error
-    
+
     WAVDisplayer.Enabled := True;
 
     // ----- Load subtitles
@@ -3042,7 +3043,7 @@ begin
       // Zoom in at beginning
       WAVDisplayer.ZoomRange(0,15000);
     end;
-    
+
     if (CurrentProject.FocusedTimeMs <> -1) then
     begin
       Idx := WAVDisplayer.RangeList.FindInsertPos(CurrentProject.FocusedTimeMs, -1);
@@ -3245,7 +3246,7 @@ begin
     Exit;
   end;
   CloseProject;
-  
+
   // New project
   ProjectForm.ConfigureInNewProjectMode;
   if (ProjectForm.ShowModal = mrOK) then
@@ -3464,7 +3465,7 @@ begin
         CurrentProject.SubtitlesFile := ProjectForm.EditSubtitleFilename.Text;
         ErrorReportForm.Clear;
         LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
-        
+
         ProjectHasChanged := True;
         SubtitleFileHasChanged := True;
       end;
@@ -3568,7 +3569,7 @@ begin
           g_AudioGraphDebugInfo := AudioOnlyRenderer.GetFiltersAsString
         else
           g_AudioGraphDebugInfo := '';
-          
+
         SaveProject(CurrentProject, False);
       end;
 
@@ -3777,8 +3778,8 @@ begin
       MemoSubtitleText.SelStart := SearchPos - 1;
       MemoSubtitleText.SelLength := MatchLen;
       Inc(SearchPos, MatchLen);
-      RegExp.Free;      
-      Result := True;      
+      RegExp.Free;
+      Result := True;
       Exit;
     end;
     SearchNode := vtvSubsList.GetNext(SearchNode);
@@ -3806,7 +3807,7 @@ begin
   begin
     IsFound := SearchSubtitles(FindText);
   end;
-  
+
   if (not IsFound) then
   begin
     ShowStatusBarMessage('No more items.');
@@ -3826,7 +3827,7 @@ begin
   RegExpr.ModifierI := (not FindForm.MatchCase);
   RegExpr.ModifierG := True;
   RegExpr.Expression := FindText;
-  
+
   if (SearchItemPos <= 0) and (not FindForm.FromCursor) then
     SearchItemPos := 1
   else
@@ -4034,7 +4035,7 @@ begin
   end;
 
   MemoSubtitleText.SelText := NewText;
-  
+
   // Restaure selection
   MemoSubtitleText.SelStart := SelStart;
   MemoSubtitleText.SelLength := Length(NewText);
@@ -4099,7 +4100,7 @@ begin
   begin
     DelayInMs := DelayForm.GetDelayInMs;
     DelayShiftType := DelayForm.GetDelayShiftType;
-    
+
     UndoableDelayTask := TUndoableDelayTask.Create;
     UndoableDelayTask.SetDelayInMs(DelayInMs);
     UndoableDelayTask.SetDelayShiftType(DelayShiftType);
@@ -4671,7 +4672,7 @@ begin
   // Skip the text and VO column and autofit the rest of the columns only using visible node
   vtvSubsList.Header.AutoFitColumns(False, smaAllColumns, VO_COL_INDEX + 1);
 
-  vtvSubsList.Invalidate;  
+  vtvSubsList.Invalidate;
 end;
 
 //------------------------------------------------------------------------------
@@ -4730,7 +4731,7 @@ begin
   MemoSubtitleText.Tag := TmpTag;
   MemoSubtitleVO.Text := TmpTextVO;
 
-  
+
   // Update line counter size so we have at least 3 digit
   DC := GetDC(MemoLinesCounter.Handle);
   if(DC <> 0) then
@@ -4807,7 +4808,7 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
-    
+
   Self.Caption := ApplicationName;
   MemoLinesCounter.Text := '';
   StatusBarPanel1.Caption := '';
@@ -4894,7 +4895,7 @@ var
   UndoableMultiAddTask : TUndoableMultiAddTask;
   SRTParser : TSRTParser;
   SubList : TList;
-  SRTSub : TSRTSubtitle; 
+  SRTSub : TSRTSubtitle;
 begin
 
   TntOpenDialog1.Filter := 'Text files|*.TXT' + '|' +
@@ -4909,7 +4910,7 @@ begin
   TntOpenDialog1.Options := TntOpenDialog1.Options - [ofAllowMultiSelect];
 
   Source := nil;
-  
+
   g_WebRWSynchro.BeginWrite;
   try
     for fidx := 0 to TntOpenDialog1.Files.Count-1 do
@@ -4995,7 +4996,7 @@ begin
   finally
     g_WebRWSynchro.EndWrite;
   end;
-  
+
   UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
@@ -5409,7 +5410,7 @@ begin
       Exit;
     end;
   end;
-  
+
   if Assigned(vtvSubsList.FocusedNode) then
   begin
     NodeData := vtvSubsList.GetNodeData(vtvSubsList.FocusedNode);
@@ -5613,7 +5614,7 @@ var ActionType : Integer;
     UndoablePipeTask : TUndoablePipeTask;
 begin
   NewColor := $003333FF;
-  ActionType := 0;  
+  ActionType := 0;
   UndoablePipeTask := TUndoablePipeTask.Create;
   if pmiAutoColorizeText.Checked then
   begin
@@ -5745,7 +5746,7 @@ begin
   LogForm.SilentLogMsg('Starting error checking :');
 
   ErrorReportForm.Clear;
-  Start := GetTickCount;  
+  Start := GetTickCount;
   ErrorReportForm.vtvErrorList.BeginUpdate;
 
   JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
@@ -6047,7 +6048,7 @@ var NodeData : PErrorTreeData;
 begin
   Start := GetTickCount;
   FixedCount := 0;
-  
+
   UndoableMultiChangeTask := TUndoableMultiChangeTask.Create;
   JSPEnum := TJavaScriptPluginEnumerator.Create(g_PluginPath);
   JSPEnum.OnJSPluginError := LogForm.LogMsg;
@@ -6581,7 +6582,7 @@ begin
       // Convert framenumber back in ms
       StopTimeFrame := Ceil(FrameNumber * FrameLen);
     end;
-    
+
     UpdateSubtitleForPreview(VideoPreviewNeedSubtitleUpdate);
     // Finally show the image
     VideoRenderer.ShowImageAt(StopTimeFrame);
@@ -6673,7 +6674,7 @@ var i : integer;
     s, SubText : WideString;
     style : TSSAStyle;
     ConvertFunc : function(Src : WideString) : WideString;
-    
+
     procedure WriteStringLnStream(str : string; Stream : TStream);
     begin
       str := str + #13#10;
@@ -6706,7 +6707,7 @@ begin
       WriteStringLnStream(Format('PlayResY: %d',[288]), FS);
     { end; }
     WriteStringLnStream('PlayDepth: 0', FS);
-    WriteStringLnStream('Timer: 100.0', FS);    
+    WriteStringLnStream('Timer: 100.0', FS);
   end
   else
   begin
@@ -6766,7 +6767,7 @@ begin
     else
       WriteStringLnStream(WC2MB(Trim(SubtitleFileFooter)), FS);
   end;
-  
+
   FS.Free;
 end;
 
@@ -6857,13 +6858,13 @@ begin
     SubText := ConvertFunc(SubText);
 
     s := s + Tnt_WideStringReplace(SubText, CRLF, '\N', [rfReplaceAll]);
-    
+
     if InUTF8 then
       WriteStringLnStream(UTF8Encode(s), FS)
     else
       WriteStringLnStream(WC2MB(s), FS);
   end;
-  
+
   if (SubtitleFileFooter <> '') then
   begin
     WriteStringLnStream('', FS);
@@ -7006,7 +7007,7 @@ begin
           Node := vtvSubsList.GetFirst;{
         end;
         }
-        
+
         while (Node <> nil) do
         begin
           NodeData := vtvSubsList.GetNodeData(Node);
@@ -7237,7 +7238,7 @@ begin
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+2]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StartTime)]), FS);
     WriteStringLnStream(Format('    TITLE "%s"', [SubText]), FS);
-    
+
     WriteStringLnStream(Format('  TRACK %2.2d AUDIO', [i*2+3]), FS);
     WriteStringLnStream(Format('    INDEX 01 %s', [TimeMsToCUE(SubRange.StopTime)]), FS);
   end;
@@ -7404,7 +7405,7 @@ begin
   begin
     AdvanceToNextSubtitleAfterFocus;
   end;
-  
+
   UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
   vtvSubsList.Repaint;
@@ -7661,7 +7662,7 @@ var TmpDstFilename : WideString;
     StartTime : Cardinal;
 begin
   // TODO : Clean old files in temp directory
-  
+
   if DisableVideoUpdatePreview
      or (Trim(CurrentProject.SubtitlesFile) = '')
      or (not VideoRenderer.IsOpen) then
@@ -7922,7 +7923,7 @@ begin
 
       // Make project with existing data and load it
       ProjectFileIni := TTntIniFile.Create(NewProjectName);
-      
+
       ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile', ArgFilename);
 
       // Search for a matching video file
@@ -8093,7 +8094,7 @@ begin
         DelaySelectedRange := True;
       end;
     end;
-    // Delay the selected range if necessary 
+    // Delay the selected range if necessary
     if (DelaySelectedRange = True) and Assigned(WavDisplayer.SelectedRange) then
     begin
       DelaySub(WavDisplayer.Selection, DelayInMs, DelayShiftType);
@@ -8111,7 +8112,7 @@ begin
     g_WebRWSynchro.EndWrite;
   end;
 
-  // Update SearchNodeIndex  (TODO : SearchPos)  
+  // Update SearchNodeIndex  (TODO : SearchPos)
 
   // Update indexes which have been changed during sorting
   for i := 0 to DelayedRangeList.Count-1 do
@@ -8119,7 +8120,7 @@ begin
     SubtitleRange := TSubtitleRange(DelayedRangeList[i]);
     Indexes[i] := SubtitleRange.Node.Index;
   end;
-  DelayedRangeList.Free;  
+  DelayedRangeList.Free;
 
   UpdateDurationWithSubOnly;
   WAVDisplayer.UpdateView([uvfRange]);
@@ -8222,7 +8223,7 @@ begin
     for i := 0 to List.Count-1 do
     begin
       Range := List[i];
-      Indexes[i] := Range.Node.Index;    
+      Indexes[i] := Range.Node.Index;
     end;
   end;
 
@@ -8312,7 +8313,7 @@ begin
       NewText := CalculateNewTextFromSubTime(SubRange);
       if (NewText <> SubRange.Text) then
         SubRange.Text := NewText;
-    end;    
+    end;
     FullSortTreeAndSubList;
     CurrentProject.IsDirty := True;
   finally
@@ -8780,7 +8781,7 @@ begin
   end
   else
   begin
-    // default  
+    // default
     vtvSubsList.SelectionBlendFactor := 255;
   end;
 end;
@@ -8927,7 +8928,7 @@ procedure TMainForm.ActionReloadExecute(Sender: TObject);
 var Index : Integer;
 begin
   if CheckSubtitlesAreSaved then
-  begin    
+  begin
     if Assigned(vtvSubsList.FocusedNode) then
     begin
       Index := vtvSubsList.FocusedNode.Index;
@@ -9032,7 +9033,7 @@ var SubtitleRange : TSubtitleRange;
     SelStart, SelLength : Integer;
 begin
   CallJSOnSubtitleModification;
-  
+
   // Update MemoSubtitleText if changed
   if Assigned(vtvSubsList.FocusedNode) then
   begin
@@ -9053,7 +9054,7 @@ begin
   vtvSubsList.Repaint;
   WAVDisplayer.UpdateView([uvfSelection, uvfRange]);
   WAVDisplayer1SelectionChange(WAVDisplayer);
-  CurrentProject.IsDirty := True;  
+  CurrentProject.IsDirty := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -9268,7 +9269,7 @@ begin
   end;
 
   FileList.Sort;
-  
+
   for i:=0 to FileList.Count-1 do
   begin
     NewMenuItem := TTntMenuItem.Create(MenuItemLoadPresets);
@@ -9334,7 +9335,7 @@ begin
   begin
     TagHighlight(MemoSubtitleText, WAVDisplayer.KaraokeSelectedIndex);
   end;
-  
+
   // Enable dictionnary loading menus
   for i := 0 to SubMenuItemSpellcheck.Count-1 do
   begin
@@ -9564,7 +9565,7 @@ begin
     SpellCheckForm := TSpellCheckForm.Create(Self);
     IniFile := TIniFile.Create(GetIniFilename);
     LoadFormPosition(IniFile, SpellCheckForm);
-    IniFile.Free;    
+    IniFile.Free;
   end;
   SpellCheckForm.ShowModal;
 

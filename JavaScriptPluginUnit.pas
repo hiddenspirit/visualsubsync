@@ -106,6 +106,7 @@ type
     FLAST_CORE_COL_IDX : Integer;
 
     FMinimumBlank : Integer;
+    FRsTargetIndex : Integer;
     FCpsTarget : Integer;
     FMinimumDuration : Integer;
     FMaximumDuration : Integer;
@@ -136,9 +137,10 @@ type
     procedure Set_VO_COL_IDX(Value : Integer);
     procedure Set_LAST_CORE_COL_IDX(Value : Integer);
 
+    procedure SetRsTargetIndex(Value : Integer);
     procedure SetCpsTarget(Value : Integer);
     procedure SetMinimumDuration(Value : Integer);
-    procedure SetMaximumDuration(Value : Integer);    
+    procedure SetMaximumDuration(Value : Integer);
     procedure SetMinimumBlank(Value : Integer);
 
     procedure SetVideoWidth(Value : Integer);
@@ -177,7 +179,7 @@ type
     function GetTextSelectionStart : Integer;
     function GetTextSelectionLength : Integer;
 
-    function GetAudioCursorPosition : Integer; 
+    function GetAudioCursorPosition : Integer;
 
     property INDEX_COL_IDX : Integer read FINDEX_COL_IDX;
     property START_COL_IDX : Integer read FSTART_COL_IDX;
@@ -187,9 +189,10 @@ type
     property VO_COL_IDX : Integer read FVO_COL_IDX;
     property LAST_CORE_COL_IDX : Integer read FLAST_CORE_COL_IDX;
 
+    property RsTargetIndex : Integer read FRsTargetIndex;
     property CpsTarget : Integer read FCpsTarget;
     property MinimumDuration : Integer read FMinimumDuration;
-    property MaximumDuration : Integer read FMaximumDuration;    
+    property MaximumDuration : Integer read FMaximumDuration;
     property MinimumBlank : Integer read FMinimumBlank;
 
     property VideoWidth : Integer read FVideoWidth;
@@ -222,7 +225,7 @@ type
     FVSSPluginObject : TJSObject;
     FFilename : WideString;
     FOnJSPluginError : TJSPluginNotifyEvent;
-    FLoadingStack : TStack; // Needed for nested include stuff 
+    FLoadingStack : TStack; // Needed for nested include stuff
     FPreInitDone : Boolean;
     FFilenames : TTntStringList; // To keep unicode filenames
 
@@ -233,7 +236,7 @@ type
     procedure PreInitScript; virtual;
     function InternalLoadScript(Filename : WideString) : Boolean;
     function InternalLoadScripts(Filename : WideString) : Boolean;
-    function GetCurrentLoadingFile : WideString;     
+    function GetCurrentLoadingFile : WideString;
   public
     constructor Create;
     destructor Destroy; override;
@@ -243,7 +246,7 @@ type
 
     property Filename : WideString read FFilename;
     property LastErrorMsg : WideString read FLastErrorMsg;
-    property FatalError : Boolean read FFatalError;    
+    property FatalError : Boolean read FFatalError;
     property OnJSPluginError : TJSPluginNotifyEvent read FOnJSPluginError write FOnJSPluginError;
   end;
 
@@ -313,7 +316,7 @@ type
     FOnSubtitleChangeStart : TSubtitleRangeJSWrapperChangeStartEvent;
     FOnSubtitleChangeStop : TSubtitleRangeJSWrapperChangeStopEvent;
     FOnSubtitleChangeText : TSubtitleRangeJSWrapperChangeTextEvent;
-    
+
     // Columns
     FGetColumnBGColor : TJSFunction;
     FGetColumnText : TJSFunction;
@@ -338,7 +341,7 @@ type
 
   protected
     // nothing for now
-    
+
   public
     constructor Create;
     destructor Destroy; override;
@@ -495,7 +498,7 @@ function _JS_LoadScript(cx: PJSContext; obj: PJSObject; argc: uintN; argv, rval:
 var
   jseng: TJSEngine;
   jsplugin : TBaseJavascriptPlugin;
-  pstr : PJSString;  
+  pstr : PJSString;
 begin
   if (argc = 1) then
   begin
@@ -717,7 +720,7 @@ begin
       end;
     end;
 
-    Result := True;    
+    Result := True;
   end
   else
   begin
@@ -843,7 +846,7 @@ begin
     FreeAndNil(FFixErrorFunc);
   if Assigned(FVSSPluginObject) then
     FreeAndNil(FVSSPluginObject);
-  
+
   FNextSub.Free;
   FPreviousSub.Free;
   FCurrentSub.Free;
@@ -1026,7 +1029,7 @@ var i : Integer;
 begin
   for i:=0 to Length(FParamArray)-1 do
     FParamArray[i] := nil;
-  
+
   if Assigned(CurrentSub) then
   begin
     FCurrentSub.SetSubtitle(CurrentSub);
@@ -1209,7 +1212,7 @@ begin
     FreeAndNil(FNotifyRangeStartDblClickFunc);
   if Assigned(FNotifyRangeStopDblClickFunc) then
     FreeAndNil(FNotifyRangeStopDblClickFunc);
-    
+
   if Assigned(FGetColumnBGColor) then
     FreeAndNil(FGetColumnBGColor);
   if Assigned(FGetColumnText) then
@@ -1465,7 +1468,7 @@ begin
 
   FIndexParam.Value := Index;
   FICPNParamArray[0] := FIndexParam;
-  
+
   if Assigned(CurrentSub) then
   begin
     FCurrentSub.SetSubtitle(CurrentSub);
@@ -1770,6 +1773,11 @@ begin
   FLAST_CORE_COL_IDX := Value;
 end;
 
+procedure TVSSCoreWrapper.SetRsTargetIndex(Value : Integer);
+begin
+  FRsTargetIndex := Value;
+end;
+
 procedure TVSSCoreWrapper.SetCpsTarget(Value : Integer);
 begin
   FCpsTarget := Value;
@@ -1967,7 +1975,7 @@ end;
 
 function TVSSCoreWrapper.MeasureStringWidth(FontName : WideString;
   FontSize : Integer; Bold : Boolean; Text : WideString) : Integer;
-var 
+var
   DC : HDC;
   xysize : Size;
   FontLOG : LOGFONT;

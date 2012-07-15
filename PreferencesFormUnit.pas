@@ -76,6 +76,7 @@ type
     EnableMouseAntiOverlapping : Boolean;
     EnableMouseSnapping : Boolean;
     SpaceKeyModifyTiming : Boolean;
+    SpaceKeyRSTargetIndex : Integer;
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
@@ -103,7 +104,7 @@ type
     ShowSceneChange : Boolean;
     SceneChangeStartOffset : Integer;
     SceneChangeStopOffset : Integer;
-    SceneChangeFilterOffset : Integer; 
+    SceneChangeFilterOffset : Integer;
     ShowTextInWAVDisplay : Boolean;
 
     constructor Create;
@@ -211,6 +212,8 @@ type
     UpDownBlankBetweenSub: TTntUpDown;
     TntLabel13: TTntLabel;
     TntLabel2: TTntLabel;
+    TntLabel15: TTntLabel;
+    ComboBoxRSTarget: TTntComboBox;
     EditCPSTarget: TTntEdit;
     UpDownCPSTarget: TTntUpDown;
     TntLabel7: TTntLabel;
@@ -500,6 +503,7 @@ begin
   EnableMouseAntiOverlapping := False;
   EnableMouseSnapping := True;
   SpaceKeyModifyTiming := True;
+  SpaceKeyRSTargetIndex := 0;
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
@@ -625,6 +629,7 @@ begin
   IniFile.WriteBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   IniFile.WriteBool('Misc','EnableToggleCreation',EnableToggleCreation);
   IniFile.WriteBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  IniFile.WriteInteger('Misc','SpaceKeyRSTargetIndex',SpaceKeyRSTargetIndex);
   IniFile.WriteInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
@@ -707,6 +712,7 @@ begin
   DisableSubtitleEdition := IniFile.ReadBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   EnableToggleCreation := IniFile.ReadBool('Misc','EnableToggleCreation',EnableToggleCreation);
   SpaceKeyModifyTiming := IniFile.ReadBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  SpaceKeyRSTargetIndex := IniFile.ReadInteger('Misc','SpaceKeyRSTargetIndex',SpaceKeyRSTargetIndex);
   SpaceKeyCPSTarget := IniFile.ReadInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
@@ -746,7 +752,7 @@ begin
     for i:=0 to ListHotkeys.Count-1 do
     begin
       HLID := ListHotkeys[i];
-      
+
       KeyName := HLID.Action.Name + '[Normal]';
       if IniFile.ValueExists('Hotkeys', KeyName) then
       begin
@@ -879,6 +885,7 @@ begin
   chkEnableMouseAntiOverlapping.Checked := Config.EnableMouseAntiOverlapping;
   chkEnableMouseSnapping.Checked := Config.EnableMouseSnapping;
   chkSpaceKeyModifyTiming.Checked := Config.SpaceKeyModifyTiming;
+  ComboBoxRSTarget.ItemIndex := Config.SpaceKeyRSTargetIndex;
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
@@ -902,7 +909,7 @@ begin
     ListErrorChecking.AddItem(JSPluginInfoDst.Name, JSPluginInfoDst);
   end;
   ListErrorChecking.Sorted := False;
-  // Do the checking now cause sorting would have messed up the order 
+  // Do the checking now cause sorting would have messed up the order
   for i:=0 to ListErrorChecking.Items.Count-1 do
   begin
     JSPluginInfoSrc := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
@@ -971,6 +978,7 @@ begin
   Config.EnableMouseAntiOverlapping := chkEnableMouseAntiOverlapping.Checked;
   Config.EnableMouseSnapping := chkEnableMouseSnapping.Checked;
   Config.SpaceKeyModifyTiming := chkSpaceKeyModifyTiming.Checked;
+  Config.SpaceKeyRSTargetIndex := ComboBoxRSTarget.ItemIndex;
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
@@ -1612,7 +1620,7 @@ procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
 begin
   if not CheckRegistryAccess then
     Exit;
-    
+
   if chkAssociateExtASS.Checked then
   begin
     ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, ASS_ICON_INDEX);
