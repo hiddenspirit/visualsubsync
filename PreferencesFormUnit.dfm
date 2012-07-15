@@ -92,7 +92,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 121
           Height = 17
-          Hint = 
+          Hint =
             'Compress dynamic webpages for faster transmission (broken with I' +
             'E)'
           Caption = 'Enable compression'
@@ -114,10 +114,10 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 440
           Height = 17
-          Hint = 
+          Hint =
             'Double click on a .vssprj file will automatically open the proje' +
             'ct in VisualSubSync'
-          Caption = 
+          Caption =
             'Associate project file (*.vssprj) with VisualSubSync (admin righ' +
             'ts required)'
           ParentShowHint = False
@@ -173,7 +173,7 @@ object PreferencesForm: TPreferencesForm
           Top = 120
           Width = 440
           Height = 17
-          Caption = 
+          Caption =
             'Always generate scene change file instead of extracting keyframe' +
             's'
           TabOrder = 6
@@ -266,7 +266,7 @@ object PreferencesForm: TPreferencesForm
           322)
         object TntLabel8: TTntLabel
           Left = 16
-          Top = 164
+          Top = 196
           Width = 140
           Height = 13
           Caption = 'Blank between subtitles (ms) :'
@@ -278,81 +278,88 @@ object PreferencesForm: TPreferencesForm
           Height = 33
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
-          Caption = 
+          Caption =
             'Common settings used when editing subtitles in normal or timing ' +
             'mode, and possibly when fixing error with JavaScript plug-ins.'
           WordWrap = True
         end
         object TntLabel2: TTntLabel
           Left = 16
-          Top = 68
+          Top = 100
           Width = 143
           Height = 13
           Caption = 'Characters per second target :'
         end
         object TntLabel7: TTntLabel
           Left = 16
-          Top = 100
+          Top = 132
           Width = 146
           Height = 13
           Caption = 'Minimum subtitle duration (ms) :'
         end
         object TntLabel14: TTntLabel
           Left = 16
-          Top = 132
+          Top = 164
           Width = 149
           Height = 13
           Caption = 'Maximum subtitle duration (ms) :'
         end
+        object TntLabel15: TTntLabel
+          Left = 16
+          Top = 68
+          Width = 143
+          Height = 13
+          Caption = 'Reading speed target :'
+        end
         object EditBlankBetweenSub: TTntEdit
           Left = 176
-          Top = 160
+          Top = 192
           Width = 81
           Height = 21
-          TabOrder = 3
+          TabOrder = 4
           Text = '0'
         end
         object UpDownBlankBetweenSub: TTntUpDown
           Left = 257
-          Top = 160
+          Top = 192
           Width = 15
           Height = 21
           Associate = EditBlankBetweenSub
           Max = 500
           Increment = 10
-          TabOrder = 4
+          TabOrder = 5
         end
         object EditCPSTarget: TTntEdit
           Left = 176
-          Top = 64
+          Top = 96
           Width = 81
           Height = 21
-          TabOrder = 0
+          TabOrder = 1
           Text = '5'
         end
         object UpDownCPSTarget: TTntUpDown
           Left = 257
-          Top = 64
+          Top = 96
           Width = 15
           Height = 21
           Associate = EditCPSTarget
           Min = 5
           Max = 50
           Position = 5
-          TabOrder = 5
+          TabOrder = 6
           Thousands = False
         end
         object EditMinimalDuration: TTntEdit
           Left = 176
-          Top = 96
+          Top = 128
           Width = 81
           Height = 21
-          TabOrder = 1
+          TabOrder = 2
           Text = '500'
         end
         object UpDownMinimalDuration: TTntUpDown
           Left = 257
-          Top = 96
+          Top = 128
           Width = 15
           Height = 21
           Associate = EditMinimalDuration
@@ -360,20 +367,20 @@ object PreferencesForm: TPreferencesForm
           Max = 5000
           Increment = 100
           Position = 500
-          TabOrder = 6
+          TabOrder = 7
           Thousands = False
         end
         object EditMaximalDuration: TTntEdit
           Left = 176
-          Top = 128
+          Top = 160
           Width = 81
           Height = 21
-          TabOrder = 2
+          TabOrder = 3
           Text = '6000'
         end
         object UpDownMaximumDuration: TTntUpDown
           Left = 257
-          Top = 128
+          Top = 160
           Width = 16
           Height = 21
           Associate = EditMaximalDuration
@@ -381,8 +388,25 @@ object PreferencesForm: TPreferencesForm
           Max = 25000
           Increment = 100
           Position = 6000
-          TabOrder = 7
+          TabOrder = 8
           Thousands = False
+        end
+        object ComboBoxRSTarget: TTntComboBox
+          Left = 176
+          Top = 64
+          Width = 95
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          ItemIndex = 0
+          TabOrder = 0
+          Text = 'Perfect'
+          OnSelect = ComboHotkeyModeSelect
+          Items.Strings = (
+            'Perfect'
+            'Good'
+            'A bit fast'
+            'Fast, acceptable')
         end
       end
     end
@@ -391,7 +415,7 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Error checking'
       object Bevel7: TBevel
         Left = 0
-        Top = 202
+        Top = 198
         Width = 568
         Height = 4
         Align = alBottom
@@ -399,7 +423,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Bevel8: TBevel
         Left = 0
-        Top = 110
+        Top = 106
         Width = 568
         Height = 4
         Align = alBottom
@@ -816,7 +840,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 400
           Height = 17
-          Caption = 
+          Caption =
             'Left/right mouse button set start/stop time in Timing Mode (SSA ' +
             'mouse mode)'
           TabOrder = 0
