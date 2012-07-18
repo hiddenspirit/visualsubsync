@@ -5798,9 +5798,10 @@ begin
   ExecTime := GetTickCount - Start;
 
   ErrorReportForm.vtvErrorList.EndUpdate;
+  ErrorReportForm.Show();
+  ErrorReportForm.Visible := True;
   if (ErrorReportForm.vtvErrorList.TotalCount > 0) then
   begin
-    ErrorReportForm.Visible := True;
     Msg := Format('%d error(s) found', [ErrorReportForm.vtvErrorList.TotalCount]);
   end
   else
