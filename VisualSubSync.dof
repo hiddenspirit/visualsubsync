@@ -113,7 +113,7 @@ AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=2012
-Build=715
+Build=718
 Debug=0
 PreRelease=1
 Special=0
@@ -123,13 +123,13 @@ Locale=1036
 CodePage=1252
 [Version Info Keys]
 CompanyName=
-FileDescription=VisualSubSync
-FileVersion=1.0.0.1155
+FileDescription=
+FileVersion=1.0.2012.718
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
-ProductName=VisualSubSync
+ProductName=
 ProductVersion=1.0.0.0
 Comments=spirit's custom build
 [HistoryLists\hlDebugSourcePath]
