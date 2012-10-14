@@ -211,7 +211,7 @@ begin
   fontname := 'Verdana';
   fontsize := 18;
   primaryColor := clWhite;
-  secondaryColor := clBlack;
+  secondaryColor := clYellow;
   outlineColor := clBlack;
   backColor := $80000000;
   bold := -1;
