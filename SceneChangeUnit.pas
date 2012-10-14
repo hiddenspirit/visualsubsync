@@ -103,9 +103,9 @@ begin
         begin
           ConsecutiveKF := 0;
         end;
-        
+
         PreviousFramePos := FramePos;
-        Inc(FramePos);        
+        Inc(FramePos);
       end;
       //AVIStreamRelease(ppavi);
     end;
@@ -237,11 +237,15 @@ begin
   if CreateProcessW(nil, PWideChar(Cmd), nil, nil, false,
             NORMAL_PRIORITY_CLASS, nil, nil,
             StartInfo, ProcInfo) then
-    begin
-      WaitForSingleObject(ProcInfo.hProcess, INFINITE);
-      CloseHandle(ProcInfo.hProcess);
-      CloseHandle(ProcInfo.hThread);
-    end;
+  begin
+    WaitForSingleObject(ProcInfo.hProcess, INFINITE);
+    CloseHandle(ProcInfo.hProcess);
+    CloseHandle(ProcInfo.hThread);
+  end
+  else
+  begin
+    MessageBox(0, 'Couldn''t start generate_scenechange_file.exe.', 'Error', MB_ICONERROR);
+  end;
 end;
 
 // -----------------------------------------------------------------------------

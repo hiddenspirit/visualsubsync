@@ -25,7 +25,8 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Buttons, TntStdCtrls, TntDialogs, Renderer;
+  Dialogs, StdCtrls, Buttons, TntStdCtrls, TntDialogs, Renderer,
+  SceneChangeUnit;
 
 type
   TProjectWAVMode = (pwmNoWaveform, pwmExternal, pwmPeakOnly);
@@ -98,6 +99,7 @@ type
     bttBrowseSubtitleVO: TSpeedButton;
     rbNoWaveform: TTntRadioButton;
     bttExtractWAVFromVideo: TTntButton;
+    bttGenerateSceneChangeFile: TTntButton;
     procedure bttCreateNewProjectClick(Sender: TObject);
     procedure bttCancelClick(Sender: TObject);
     procedure bttBrowseVideoFileClick(Sender: TObject);
@@ -106,6 +108,7 @@ type
     procedure bttBrowseProjectFileClick(Sender: TObject);
     procedure bttBrowseVOFileClick(Sender: TObject);
     procedure bttExtractWAVFromVideoClick(Sender: TObject);
+    procedure bttGenerateSceneChangeFileClick(Sender: TObject);
     procedure bttOkClick(Sender: TObject);
     procedure rbInternalWAVClick(Sender: TObject);
     procedure bttBrowsePeakFileClick(Sender: TObject);
@@ -121,7 +124,7 @@ type
     procedure UpdateFormatCombobox;
     function ShowExtractForm(extType : TWAVExtractionType) : Boolean;
     function CheckData(AskForExtraction : Boolean) : Boolean;
-    procedure UpdateColor;    
+    procedure UpdateColor;
   public
     { Public declarations }
     procedure Clear;
@@ -261,7 +264,7 @@ begin
   Result := False;
   VideoFileExists := (Trim(EditVideoFilename.Text) <> '') and WideFileExists(EditVideoFilename.Text);
 
-  // We need a valid extension subtitle filename  
+  // We need a valid extension subtitle filename
   Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
   if (Trim(EditSubtitleFilename.Text) <> '') and
     (Ext <> '.srt') and (Ext <> '.ass') and (Ext <> '.ssa') then
@@ -270,7 +273,7 @@ begin
       PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
     EditSubtitleFilename.SetFocus;
     Exit;
-  end;  
+  end;
 
   // We need a least subtitle filename
   if not CheckFileCanBeCreated(EditSubtitleFilename.Text) then
@@ -369,7 +372,7 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditVideoFilename.Text := TntOpenDialog1.FileName;
-    
+
     // If external wav file exists with the same name use it
     WAVFilename := WideChangeFileExt(EditVideoFilename.Text,'.wav');
     PeakFilename := WideChangeFileExt(EditVideoFilename.Text,'.peak');
@@ -402,7 +405,11 @@ begin
     end;
   end;
 
-  bttExtractWAVFromVideo.Enabled := WideFileExists(EditVideoFilename.Text);
+  if WideFileExists(EditVideoFilename.Text) then
+  begin
+    bttExtractWAVFromVideo.Enabled := True;
+    bttGenerateSceneChangeFile.Enabled := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -421,13 +428,13 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TProjectForm.bttBrowseSubtitleFileClick(Sender: TObject);
-var Ext : WideString; 
+var Ext : WideString;
 begin
   TntOpenDialog1.FileName := EditSubtitleFilename.Text;
   TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
     'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
     'All files (*.*)|*.*';
-    
+
   Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
   if (Ext = '.srt') then
     TntOpenDialog1.FilterIndex := 1
@@ -435,7 +442,7 @@ begin
     TntOpenDialog1.FilterIndex := 2
   else
     TntOpenDialog1.FilterIndex := 3;
-    
+
   if TntOpenDialog1.Execute then
   begin
     EditSubtitleFilename.Text := TntOpenDialog1.FileName;
@@ -520,6 +527,13 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TProjectForm.bttGenerateSceneChangeFileClick(Sender: TObject);
+begin
+  GenerateSceneChangeFile(EditVideoFilename.Text);
+end;
+
+//------------------------------------------------------------------------------
+
 procedure TProjectForm.Clear;
 begin
   EditVideoFilename.Text := '';
@@ -529,6 +543,7 @@ begin
   chkSaveAsUTF8.Checked := False;
   cbSubtitleFormat.ItemIndex := 0;
   bttExtractWAVFromVideo.Enabled := False;
+  bttGenerateSceneChangeFile.Enabled := False;
 
   EditPeakFilename.Text := LEAVE_EMPTY;
   EditPeakFilename.Font.Color := clInactiveCaption;
