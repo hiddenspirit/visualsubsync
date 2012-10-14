@@ -84,7 +84,7 @@ type
     LoadMostRecentProjectOnStartup : Boolean;
     AlwaysGenerateSceneChangeFile : Boolean;
     // General
-    Dictionnary : WideString;
+    Dictionary : WideString;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -725,7 +725,7 @@ begin
   AlwaysGenerateSceneChangeFile := IniFile.ReadBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
 
   // General
-  Dictionnary := IniFile.ReadString('General','Dictionnary','');
+  Dictionary := IniFile.ReadString('General','Dictionary','');
 
   // Web server
   if (not IsPresets) then
