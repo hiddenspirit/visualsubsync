@@ -618,7 +618,7 @@ type
     StartupShowVideo, StartupDetachVideo : Boolean;
 
     FSpellChecker : THunspellChecker;
-    StartupDictionnary : WideString;
+    StartupDictionary : WideString;
 
     HiddenByUserCoreColumnsList : TStrings;
 
@@ -714,8 +714,8 @@ type
 
     procedure OnSpellcheckLanguageMenuItemClick(Sender: TObject);
     procedure OnSpellcheckSuggestionMenuItemClick(Sender: TObject);
-    procedure OnLoadDictionnary(Sender: TObject);
-    procedure OnLoadDictionnaryTerminate(Sender: TObject);
+    procedure OnLoadDictionary(Sender: TObject);
+    procedure OnLoadDictionaryTerminate(Sender: TObject);
     procedure OnSpellcheckAddToDictionaryMenuItemClick(Sender: TObject);
     procedure OnSpellcheckIgnoreMenuItemClick(Sender: TObject);
 
@@ -1258,7 +1258,7 @@ begin
     IniFile.WriteInteger('TextPipe', 'TextPipeAutoOption', GetTextPipeAutoOption);
 
     // Default dictionnary
-    IniFile.WriteString('General', 'Dictionnary', StartupDictionnary);
+    IniFile.WriteString('General', 'Dictionary', StartupDictionary);
 
     IniFile.Free;
   except
@@ -1306,7 +1306,7 @@ begin
   StartupShowVideo := IniFile.ReadBool('Windows', 'ShowVideo', False);
 
   // Default dictionnary
-  StartupDictionnary := IniFile.ReadString('General','Dictionnary','');
+  StartupDictionary := IniFile.ReadString('General','Dictionary','');
 
   // VO textbox
   MemoSubtitleVO.Width := IniFile.ReadInteger('Windows', 'MemoSubtitleVO_Width', 400);
@@ -1408,9 +1408,9 @@ end;
 procedure TMainForm.LoadAfterParamsSettings;
 var Idx : Integer;
 begin
-  if (not Assigned(CurrentProject)) or (CurrentProject.Dictionnary = '') then
+  if (not Assigned(CurrentProject)) or (CurrentProject.Dictionary = '') then
   begin
-    Idx := FSpellChecker.GetDictIdx(StartupDictionnary);
+    Idx := FSpellChecker.GetDictIdx(StartupDictionary);
     if (Idx <> -1) then
     begin
       LoadDict(Idx);
@@ -3051,7 +3051,7 @@ begin
     end;
 
     // ----- Load dictionnary ---
-    Idx := FSpellChecker.GetDictIdx(CurrentProject.Dictionnary);
+    Idx := FSpellChecker.GetDictIdx(CurrentProject.Dictionary);
     if (Idx <> -1) then
     begin
       LoadDict(Idx);
@@ -3141,7 +3141,7 @@ begin
   end;
   ProjectFileIni.WriteInteger('VisualSubsync', 'FocusedTimeMs', FocusedTimeMs);
 
-  ProjectFileIni.WriteString('VisualSubsync', 'Dictionnary', FSpellChecker.GetCurrentDictName);
+  ProjectFileIni.WriteString('VisualSubsync', 'Dictionary', FSpellChecker.GetCurrentDictName);
 
   ProjectFileIni.WriteString('VisualSubsync','Presets', Project.Presets);
 
@@ -3262,7 +3262,7 @@ begin
     ProjectFileIni.WriteBool('VisualSubsync','DetachedVideo',StartupDetachVideo);
     ProjectFileIni.WriteBool('VisualSubsync','ShowVideo',StartupShowVideo);
     ProjectFileIni.WriteBool('VisualSubsync','ShowVO',WideFileExists(ProjectForm.EditSubtitleVO.Text));
-    ProjectFileIni.WriteString('VisualSubsync','Dictionnary',StartupDictionnary);
+    ProjectFileIni.WriteString('VisualSubsync','Dictionary',StartupDictionary);
     ProjectFileIni.Free;
 
     // Load the project
@@ -9243,8 +9243,8 @@ begin
     CurrentProject.Presets := MenuItem.Hint;
     CurrentProject.IsDirty := True;
     // Dictionary
-    StartupDictionnary := ConfigObject.Dictionnary;
-    Idx := FSpellChecker.GetDictIdx(StartupDictionnary);
+    StartupDictionary := ConfigObject.Dictionary;
+    Idx := FSpellChecker.GetDictIdx(StartupDictionary);
     if (Idx <> -1) then
     begin
       LoadDict(Idx);
@@ -9331,12 +9331,12 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TMainForm.OnLoadDictionnary(Sender: TObject);
+procedure TMainForm.OnLoadDictionary(Sender: TObject);
 begin
   FSpellChecker.Initialize((Sender as TBgThreadTask).Param);
 end;
 
-procedure TMainForm.OnLoadDictionnaryTerminate(Sender: TObject);
+procedure TMainForm.OnLoadDictionaryTerminate(Sender: TObject);
 var Event1, Event2 : TNotifyEvent;
     i : Integer;
 begin
@@ -9356,12 +9356,12 @@ begin
     end;
   end;
 
-  StartupDictionnary := FSpellChecker.GetCurrentDictName;
+  StartupDictionary := FSpellChecker.GetCurrentDictName;
   if Assigned(CurrentProject) and (CurrentProject.Filename <> '') then
   begin
-    if (CurrentProject.Dictionnary <> StartupDictionnary) then
+    if (CurrentProject.Dictionary <> StartupDictionary) then
     begin
-      CurrentProject.Dictionnary := StartupDictionnary;
+      CurrentProject.Dictionary := StartupDictionary;
       SaveProject(CurrentProject, True);
     end;
   end;
@@ -9403,8 +9403,8 @@ begin
   // Load new dictionnary in background
   BgThreadTask := TBgThreadTask.Create(True, tpLowest);
   BgThreadTask.FreeOnTerminate := True;
-  BgThreadTask.OnExecute := OnLoadDictionnary;
-  BgThreadTask.OnTerminate := OnLoadDictionnaryTerminate;
+  BgThreadTask.OnExecute := OnLoadDictionary;
+  BgThreadTask.OnTerminate := OnLoadDictionaryTerminate;
   BgThreadTask.Param := Idx;
   BgThreadTask.Resume;
 end;
