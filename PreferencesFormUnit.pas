@@ -83,6 +83,8 @@ type
     MaximumSubtitleDuration : Integer;
     LoadMostRecentProjectOnStartup : Boolean;
     AlwaysGenerateSceneChangeFile : Boolean;
+    // General
+    Dictionnary : WideString;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -721,6 +723,9 @@ begin
   MaximumSubtitleDuration := IniFile.ReadInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
   LoadMostRecentProjectOnStartup := IniFile.ReadBool('Misc','LoadMostRecentProjectOnStartup',LoadMostRecentProjectOnStartup);
   AlwaysGenerateSceneChangeFile := IniFile.ReadBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
+
+  // General
+  Dictionnary := IniFile.ReadString('General','Dictionnary','');
 
   // Web server
   if (not IsPresets) then
