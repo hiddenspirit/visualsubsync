@@ -10,8 +10,7 @@ syntax: glob
 *.dsk
 Backup
 archives
-Release/VisualSubSync.*
-Release/jsplugin/
+Release/**
 .svn
 *.drc
 *.res

@@ -9234,6 +9234,7 @@ end;
 
 procedure TMainForm.OnLoadPresetMenuItemClick(Sender: TObject);
 var MenuItem : TTntMenuItem;
+    Idx : Integer;
 begin
   if (Sender is TTntMenuItem) then
   begin
@@ -9241,6 +9242,13 @@ begin
     LoadPresetFile(g_PresetsPath + MenuItem.Hint);
     CurrentProject.Presets := MenuItem.Hint;
     CurrentProject.IsDirty := True;
+    // Dictionary
+    StartupDictionnary := ConfigObject.Dictionnary;
+    Idx := FSpellChecker.GetDictIdx(StartupDictionnary);
+    if (Idx <> -1) then
+    begin
+      LoadDict(Idx);
+    end;
   end;
 end;
 
