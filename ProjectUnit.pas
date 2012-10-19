@@ -415,6 +415,17 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditWAVFilename.Text := TntOpenDialog1.FileName;
+
+    if Trim(EditSubtitleFilename.Text) = '' then
+    begin
+      EditSubtitleFilename.Text := WideChangeFileExt(EditWAVFilename.Text,'.srt');
+      UpdateFormatCombobox;
+    end;
+
+    if Trim(EditProjectFilename.Text) = '' then
+    begin
+      EditProjectFilename.Text := WideChangeFileExt(EditWAVFilename.Text,'.vssprj');
+    end;
   end;
 end;
 
@@ -628,6 +639,17 @@ begin
   if TntOpenDialog1.Execute then
   begin
     EditPeakFilename.Text := TntOpenDialog1.FileName;
+
+    if Trim(EditSubtitleFilename.Text) = '' then
+    begin
+      EditSubtitleFilename.Text := WideChangeFileExt(EditPeakFilename.Text,'.srt');
+      UpdateFormatCombobox;
+    end;
+
+    if Trim(EditProjectFilename.Text) = '' then
+    begin
+      EditProjectFilename.Text := WideChangeFileExt(EditPeakFilename.Text,'.vssprj');
+    end;
   end;
 end;
 
