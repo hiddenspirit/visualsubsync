@@ -7,6 +7,7 @@ uses Types;
 procedure ExtractSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 procedure SaveSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 procedure LoadSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
+procedure GenerateSceneChangeFile(Filename : WideString);
 
 implementation
 
@@ -102,9 +103,9 @@ begin
         begin
           ConsecutiveKF := 0;
         end;
-        
+
         PreviousFramePos := FramePos;
-        Inc(FramePos);        
+        Inc(FramePos);
       end;
       //AVIStreamRelease(ppavi);
     end;
@@ -218,6 +219,32 @@ begin
   else if (Ext = '.mp4') then
   begin
     ExtractKeyFramesMP4(Filename, SCArray);
+  end;
+end;
+
+procedure GenerateSceneChangeFile(Filename : WideString);
+var Cmd : WideString;
+    StartInfo  : TStartupInfo;
+    ProcInfo   : TProcessInformation;
+begin
+  ZeroMemory(@StartInfo, sizeof(StartInfo));
+  StartInfo.cb := sizeof(StartInfo);
+  StartInfo.dwFlags := STARTF_USESHOWWINDOW;
+  StartInfo.wShowWindow := SW_SHOW;
+  Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+         'generate_scenechange_file\generate_scenechange_file.exe" "' +
+         Filename + '"';
+  if CreateProcessW(nil, PWideChar(Cmd), nil, nil, false,
+            NORMAL_PRIORITY_CLASS, nil, nil,
+            StartInfo, ProcInfo) then
+  begin
+    WaitForSingleObject(ProcInfo.hProcess, INFINITE);
+    CloseHandle(ProcInfo.hProcess);
+    CloseHandle(ProcInfo.hThread);
+  end
+  else
+  begin
+    MessageBox(0, 'Couldn''t start generate_scenechange_file.exe.', 'Error', MB_ICONERROR);
   end;
 end;
 
