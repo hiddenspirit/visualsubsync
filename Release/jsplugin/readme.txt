@@ -20,6 +20,7 @@ VSSCore.STYLE_COL_IDX : Index of the style column (SSA/ASS only)
 VSSCore.TEXT_COL_IDX  : Index of the text column
 VSSCore.LAST_CORE_COL_IDX : Index of the last column of VSS core
 
+VSSCore.RsTargetIndex : Reading speed target index (value set in the preferences dialog)
 VSSCore.CpsTarget : Characters per second target (value set in the preferences dialog)
 VSSCore.MinimumDuration : Minimum subtitle duration (value set in the preferences dialog)
 VSSCore.MaximumDuration : Maximum subtitle duration (value set in the preferences dialog)
@@ -57,5 +58,3 @@ SceneChange.GetAt(Index) : Get the time of the scene change at the specified ind
 SceneChange.GetNext(TimeMs) : Get the time in ms of the next scene change superior or equal to TimeMs
 SceneChange.GetPrevious(TimeMs) : Get the time in ms of the next scene change inferior or equal to TimeMs
 SceneChange.Contains(Start,Stop) : Check if there is a scene change between [Start,Stop]
-
-
