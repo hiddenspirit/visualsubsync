@@ -263,12 +263,14 @@ var Cmd : WideString;
     ExitCode: DWord;
 begin
   Result := -1;
-  with Security do begin
+  with Security do
+  begin
     nlength := SizeOf(TSecurityAttributes);
     binherithandle := true;
     lpsecuritydescriptor := nil;
-   end;
-  if CreatePipe(ReadPipe, WritePipe, @Security, 0) then begin
+  end;
+  if CreatePipe(ReadPipe, WritePipe, @Security, 0) then
+  begin
     Buffer := AllocMem(ReadBuffer + 1) ;
     FillChar(StartInfo, SizeOf(StartInfo), #0);
     StartInfo.cb := SizeOf(StartInfo) ;
@@ -291,10 +293,14 @@ begin
       begin
         repeat
           BytesRead := 0;
-          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead,nil);
+          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead, nil);
           Buffer[BytesRead] := #0;
         until (BytesRead < ReadBuffer);
         Result := StrToInt(TrimRight(String(Buffer)));
+      end
+      else
+      begin
+        MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR);
       end;
       CloseHandle(ProcInfo.hProcess);
       CloseHandle(ProcInfo.hThread);
