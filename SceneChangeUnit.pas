@@ -260,6 +260,7 @@ var Cmd : WideString;
     Buffer : Pchar;
     BytesRead : DWord;
     AppRunning : DWord;
+    ExitCode: DWord;
 begin
   Result := -1;
   with Security do begin
@@ -285,16 +286,20 @@ begin
       repeat
         Apprunning := WaitForSingleObject(ProcInfo.hProcess, 500);
       until (Apprunning <> WAIT_TIMEOUT);
-      repeat
-        BytesRead := 0;
-        ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead,nil);
-        Buffer[BytesRead] := #0;
-      until (BytesRead < ReadBuffer);
+      GetExitCodeProcess(ProcInfo.hProcess, ExitCode);
+      if (ExitCode = 0) then
+      begin
+        repeat
+          BytesRead := 0;
+          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead,nil);
+          Buffer[BytesRead] := #0;
+        until (BytesRead < ReadBuffer);
+        Result := StrToInt(TrimRight(String(Buffer)));
+      end;
       CloseHandle(ProcInfo.hProcess);
       CloseHandle(ProcInfo.hThread);
       CloseHandle(ReadPipe);
       CloseHandle(WritePipe);
-      Result := StrToInt(TrimRight(String(Buffer)));
     end
     else
     begin
