@@ -336,6 +336,8 @@ type
     ActionPlay1sBeforeToEnd: TTntAction;
     ActionDeleteSceneChange: TTntAction;
     pmiDeleteSC: TTntMenuItem;
+    ActionFindSceneChange: TTntAction;
+    pmiFindSC: TMenuItem;
     MenuItemShowHidesSeneChange: TTntMenuItem;
     ActionReload: TTntAction;
     Reload1: TTntMenuItem;
@@ -546,6 +548,7 @@ type
     procedure ActionOpenProjectFolderExecute(Sender: TObject);
     procedure ActionPlay1sBeforeToEndExecute(Sender: TObject);
     procedure ActionDeleteSceneChangeExecute(Sender: TObject);
+    procedure ActionFindSceneChangeExecute(Sender: TObject);
     procedure ActionReloadExecute(Sender: TObject);
     procedure ActionMergeWithPreviousExecute(Sender: TObject);
     procedure ActionMergeWithNextExecute(Sender: TObject);
@@ -4312,6 +4315,7 @@ begin
   pmiWAVDispSplitAtCursor.Enabled := pmiWAVDispDeleteRange.Enabled;
   pmiInsertKaraokeMarker.Enabled := pmiWAVDispDeleteRange.Enabled;
   pmiDeleteSC.Enabled := (not WAVDisplayer.SelectionIsEmpty);
+  pmiFindSC.Enabled := (not WAVDisplayer.SelectionIsEmpty);
   pmiInsertSC.Enabled := WAVDisplayer.SelectionIsEmpty;
 end;
 
@@ -8921,6 +8925,27 @@ begin
     WAVDisplayer.Selection.StopTime);
   UndoableDeleteSceneChange.DoTask;
   PushUndoableTask(UndoableDeleteSceneChange);
+end;
+
+procedure TMainForm.ActionFindSceneChangeExecute(Sender: TObject);
+var UndoableInsertSceneChange : TUndoableInsertSceneChange;
+    CursorPos : Integer;
+begin
+  CursorPos := FindSceneChange(
+    CurrentProject.VideoSource,
+    WAVDisplayer.Selection.StartTime,
+    WAVDisplayer.Selection.StopTime
+  );
+
+  if CursorPos < 0 then
+    Exit;
+  if g_SceneChangeWrapper.Contains(CursorPos,CursorPos) then
+    Exit;
+
+  UndoableInsertSceneChange := TUndoableInsertSceneChange.Create;
+  UndoableInsertSceneChange.SetData(CursorPos);
+  UndoableInsertSceneChange.DoTask;
+  PushUndoableTask(UndoableInsertSceneChange);
 end;
 
 //------------------------------------------------------------------------------
