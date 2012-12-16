@@ -14,7 +14,7 @@ from util.get_app_data_dir import get_app_data_dir
 from util.media_hash import MediaHash
 
 
-FFINDEX_MAX_FILES = 8
+FFINDEX_MAX_FILES = 24
 MAX_RANGE = 30000
 
 APP_NAME = "VisualSubSync-Companion"
