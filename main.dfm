@@ -24,7 +24,7 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 435
+    Top = 434
     Width = 764
     Height = 4
     Cursor = crVSplit
@@ -125,7 +125,7 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 439
+    Top = 438
     Width = 764
     Height = 65
     Align = alBottom
@@ -197,7 +197,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 764
-    Height = 206
+    Height = 205
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -206,7 +206,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 764
-      Height = 136
+      Height = 135
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -1248,7 +1248,7 @@ object MainForm: TMainForm
   end
   object StatusBarMainPanel: TPanel
     Left = 0
-    Top = 504
+    Top = 503
     Width = 764
     Height = 19
     Align = alBottom
@@ -2223,6 +2223,11 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Delete scene change'
       OnExecute = ActionDeleteSceneChangeExecute
+    end
+    object ActionFindSceneChange: TTntAction
+      Tag = 1
+      Caption = 'Find scene change'
+      OnExecute = ActionFindSceneChangeExecute
     end
     object ActionReload: TTntAction
       Tag = 1
@@ -4070,6 +4075,9 @@ object MainForm: TMainForm
     end
     object pmiDeleteSC: TTntMenuItem
       Action = ActionDeleteSceneChange
+    end
+    object pmiFindSC: TMenuItem
+      Action = ActionFindSceneChange
     end
     object pmiInsertKaraokeMarker: TTntMenuItem
       Action = ActionInsertKaraokeMarker
