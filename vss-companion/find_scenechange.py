@@ -50,16 +50,16 @@ def main():
 
     if args.start_time is None or args.end_time is None:
         print("Both start and end time are required.", file=sys.stderr)
-        return 1
+        return 2
 
     if args.start_time > args.end_time:
         print("Start time must come before end time.", file=sys.stderr)
-        return 1
-        
+        return 3
+
     if args.end_time - args.start_time > MAX_RANGE:
         print("Range must not exceed {} ms.".format(MAX_RANGE),
               file=sys.stderr)
-        return 1
+        return 4
 
     hex_digest = MediaHash(args.video_file).hex_digest
     ffindex_filepath = os.path.join(APP_DATA_DIR,
@@ -83,8 +83,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except Exception as e:
-        print(e, file=sys.stderr)
-        input()
+    sys.exit(main())
