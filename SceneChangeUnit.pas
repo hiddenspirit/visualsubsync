@@ -233,7 +233,7 @@ begin
   StartInfo.dwFlags := STARTF_USESHOWWINDOW;
   StartInfo.wShowWindow := SW_SHOW;
   Cmd := '"' + ExtractFilePath(ParamStr(0)) +
-         'generate_scenechange_file\generate_scenechange_file.exe" "' +
+         'vss-companion\generate_scenechange_file.exe" "' +
          Filename + '"';
   if CreateProcessW(nil, PWideChar(Cmd), nil, nil, false,
             NORMAL_PRIORITY_CLASS, nil, nil,
