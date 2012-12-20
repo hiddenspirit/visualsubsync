@@ -116,6 +116,12 @@ class SceneChangeFile(SortedSet):
                 start += 1
             if frame_position_to_time(end, frame_duration) > end_time:
                 end -= 1
+        selected = cls.find_frame(vsource, start, end)
+        return frame_position_to_time(selected, frame_duration)
+
+    @classmethod
+    def find_frame(cls, vsource, start, end):
+        with vsource.output_format(*cls.OUTPUT_FORMAT):
             selected = start
             selected_diff = 0
             if start:
@@ -128,18 +134,13 @@ class SceneChangeFile(SortedSet):
                 prev = numpy.zeros(len(plane), numpy.int_)
             for pos in range(start, end + 1):
                 frame = vsource.get_frame(pos)
+                plane = frame.planes[0]
                 diff = numpy.absolute(plane - prev).sum()
                 if diff > selected_diff:
                     selected = pos
                     selected_diff = diff
                 prev = plane.astype(numpy.int_)
-        
-        if vsource.index.source_file:
-            ext = os.path.splitext(vsource.index.source_file)[1]
-            if ext.lower() == ".mp4":
-                selected += 2
-
-        return frame_position_to_time(selected, frame_duration)
+        return selected
 
     def scan_bad(self, vsource, threshold=0.05):
         with vsource.output_format(*self.OUTPUT_FORMAT):
