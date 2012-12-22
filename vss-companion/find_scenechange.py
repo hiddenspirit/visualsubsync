@@ -67,9 +67,9 @@ def main():
 
     if os.path.isfile(ffindex_filepath):
         index = ffms.Index.read(ffindex_filepath, args.video_file)
-        vsource = ffms.VideoSource(args.video_file, index=index, num_threads=1)
+        vsource = ffms.VideoSource(args.video_file, index=index)
     else:
-        vsource = ffms.VideoSource(args.video_file, num_threads=1)
+        vsource = ffms.VideoSource(args.video_file)
         if not os.path.isdir(APP_DATA_DIR):
             os.makedirs(APP_DATA_DIR)
         vsource.index.write(ffindex_filepath)
