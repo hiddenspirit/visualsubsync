@@ -109,7 +109,6 @@ class SceneChangeFile(SortedSet):
     @classmethod
     def find(cls, vsource, start_time, end_time):
         with vsource.output_format(*cls.OUTPUT_FORMAT):
-            # frame_duration = get_frame_duration(vsource.properties)
             start = frame_time_to_position(vsource, start_time)
             end = frame_time_to_position(vsource, end_time)
             if frame_position_to_time(vsource, start) < start_time:
@@ -144,7 +143,7 @@ class SceneChangeFile(SortedSet):
 
     def scan_bad(self, vsource, threshold=0.05):
         with vsource.output_format(*self.OUTPUT_FORMAT):
-            frame_duration = get_frame_duration(vsource.properties)
+            # frame_duration = get_frame_duration(vsource.properties)
             sc_positions = [frame_time_to_position(t, frame_duration)
                                   for t in self]
             plane = vsource.planes[0]   # XXX
@@ -176,8 +175,8 @@ def frame_position_to_time(vsource, frame):
     return vsource.track.timecodes[frame]
 
 
-def get_frame_duration(props):
-    return 1000 * props.FPSDenominator / props.FPSNumerator
+# def get_frame_duration(props):
+    # return 1000 * props.FPSDenominator / props.FPSNumerator
 
 
 # def frame_time_to_position(time, frame_duration):
