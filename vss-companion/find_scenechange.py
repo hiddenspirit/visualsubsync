@@ -67,9 +67,9 @@ def main():
 
     if os.path.isfile(ffindex_filepath):
         index = ffms.Index.read(ffindex_filepath, args.video_file)
-        vsource = ffms.VideoSource(args.video_file, index=index)
+        vsource = ffms.VideoSource(args.video_file, index=index, num_threads=1)
     else:
-        vsource = ffms.VideoSource(args.video_file)
+        vsource = ffms.VideoSource(args.video_file, num_threads=1)
         if not os.path.isdir(APP_DATA_DIR):
             os.makedirs(APP_DATA_DIR)
         vsource.index.write(ffindex_filepath)
@@ -79,7 +79,7 @@ def main():
     sc_time = sublib.SceneChangeFile.find(vsource,
                                           args.start_time, args.end_time)
 
-    print(sc_time)
+    print(int(sc_time))
 
 
 if __name__ == "__main__":

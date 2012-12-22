@@ -109,15 +109,15 @@ class SceneChangeFile(SortedSet):
     @classmethod
     def find(cls, vsource, start_time, end_time):
         with vsource.output_format(*cls.OUTPUT_FORMAT):
-            frame_duration = get_frame_duration(vsource.properties)
-            start = frame_time_to_position(start_time, frame_duration)
-            end = frame_time_to_position(end_time, frame_duration)
-            if frame_position_to_time(start, frame_duration) < start_time:
+            # frame_duration = get_frame_duration(vsource.properties)
+            start = frame_time_to_position(vsource, start_time)
+            end = frame_time_to_position(vsource, end_time)
+            if frame_position_to_time(vsource, start) < start_time:
                 start += 1
-            if frame_position_to_time(end, frame_duration) > end_time:
+            if frame_position_to_time(vsource, end) > end_time:
                 end -= 1
         selected = cls.find_frame(vsource, start, end)
-        return frame_position_to_time(selected, frame_duration)
+        return frame_position_to_time(vsource, selected)
 
     @classmethod
     def find_frame(cls, vsource, start, end):
@@ -167,14 +167,22 @@ def get_scene_changes(vsource):
         sc_list = sc_list[1:]
     return sc_list
 
+    
+def frame_time_to_position(vsource, time):
+    return bisect.bisect(vsource.track.timecodes, time) - 1
+
+
+def frame_position_to_time(vsource, frame):
+    return vsource.track.timecodes[frame]
+
 
 def get_frame_duration(props):
     return 1000 * props.FPSDenominator / props.FPSNumerator
 
 
-def frame_time_to_position(time, frame_duration):
-    return round(time / frame_duration)
+# def frame_time_to_position(time, frame_duration):
+    # return round(time / frame_duration)
 
 
-def frame_position_to_time(frame, frame_duration):
-    return int(frame * frame_duration)
+# def frame_position_to_time(frame, frame_duration):
+    # return int(frame * frame_duration)
