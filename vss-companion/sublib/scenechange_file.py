@@ -20,7 +20,8 @@ class SceneChangeFile(SortedSet):
     ENCODING = "ascii"
     NEWLINE = "\n"
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
-    OUTPUT_FORMAT = [0], 64, 64, ffms.FFMS_RESIZER_FAST_BILINEAR
+    OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
+                     ffms.FFMS_RESIZER_FAST_BILINEAR)
 
     def __init__(self, data=None, file=None):
         if data is None:
