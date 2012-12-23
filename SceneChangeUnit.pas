@@ -13,7 +13,7 @@ function FindSceneChange(Filename : WideString; Start, Stop : Integer) : Integer
 implementation
 
 uses Windows, VFW, SysUtils, TntClasses, TntSysUtils, MiscToolsUnit,
-  FileReaderUnit, MatroskaHelper, LogWriterIntf, MP4File;
+  FileReaderUnit, MatroskaHelper, LogWriterIntf, MP4File, LogWindowFormUnit;
 
 // -----------------------------------------------------------------------------
 
@@ -276,6 +276,7 @@ begin
     StartInfo.cb := SizeOf(StartInfo) ;
     StartInfo.hStdInput := ReadPipe;
     StartInfo.hStdOutput := WritePipe;
+    StartInfo.hStdError := WritePipe;
     StartInfo.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
     StartInfo.wShowWindow := SW_HIDE;
     Cmd := '"' + ExtractFilePath(ParamStr(0)) +
@@ -300,10 +301,15 @@ begin
       end
       else
       begin
-        if (ExitCode = 4) then
-          MessageBox(0, 'Range is too large.', 'Error', MB_ICONERROR)
-        else
-          MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR);
+        LogForm.LogMsg(Cmd);
+        LogForm.LogMsg('Error code: ' + IntToStr(ExitCode));
+        repeat
+          BytesRead := 0;
+          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead, nil);
+          Buffer[BytesRead] := #0;
+        until (BytesRead < ReadBuffer);
+        LogForm.LogMsg(String(Buffer));
+        { MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR); }
       end;
       CloseHandle(ProcInfo.hProcess);
       CloseHandle(ProcInfo.hThread);
