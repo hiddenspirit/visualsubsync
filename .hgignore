@@ -17,3 +17,4 @@ Release/**
 *.RES
 .cvsignore
 build
+__pycache__
