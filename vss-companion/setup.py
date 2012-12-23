@@ -41,20 +41,26 @@ base = None
 # if sys.platform == "win32":
     # base = "Win32GUI"
 
-exe = Executable(
-    script = "find_scenechange.py",
-    base = base,
-    compress = True,
+exe_list = [
+    Executable(
+        script = "find_scenechange.py",
+        base = base,
+        compress = True,
+    ),
+    Executable(
+        script = "make_scenechange_file.py",
+        base = base,
+        compress = True,
     )
-
+]
 
 #############################################################################
 # création du setup
 setup(
-    name = "generate_scenechange_file",
+    name = "vss-companion",
     version = "1",
-    description = "Generate SceneChange File",
+    description = "VisualSubSync Companion Tools",
     author = "spirit",
     options = {"build_exe": options},
-    executables = [exe]
+    executables = exe_list
     )
