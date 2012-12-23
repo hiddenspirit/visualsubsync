@@ -300,7 +300,10 @@ begin
       end
       else
       begin
-        MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR);
+        if (ExitCode = 4) then
+          MessageBox(0, 'Range is too large.', 'Error', MB_ICONERROR)
+        else
+          MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR);
       end;
       CloseHandle(ProcInfo.hProcess);
       CloseHandle(ProcInfo.hThread);
