@@ -109,13 +109,12 @@ class SceneChangeFile(SortedSet):
 
     @classmethod
     def find(cls, vsource, start_time, end_time):
-        with vsource.output_format(*cls.OUTPUT_FORMAT):
-            start = frame_time_to_position(vsource, start_time)
-            end = frame_time_to_position(vsource, end_time)
-            if frame_position_to_time(vsource, start) < start_time:
-                start += 1
-            if frame_position_to_time(vsource, end) > end_time:
-                end -= 1
+        start = frame_time_to_position(vsource, start_time)
+        end = frame_time_to_position(vsource, end_time)
+        if frame_position_to_time(vsource, start) < start_time:
+            start += 1
+        if frame_position_to_time(vsource, end) > end_time:
+            end -= 1
         selected = cls.find_frame(vsource, start, end)
         return frame_position_to_time(vsource, selected)
 
@@ -167,7 +166,7 @@ def get_scene_changes(vsource):
         sc_list = sc_list[1:]
     return sc_list
 
-    
+
 def frame_time_to_position(vsource, time):
     return bisect.bisect(vsource.track.timecodes, time) - 1
 
