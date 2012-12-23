@@ -24,7 +24,6 @@ def main():
               file=sys.stderr)
         return 1
 
-
     vsource = common.get_video_source(args.video_file)
     sc_file = sublib.SceneChangeFile.from_source(vsource)
     sc_file.save()
