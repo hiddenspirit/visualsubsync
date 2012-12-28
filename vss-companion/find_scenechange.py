@@ -53,14 +53,11 @@ def main():
     sc_time = sublib.SceneChangeFile.find(vsource,
                                           args.start_time, args.end_time)
 
-    # Reround timecodes for NTSC (mostly for MKVs).
+    # Reround timecodes (because of MKVs).
     fps = FPS(vsource.properties.FPSNumerator,
               vsource.properties.FPSDenominator)
-    if fps in [(24000, 1001), (30000, 1001)]:
-        sc_time = (
-            round(sc_time * fps.num / fps.den / 1000) *
-            1000 * fps.den / fps.num
-        )
+    sc_time = (round(sc_time * fps.num / fps.den / 1000) *
+               1000 * fps.den / fps.num)
 
     print(int(sc_time))
 
