@@ -52,8 +52,9 @@ def main():
     # Assume best rounded timecode values for NTSC (mostly for MKVs).
     fps = vsource.properties.FPSNumerator / vsource.properties.FPSDenominator
     if abs(fps - 24000 / 1001) < 0.0001:
-        frame_duration = 1001 / 24
-        sc_time = round(sc_time / frame_duration) * frame_duration
+        frame_duration_num, frame_duration_den = 1001, 24
+        sc_time = (round(sc_time / frame_duration_num * frame_duration_den) *
+                   frame_duration_num / frame_duration_den)
 
     print(int(sc_time))
 
