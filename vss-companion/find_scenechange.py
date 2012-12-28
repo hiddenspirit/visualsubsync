@@ -5,11 +5,15 @@ import argparse
 import os
 import sys
 
+from collections import namedtuple
+
 import sublib
 import common
 
 
 MAX_RANGE = 30000
+
+FPS = namedtuple("FPS", ("num", "den"))
 
 
 def parse_args():
@@ -49,12 +53,14 @@ def main():
     sc_time = sublib.SceneChangeFile.find(vsource,
                                           args.start_time, args.end_time)
 
-    # Assume best rounded timecode values for NTSC (mostly for MKVs).
-    fps = vsource.properties.FPSNumerator / vsource.properties.FPSDenominator
-    if abs(fps - 24000 / 1001) < 0.0001:
-        frame_duration_num, frame_duration_den = 1001, 24
-        sc_time = (round(sc_time / frame_duration_num * frame_duration_den) *
-                   frame_duration_num / frame_duration_den)
+    # Reround timecodes for NTSC (mostly for MKVs).
+    fps = FPS(vsource.properties.FPSNumerator,
+              vsource.properties.FPSDenominator)
+    if fps in [(24000, 1001), (30000, 1001)]:
+        sc_time = (
+            round(sc_time * fps.num / fps.den / 1000) *
+            1000 * fps.den / fps.num
+        )
 
     print(int(sc_time))
 
