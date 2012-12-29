@@ -5,8 +5,8 @@ object ExtractWAVForm: TExtractWAVForm
   BorderStyle = bsSingle
   BorderWidth = 4
   Caption = 'Extract WAV'
-  ClientHeight = 297
-  ClientWidth = 427
+  ClientHeight = 358
+  ClientWidth = 484
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -24,7 +24,7 @@ object ExtractWAVForm: TExtractWAVForm
   TextHeight = 13
   object TntLabel3: TTntLabel
     Left = 0
-    Top = 246
+    Top = 302
     Width = 47
     Height = 13
     Caption = 'Progress :'
@@ -32,15 +32,15 @@ object ExtractWAVForm: TExtractWAVForm
   object TntGroupBox1: TTntGroupBox
     Left = 0
     Top = 0
-    Width = 425
-    Height = 113
+    Width = 481
+    Height = 169
     Caption = ' Video info : '
     TabOrder = 0
     object MemoVideoInfo: TTntMemo
       Left = 8
       Top = 16
-      Width = 409
-      Height = 89
+      Width = 465
+      Height = 145
       ReadOnly = True
       ScrollBars = ssVertical
       TabOrder = 0
@@ -48,7 +48,7 @@ object ExtractWAVForm: TExtractWAVForm
   end
   object bttExtract: TTntButton
     Left = 0
-    Top = 272
+    Top = 328
     Width = 75
     Height = 25
     Caption = 'Extract'
@@ -56,8 +56,8 @@ object ExtractWAVForm: TExtractWAVForm
     OnClick = bttExtractClick
   end
   object bttClose: TTntButton
-    Left = 352
-    Top = 272
+    Left = 408
+    Top = 328
     Width = 75
     Height = 25
     Caption = 'Cancel'
@@ -66,8 +66,8 @@ object ExtractWAVForm: TExtractWAVForm
   end
   object ProgressBar1: TProgressBar
     Left = 56
-    Top = 240
-    Width = 369
+    Top = 296
+    Width = 425
     Height = 25
     Max = 1000
     Smooth = True
@@ -75,8 +75,8 @@ object ExtractWAVForm: TExtractWAVForm
   end
   object gbSettings: TTntGroupBox
     Left = 0
-    Top = 120
-    Width = 425
+    Top = 176
+    Width = 481
     Height = 113
     Caption = ' Settings : '
     TabOrder = 4
@@ -132,7 +132,7 @@ object ExtractWAVForm: TExtractWAVForm
   end
   object bttStop: TTntButton
     Left = 80
-    Top = 272
+    Top = 328
     Width = 75
     Height = 25
     Caption = 'Stop'
@@ -141,7 +141,7 @@ object ExtractWAVForm: TExtractWAVForm
   end
   object bttDebug: TTntButton
     Left = 208
-    Top = 272
+    Top = 328
     Width = 75
     Height = 25
     Caption = 'Debug'
