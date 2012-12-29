@@ -24,8 +24,8 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 439
-    Width = 772
+    Top = 434
+    Width = 764
     Height = 4
     Cursor = crVSplit
     Align = alBottom
@@ -37,7 +37,7 @@ object MainForm: TMainForm
   object Splitter2: TSplitter
     Left = 0
     Top = 225
-    Width = 772
+    Width = 764
     Height = 4
     Cursor = crVSplit
     Align = alTop
@@ -48,7 +48,7 @@ object MainForm: TMainForm
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 772
+    Width = 764
     Height = 225
     Align = alTop
     BevelOuter = bvLowered
@@ -57,7 +57,7 @@ object MainForm: TMainForm
     FullRepaint = False
     TabOrder = 0
     object SplitterWAVDisplay_Video: TSplitter
-      Left = 566
+      Left = 558
       Top = 1
       Width = 4
       Height = 223
@@ -78,7 +78,7 @@ object MainForm: TMainForm
       Visible = False
     end
     object PanelVideo: TPanel
-      Left = 570
+      Left = 562
       Top = 1
       Width = 201
       Height = 223
@@ -97,7 +97,7 @@ object MainForm: TMainForm
     object PanelWAVDisplay: TPanel
       Left = 255
       Top = 1
-      Width = 311
+      Width = 303
       Height = 223
       Align = alClient
       BevelOuter = bvNone
@@ -125,8 +125,8 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 443
-    Width = 772
+    Top = 438
+    Width = 764
     Height = 65
     Align = alBottom
     BevelOuter = bvNone
@@ -134,7 +134,7 @@ object MainForm: TMainForm
     FullRepaint = False
     TabOrder = 1
     object SplitterSubtitleVO: TSplitter
-      Left = 368
+      Left = 360
       Top = 0
       Width = 4
       Height = 65
@@ -146,7 +146,7 @@ object MainForm: TMainForm
     object MemoSubtitleText: TTntRichEdit
       Left = 35
       Top = 0
-      Width = 333
+      Width = 325
       Height = 65
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -175,7 +175,7 @@ object MainForm: TMainForm
       TabOrder = 0
     end
     object MemoSubtitleVO: TTntRichEdit
-      Left = 372
+      Left = 364
       Top = 0
       Width = 400
       Height = 65
@@ -196,8 +196,8 @@ object MainForm: TMainForm
   object PanelMiddle: TPanel
     Left = 0
     Top = 229
-    Width = 772
-    Height = 210
+    Width = 764
+    Height = 205
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -205,8 +205,8 @@ object MainForm: TMainForm
     object vtvSubsList: TVirtualStringTree
       Left = 0
       Top = 70
-      Width = 772
-      Height = 140
+      Width = 764
+      Height = 135
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -214,7 +214,6 @@ object MainForm: TMainForm
       Font.Name = 'Arial'
       Font.Style = []
       Header.AutoSizeIndex = -1
-      Header.DefaultHeight = 17
       Header.Font.Charset = DEFAULT_CHARSET
       Header.Font.Color = clWindowText
       Header.Font.Height = -11
@@ -236,7 +235,7 @@ object MainForm: TMainForm
     object PanelPlaybackControl: TPanel
       Left = 0
       Top = 0
-      Width = 772
+      Width = 764
       Height = 70
       Align = alTop
       BevelOuter = bvNone
@@ -1249,8 +1248,8 @@ object MainForm: TMainForm
   end
   object StatusBarMainPanel: TPanel
     Left = 0
-    Top = 508
-    Width = 772
+    Top = 503
+    Width = 764
     Height = 19
     Align = alBottom
     BevelOuter = bvNone
@@ -1268,7 +1267,7 @@ object MainForm: TMainForm
     object StatusBarPanel2: TTntPanel
       Left = 250
       Top = 0
-      Width = 522
+      Width = 514
       Height = 19
       Align = alClient
       Alignment = taLeftJustify
@@ -2224,6 +2223,11 @@ object MainForm: TMainForm
       Tag = 1
       Caption = 'Delete scene change'
       OnExecute = ActionDeleteSceneChangeExecute
+    end
+    object ActionFindSceneChange: TTntAction
+      Tag = 1
+      Caption = 'Find scene change'
+      OnExecute = ActionFindSceneChangeExecute
     end
     object ActionReload: TTntAction
       Tag = 1
@@ -4071,6 +4075,9 @@ object MainForm: TMainForm
     end
     object pmiDeleteSC: TTntMenuItem
       Action = ActionDeleteSceneChange
+    end
+    object pmiFindSC: TMenuItem
+      Action = ActionFindSceneChange
     end
     object pmiInsertKaraokeMarker: TTntMenuItem
       Action = ActionInsertKaraokeMarker

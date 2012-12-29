@@ -4,7 +4,7 @@ object ProjectForm: TProjectForm
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'New Project'
-  ClientHeight = 438
+  ClientHeight = 452
   ClientWidth = 550
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,7 +20,7 @@ object ProjectForm: TProjectForm
   TextHeight = 13
   object bttCreateNewProject: TTntButton
     Left = 336
-    Top = 408
+    Top = 424
     Width = 131
     Height = 25
     Caption = 'Create new project'
@@ -29,7 +29,7 @@ object ProjectForm: TProjectForm
   end
   object bttCancel: TTntButton
     Left = 472
-    Top = 408
+    Top = 424
     Width = 75
     Height = 25
     Caption = 'Cancel'
@@ -40,7 +40,7 @@ object ProjectForm: TProjectForm
     Left = 8
     Top = 8
     Width = 537
-    Height = 81
+    Height = 105
     Caption = ' Video source file (optional) : '
     TabOrder = 0
     object bttBrowseVideoFile: TSpeedButton
@@ -67,10 +67,19 @@ object ProjectForm: TProjectForm
       TabOrder = 1
       OnClick = bttExtractWAVFromVideoClick
     end
+    object bttGenerateSceneChangeFile: TTntButton
+      Left = 8
+      Top = 72
+      Width = 521
+      Height = 22
+      Caption = 'Generate scene change file'
+      TabOrder = 2
+      OnClick = bttGenerateSceneChangeFileClick
+    end
   end
   object gbWAVFile: TTntGroupBox
     Left = 8
-    Top = 104
+    Top = 120
     Width = 537
     Height = 105
     Caption = ' Audio waveform / Audio only preview (optional) : '
@@ -107,7 +116,7 @@ object ProjectForm: TProjectForm
       Top = 76
       Width = 73
       Height = 17
-      Hint = 
+      Hint =
         'Use an external or extracted WAV file for waveform and audio onl' +
         'y preview.'
       Caption = 'WAV file :'
@@ -122,7 +131,7 @@ object ProjectForm: TProjectForm
       Top = 48
       Width = 73
       Height = 17
-      Hint = 
+      Hint =
         'Use the video file for audio preview and a created peak file for' +
         ' the waveform display.'
       Caption = 'Peak file :'
@@ -146,7 +155,7 @@ object ProjectForm: TProjectForm
       Top = 24
       Width = 129
       Height = 17
-      Hint = 
+      Hint =
         'If available the audio track of the video file will be used for ' +
         'preview but no waveform is displayed.'
       Caption = 'No waveform display'
@@ -158,7 +167,7 @@ object ProjectForm: TProjectForm
   end
   object gbSubtitleFile: TTntGroupBox
     Left = 8
-    Top = 224
+    Top = 240
     Width = 537
     Height = 49
     Caption = ' Subtitle file : '
@@ -200,7 +209,7 @@ object ProjectForm: TProjectForm
   end
   object gbProjectFile: TTntGroupBox
     Left = 8
-    Top = 344
+    Top = 360
     Width = 537
     Height = 49
     Caption = ' Project file : '
@@ -223,7 +232,7 @@ object ProjectForm: TProjectForm
   end
   object bttOk: TTntButton
     Left = 392
-    Top = 408
+    Top = 424
     Width = 75
     Height = 25
     Caption = 'OK'
@@ -233,7 +242,7 @@ object ProjectForm: TProjectForm
   end
   object chkSaveAsUTF8: TTntCheckBox
     Left = 112
-    Top = 223
+    Top = 239
     Width = 92
     Height = 17
     Caption = 'Save as UTF8'
@@ -241,7 +250,7 @@ object ProjectForm: TProjectForm
   end
   object gbVO: TTntGroupBox
     Left = 8
-    Top = 280
+    Top = 296
     Width = 537
     Height = 49
     Caption = 'Reference VO : '
@@ -264,6 +273,6 @@ object ProjectForm: TProjectForm
   end
   object TntOpenDialog1: TTntOpenDialog
     Left = 40
-    Top = 400
+    Top = 416
   end
 end
