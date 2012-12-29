@@ -187,7 +187,7 @@ begin
           if sample.Sync then
           begin
             SetLength(KFArray, Length(KFArray) + 1);
-            ts := Int64(sample.DecodingTime);
+            ts := Int64(sample.CompositionTime);
             ts := ts / Int64(track.timescale);
             ts := ts * 1000.0;
             KFArray[Length(KFArray) - 1] := Trunc(ts);
