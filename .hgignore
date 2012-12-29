@@ -1,0 +1,20 @@
+syntax: glob
+*.~*
+*.dcu
+*.bpl
+*.dcp
+*.ddp
+*.dsm
+*.gex
+*.bkm
+*.dsk
+Backup
+archives
+Release/**
+.svn
+*.drc
+*.res
+*.RES
+.cvsignore
+build
+__pycache__

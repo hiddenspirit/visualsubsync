@@ -7,11 +7,13 @@ uses Types;
 procedure ExtractSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 procedure SaveSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
 procedure LoadSceneChange(Filename : WideString; var SCArray : TIntegerDynArray);
+procedure GenerateSceneChangeFile(Filename : WideString);
+function FindSceneChange(Filename : WideString; Start, Stop : Integer) : Integer;
 
 implementation
 
 uses Windows, VFW, SysUtils, TntClasses, TntSysUtils, MiscToolsUnit,
-  FileReaderUnit, MatroskaHelper, LogWriterIntf, MP4File;
+  FileReaderUnit, MatroskaHelper, LogWriterIntf, MP4File, LogWindowFormUnit;
 
 // -----------------------------------------------------------------------------
 
@@ -102,9 +104,9 @@ begin
         begin
           ConsecutiveKF := 0;
         end;
-        
+
         PreviousFramePos := FramePos;
-        Inc(FramePos);        
+        Inc(FramePos);
       end;
       //AVIStreamRelease(ppavi);
     end;
@@ -219,6 +221,112 @@ begin
   begin
     ExtractKeyFramesMP4(Filename, SCArray);
   end;
+end;
+
+procedure GenerateSceneChangeFile(Filename : WideString);
+var Cmd : WideString;
+    StartInfo  : TStartupInfo;
+    ProcInfo   : TProcessInformation;
+begin
+  ZeroMemory(@StartInfo, SizeOf(StartInfo));
+  StartInfo.cb := SizeOf(StartInfo);
+  StartInfo.dwFlags := STARTF_USESHOWWINDOW;
+  StartInfo.wShowWindow := SW_SHOW;
+  Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+         'vss-companion\generate_scenechange_file.exe" "' +
+         Filename + '"';
+  if CreateProcessW(nil, PWideChar(Cmd), nil, nil, false,
+            NORMAL_PRIORITY_CLASS, nil, nil,
+            StartInfo, ProcInfo) then
+  begin
+    WaitForSingleObject(ProcInfo.hProcess, INFINITE);
+    CloseHandle(ProcInfo.hProcess);
+    CloseHandle(ProcInfo.hThread);
+  end
+  else
+  begin
+    MessageBox(0, 'Couldn''t start generate_scenechange_file.exe.', 'Error', MB_ICONERROR);
+  end;
+end;
+
+function FindSceneChange(Filename : WideString; Start, Stop : Integer) : Integer;
+const
+  ReadBuffer = 2400;
+var Cmd : WideString;
+    Security : TSecurityAttributes;
+    ReadPipe, WritePipe : THandle;
+    StartInfo : TStartupInfo;
+    ProcInfo : TProcessInformation;
+    Buffer : Pchar;
+    BytesRead : DWord;
+    AppRunning : DWord;
+    ExitCode: DWord;
+begin
+  Result := -1;
+  with Security do
+  begin
+    nlength := SizeOf(TSecurityAttributes);
+    binherithandle := true;
+    lpsecuritydescriptor := nil;
+  end;
+  if CreatePipe(ReadPipe, WritePipe, @Security, 0) then
+  begin
+    Buffer := AllocMem(ReadBuffer + 1) ;
+    FillChar(StartInfo, SizeOf(StartInfo), #0);
+    StartInfo.cb := SizeOf(StartInfo) ;
+    StartInfo.hStdInput := ReadPipe;
+    StartInfo.hStdOutput := WritePipe;
+    StartInfo.hStdError := WritePipe;
+    StartInfo.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
+    StartInfo.wShowWindow := SW_HIDE;
+    Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+           'vss-companion\find_scenechange.exe" "' + Filename +
+           '" --start-time ' + IntToStr(Start) +
+           ' --end-time ' + IntToStr(Stop);
+    if CreateProcessW(nil, PWideChar(Cmd), @Security, @Security, true,
+              NORMAL_PRIORITY_CLASS, nil, nil, StartInfo, ProcInfo) then
+    begin
+      repeat
+        Apprunning := WaitForSingleObject(ProcInfo.hProcess, 500);
+      until (Apprunning <> WAIT_TIMEOUT);
+      GetExitCodeProcess(ProcInfo.hProcess, ExitCode);
+      if (ExitCode = 0) then
+      begin
+        repeat
+          BytesRead := 0;
+          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead, nil);
+          Buffer[BytesRead] := #0;
+        until (BytesRead < ReadBuffer);
+        Result := StrToInt(TrimRight(String(Buffer)));
+      end
+      else
+      begin
+        LogForm.LogMsg(Cmd);
+        LogForm.LogMsg('Error code: ' + IntToStr(ExitCode));
+        repeat
+          BytesRead := 0;
+          ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead, nil);
+          Buffer[BytesRead] := #0;
+        until (BytesRead < ReadBuffer);
+        LogForm.LogMsg(String(Buffer));
+        { MessageBox(0, pChar(IntToStr(ExitCode)), 'Error', MB_ICONERROR); }
+      end;
+      CloseHandle(ProcInfo.hProcess);
+      CloseHandle(ProcInfo.hThread);
+      CloseHandle(ReadPipe);
+      CloseHandle(WritePipe);
+    end
+    else
+    begin
+      MessageBox(0, 'Couldn''t start find_scenechange.exe.', 'Error', MB_ICONERROR);
+    end;
+    FreeMem(Buffer);
+  end
+  else
+  begin
+    MessageBox(0, 'Couldn''t create pipe for find_scenechange.exe.', 'Error', MB_ICONERROR);
+  end;
+  { MessageBox(0, pChar(IntToStr(Result)), 'Error', MB_ICONERROR); }
 end;
 
 // -----------------------------------------------------------------------------
