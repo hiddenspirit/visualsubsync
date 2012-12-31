@@ -5,7 +5,7 @@ import os
 import ffms
 
 from util.get_app_data_dir import get_app_data_dir
-from util.media_hash import media_hash
+from util.media_hash import MediaHash
 
 
 FFINDEX_MAX_FILES = 24
@@ -23,7 +23,7 @@ def purge_old_ffindexes():
 
 
 def get_video_source(file_path):
-    hex_digest = media_hash(file_path)
+    hex_digest = MediaHash(file_path).hex_digest
     ffindex_filepath = os.path.join(APP_DATA_DIR,
                                     hex_digest + ffms.FFINDEX_EXT)
     if os.path.isfile(ffindex_filepath):
