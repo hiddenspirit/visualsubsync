@@ -31,21 +31,19 @@ def main():
     args = parse_args()
 
     if not os.path.isfile(args.video_file):
-        print("{!r} file does not exist.".format(args.video_file),
-              file=sys.stderr)
+        common.print_error("{!r} file does not exist.".format(args.video_file))
         return 11
 
     if args.start_time is None or args.end_time is None:
-        print("Both start and end time are required.", file=sys.stderr)
+        common.print_error("Both start and end time are required.")
         return 12
 
     if args.start_time > args.end_time:
-        print("Start time must come before end time.", file=sys.stderr)
+        common.print_error("Start time must come before end time.")
         return 13
 
     if args.end_time - args.start_time > MAX_RANGE:
-        print("Range must not exceed {} ms.".format(MAX_RANGE),
-              file=sys.stderr)
+        common.print_error("Range must not exceed {} ms.".format(MAX_RANGE))
         return 14
 
     vsource = common.get_video_source(args.video_file)

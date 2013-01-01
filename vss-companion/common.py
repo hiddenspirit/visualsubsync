@@ -1,6 +1,7 @@
 import glob
 import operator
 import os
+import sys
 
 import ffms
 
@@ -9,6 +10,7 @@ from util.media_hash import MediaHash
 
 
 FFINDEX_MAX_FILES = 24
+BUILD_DATE = "2013-01-01 18:50:13"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -36,3 +38,8 @@ def get_video_source(file_path):
         vsource.index.write(ffindex_filepath)
     purge_old_ffindexes()
     return vsource
+
+
+def print_error(msg):
+    print("build_date = {}".format(BUILD_DATE), file=sys.stderr)
+    print(msg, file=sys.stderr)
