@@ -41,5 +41,5 @@ def get_video_source(file_path):
 
 
 def print_error(msg):
-    print("build_date = {}".format(BUILD_DATE), file=sys.stderr)
+    print("build date: {}".format(BUILD_DATE), file=sys.stderr)
     print(msg, file=sys.stderr)
