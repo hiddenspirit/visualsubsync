@@ -15,7 +15,7 @@ def parse_args():
                         help="video media filename")
     return parser.parse_args()
 
-    
+
 def main():
     args = parse_args()
 
