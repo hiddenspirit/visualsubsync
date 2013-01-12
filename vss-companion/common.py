@@ -26,15 +26,16 @@ def purge_old_ffindexes():
         os.remove(path)
 
 
-def get_video_source(file_path):
+def get_video_source(file_path, num_threads=None):
     hex_digest = MediaHash(file_path).hex_digest
     ffindex_filepath = os.path.join(APP_DATA_DIR,
                                     hex_digest + ffms.FFINDEX_EXT)
     if os.path.isfile(ffindex_filepath):
         index = ffms.Index.read(ffindex_filepath, file_path)
-        vsource = ffms.VideoSource(file_path, index=index)
+        vsource = ffms.VideoSource(file_path, index=index,
+                                   num_threads=num_threads)
     else:
-        vsource = ffms.VideoSource(file_path)
+        vsource = ffms.VideoSource(file_path, num_threads=num_threads)
         if not os.path.isdir(APP_DATA_DIR):
             os.makedirs(APP_DATA_DIR)
         vsource.index.write(ffindex_filepath)

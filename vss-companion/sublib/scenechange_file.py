@@ -184,23 +184,29 @@ class SceneChangeFile(SortedSet):
     @classmethod
     def scan_timings(cls, vsource, timings, threshold):
         with vsource.output_format(*cls.OUTPUT_FORMAT):
-            for index, (start_time, end_time) in timings:
-                start = frame_time_to_position(vsource, start_time)
-                end = frame_time_to_position(vsource, end_time)
-                if frame_position_to_time(vsource, end) < end_time:
-                    end += 1
-                scan_start = start + 1
-                diffs = numpy.empty(end - scan_start, numpy.int_)
+            for index, start_stops in timings:
+                result = [None] * 2
+                for n_result, start_stop in enumerate(start_stops):
+                    if start_stop is None:
+                        continue
+                    start_time, end_time = start_stop
+                    start = frame_time_to_position(vsource, start_time)
+                    end = frame_time_to_position(vsource, end_time)
+                    if frame_position_to_time(vsource, end) < end_time:
+                        end += 1
+                    scan_start = start + 1
+                    diffs = numpy.empty(end - scan_start, numpy.int_)
 
-                plane = vsource.get_frame(start).planes[0]
-                for n, pos in enumerate(range(scan_start, end)):
-                    prev = plane.astype(numpy.int_)
-                    plane = vsource.get_frame(pos).planes[0]
-                    diffs[n] = numpy.absolute(plane - prev).sum()
+                    plane = vsource.get_frame(start).planes[0]
+                    for n, pos in enumerate(range(scan_start, end)):
+                        prev = plane.astype(numpy.int_)
+                        plane = vsource.get_frame(pos).planes[0]
+                        diffs[n] = numpy.absolute(plane - prev).sum()
 
-                if diffs.max() / numpy.median(diffs) >= threshold:
-                    pos = diffs.argmax() + scan_start
-                    yield index, frame_position_to_time(vsource, pos)
+                    if diffs.max() / numpy.median(diffs) >= threshold:
+                        pos = diffs.argmax() + scan_start
+                        result[n_result] = frame_position_to_time(vsource, pos)
+                yield index, result
 
     def scan_bad(self, vsource, threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
