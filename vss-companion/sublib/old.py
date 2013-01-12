@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Subtitle Library (Python 3)
 """
-import re, codecs, itertools
+import re
+import codecs
+import itertools
 
 __author__ = "Spirit <hiddenspirit (at) gmail.com>",
 __version__ = 0, 1, 0
@@ -46,13 +48,17 @@ class Subtitle(object):
             return False
 
     def __eq__(self, other):
-        return (self.start == other.start and self.stop == other.stop and
-            self.text == other.text)
+        return (
+            self.start == other.start and self.stop == other.stop and
+            self.text == other.text
+        )
 
     def __len__(self):
         stripped_lines = self.stripped_lines()
-        return (sum([len(stripped_line) for stripped_line in stripped_lines]) +
-            (len(stripped_lines) - 1) * 2)
+        return (
+            sum([len(stripped_line) for stripped_line in stripped_lines]) +
+            (len(stripped_lines) - 1) * 2
+        )
 
     def lines(self):
         return self.text.split(NEWLINE)
@@ -82,12 +88,16 @@ class SubRipSubtitle(Subtitle):
         self.index = index
 
     def __repr__(self):
-        return "SubRipSubtitle(%r, %r, %r, %r)" % (self.index, self.start,
-            self.stop, self.text)
+        return "SubRipSubtitle(%r, %r, %r, %r)" % (
+            self.index, self.start,
+            self.stop, self.text
+        )
 
     def __str__(self):
-        return "%d%s%s%s%s%s" % (self.index, NEWLINE, self.time_pair(), NEWLINE,
-            self.text, NEWLINE)
+        return "%d%s%s%s%s%s" % (
+            self.index, NEWLINE, self.time_pair(), NEWLINE,
+            self.text, NEWLINE
+        )
 
     def __lt__(self, other):
         if self.start < other.start:
@@ -190,16 +200,20 @@ class SubRipFile(SubtitleFile):
                 elif entry == 1:
                     if line:
                         try:
-                            start, stop = (SubRipSubtitle.
-                                time_pair_to_start_stop(line))
+                            start, stop = (
+                                SubRipSubtitle.
+                                time_pair_to_start_stop(line)
+                            )
                         except RuntimeError as e:
                             print(index, e)
                             entry = 0
                         else:
                             entry += 1
                 elif line == "":
-                    srt = SubRipSubtitle(index, start, stop,
-                        NEWLINE.join(lines))
+                    srt = SubRipSubtitle(
+                        index, start, stop,
+                        NEWLINE.join(lines)
+                    )
                     self.sub_list.append(srt)
                     entry = 0
                     index = 0
@@ -208,8 +222,9 @@ class SubRipFile(SubtitleFile):
                 else:
                     lines.append(line)
             if entry:
-                self.sub_list.append(SubRipSubtitle(index, start, stop,
-                    NEWLINE.join(lines)))
+                self.sub_list.append(
+                    SubRipSubtitle(index, start, stop, NEWLINE.join(lines))
+                )
 
     def write(self, file_path=None, encoding=None):
         if file_path is None:
@@ -232,6 +247,7 @@ class AssFile(SubtitleFile):
 class Tags(object):
     pass
 
+
 class HtmlTags(Tags):
     ITALIC = "<i>%s</i>"
     BOLD = "<b>%s</b>"
@@ -245,7 +261,7 @@ class AssTags(Tags):
     BOLD = r"{\b1}%s{\b0}"
     UNDERLINE = r"{\u1}%s{\u0}"
     COLOR = r"{\1c&H%X%X%X&}%s{\1c}"
-    SIZE =  r"{\fs%d}%s{\fs}"
+    SIZE = r"{\fs%d}%s{\fs}"
     POS = r"{\pos(%d,%d)}"
     A = r"{\a%d}"
     FAD = r"{\fad(%d,%d)}"

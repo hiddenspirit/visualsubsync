@@ -22,6 +22,8 @@ class SceneChangeFile(SortedSet):
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
     OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
                      ffms.FFMS_RESIZER_FAST_BILINEAR)
+    SCAN_THRESHOLD = 6
+    BAD_THRESHOLD = 0.0625
 
     def __init__(self, data=None, file=None):
         if data is None:
@@ -76,8 +78,9 @@ class SceneChangeFile(SortedSet):
     def save(self, file=None):
         if not file:
             file = self.file
-        with open(file, "w", encoding=self.ENCODING, newline=self.NEWLINE)\
-             as f:
+        with open(
+            file, "w", encoding=self.ENCODING, newline=self.NEWLINE
+        ) as f:
             f.write("SceneChangeFormatVersion={}\n"
                     .format(self.FORMAT_VERSION))
             f.write("\n".join(str(Time.from_int(t)) for t in self) + "\n")
@@ -113,16 +116,16 @@ class SceneChangeFile(SortedSet):
         end = frame_time_to_position(vsource, end_time)
         if frame_position_to_time(vsource, start) < start_time:
             start += 1
-        if frame_position_to_time(vsource, end) > end_time:
-            end -= 1
-        selected = cls.find_frame(vsource, start, end)
-        return frame_position_to_time(vsource, selected)
+        #if frame_position_to_time(vsource, end) > end_time:
+            #end -= 1
+        pos = cls.find_frame(vsource, start, end)
+        return frame_position_to_time(vsource, pos)
 
     @classmethod
     def find_frame(cls, vsource, start, end):
+        selected = start
+        selected_diff = 0
         with vsource.output_format(*cls.OUTPUT_FORMAT):
-            selected = start
-            selected_diff = 0
             if start:
                 frame = vsource.get_frame(start - 1)
                 plane = frame.planes[0]
@@ -141,11 +144,69 @@ class SceneChangeFile(SortedSet):
                 prev = plane.astype(numpy.int_)
         return selected
 
-    def scan_bad(self, vsource, threshold=0.05):
+    def scan_missing(self, vsource, sub_file):
+        raise NotImplementedError
+
+    @classmethod
+    def scan(cls, vsource, start_time, end_time, threshold=SCAN_THRESHOLD):
+        start = frame_time_to_position(vsource, start_time)
+        end = frame_time_to_position(vsource, end_time)
+        #if frame_position_to_time(vsource, start) > start_time:
+            #start -= 1
+        if frame_position_to_time(vsource, end) < end_time:
+            end += 1
+        pos = cls.scan_frame(vsource, start, end, threshold)
+        if pos is None:
+            return pos
+        return frame_position_to_time(vsource, pos)
+
+    @classmethod
+    def scan_frame(cls, vsource, start, end, threshold=SCAN_THRESHOLD):
+        scan_start = start + 1
+        size = end - scan_start
+        #if size < 1:
+            #raise ValueError(
+                #"too narrow scan interval: {!r}, {!r}".format(start, end)
+            #)
+        diffs = numpy.empty(size, numpy.int_)
+
+        #with vsource.output_format(*cls.OUTPUT_FORMAT):
+        plane = vsource.get_frame(start).planes[0]
+        for n, pos in enumerate(range(scan_start, end)):
+            prev = plane.astype(numpy.int_)
+            plane = vsource.get_frame(pos).planes[0]
+            diffs[n] = numpy.absolute(plane - prev).sum()
+
+        if diffs.max() / numpy.median(diffs) < threshold:
+            return None
+        return diffs.argmax() + scan_start
+
+    @classmethod
+    def scan_timings(cls, vsource, timings, threshold):
+        with vsource.output_format(*cls.OUTPUT_FORMAT):
+            for index, (start_time, end_time) in timings:
+                start = frame_time_to_position(vsource, start_time)
+                end = frame_time_to_position(vsource, end_time)
+                if frame_position_to_time(vsource, end) < end_time:
+                    end += 1
+                scan_start = start + 1
+                diffs = numpy.empty(end - scan_start, numpy.int_)
+
+                plane = vsource.get_frame(start).planes[0]
+                for n, pos in enumerate(range(scan_start, end)):
+                    prev = plane.astype(numpy.int_)
+                    plane = vsource.get_frame(pos).planes[0]
+                    diffs[n] = numpy.absolute(plane - prev).sum()
+
+                if diffs.max() / numpy.median(diffs) >= threshold:
+                    pos = diffs.argmax() + scan_start
+                    yield index, frame_position_to_time(vsource, pos)
+
+    def scan_bad(self, vsource, threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
             # frame_duration = get_frame_duration(vsource.properties)
             sc_positions = [frame_time_to_position(t, frame_duration)
-                                  for t in self]
+                            for t in self]
             plane = vsource.planes[0]   # XXX
             max_diff = len(plane) * 255
             data_set = set(self)
@@ -155,7 +216,7 @@ class SceneChangeFile(SortedSet):
                 frame = vsource.get_frame(pos)
                 pct = numpy.true_divide(
                     numpy.absolute(plane - prev).sum(), max_diff)
-                if pct < threshold:
+                if pct <= threshold:
                     t = frame_position_to_time(pos, frame_duration)
                     yield t if t in data_set else self.get_nearest(t)
 

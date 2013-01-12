@@ -46,7 +46,6 @@ class Time(int):
         min, ms = divmod(remainder, ONE_MINUTE) #@ReservedAssignment
         return HoursMinutesSeconds(h, min, ms / ONE_SECOND)
 
-
     def __add__(self, other):
         return Time(int(self) + other)
 
