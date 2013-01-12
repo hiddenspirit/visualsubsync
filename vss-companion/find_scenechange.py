@@ -5,15 +5,11 @@ import argparse
 import os
 import sys
 
-from collections import namedtuple
-
 import sublib
 import common
 
 
 MAX_RANGE = 30000
-
-FPS = namedtuple("FPS", ("num", "den"))
 
 
 def parse_args():
@@ -52,10 +48,8 @@ def main():
                                           args.start_time, args.end_time)
 
     # Reround timecodes (because of MKVs).
-    fps = FPS(vsource.properties.FPSNumerator,
-              vsource.properties.FPSDenominator)
-    sc_time = (round(sc_time * fps.num / fps.den / 1000) *
-               1000 * fps.den / fps.num)
+    fps = common.get_fps(vsource)
+    sc_time = common.round_timing(sc_time, fps)
 
     print(int(sc_time))
 

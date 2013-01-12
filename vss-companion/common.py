@@ -3,6 +3,8 @@ import operator
 import os
 import sys
 
+from collections import namedtuple
+
 import ffms
 
 from util.get_app_data_dir import get_app_data_dir
@@ -43,3 +45,14 @@ def get_video_source(file_path):
 def print_error(msg):
     print("build date: {}".format(BUILD_DATE), file=sys.stderr)
     print(msg, file=sys.stderr)
+
+
+def get_fps(vsource):
+    FPS = namedtuple("FPS", ("num", "den"))
+    return FPS(vsource.properties.FPSNumerator,
+               vsource.properties.FPSDenominator)
+
+
+def round_timing(timing, fps):
+    return (round(timing * fps.num / fps.den / 1000) *
+            1000 * fps.den / fps.num)

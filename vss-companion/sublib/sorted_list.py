@@ -79,9 +79,13 @@ class SortedList(Sequence, MutableSet):
         self.data.sort()
 
     def bisect_left(self, value, lo=0, hi=None):
+        if hi is None:
+            hi = len(self)
         return bisect_left(self.data, value, lo, hi)
 
     def bisect_right(self, value, lo=0, hi=None):
+        if hi is None:
+            hi = len(self)
         return bisect_right(self.data, value, lo, hi)
 
     def _get_index(self, value, start=0, end=None):

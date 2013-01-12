@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
+import os
 from cx_Freeze import setup, Executable
-import datetime, re
 
 #############################################################################
 # préparation des options
@@ -26,14 +26,15 @@ if sys.platform.startswith("linux"):
     binpathincludes += ["/usr/lib"]
 
 # construction du dictionnaire des options
-options = {"path": path,
-           "includes": includes,
-           "excludes": excludes,
-           "packages": packages,
-           "include_files": includefiles,
-           "bin_path_includes": binpathincludes,
-           "optimize": 2,
-           }
+options = {
+    "path": path,
+    "includes": includes,
+    "excludes": excludes,
+    "packages": packages,
+    "include_files": includefiles,
+    "bin_path_includes": binpathincludes,
+    "optimize": 2,
+}
 
 #############################################################################
 # préparation des cibles
@@ -43,24 +44,24 @@ base = None
 
 exe_list = [
     Executable(
-        script = "find_scenechange.py",
-        base = base,
-        compress = True,
+        script="find_scenechange.py",
+        base=base,
+        compress=True,
     ),
     Executable(
-        script = "make_scenechange_file.py",
-        base = base,
-        compress = True,
+        script="make_scenechange_file.py",
+        base=base,
+        compress=True,
     )
 ]
 
 #############################################################################
 # création du setup
 setup(
-    name = "vss-companion",
-    version = "1",
-    description = "VisualSubSync Companion Tools",
-    author = "spirit",
-    options = {"build_exe": options},
-    executables = exe_list
-    )
+    name="vss-companion",
+    version="1",
+    description="VisualSubSync Companion Tools",
+    author="spirit",
+    options={"build_exe": options},
+    executables=exe_list
+)

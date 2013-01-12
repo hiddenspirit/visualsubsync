@@ -26,4 +26,3 @@ class MediaHash:
     @property
     def hex_digest(self):
         return "{:016x}".format(self.digest)
-
