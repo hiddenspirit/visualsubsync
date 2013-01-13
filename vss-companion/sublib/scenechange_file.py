@@ -22,8 +22,8 @@ class SceneChangeFile(SortedSet):
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
     OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
                      ffms.FFMS_RESIZER_FAST_BILINEAR)
-    SCAN_THRESHOLD = 6
-    BAD_THRESHOLD = 0.0625
+    SCAN_THRESHOLD = 6.0
+    BAD_THRESHOLD = 0.03
 
     def __init__(self, data=None, file=None):
         if data is None:
@@ -148,7 +148,7 @@ class SceneChangeFile(SortedSet):
         raise NotImplementedError
 
     @classmethod
-    def scan(cls, vsource, start_time, end_time, threshold=SCAN_THRESHOLD):
+    def _scan(cls, vsource, start_time, end_time, threshold=SCAN_THRESHOLD):
         start = frame_time_to_position(vsource, start_time)
         end = frame_time_to_position(vsource, end_time)
         #if frame_position_to_time(vsource, start) > start_time:
@@ -161,7 +161,7 @@ class SceneChangeFile(SortedSet):
         return frame_position_to_time(vsource, pos)
 
     @classmethod
-    def scan_frame(cls, vsource, start, end, threshold=SCAN_THRESHOLD):
+    def _scan_frame(cls, vsource, start, end, threshold=SCAN_THRESHOLD):
         scan_start = start + 1
         size = end - scan_start
         #if size < 1:
@@ -210,20 +210,19 @@ class SceneChangeFile(SortedSet):
 
     def scan_bad(self, vsource, threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
-            # frame_duration = get_frame_duration(vsource.properties)
-            sc_positions = [frame_time_to_position(t, frame_duration)
-                            for t in self]
-            plane = vsource.planes[0]   # XXX
+            sc_positions = [frame_time_to_position(vsource, t) for t in self]
+            if sc_positions and not sc_positions[0]:
+                del sc_positions[0]
+            plane = vsource.get_frame(0).planes[0]
             max_diff = len(plane) * 255
             data_set = set(self)
             for pos in sc_positions:
-                frame = vsource.get_frame(pos - 1)
-                prev = plane.astype(numpy.int_)
-                frame = vsource.get_frame(pos)
+                prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
+                plane = vsource.get_frame(pos).planes[0]
                 pct = numpy.true_divide(
                     numpy.absolute(plane - prev).sum(), max_diff)
                 if pct <= threshold:
-                    t = frame_position_to_time(pos, frame_duration)
+                    t = frame_position_to_time(vsource, pos)
                     yield t if t in data_set else self.get_nearest(t)
 
 

@@ -6,8 +6,8 @@ import os
 import sys
 import time
 
-import multiprocessing
-import concurrent.futures
+#import multiprocessing
+#import concurrent.futures
 
 import sublib
 import sublib.old
@@ -27,10 +27,12 @@ def parse_args():
                         help="scene change filename")
     parser.add_argument("--filter-offset", metavar="ms", type=int, default=500,
                         help="filter offset")
-    parser.add_argument("--threshold", type=int, default=6,
+    parser.add_argument("--threshold", type=float, default=6.0,
                         help="threshold")
     parser.add_argument("--time-output", action="store_true",
                         help="time output")
+    parser.add_argument("--apply", action="store_true",
+                        help="apply suggestions")
     return parser.parse_args()
 
 
@@ -68,6 +70,7 @@ def main():
 
     fps = common.get_fps(vsource)
     timings = []
+    missing_list = []
     for sub in sub_file.sub_list:
         start_stops = [
             (sub.start, min(sub.start + filter_offset, sub.stop)),
@@ -83,7 +86,20 @@ def main():
         for sc_time in result:
             if sc_time is not None:
                 sc_time = common.round_timing(sc_time, fps)
-                print("{}\t{}".format(index, time_output(sc_time)))
+                #print("{}\t{}".format(index, time_output(sc_time)))
+                print(time_output(sc_time))
+                missing_list.append(sc_time)
+
+    if args.apply:
+        count = 0
+        for sc_time in missing_list:
+            if sc_time not in sc_file:
+                sc_file.add(sc_time)
+                count += 1
+        if count:
+            sc_file.save()
+        print("Added {} scene changes.".format(len(missing_list)))
+
 
     #processes = []
     #cpu_count = multiprocessing.cpu_count()
