@@ -6,9 +6,6 @@ import os
 import sys
 import time
 
-#import multiprocessing
-#import concurrent.futures
-
 import sublib
 import sublib.old
 import common
@@ -71,24 +68,22 @@ def main():
     fps = common.get_fps(vsource)
     timings = []
     missing_list = []
+
     for sub in sub_file.sub_list:
         start_stops = [
             (sub.start, min(sub.start + filter_offset, sub.stop)),
             (max(sub.stop - filter_offset, sub.start), sub.stop),
         ]
-        for n, (start, stop) in enumerate(start_stops):
-            if sc_file.contains(start, stop):
-                start_stops[n] = None
-        timings.append((sub.index, start_stops))
+        for start, stop in start_stops:
+            if not sc_file.contains(start, stop):
+                timings.append((start, stop))
 
-    for index, result in sublib.SceneChangeFile.scan_timings(
-            vsource, timings, threshold):
-        for sc_time in result:
-            if sc_time is not None:
-                sc_time = common.round_timing(sc_time, fps)
-                #print("{}\t{}".format(index, time_output(sc_time)))
-                print(time_output(sc_time))
-                missing_list.append(sc_time)
+    for sc_time in sublib.SceneChangeFile.scan_missing(
+        vsource, timings, threshold
+    ):
+        sc_time = common.round_timing(sc_time, fps)
+        print(time_output(sc_time))
+        missing_list.append(sc_time)
 
     if args.apply:
         count = 0
@@ -99,32 +94,6 @@ def main():
         if count:
             sc_file.save()
         print("Added {} scene changes.".format(len(missing_list)))
-
-
-    #processes = []
-    #cpu_count = multiprocessing.cpu_count()
-    #for n in range(cpu_count):
-        #ptimings = timings[n::cpu_count]
-        #p = multiprocessing.Process(
-            #target=f,
-            #args=(args.video_file, ptimings, threshold, fps, time_output)
-        #)
-        #processes.append(p)
-        #p.start()
-#
-    #for p in processes:
-        #p.join()
-
-
-#def f(video_file, timings, threshold, fps, time_output):
-    #vsource = common.get_video_source(video_file, num_threads=1)
-    #for index, result in sublib.SceneChangeFile.scan_timings(
-            #vsource, timings, threshold):
-        #for sc_time in result:
-            #if sc_time is None:
-                #continue
-            #sc_time = common.round_timing(sc_time, fps)
-            #print("{}\t{}".format(index, time_output(sc_time)))
 
 
 if __name__ == "__main__":

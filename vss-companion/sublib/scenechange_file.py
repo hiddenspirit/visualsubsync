@@ -19,11 +19,12 @@ class SceneChangeFile(SortedSet):
     EXT = ".scenechange"
     ENCODING = "ascii"
     NEWLINE = "\n"
+    MISSING_THRESHOLD = 6.0
+    BAD_THRESHOLD = 0.03
+
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
     OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
                      ffms.FFMS_RESIZER_FAST_BILINEAR)
-    SCAN_THRESHOLD = 6.0
-    BAD_THRESHOLD = 0.03
 
     def __init__(self, data=None, file=None):
         if data is None:
@@ -144,69 +145,26 @@ class SceneChangeFile(SortedSet):
                 prev = plane.astype(numpy.int_)
         return selected
 
-    def scan_missing(self, vsource, sub_file):
-        raise NotImplementedError
-
     @classmethod
-    def _scan(cls, vsource, start_time, end_time, threshold=SCAN_THRESHOLD):
-        start = frame_time_to_position(vsource, start_time)
-        end = frame_time_to_position(vsource, end_time)
-        #if frame_position_to_time(vsource, start) > start_time:
-            #start -= 1
-        if frame_position_to_time(vsource, end) < end_time:
-            end += 1
-        pos = cls.scan_frame(vsource, start, end, threshold)
-        if pos is None:
-            return pos
-        return frame_position_to_time(vsource, pos)
-
-    @classmethod
-    def _scan_frame(cls, vsource, start, end, threshold=SCAN_THRESHOLD):
-        scan_start = start + 1
-        size = end - scan_start
-        #if size < 1:
-            #raise ValueError(
-                #"too narrow scan interval: {!r}, {!r}".format(start, end)
-            #)
-        diffs = numpy.empty(size, numpy.int_)
-
-        #with vsource.output_format(*cls.OUTPUT_FORMAT):
-        plane = vsource.get_frame(start).planes[0]
-        for n, pos in enumerate(range(scan_start, end)):
-            prev = plane.astype(numpy.int_)
-            plane = vsource.get_frame(pos).planes[0]
-            diffs[n] = numpy.absolute(plane - prev).sum()
-
-        if diffs.max() / numpy.median(diffs) < threshold:
-            return None
-        return diffs.argmax() + scan_start
-
-    @classmethod
-    def scan_timings(cls, vsource, timings, threshold):
+    def scan_missing(cls, vsource, timings, threshold=MISSING_THRESHOLD):
         with vsource.output_format(*cls.OUTPUT_FORMAT):
-            for index, start_stops in timings:
-                result = [None] * 2
-                for n_result, start_stop in enumerate(start_stops):
-                    if start_stop is None:
-                        continue
-                    start_time, end_time = start_stop
-                    start = frame_time_to_position(vsource, start_time)
-                    end = frame_time_to_position(vsource, end_time)
-                    if frame_position_to_time(vsource, end) < end_time:
-                        end += 1
-                    scan_start = start + 1
-                    diffs = numpy.empty(end - scan_start, numpy.int_)
+            for start_time, end_time in timings:
+                start = frame_time_to_position(vsource, start_time)
+                end = frame_time_to_position(vsource, end_time)
+                if frame_position_to_time(vsource, end) < end_time:
+                    end += 1
+                scan_start = start + 1
+                diffs = numpy.empty(end - scan_start, numpy.int_)
 
-                    plane = vsource.get_frame(start).planes[0]
-                    for n, pos in enumerate(range(scan_start, end)):
-                        prev = plane.astype(numpy.int_)
-                        plane = vsource.get_frame(pos).planes[0]
-                        diffs[n] = numpy.absolute(plane - prev).sum()
+                plane = vsource.get_frame(start).planes[0]
+                for n, pos in enumerate(range(scan_start, end)):
+                    prev = plane.astype(numpy.int_)
+                    plane = vsource.get_frame(pos).planes[0]
+                    diffs[n] = numpy.absolute(plane - prev).sum()
 
-                    if diffs.max() / numpy.median(diffs) >= threshold:
-                        pos = diffs.argmax() + scan_start
-                        result[n_result] = frame_position_to_time(vsource, pos)
-                yield index, result
+                if diffs.max() / numpy.median(diffs) >= threshold:
+                    pos = diffs.argmax() + scan_start
+                    yield frame_position_to_time(vsource, pos)
 
     def scan_bad(self, vsource, threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
