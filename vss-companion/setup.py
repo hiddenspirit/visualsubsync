@@ -52,7 +52,17 @@ exe_list = [
         script="make_scenechange_file.py",
         base=base,
         compress=True,
-    )
+    ),
+    Executable(
+        script="scan_missing_scene_changes.py",
+        base=base,
+        compress=True,
+    ),
+    Executable(
+        script="scan_bad_scene_changes.py",
+        base=base,
+        compress=True,
+    ),
 ]
 
 #############################################################################
