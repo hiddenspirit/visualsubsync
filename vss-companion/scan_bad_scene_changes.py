@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Scan for bad scene changes
+"""
+import argparse
+import os
+import sys
+import time
+
+import sublib
+import common
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        "Find scene change",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("video_file",
+                        help="video filename")
+    parser.add_argument("--sc-file",
+                        help="scene change filename")
+    parser.add_argument("--threshold", type=float, default=0.03,
+                        help="threshold")
+    parser.add_argument("--time-output", action="store_true",
+                        help="time output")
+    parser.add_argument("--apply", action="store_true",
+                        help="apply suggestions")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    if not os.path.isfile(args.video_file):
+        common.print_error("{!r} video file does not exist."
+                           .format(args.video_file))
+        return 11
+
+    if args.sc_file and os.path.isfile(args.sc_file):
+        sc_file = sublib.SceneChangeFile.load(args.sc_file)
+    else:
+        path = os.path.splitext(args.video_file)[0] + ".scenechange"
+        if os.path.isfile(path):
+            sc_file = sublib.SceneChangeFile.load(path)
+        else:
+            sc_file = sublib.SceneChangeFile.from_source(vsource)
+
+    vsource = common.get_video_source(args.video_file)
+    threshold = args.threshold
+
+    if args.time_output:
+        time_output = lambda t: sublib.Time.from_int(int(t))
+    else:
+        time_output = int
+
+    bad_list = []
+    for sc_time in sc_file.scan_bad(vsource, threshold):
+        bad_list.append(sc_time)
+        print(time_output(sc_time))
+
+    if args.apply:
+        count = 0
+        for sc_time in bad_list:
+            if sc_time in sc_file:
+                sc_file.remove(sc_time)
+                count += 1
+        if count:
+            sc_file.save()
+        print("Removed {} scene changes.".format(len(bad_list)))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
