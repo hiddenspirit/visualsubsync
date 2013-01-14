@@ -3,7 +3,7 @@ import operator
 import os
 import sys
 
-from collections import namedtuple
+from fractions import Fraction
 
 import ffms
 
@@ -49,11 +49,10 @@ def print_error(msg):
 
 
 def get_fps(vsource):
-    FPS = namedtuple("FPS", ("num", "den"))
-    return FPS(vsource.properties.FPSNumerator,
-               vsource.properties.FPSDenominator)
+    return Fraction(vsource.properties.FPSNumerator,
+                    vsource.properties.FPSDenominator)
 
 
 def round_timing(timing, fps):
-    return (round(timing * fps.num / fps.den / 1000) *
-            1000 * fps.den / fps.num)
+    return (round(timing * fps.numerator / fps.denominator / 1000) *
+            1000 * fps.denominator / fps.numerator)

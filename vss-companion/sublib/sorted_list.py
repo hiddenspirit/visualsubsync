@@ -30,7 +30,7 @@ class SortedList(Sequence, MutableSet):
     def __getitem__(self, index):
         if isinstance(index, slice):
             o = self.__new__(self.__class__)
-            o.data = self.data[index]
+            o.__init__(self.data[index])
             return o
         return self.data[index]
 

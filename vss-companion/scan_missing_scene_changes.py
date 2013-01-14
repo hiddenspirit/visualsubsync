@@ -22,7 +22,7 @@ def parse_args():
                         help="subtitle filename")
     parser.add_argument("--sc-file",
                         help="scene change filename")
-    parser.add_argument("--filter-offset", metavar="ms", type=int, default=500,
+    parser.add_argument("--filter-offset", metavar="ms", type=int, default=None,
                         help="filter offset")
     parser.add_argument("--threshold", type=float, default=6.0,
                         help="threshold")
@@ -57,29 +57,16 @@ def main():
 
     vsource = common.get_video_source(args.video_file)
     sub_file = sublib.old.SubRipFile(args.sub_file)
-    filter_offset = args.filter_offset + 1
-    threshold = args.threshold
-
+    fps = common.get_fps(vsource)
+    missing_list = []
+    timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     if args.time_output:
         time_output = lambda t: sublib.Time.from_int(int(t))
     else:
         time_output = int
 
-    fps = common.get_fps(vsource)
-    timings = []
-    missing_list = []
-
-    for sub in sub_file.sub_list:
-        start_stops = [
-            (sub.start, min(sub.start + filter_offset, sub.stop)),
-            (max(sub.stop - filter_offset, sub.start), sub.stop),
-        ]
-        for start, stop in start_stops:
-            if not sc_file.contains(start, stop):
-                timings.append((start, stop))
-
-    for sc_time in sublib.SceneChangeFile.scan_missing(
-        vsource, timings, threshold
+    for sc_time in sc_file.scan_missing(
+        vsource, timings, args.threshold, args.filter_offset
     ):
         sc_time = common.round_timing(sc_time, fps)
         print(time_output(sc_time))

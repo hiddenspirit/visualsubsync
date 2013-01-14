@@ -5,6 +5,7 @@ import os
 import re
 
 from contextlib import contextmanager
+from fractions import Fraction
 
 import numpy
 
@@ -21,6 +22,11 @@ class SceneChangeFile(SortedSet):
     NEWLINE = "\n"
     MISSING_THRESHOLD = 6.0
     BAD_THRESHOLD = 0.03
+    DEFAULT_FILTER_OFFSET = 500
+    FILTER_OFFSETS = {
+        Fraction(24000, 1001): DEFAULT_FILTER_OFFSET,
+        Fraction(25000, 1000): 480,
+    }
 
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
     OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
@@ -91,11 +97,11 @@ class SceneChangeFile(SortedSet):
         self.update(get_scene_changes(vsource))
 
     def get_previous(self, time):
-        pos = self.bisect_left(time)
+        pos = self.bisect_right(time)
         return self[pos - 1] if pos else None
 
     def get_next(self, time):
-        pos = self.bisect_right(time)
+        pos = self.bisect_left(time)
         return self[pos] if pos < len(self) else None
 
     def get_nearest(self, time):
@@ -145,28 +151,78 @@ class SceneChangeFile(SortedSet):
                 prev = plane.astype(numpy.int_)
         return selected
 
-    @classmethod
-    def scan_missing(cls, vsource, timings, threshold=MISSING_THRESHOLD):
-        with vsource.output_format(*cls.OUTPUT_FORMAT):
+    def scan_missing(self, vsource, timings, threshold=MISSING_THRESHOLD,
+                     filter_offset=None):
+        if filter_offset is None:
+            filter_offset = self.FILTER_OFFSETS.get(
+                get_fps(vsource), self.DEFAULT_FILTER_OFFSET
+            )
+        filter_offset += 1
+
+        with vsource.output_format(*self.OUTPUT_FORMAT):
             for start_time, end_time in timings:
-                start = frame_time_to_position(vsource, start_time)
-                end = frame_time_to_position(vsource, end_time)
-                if frame_position_to_time(vsource, end) < end_time:
-                    end += 1
-                scan_start = start + 1
-                diffs = numpy.empty(end - scan_start, numpy.int_)
+                borders = [
+                    (start_time, min(start_time + filter_offset, end_time)),
+                    (max(end_time - filter_offset, start_time), end_time),
+                ]
+                for start_time, end_time in borders:
+                    if self.contains(start_time, end_time):
+                        continue
+                    start = frame_time_to_position(vsource, start_time)
+                    end = frame_time_to_position(vsource, end_time)
+                    if frame_position_to_time(vsource, end) < end_time:
+                        end += 1
+                    scan_start = start + 1
+                    diffs = numpy.empty(end - scan_start, numpy.int_)
 
-                plane = vsource.get_frame(start).planes[0]
-                for n, pos in enumerate(range(scan_start, end)):
-                    prev = plane.astype(numpy.int_)
-                    plane = vsource.get_frame(pos).planes[0]
-                    diffs[n] = numpy.absolute(plane - prev).sum()
+                    plane = vsource.get_frame(start).planes[0]
+                    for n, pos in enumerate(range(scan_start, end)):
+                        prev = plane.astype(numpy.int_)
+                        plane = vsource.get_frame(pos).planes[0]
+                        diffs[n] = numpy.absolute(plane - prev).sum()
 
-                if diffs.max() / numpy.median(diffs) >= threshold:
-                    pos = diffs.argmax() + scan_start
-                    yield frame_position_to_time(vsource, pos)
+                    if diffs.max() / numpy.median(diffs) >= threshold:
+                        pos = diffs.argmax() + scan_start
+                        yield frame_position_to_time(vsource, pos)
 
-    def scan_bad(self, vsource, threshold=BAD_THRESHOLD):
+    def scan_bad(self, vsource, timings, threshold=BAD_THRESHOLD):
+        filter_offset = self.FILTER_OFFSETS.get(
+            get_fps(vsource), self.DEFAULT_FILTER_OFFSET
+        )
+        offset = filter_offset // 2
+        sc_set = set()
+        for start_time, end_time in timings:
+            sc = self.get_previous(start_time)
+            if (sc is not None and start_time - sc <= offset):
+                sc_set.add(sc)
+            sc = self.get_next(start_time + 1)
+            if (sc is not None and sc - start_time <= filter_offset):
+                sc_set.add(sc)
+            sc = self.get_previous(end_time)
+            if (sc is not None and end_time - sc <= filter_offset):
+                sc_set.add(sc)
+            sc = self.get_next(end_time + 1)
+            if (sc is not None and sc - end_time <= offset):
+                sc_set.add(sc)
+
+        with vsource.output_format(*self.OUTPUT_FORMAT):
+            sc_positions = [frame_time_to_position(vsource, t)
+                            for t in sorted(sc_set)]
+            if sc_positions and not sc_positions[0]:
+                del sc_positions[0]
+            plane = vsource.get_frame(0).planes[0]
+            max_diff = len(plane) * 255
+            data_set = set(self)
+            for pos in sc_positions:
+                prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
+                plane = vsource.get_frame(pos).planes[0]
+                pct = numpy.true_divide(
+                    numpy.absolute(plane - prev).sum(), max_diff)
+                if pct <= threshold:
+                    t = frame_position_to_time(vsource, pos)
+                    yield t if t in data_set else self.get_nearest(t)
+
+    def scan_bad_all(self, vsource, threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
             sc_positions = [frame_time_to_position(vsource, t) for t in self]
             if sc_positions and not sc_positions[0]:
@@ -198,6 +254,10 @@ def frame_time_to_position(vsource, time):
 def frame_position_to_time(vsource, frame):
     return vsource.track.timecodes[frame]
 
+
+def get_fps(vsource):
+    return Fraction(vsource.properties.FPSNumerator,
+                    vsource.properties.FPSDenominator)
 
 # def get_frame_duration(props):
     # return 1000 * props.FPSDenominator / props.FPSNumerator
