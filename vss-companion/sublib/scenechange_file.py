@@ -151,7 +151,9 @@ class SceneChangeFile(SortedSet):
                 prev = plane.astype(numpy.int_)
         return selected
 
-    def scan_missing(self, vsource, timings, threshold=MISSING_THRESHOLD,
+    def scan_missing(self, vsource, timings,
+                     missing_threshold=MISSING_THRESHOLD,
+                     bad_threshold=BAD_THRESHOLD,
                      filter_offset=None):
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
@@ -160,6 +162,7 @@ class SceneChangeFile(SortedSet):
         filter_offset += 1
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
+            max_diff = len(vsource.get_frame(0).planes[0]) * 255
             for start_time, end_time in timings:
                 borders = [
                     (start_time, min(start_time + filter_offset, end_time)),
@@ -181,14 +184,19 @@ class SceneChangeFile(SortedSet):
                         plane = vsource.get_frame(pos).planes[0]
                         diffs[n] = numpy.absolute(plane - prev).sum()
 
-                    if diffs.max() / numpy.median(diffs) >= threshold:
+                    if (
+                        diffs.max() / max_diff > bad_threshold and
+                        diffs.max() / numpy.median(diffs) >= missing_threshold
+                    ):
                         pos = diffs.argmax() + scan_start
                         yield frame_position_to_time(vsource, pos)
 
-    def scan_bad(self, vsource, timings, threshold=BAD_THRESHOLD):
-        filter_offset = self.FILTER_OFFSETS.get(
-            get_fps(vsource), self.DEFAULT_FILTER_OFFSET
-        )
+    def scan_bad(self, vsource, timings, bad_threshold=BAD_THRESHOLD,
+                 filter_offset=None):
+        if filter_offset is None:
+            filter_offset = self.FILTER_OFFSETS.get(
+                get_fps(vsource), self.DEFAULT_FILTER_OFFSET
+            )
         offset = filter_offset // 2
         sc_set = set()
         for start_time, end_time in timings:
@@ -210,32 +218,28 @@ class SceneChangeFile(SortedSet):
                             for t in sorted(sc_set)]
             if sc_positions and not sc_positions[0]:
                 del sc_positions[0]
-            plane = vsource.get_frame(0).planes[0]
-            max_diff = len(plane) * 255
+            max_diff = len(vsource.get_frame(0).planes[0]) * 255
             data_set = set(self)
             for pos in sc_positions:
                 prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
                 plane = vsource.get_frame(pos).planes[0]
-                pct = numpy.true_divide(
-                    numpy.absolute(plane - prev).sum(), max_diff)
-                if pct <= threshold:
+                pct = numpy.absolute(plane - prev).sum() / max_diff
+                if pct <= bad_threshold:
                     t = frame_position_to_time(vsource, pos)
                     yield t if t in data_set else self.get_nearest(t)
 
-    def scan_bad_all(self, vsource, threshold=BAD_THRESHOLD):
+    def scan_bad_all(self, vsource, bad_threshold=BAD_THRESHOLD):
         with vsource.output_format(*self.OUTPUT_FORMAT):
             sc_positions = [frame_time_to_position(vsource, t) for t in self]
             if sc_positions and not sc_positions[0]:
                 del sc_positions[0]
-            plane = vsource.get_frame(0).planes[0]
-            max_diff = len(plane) * 255
+            max_diff = len(vsource.get_frame(0).planes[0]) * 255
             data_set = set(self)
             for pos in sc_positions:
                 prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
                 plane = vsource.get_frame(pos).planes[0]
-                pct = numpy.true_divide(
-                    numpy.absolute(plane - prev).sum(), max_diff)
-                if pct <= threshold:
+                pct = numpy.absolute(plane - prev).sum() / max_diff
+                if pct <= bad_threshold:
                     t = frame_position_to_time(vsource, pos)
                     yield t if t in data_set else self.get_nearest(t)
 

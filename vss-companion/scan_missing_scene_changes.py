@@ -22,10 +22,15 @@ def parse_args():
                         help="subtitle filename")
     parser.add_argument("--sc-file",
                         help="scene change filename")
-    parser.add_argument("--filter-offset", metavar="ms", type=int, default=None,
+    parser.add_argument("--missing-threshold", type=float,
+                        default=sublib.SceneChangeFile.MISSING_THRESHOLD,
+                        help="missing-threshold")
+    parser.add_argument("--bad-threshold", type=float,
+                        default=sublib.SceneChangeFile.BAD_THRESHOLD,
+                        help="bad threshold")
+    parser.add_argument("--filter-offset", metavar="ms", type=int,
+                        default=None,
                         help="filter offset")
-    parser.add_argument("--threshold", type=float, default=6.0,
-                        help="threshold")
     parser.add_argument("--time-output", action="store_true",
                         help="time output")
     parser.add_argument("--apply", action="store_true",
@@ -65,9 +70,10 @@ def main():
     else:
         time_output = int
 
-    for sc_time in sc_file.scan_missing(
-        vsource, timings, args.threshold, args.filter_offset
-    ):
+    for sc_time in sc_file.scan_missing(vsource, timings,
+                                        args.missing_threshold,
+                                        args.bad_threshold,
+                                        args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
         print(time_output(sc_time))
         missing_list.append(sc_time)
