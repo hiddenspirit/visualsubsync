@@ -22,17 +22,17 @@ def parse_args():
                         help="subtitle filename")
     parser.add_argument("--sc-file",
                         help="scene change filename")
-    parser.add_argument("--missing-threshold", type=float,
-                        default=sublib.SceneChangeFile.MISSING_THRESHOLD,
-                        help="missing-threshold")
-    parser.add_argument("--bad-threshold", type=float,
-                        default=sublib.SceneChangeFile.BAD_THRESHOLD,
-                        help="bad threshold")
+    parser.add_argument("--diff-pct-threshold", type=float,
+                        default=sublib.SceneChangeFile.DIFF_PCT_THRESHOLD,
+                        help="diff-pct-threshold")
+    parser.add_argument("--multi-threshold", type=float,
+                        default=sublib.SceneChangeFile.MULTI_THRESHOLD,
+                        help="multi-threshold")
     parser.add_argument("--filter-offset", metavar="ms", type=int,
                         default=None,
                         help="filter offset")
-    parser.add_argument("--time-output", action="store_true",
-                        help="time output")
+    parser.add_argument("--milliseconds", action="store_true",
+                        help="display timestamp in milliseconds")
     parser.add_argument("--apply", action="store_true",
                         help="apply suggestions")
     return parser.parse_args()
@@ -65,17 +65,15 @@ def main():
     fps = common.get_fps(vsource)
     missing_list = []
     timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
-    if args.time_output:
-        time_output = lambda t: sublib.Time.from_int(int(t))
-    else:
-        time_output = int
+    time_output = (int if args.milliseconds
+                   else lambda t: sublib.Time.from_int(int(t)))
 
-    for sc_time in sc_file.scan_missing(vsource, timings,
-                                        args.missing_threshold,
-                                        args.bad_threshold,
-                                        args.filter_offset):
+    for sc_time, pct, value in sc_file.scan_missing(vsource, timings,
+                                               args.diff_pct_threshold,
+                                               args.multi_threshold,
+                                               args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
-        print(time_output(sc_time))
+        print("{}\t{:.2%}\t\xd7{:.2f}".format(time_output(sc_time), pct, value))
         missing_list.append(sc_time)
 
     if args.apply:
