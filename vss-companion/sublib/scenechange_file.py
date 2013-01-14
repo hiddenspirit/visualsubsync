@@ -159,14 +159,18 @@ class SceneChangeFile(SortedSet):
             filter_offset = self.FILTER_OFFSETS.get(
                 get_fps(vsource), self.DEFAULT_FILTER_OFFSET
             )
+        offset = filter_offset // 2
         filter_offset += 1
+        last_time = int(vsource.properties.LastTime * 1000)
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
             max_diff = len(vsource.get_frame(0).planes[0]) * 255
             for start_time, end_time in timings:
                 borders = [
-                    (start_time, min(start_time + filter_offset, end_time)),
-                    (max(end_time - filter_offset, start_time), end_time),
+                    (max(start_time - offset, 0),
+                     min(start_time + filter_offset, end_time)),
+                    (max(end_time - filter_offset, start_time),
+                     min(end_time + offset, last_time)),
                 ]
                 for start_time, end_time in borders:
                     if self.contains(start_time, end_time):
