@@ -7,6 +7,7 @@ import sys
 import time
 
 import sublib
+import sublib.old
 import common
 
 
@@ -17,6 +18,8 @@ def parse_args():
     )
     parser.add_argument("video_file",
                         help="video filename")
+    parser.add_argument("sub_file",
+                        help="subtitle filename")
     parser.add_argument("--sc-file",
                         help="scene change filename")
     parser.add_argument("--threshold", type=float, default=0.03,
@@ -36,6 +39,11 @@ def main():
                            .format(args.video_file))
         return 11
 
+    if not os.path.isfile(args.sub_file):
+        common.print_error("{!r} subtitle file does not exist."
+                           .format(args.sub_file))
+        return 12
+
     if args.sc_file and os.path.isfile(args.sc_file):
         sc_file = sublib.SceneChangeFile.load(args.sc_file)
     else:
@@ -46,15 +54,16 @@ def main():
             sc_file = sublib.SceneChangeFile.from_source(vsource)
 
     vsource = common.get_video_source(args.video_file)
+    sub_file = sublib.old.SubRipFile(args.sub_file)
     threshold = args.threshold
-
+    bad_list = []
+    timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     if args.time_output:
         time_output = lambda t: sublib.Time.from_int(int(t))
     else:
         time_output = int
 
-    bad_list = []
-    for sc_time in sc_file.scan_bad(vsource, threshold):
+    for sc_time in sc_file.scan_bad(vsource, timings, threshold):
         bad_list.append(sc_time)
         print(time_output(sc_time))
 
