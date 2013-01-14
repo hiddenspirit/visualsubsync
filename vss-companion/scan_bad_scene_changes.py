@@ -22,8 +22,12 @@ def parse_args():
                         help="subtitle filename")
     parser.add_argument("--sc-file",
                         help="scene change filename")
-    parser.add_argument("--threshold", type=float, default=0.03,
-                        help="threshold")
+    parser.add_argument("--bad-threshold", type=float,
+                        default=sublib.SceneChangeFile.BAD_THRESHOLD,
+                        help="bad threshold")
+    parser.add_argument("--filter-offset", metavar="ms", type=int,
+                        default=None,
+                        help="filter offset")
     parser.add_argument("--time-output", action="store_true",
                         help="time output")
     parser.add_argument("--apply", action="store_true",
@@ -55,7 +59,6 @@ def main():
 
     vsource = common.get_video_source(args.video_file)
     sub_file = sublib.old.SubRipFile(args.sub_file)
-    threshold = args.threshold
     bad_list = []
     timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     if args.time_output:
@@ -63,7 +66,8 @@ def main():
     else:
         time_output = int
 
-    for sc_time in sc_file.scan_bad(vsource, timings, threshold):
+    for sc_time in sc_file.scan_bad(vsource, timings,
+                                    args.bad_threshold, args.filter_offset):
         bad_list.append(sc_time)
         print(time_output(sc_time))
 
