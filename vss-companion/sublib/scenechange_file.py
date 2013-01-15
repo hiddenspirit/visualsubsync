@@ -20,7 +20,7 @@ class SceneChangeFile(SortedSet):
     EXT = ".scenechange"
     ENCODING = "ascii"
     NEWLINE = "\n"
-    MULTI_THRESHOLD = 3.0
+    RATIO_THRESHOLD = 3.0
     DIFF_PCT_THRESHOLD = 0.15
     DEFAULT_FILTER_OFFSET = 500
     FILTER_OFFSETS = {
@@ -153,7 +153,7 @@ class SceneChangeFile(SortedSet):
 
     def scan_missing(self, vsource, timings,
                      diff_pct_threshold=DIFF_PCT_THRESHOLD,
-                     multi_threshold=MULTI_THRESHOLD,
+                     ratio_threshold=RATIO_THRESHOLD,
                      filter_offset=None):
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
@@ -188,13 +188,13 @@ class SceneChangeFile(SortedSet):
                         plane = vsource.get_frame(pos).planes[0]
                         diffs[n] = numpy.log1p(
                             numpy.absolute(plane - prev)).mean()
-                    
+
                     pct = diffs.max() / den
 
                     if pct >= diff_pct_threshold:
                         diffs /= den
                         value = diffs.max() / numpy.median(diffs)
-                        if value >= multi_threshold:
+                        if value >= ratio_threshold:
                             pos = diffs.argmax() + scan_start
                             yield (frame_position_to_time(vsource, pos),
                                    pct, value)
@@ -223,7 +223,7 @@ class SceneChangeFile(SortedSet):
             sc = self.get_next(end_time + 1)
             if (sc is not None and sc - end_time <= offset):
                 sc_set.add(sc)
-                
+
         sc_positions = [frame_time_to_position(vsource, t)
                         for t in sorted(sc_set)]
         if sc_positions and not sc_positions[0]:
