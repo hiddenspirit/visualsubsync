@@ -64,10 +64,11 @@ def main():
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
 
-    for sc_time, pct in sc_file.scan_bad(vsource, timings, args.diff_pct_threshold,
-                                         args.filter_offset):
+    for sc_time, diff_pct in sc_file.scan_bad(vsource, timings,
+                                              args.diff_pct_threshold,
+                                              args.filter_offset):
         bad_list.append(sc_time)
-        print("{}\t{:.2%}".format(time_output(sc_time), pct))
+        print("{}\t{:.2%}".format(time_output(sc_time), diff_pct))
 
     if args.apply:
         count = 0

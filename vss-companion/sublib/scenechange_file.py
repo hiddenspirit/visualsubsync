@@ -155,24 +155,32 @@ class SceneChangeFile(SortedSet):
                      diff_pct_threshold=DIFF_PCT_THRESHOLD,
                      ratio_threshold=RATIO_THRESHOLD,
                      filter_offset=None):
+        if not timings:
+            raise ValueError("empty timings")
+        last_time = int(vsource.properties.LastTime * 1000)
+        if timings[0][0] < 0 or timings[-1][1] > last_time:
+            raise ValueError("out of range timings")
+
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
                 get_fps(vsource), self.DEFAULT_FILTER_OFFSET
             )
         offset = filter_offset // 2
         filter_offset += 1
-        last_time = int(vsource.properties.LastTime * 1000)
         den = numpy.log1p(255)
+        sc_time = 0
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
             for start_time, end_time in timings:
                 borders = [
-                    (max(start_time - offset, 0),
-                     min(start_time + filter_offset, end_time)),
-                    (max(end_time - filter_offset, start_time),
-                     min(end_time + offset, last_time)),
+                    (start_time - offset, start_time + filter_offset),
+                    (end_time - filter_offset, end_time + offset),
                 ]
                 for start_time, end_time in borders:
+                    if start_time < sc_time:
+                        start_time = sc_time
+                    if end_time > last_time:
+                        end_time = last_time
                     if self.contains(start_time, end_time):
                         continue
                     start = frame_time_to_position(vsource, start_time)
@@ -189,15 +197,14 @@ class SceneChangeFile(SortedSet):
                         diffs[n] = numpy.log1p(
                             numpy.absolute(plane - prev)).mean()
 
-                    pct = diffs.max() / den
-
-                    if pct >= diff_pct_threshold:
+                    diff_pct = diffs.max() / den
+                    if diff_pct >= diff_pct_threshold:
                         diffs /= den
-                        value = diffs.max() / numpy.median(diffs)
-                        if value >= ratio_threshold:
+                        ratio = diffs.max() / numpy.median(diffs)
+                        if ratio >= ratio_threshold:
                             pos = diffs.argmax() + scan_start
-                            yield (frame_position_to_time(vsource, pos),
-                                   pct, value)
+                            sc_time = frame_position_to_time(vsource, pos)
+                            yield sc_time, diff_pct, ratio
 
     def scan_bad(self, vsource, timings, diff_pct_threshold=DIFF_PCT_THRESHOLD,
                  filter_offset=None):
@@ -211,18 +218,18 @@ class SceneChangeFile(SortedSet):
         den = numpy.log1p(255)
 
         for start_time, end_time in timings:
-            sc = self.get_previous(start_time)
-            if (sc is not None and start_time - sc <= offset):
-                sc_set.add(sc)
-            sc = self.get_next(start_time + 1)
-            if (sc is not None and sc - start_time <= filter_offset):
-                sc_set.add(sc)
-            sc = self.get_previous(end_time)
-            if (sc is not None and end_time - sc <= filter_offset):
-                sc_set.add(sc)
-            sc = self.get_next(end_time + 1)
-            if (sc is not None and sc - end_time <= offset):
-                sc_set.add(sc)
+            sc_time = self.get_previous(start_time)
+            if (sc_time is not None and start_time - sc_time <= offset):
+                sc_set.add(sc_time)
+            sc_time = self.get_next(start_time + 1)
+            if (sc_time is not None and sc_time - start_time <= filter_offset):
+                sc_set.add(sc_time)
+            sc_time = self.get_previous(end_time)
+            if (sc_time is not None and end_time - sc_time <= filter_offset):
+                sc_set.add(sc_time)
+            sc_time = self.get_next(end_time + 1)
+            if (sc_time is not None and sc_time - end_time <= offset):
+                sc_set.add(sc_time)
 
         sc_positions = [frame_time_to_position(vsource, t)
                         for t in sorted(sc_set)]
@@ -233,25 +240,11 @@ class SceneChangeFile(SortedSet):
             for pos in sc_positions:
                 prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
                 plane = vsource.get_frame(pos).planes[0]
-                pct = numpy.log1p(numpy.absolute(plane - prev)).mean() / den
-                if pct < diff_pct_threshold:
+                diff_pct = numpy.log1p(
+                    numpy.absolute(plane - prev)).mean() / den
+                if diff_pct < diff_pct_threshold:
                     t = frame_position_to_time(vsource, pos)
-                    yield t if t in data_set else self.get_nearest(t), pct
-
-    # def scan_bad_all(self, vsource, diff_pct_threshold=DIFF_PCT_THRESHOLD):
-        # with vsource.output_format(*self.OUTPUT_FORMAT):
-            # sc_positions = [frame_time_to_position(vsource, t) for t in self]
-            # if sc_positions and not sc_positions[0]:
-                # del sc_positions[0]
-            # max_diff = len(vsource.get_frame(0).planes[0]) * 255
-            # data_set = set(self)
-            # for pos in sc_positions:
-                # prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
-                # plane = vsource.get_frame(pos).planes[0]
-                # pct = numpy.absolute(plane - prev).sum() / max_diff
-                # if pct <= diff_pct_threshold:
-                    # t = frame_position_to_time(vsource, pos)
-                    # yield t if t in data_set else self.get_nearest(t), pct
+                    yield t if t in data_set else self.get_nearest(t), diff_pct
 
 
 def get_scene_changes(vsource):
