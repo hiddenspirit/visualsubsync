@@ -68,12 +68,12 @@ def main():
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
 
-    for sc_time, pct, value in sc_file.scan_missing(vsource, timings,
-                                               args.diff_pct_threshold,
-                                               args.ratio_threshold,
-                                               args.filter_offset):
+    for sc_time, diff_pct, ratio in sc_file.scan_missing(
+            vsource, timings, args.diff_pct_threshold, args.ratio_threshold,
+            args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
-        print("{}\t{:.2%}\t\xd7{:.2f}".format(time_output(sc_time), pct, value))
+        print("{}\t{:.2%}\t\xd7{:.2f}".format(time_output(sc_time),
+                                              diff_pct, ratio))
         missing_list.append(sc_time)
 
     if args.apply:
