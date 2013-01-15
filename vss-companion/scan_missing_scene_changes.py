@@ -25,9 +25,9 @@ def parse_args():
     parser.add_argument("--diff-pct-threshold", type=float,
                         default=sublib.SceneChangeFile.DIFF_PCT_THRESHOLD,
                         help="diff-pct-threshold")
-    parser.add_argument("--multi-threshold", type=float,
-                        default=sublib.SceneChangeFile.MULTI_THRESHOLD,
-                        help="multi-threshold")
+    parser.add_argument("--ratio-threshold", type=float,
+                        default=sublib.SceneChangeFile.RATIO_THRESHOLD,
+                        help="ratio-threshold")
     parser.add_argument("--filter-offset", metavar="ms", type=int,
                         default=None,
                         help="filter offset")
@@ -70,7 +70,7 @@ def main():
 
     for sc_time, pct, value in sc_file.scan_missing(vsource, timings,
                                                args.diff_pct_threshold,
-                                               args.multi_threshold,
+                                               args.ratio_threshold,
                                                args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
         print("{}\t{:.2%}\t\xd7{:.2f}".format(time_output(sc_time), pct, value))
