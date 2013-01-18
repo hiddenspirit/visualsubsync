@@ -383,6 +383,7 @@ type
     MenuItemTranslationTemplate: TTntMenuItem;
     MenuItemHelpCodecsInstallation: TTntMenuItem;
     procedure FormCreate(Sender: TObject);
+    procedure OnMessage(var Msg: TMsg; var Handled: Boolean);
 
     procedure WAVDisplayer1CursorChange(Sender: TObject);
     procedure WAVDisplayer1PlayCursorChange(Sender: TObject);
@@ -834,6 +835,11 @@ const
   MemoVOMaxUnassigned : Integer = 100;
   MemoVOMaxLength : Integer = 40;
   MemoVOMaxRows : Integer = 4;
+  WM_APP_SAVE = WM_APP + 0;
+  WM_APP_SAVE_DONE = WM_APP + 1;
+  WM_APP_SET_POSITION = WM_APP + 2;
+  WM_APP_INSERT_SC = WM_APP + 3;
+  WM_APP_DELETE_SC = WM_APP + 4;
 
 var
   MainForm: TMainForm;
@@ -880,6 +886,8 @@ var i : integer;
     CustomMemo : TTntRichEditCustomUndo;
     MenuItem : TTntMenuItem;
 begin
+  Application.OnMessage := OnMessage;
+
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
   CustomMemo.Parent := MemoSubtitleText.Parent;
   CustomMemo.Font.Assign(MemoSubtitleText.Font);
@@ -1028,6 +1036,52 @@ begin
 
   // Fill the presets menu
   FillPresetsMenu;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TMainForm.OnMessage(var Msg: TMsg; var Handled: Boolean);
+var UndoableInsertSceneChange : TUndoableInsertSceneChange;
+    UndoableDeleteSceneChange : TUndoableDeleteSceneChange;
+    Range : TRange;
+begin
+  if Msg.hwnd = Application.Handle then
+  begin
+    case Msg.message of
+      WM_APP_SAVE: begin
+        ActionSaveExecute(nil);
+        PostMessage(Msg.wParam, WM_APP_SAVE_DONE, 0,
+                    Integer(CurrentProject.SubtitlesFile));
+        Handled := True;
+      end;
+      WM_APP_SET_POSITION: begin
+        Range := TRange.Create;
+        Range.StartTime := Max(Msg.wParam -
+                               ConfigObject.SceneChangeStartOffset, 0);
+        Range.StopTime := Msg.wParam + ConfigObject.SceneChangeStopOffset;
+        WAVDisplayer.ZoomAndSelectRange(Range);
+        Range.Free;
+        VideoRenderer.ShowImageAt(Msg.wParam);
+        Handled := True;
+      end;
+      WM_APP_INSERT_SC: begin
+        UndoableInsertSceneChange := TUndoableInsertSceneChange.Create;
+        UndoableInsertSceneChange.SetData(Msg.wParam);
+        UndoableInsertSceneChange.DoTask;
+        PushUndoableTask(UndoableInsertSceneChange);
+        Handled := True;
+      end;
+      WM_APP_DELETE_SC: begin
+        UndoableDeleteSceneChange := TUndoableDeleteSceneChange.Create;
+        UndoableDeleteSceneChange.SetData(Msg.wParam, Msg.wParam);
+        UndoableDeleteSceneChange.DoTask;
+        PushUndoableTask(UndoableDeleteSceneChange);
+        Handled := True;
+      end;
+    end;
+  end;
+  { For all other messages, Handled remains False }
+  { so that other message handlers can respond. }
 end;
 
 //------------------------------------------------------------------------------
