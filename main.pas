@@ -8941,7 +8941,7 @@ begin
 
   if CursorPos < 0 then
     Exit;
-  if g_SceneChangeWrapper.Contains(CursorPos,CursorPos) then
+  if g_SceneChangeWrapper.Contains(CursorPos-1,CursorPos+1) then
     Exit;
 
   UndoableInsertSceneChange := TUndoableInsertSceneChange.Create;
