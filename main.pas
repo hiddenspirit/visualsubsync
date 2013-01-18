@@ -8930,14 +8930,14 @@ end;
 procedure TMainForm.ActionFindSceneChangeExecute(Sender: TObject);
 var UndoableInsertSceneChange : TUndoableInsertSceneChange;
     CursorPos : Integer;
+    CM : ICursorManager;
 begin
-  Screen.Cursor := crHourGlass;
+  CM := TCursorManager.Create(crHourGlass);
   CursorPos := FindSceneChange(
     CurrentProject.VideoSource,
     WAVDisplayer.Selection.StartTime,
     WAVDisplayer.Selection.StopTime
   );
-  Screen.Cursor := crDefault;
 
   if CursorPos < 0 then
     Exit;
