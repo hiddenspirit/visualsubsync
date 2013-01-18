@@ -13,7 +13,7 @@ import common
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        "Find scene change",
+        "Scan for missing scene changes",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("video_file",

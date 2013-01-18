@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scan for bad scene changes
+"""Scan for bogus scene changes
 """
 import argparse
 import os
@@ -13,7 +13,7 @@ import common
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        "Find scene change",
+        "Scan for bogus scene changes",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("video_file",
@@ -64,9 +64,9 @@ def main():
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
 
-    for sc_time, diff_pct in sc_file.scan_bad(vsource, timings,
-                                              args.diff_pct_threshold,
-                                              args.filter_offset):
+    for sc_time, diff_pct in sc_file.scan_bogus(vsource, timings,
+                                                args.diff_pct_threshold,
+                                                args.filter_offset):
         bad_list.append(sc_time)
         print("{}\t{:.2%}".format(time_output(sc_time), diff_pct))
 
