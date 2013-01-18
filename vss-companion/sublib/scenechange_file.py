@@ -206,8 +206,8 @@ class SceneChangeFile(SortedSet):
                             sc_time = frame_position_to_time(vsource, pos)
                             yield sc_time, diff_pct, ratio
 
-    def scan_bad(self, vsource, timings, diff_pct_threshold=DIFF_PCT_THRESHOLD,
-                 filter_offset=None):
+    def scan_bogus(self, vsource, timings,
+                   diff_pct_threshold=DIFF_PCT_THRESHOLD, filter_offset=None):
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
                 get_fps(vsource), self.DEFAULT_FILTER_OFFSET

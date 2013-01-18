@@ -59,7 +59,7 @@ exe_list = [
         compress=True,
     ),
     Executable(
-        script="scan_bad_scene_changes.py",
+        script="scan_bogus_scene_changes.py",
         base=base,
         compress=True,
     ),
