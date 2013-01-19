@@ -4,7 +4,6 @@
 import argparse
 import os
 import sys
-import time
 
 import sublib
 import sublib.old
@@ -48,6 +47,8 @@ def main():
                            .format(args.sub_file))
         return 12
 
+    vsource = common.get_video_source(args.video_file)
+
     if args.sc_file and os.path.isfile(args.sc_file):
         sc_file = sublib.SceneChangeFile.load(args.sc_file)
     else:
@@ -57,9 +58,8 @@ def main():
         else:
             sc_file = sublib.SceneChangeFile.from_source(vsource)
 
-    vsource = common.get_video_source(args.video_file)
     sub_file = sublib.old.SubRipFile(args.sub_file)
-    bad_list = []
+    bogus_list = []
     timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
@@ -67,18 +67,18 @@ def main():
     for sc_time, diff_pct in sc_file.scan_bogus(vsource, timings,
                                                 args.diff_pct_threshold,
                                                 args.filter_offset):
-        bad_list.append(sc_time)
-        print("{}\t{:.2%}".format(time_output(sc_time), diff_pct))
+        bogus_list.append(sc_time)
+        print("{}\t{:.1%}".format(time_output(sc_time), diff_pct))
 
     if args.apply:
         count = 0
-        for sc_time in bad_list:
+        for sc_time in bogus_list:
             if sc_time in sc_file:
                 sc_file.remove(sc_time)
                 count += 1
         if count:
             sc_file.save()
-        print("Removed {} scene changes.".format(len(bad_list)))
+        print("Removed {} scene changes.".format(len(bogus_list)))
 
 
 if __name__ == "__main__":
