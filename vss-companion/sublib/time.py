@@ -29,7 +29,7 @@ class Time(int):
     def from_str(cls, text):
         units = text.split(":", 2)
         if len(units) < 3:
-            units = [0] * (3 - units_len) + units
+            units = [0] * (3 - len(units)) + units
         return cls.from_h_min_s(int(units[0]), int(units[1]),
                                 float(cls._decimal_mark_sub(units[2])))
 

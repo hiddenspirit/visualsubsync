@@ -4,7 +4,6 @@
 import argparse
 import os
 import sys
-import time
 
 import sublib
 import sublib.old
@@ -51,6 +50,8 @@ def main():
                            .format(args.sub_file))
         return 12
 
+    vsource = common.get_video_source(args.video_file)
+
     if args.sc_file and os.path.isfile(args.sc_file):
         sc_file = sublib.SceneChangeFile.load(args.sc_file)
     else:
@@ -60,7 +61,6 @@ def main():
         else:
             sc_file = sublib.SceneChangeFile.from_source(vsource)
 
-    vsource = common.get_video_source(args.video_file)
     sub_file = sublib.old.SubRipFile(args.sub_file)
     fps = common.get_fps(vsource)
     missing_list = []
@@ -72,7 +72,7 @@ def main():
             vsource, timings, args.diff_pct_threshold, args.ratio_threshold,
             args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
-        print("{}\t{:.2%}\t\xd7{:.2f}".format(time_output(sc_time),
+        print("{}\t{:.1%}\t{:.2f}".format(time_output(sc_time),
                                               diff_pct, ratio))
         missing_list.append(sc_time)
 

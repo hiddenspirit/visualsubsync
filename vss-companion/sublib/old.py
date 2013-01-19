@@ -167,7 +167,7 @@ class SubRipFile(SubtitleFile):
             self.reindex()
 
     def __repr__(self):
-        return "SubRipFile(%r, %r)" % (file_path, self.encoding)
+        return "SubRipFile(%r, %r)" % (self.file_path, self.encoding)
 
     def __bytes(self):
         return str(self).encode(ENCODING, "replace")

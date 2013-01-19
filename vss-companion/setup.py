@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import os
+#import os
 from cx_Freeze import setup, Executable
 
 #############################################################################

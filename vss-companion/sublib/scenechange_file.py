@@ -3,8 +3,9 @@ import codecs
 import functools
 import os
 import re
+import threading
 
-from contextlib import contextmanager
+#from contextlib import contextmanager
 from fractions import Fraction
 
 import numpy
@@ -20,13 +21,14 @@ class SceneChangeFile(SortedSet):
     EXT = ".scenechange"
     ENCODING = "ascii"
     NEWLINE = "\n"
-    RATIO_THRESHOLD = 3.0
     DIFF_PCT_THRESHOLD = 0.15
+    RATIO_THRESHOLD = 3.0
     DEFAULT_FILTER_OFFSET = 500
     FILTER_OFFSETS = {
         Fraction(24000, 1001): DEFAULT_FILTER_OFFSET,
         Fraction(25000, 1000): 480,
     }
+    _cancel_event = threading.Event()
 
     VERSION_RE = re.compile(r"SceneChangeFormatVersion\s*=\s*(\w+)", re.I)
     OUTPUT_FORMAT = ([ffms.get_pix_fmt("yuv420p")], 64, 64,
@@ -154,7 +156,7 @@ class SceneChangeFile(SortedSet):
     def scan_missing(self, vsource, timings,
                      diff_pct_threshold=DIFF_PCT_THRESHOLD,
                      ratio_threshold=RATIO_THRESHOLD,
-                     filter_offset=None):
+                     filter_offset=None, cancel_event=_cancel_event):
         if not timings:
             raise ValueError("empty timings")
         last_time = int(vsource.properties.LastTime * 1000)
@@ -172,6 +174,8 @@ class SceneChangeFile(SortedSet):
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
             for start_time, end_time in timings:
+                if cancel_event.is_set():
+                    return
                 borders = [
                     (start_time - offset, start_time + filter_offset),
                     (end_time - filter_offset, end_time + offset),
@@ -204,10 +208,11 @@ class SceneChangeFile(SortedSet):
                         if ratio >= ratio_threshold:
                             pos = diffs.argmax() + scan_start
                             sc_time = frame_position_to_time(vsource, pos)
-                            yield sc_time, diff_pct, ratio
+                            yield sc_time, diff_pct, ratio                    
 
     def scan_bogus(self, vsource, timings,
-                   diff_pct_threshold=DIFF_PCT_THRESHOLD, filter_offset=None):
+                   diff_pct_threshold=DIFF_PCT_THRESHOLD, filter_offset=None,
+                   cancel_event=_cancel_event):
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
                 get_fps(vsource), self.DEFAULT_FILTER_OFFSET
@@ -238,6 +243,8 @@ class SceneChangeFile(SortedSet):
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
             for pos in sc_positions:
+                if cancel_event.is_set():
+                    return
                 prev = vsource.get_frame(pos - 1).planes[0].astype(numpy.int_)
                 plane = vsource.get_frame(pos).planes[0]
                 diff_pct = numpy.log1p(

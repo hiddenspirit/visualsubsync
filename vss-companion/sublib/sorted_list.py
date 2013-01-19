@@ -4,8 +4,8 @@
 import sys
 
 from bisect import bisect_left, bisect_right, insort_right
-from collections import MutableSet, Sequence, Sized
-from functools import total_ordering, partial
+from collections import MutableSet, Sequence#, Sized
+from functools import total_ordering#, partial
 
 
 @total_ordering
