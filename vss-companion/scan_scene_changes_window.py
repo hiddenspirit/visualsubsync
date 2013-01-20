@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'scan_scene_changes_window.ui'
 #
-# Created: Sun Jan 20 07:41:26 2013
+# Created: Sun Jan 20 10:34:43 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -190,6 +190,8 @@ class Ui_MainWindow(object):
         self.actionApply_suggestions_category.setObjectName(_fromUtf8("actionApply_suggestions_category"))
         self.actionApply_all_suggestions = QtGui.QAction(MainWindow)
         self.actionApply_all_suggestions.setObjectName(_fromUtf8("actionApply_all_suggestions"))
+        self.actionUndo_suggestion = QtGui.QAction(MainWindow)
+        self.actionUndo_suggestion.setObjectName(_fromUtf8("actionUndo_suggestion"))
 
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
@@ -231,4 +233,5 @@ class Ui_MainWindow(object):
         self.actionApply_suggestion.setText(_translate("MainWindow", "Apply suggestion", None))
         self.actionApply_suggestions_category.setText(_translate("MainWindow", "Apply suggestions in this category", None))
         self.actionApply_all_suggestions.setText(_translate("MainWindow", "Apply all suggestions", None))
+        self.actionUndo_suggestion.setText(_translate("MainWindow", "Undo suggestion", None))
 

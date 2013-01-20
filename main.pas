@@ -382,6 +382,8 @@ type
     ActionTranslationTemplate: TTntAction;
     MenuItemTranslationTemplate: TTntMenuItem;
     MenuItemHelpCodecsInstallation: TTntMenuItem;
+    ActionScanSceneChanges: TTntAction;
+    bttScanSceneChanges: TTntSpeedButton;
     procedure FormCreate(Sender: TObject);
     procedure OnMessage(var Msg: TMsg; var Handled: Boolean);
 
@@ -573,9 +575,11 @@ type
     procedure ActionShowHideSubsExecute(Sender: TObject);
     procedure ActionTranslationTemplateExecute(Sender: TObject);
     procedure MenuItemHelpCodecsInstallationClick(Sender: TObject);
+    procedure ActionScanSceneChangesExecute(Sender: TObject);
 
   private
     { Private declarations }
+    CompanionHandle : UINT;
     WAVDisplayer : TWAVDisplayer;
     SubRangeFactory : TSubtitleRangeFactory;
     CurrentProject : TVSSProject;
@@ -835,11 +839,19 @@ const
   MemoVOMaxUnassigned : Integer = 100;
   MemoVOMaxLength : Integer = 40;
   MemoVOMaxRows : Integer = 4;
-  WM_APP_SAVE = WM_APP + 0;
-  WM_APP_SAVE_DONE = WM_APP + 1;
-  WM_APP_SET_POSITION = WM_APP + 2;
-  WM_APP_INSERT_SC = WM_APP + 3;
-  WM_APP_DELETE_SC = WM_APP + 4;
+
+  WM_APP_COMPANION_CLOSED = WM_APP + $00;
+  WM_APP_COMPANION_OPENED = WM_APP + $01;
+
+  WM_APP_SAVE = WM_APP + $10;
+  WM_APP_SET_POSITION = WM_APP + $11;
+  WM_APP_INSERT_SC = WM_APP + $12;
+  WM_APP_DELETE_SC = WM_APP + $13;
+
+  WM_APP_EXIT = WM_APP + $100;
+  WM_APP_SAVE_DONE = WM_APP + $101;
+  WM_APP_VIDEO_CHANGED = WM_APP + $102;
+  WM_APP_SUB_CHANGED = WM_APP + $103;
 
 var
   MainForm: TMainForm;
@@ -887,6 +899,7 @@ var i : integer;
     MenuItem : TTntMenuItem;
 begin
   Application.OnMessage := OnMessage;
+  CompanionHandle := 0;
 
   CustomMemo := TTntRichEditCustomUndo.Create(MemoSubtitleText.Owner);
   CustomMemo.Parent := MemoSubtitleText.Parent;
@@ -1041,13 +1054,19 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.OnMessage(var Msg: TMsg; var Handled: Boolean);
-var UndoableInsertSceneChange : TUndoableInsertSceneChange;
-    UndoableDeleteSceneChange : TUndoableDeleteSceneChange;
-    Range : TRange;
+var InsertSC : TIntegerDynArray;
 begin
-  if Msg.hwnd = Application.Handle then
+  if (Msg.hwnd = Application.Handle) then
   begin
     case Msg.message of
+      WM_APP_COMPANION_OPENED: begin
+        CompanionHandle := Msg.wParam;
+        Handled := True;
+      end;
+      WM_APP_COMPANION_CLOSED: begin
+        CompanionHandle := 0;
+        Handled := True;
+      end;
       WM_APP_SAVE: begin
         ActionSaveExecute(nil);
         PostMessage(Msg.wParam, WM_APP_SAVE_DONE, 0,
@@ -1055,27 +1074,24 @@ begin
         Handled := True;
       end;
       WM_APP_SET_POSITION: begin
-        Range := TRange.Create;
-        Range.StartTime := Max(Msg.wParam -
-                               ConfigObject.SceneChangeStartOffset, 0);
-        Range.StopTime := Msg.wParam + ConfigObject.SceneChangeStopOffset;
-        WAVDisplayer.ZoomAndSelectRange(Range);
-        Range.Free;
-        VideoRenderer.ShowImageAt(Msg.wParam);
+        WAVDisplayer.Selection.StartTime := Max(Msg.wParam -
+            ConfigObject.SceneChangeStartOffset, 0);
+        WAVDisplayer.Selection.StopTime := Msg.wParam +
+            ConfigObject.SceneChangeStopOffset;
+        WAVDisplayer.ZoomAndSelectRange(WAVDisplayer.Selection);
+        WAVDisplayer.SetCursorPos(Msg.wParam);
+        if VideoRenderer.IsOpen then
+          VideoRenderer.ShowImageAt(Msg.wParam);
         Handled := True;
       end;
       WM_APP_INSERT_SC: begin
-        UndoableInsertSceneChange := TUndoableInsertSceneChange.Create;
-        UndoableInsertSceneChange.SetData(Msg.wParam);
-        UndoableInsertSceneChange.DoTask;
-        PushUndoableTask(UndoableInsertSceneChange);
+        SetLength(InsertSC, 1);
+        InsertSC[0] := Msg.wParam;
+        InsertSceneChange(InsertSC);
         Handled := True;
       end;
       WM_APP_DELETE_SC: begin
-        UndoableDeleteSceneChange := TUndoableDeleteSceneChange.Create;
-        UndoableDeleteSceneChange.SetData(Msg.wParam, Msg.wParam);
-        UndoableDeleteSceneChange.DoTask;
-        PushUndoableTask(UndoableDeleteSceneChange);
+        DeleteSceneChange(Msg.wParam, Msg.wParam);
         Handled := True;
       end;
     end;
@@ -1721,6 +1737,7 @@ begin
   ActionFindNext.Enabled := Enable;
   ActionGoto.Enabled := Enable;
   ActionCheckErrors.Enabled := Enable;
+  ActionScanSceneChanges.Enabled := Enable;
   ActionDelay.Enabled := Enable;
   ActionInsertTextFile.Enabled := Enable;
 
@@ -3481,6 +3498,8 @@ var ProjectHasChanged, VideoHasChanged, SubtitleFileHasChanged : Boolean;
     PreviousSubtitlesFile : WideString;
 begin
   // TODO : test this more
+  if (CompanionHandle <> 0) then
+    PostMessage(CompanionHandle, WM_APP_EXIT, 0, 0);
 
   ProjectForm.ConfigureInModifyProjectMode(CurrentProject);
   if (ProjectForm.ShowModal = mrOK) then
@@ -4353,7 +4372,11 @@ procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   CanClose := CheckSubtitlesAreSaved;
   if CanClose then
+  begin
+    if (CompanionHandle <> 0) then
+      PostMessage(CompanionHandle, WM_APP_EXIT, 0, 0);
     SaveSettings;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -4838,6 +4861,9 @@ end;
 procedure TMainForm.CloseProject;
 var EmptyArray : TIntegerDynArray;
 begin
+  if (CompanionHandle <> 0) then
+    PostMessage(CompanionHandle, WM_APP_EXIT, 0, 0);
+
   chkAutoScrollSub.Checked := False;
   TimerAutoScrollSub.Enabled := False;
   SetLength(EmptyArray, 0);
@@ -10036,6 +10062,27 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+
+procedure TMainForm.ActionScanSceneChangesExecute(Sender: TObject);
+var Cmd : WideString;
+    Params : WideString;
+begin
+  if (CompanionHandle <> 0) or (CurrentProject.VideoSource = '') or
+     (CurrentProject.SubtitlesFile = '') then
+    Exit;
+  Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+    'vss-companion\scan_scene_changes.exe"';
+  Params := '--video "' + CurrentProject.VideoSource +
+    '" --sub "' + CurrentProject.SubtitlesFile +
+    '" --vss ' + IntToStr(Application.Handle);
+  if ShellExecuteW(Handle, 'open', PWideChar(Cmd), PWideChar(Params), nil,
+                   SW_SHOWNORMAL) <= 32 then
+  begin
+    ShowMessage(SysErrorMessage(GetLastError));
+  end;
+end;
+
+
 end.
 //------------------------------------------------------------------------------
 
