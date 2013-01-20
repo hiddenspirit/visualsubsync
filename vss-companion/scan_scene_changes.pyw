@@ -93,6 +93,18 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         # self.ui.show()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        if self.modal:
+            if args.vss:
+                self.vss = args.vss
+            else:
+                self.vss = win32gui.FindWindow(None, "VisualSubSync")
+            if self.vss:
+                self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
+                win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED, self.winId(), 0)
+        else:
+            self.vss = None
+
         self.show()
 
         if args.video_file:
@@ -117,17 +129,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.model = False
             self.sub_file = self.get_open_filename(self.tr("Subtitle file"),
                                                    self.sub_dialog_filter)
-
-        if self.modal:
-            if args.vss:
-                self.vss = args.vss
-            else:
-                self.vss = win32gui.FindWindow(None, "VisualSubSync")
-            if self.vss:
-                self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
-                win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED, self.winId(), 0)
-        else:
-            self.vss = None
         
         self.bogus_category = self.tr("Bogus")
         self.missing_category = self.tr("Missing")
@@ -272,7 +273,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.statusbar.showMessage(self.tr("Scanning…"))
         self.job = None
         if self.vss:
-            win32gui.PostMessage(self.vss, WM_APP_SAVE, 0, 0)
+            win32gui.PostMessage(self.vss, WM_APP_SAVE, self.winId(), 0)
         else:
             self.saved_event()
 
@@ -485,9 +486,9 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
 def parse_args():
     parser = argparse.ArgumentParser("Scan for scene changes")
-    parser.add_argument("--video_file",
+    parser.add_argument("--video-file",
                         help="video filename")
-    parser.add_argument("--sub_file",
+    parser.add_argument("--sub-file",
                         help="subtitle filename")
     parser.add_argument("--vss", type=int,
                         help="VisualSubSync hWnd")
