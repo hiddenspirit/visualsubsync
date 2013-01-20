@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'scan_scene_changes_window.ui'
 #
-# Created: Sun Jan 20 07:18:52 2013
+# Created: Sun Jan 20 07:41:26 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -173,10 +173,10 @@ class Ui_MainWindow(object):
         self.horizontalLayoutParametersButtons.setObjectName(_fromUtf8("horizontalLayoutParametersButtons"))
         spacerItem2 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayoutParametersButtons.addItem(spacerItem2)
-        self.toolButtonReset = QtGui.QToolButton(self.tabParameters)
-        self.toolButtonReset.setMinimumSize(QtCore.QSize(64, 24))
-        self.toolButtonReset.setObjectName(_fromUtf8("toolButtonReset"))
-        self.horizontalLayoutParametersButtons.addWidget(self.toolButtonReset)
+        self.toolButtonDefaults = QtGui.QToolButton(self.tabParameters)
+        self.toolButtonDefaults.setMinimumSize(QtCore.QSize(64, 24))
+        self.toolButtonDefaults.setObjectName(_fromUtf8("toolButtonDefaults"))
+        self.horizontalLayoutParametersButtons.addWidget(self.toolButtonDefaults)
         self.verticalLayout.addLayout(self.horizontalLayoutParametersButtons)
         self.tabWidget.addTab(self.tabParameters, _fromUtf8(""))
         self.horizontalLayout.addWidget(self.tabWidget)
@@ -206,7 +206,7 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.spinBoxDifference, self.horizontalSliderRatio)
         MainWindow.setTabOrder(self.horizontalSliderRatio, self.doubleSpinBoxRatio)
         MainWindow.setTabOrder(self.doubleSpinBoxRatio, self.textEdit)
-        MainWindow.setTabOrder(self.textEdit, self.toolButtonReset)
+        MainWindow.setTabOrder(self.textEdit, self.toolButtonDefaults)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "Scene Change Scanner", None))
@@ -226,7 +226,7 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\" bgcolor=\"#eeeeee\">\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Difference (0%–100%):<br /></span><span style=\" font-size:9pt;\">Scene changes that have a difference percentage (compared to previous frames) below this threshold will be reported as bogus.</span></p>\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Ratio (×1.0–×20.0):<br /></span><span style=\" font-size:9pt;\">Each subtitle starting and ending zone will be scanned for a missing scene change. A missing scene change will be reported if </span><span style=\" font-size:9pt; font-style:italic;\">highest </span><span style=\" font-size:8pt;\"> ÷ </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is greater or equal to this threshold, where </span><span style=\" font-size:9pt; font-style:italic;\">highest</span><span style=\" font-size:9pt;\"> is the frame that has the highest difference in the zone, and </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is the median of the differences in the zone.</span></p></body></html>", None))
-        self.toolButtonReset.setText(_translate("MainWindow", "Reset", None))
+        self.toolButtonDefaults.setText(_translate("MainWindow", "Defaults", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabParameters), _translate("MainWindow", "Parameters", None))
         self.actionApply_suggestion.setText(_translate("MainWindow", "Apply suggestion", None))
         self.actionApply_suggestions_category.setText(_translate("MainWindow", "Apply suggestions in this category", None))

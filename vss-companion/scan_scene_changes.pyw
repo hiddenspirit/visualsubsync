@@ -133,9 +133,10 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.missing_category = self.tr("Missing")
         self.scan_results = {}
 
+        self.ui.spinBoxDifference.valueChanged.connect(self.on_spinbox_difference_changed)
         self.ui.doubleSpinBoxRatio.valueChanged.connect(self.on_spinbox_ratio_changed)
         self.ui.horizontalSliderRatio.valueChanged.connect(self.on_slider_ratio_changed)
-        self.ui.toolButtonReset.clicked.connect(self.on_reset_clicked)
+        self.ui.toolButtonDefaults.clicked.connect(self.on_defaults_clicked)
         self.ui.toolButtonScan.clicked.connect(self.on_scan_clicked)
         self.ui.toolButtonCancel.clicked.connect(self.on_cancel_clicked)
         self.ui.checkBoxBogus.stateChanged.connect(self.on_check_bogus_changed)
@@ -207,11 +208,19 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.toolButtonScan.setEnabled(True)
         self.state = "ready"
         
+    def on_spinbox_difference_changed(self, value):
+        self.check_defaults()
+
     def on_spinbox_ratio_changed(self, value):
         self.ui.horizontalSliderRatio.setValue(int(value * 10))
+        self.check_defaults()
     
     def on_slider_ratio_changed(self, value):
         self.ui.doubleSpinBoxRatio.setValue(value / 10.0)
+    
+    def check_defaults(self):
+        non_defaults = (self.diff_pct != sublib.SceneChangeFile.DIFF_PCT_THRESHOLD or self.ratio != sublib.SceneChangeFile.RATIO_THRESHOLD)
+        self.ui.toolButtonDefaults.setEnabled(non_defaults)
 
     @property
     def diff_pct(self):
@@ -229,7 +238,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def ratio(self, value):
         self.ui.doubleSpinBoxRatio.setValue(value)
 
-    def on_reset_clicked(self):
+    def on_defaults_clicked(self):
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -244,7 +253,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.horizontalSliderDifference.setEnabled(enabled)
         self.ui.doubleSpinBoxRatio.setEnabled(enabled)
         self.ui.horizontalSliderRatio.setEnabled(enabled)
-        self.ui.toolButtonReset.setEnabled(enabled)
+        self.ui.toolButtonDefaults.setEnabled(enabled)
 
     @property
     def scan_bogus(self):
@@ -315,8 +324,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
                     self.missing_root.setExpanded(True)
 
     def scan_thread(self, cancel_bogus_event, cancel_missing_event):
-        import time
-        thread_start_time = time.time()
         vsource = common.get_video_source(self.video_file)
         sc_file = self.load_sc_file(vsource)
         sub_file = sublib.old.SubRipFile(self.sub_file)
@@ -339,7 +346,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.job = None
         #self.missing_scan_done.emit()
         self.scan_done.emit()
-        print(time.time() - thread_start_time)
 
     def on_bogus_scan_done(self):
         self.ui.checkBoxBogus.setEnabled(False)
