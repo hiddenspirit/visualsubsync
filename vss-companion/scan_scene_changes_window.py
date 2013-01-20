@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'scan_scene_changes_window.ui'
 #
-# Created: Sat Jan 19 07:05:22 2013
+# Created: Sun Jan 20 07:18:52 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -184,13 +184,20 @@ class Ui_MainWindow(object):
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName(_fromUtf8("statusbar"))
         MainWindow.setStatusBar(self.statusbar)
+        self.actionApply_suggestion = QtGui.QAction(MainWindow)
+        self.actionApply_suggestion.setObjectName(_fromUtf8("actionApply_suggestion"))
+        self.actionApply_suggestions_category = QtGui.QAction(MainWindow)
+        self.actionApply_suggestions_category.setObjectName(_fromUtf8("actionApply_suggestions_category"))
+        self.actionApply_all_suggestions = QtGui.QAction(MainWindow)
+        self.actionApply_all_suggestions.setObjectName(_fromUtf8("actionApply_all_suggestions"))
 
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QObject.connect(self.horizontalSliderDifference, QtCore.SIGNAL(_fromUtf8("valueChanged(int)")), self.spinBoxDifference.setValue)
         QtCore.QObject.connect(self.spinBoxDifference, QtCore.SIGNAL(_fromUtf8("valueChanged(int)")), self.horizontalSliderDifference.setValue)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
-        MainWindow.setTabOrder(self.tabWidget, self.checkBoxBogus)
+        MainWindow.setTabOrder(self.tabWidget, self.treeWidget)
+        MainWindow.setTabOrder(self.treeWidget, self.checkBoxBogus)
         MainWindow.setTabOrder(self.checkBoxBogus, self.checkBoxMissing)
         MainWindow.setTabOrder(self.checkBoxMissing, self.toolButtonCancel)
         MainWindow.setTabOrder(self.toolButtonCancel, self.toolButtonScan)
@@ -198,7 +205,8 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.horizontalSliderDifference, self.spinBoxDifference)
         MainWindow.setTabOrder(self.spinBoxDifference, self.horizontalSliderRatio)
         MainWindow.setTabOrder(self.horizontalSliderRatio, self.doubleSpinBoxRatio)
-        MainWindow.setTabOrder(self.doubleSpinBoxRatio, self.toolButtonReset)
+        MainWindow.setTabOrder(self.doubleSpinBoxRatio, self.textEdit)
+        MainWindow.setTabOrder(self.textEdit, self.toolButtonReset)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "Scene Change Scanner", None))
@@ -216,8 +224,11 @@ class Ui_MainWindow(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\" bgcolor=\"#eeeeee\">\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Difference (0%–100%):<br /></span><span style=\" font-size:9pt;\">Scene changes that have a difference percentage (compared to previous frames) below this threshold will be considered as bogus.</span></p>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Difference (0%–100%):<br /></span><span style=\" font-size:9pt;\">Scene changes that have a difference percentage (compared to previous frames) below this threshold will be reported as bogus.</span></p>\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Ratio (×1.0–×20.0):<br /></span><span style=\" font-size:9pt;\">Each subtitle starting and ending zone will be scanned for a missing scene change. A missing scene change will be reported if </span><span style=\" font-size:9pt; font-style:italic;\">highest </span><span style=\" font-size:8pt;\"> ÷ </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is greater or equal to this threshold, where </span><span style=\" font-size:9pt; font-style:italic;\">highest</span><span style=\" font-size:9pt;\"> is the frame that has the highest difference in the zone, and </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is the median of the differences in the zone.</span></p></body></html>", None))
         self.toolButtonReset.setText(_translate("MainWindow", "Reset", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabParameters), _translate("MainWindow", "Parameters", None))
+        self.actionApply_suggestion.setText(_translate("MainWindow", "Apply suggestion", None))
+        self.actionApply_suggestions_category.setText(_translate("MainWindow", "Apply suggestions in this category", None))
+        self.actionApply_all_suggestions.setText(_translate("MainWindow", "Apply all suggestions", None))
 
