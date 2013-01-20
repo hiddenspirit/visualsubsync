@@ -354,7 +354,7 @@ p, li { white-space: pre-wrap; }
            </spacer>
           </item>
           <item>
-           <widget class="QToolButton" name="toolButtonReset">
+           <widget class="QToolButton" name="toolButtonDefaults">
             <property name="minimumSize">
              <size>
               <width>64</width>
@@ -362,7 +362,7 @@ p, li { white-space: pre-wrap; }
              </size>
             </property>
             <property name="text">
-             <string>Reset</string>
+             <string>Defaults</string>
             </property>
            </widget>
           </item>
@@ -403,7 +403,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>horizontalSliderRatio</tabstop>
   <tabstop>doubleSpinBoxRatio</tabstop>
   <tabstop>textEdit</tabstop>
-  <tabstop>toolButtonReset</tabstop>
+  <tabstop>toolButtonDefaults</tabstop>
  </tabstops>
  <resources/>
  <connections>
