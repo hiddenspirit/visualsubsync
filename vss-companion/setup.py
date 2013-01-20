@@ -45,22 +45,27 @@ base = None
 exe_list = [
     Executable(
         script="find_scenechange.py",
-        base=base,
+        base=None,
         compress=True,
     ),
     Executable(
         script="make_scenechange_file.py",
-        base=base,
+        base=None,
         compress=True,
     ),
     Executable(
         script="scan_missing_scene_changes.py",
-        base=base,
+        base=None,
         compress=True,
     ),
     Executable(
         script="scan_bogus_scene_changes.py",
-        base=base,
+        base=None,
+        compress=True,
+    ),
+    Executable(
+        script="scan_scene_changes.pyw",
+        base="Win32GUI",
         compress=True,
     ),
 ]
