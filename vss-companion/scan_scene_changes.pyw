@@ -59,7 +59,7 @@ ScanResult = namedtuple("ScanResult", ("item", "category", "timecode"))
 class ScanSceneChangeApplication(QtGui.QApplication):
     def winEventFilter(self, msg):
         if msg.message == WM_APP_EXIT:
-            self.exit(0)
+            form.closeEvent()
             return True, id(msg)
         elif msg.message == WM_APP_SAVE_DONE:
             form.saved_event()
@@ -80,7 +80,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     bogus_scan_done = Signal()
     missing_scan_done = Signal()
     scan_done = Signal()
-    modal = True
     job = None
     cancel_bogus_event = None
     cancel_missing_event = None
@@ -94,14 +93,10 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        if self.modal:
-            if args.vss:
-                self.vss = args.vss
-            else:
-                self.vss = win32gui.FindWindow(None, "VisualSubSync")
-            if self.vss:
-                self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
-                win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED, self.winId(), 0)
+        if args.vss:
+            self.vss = args.vss
+            self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
+            win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED, self.winId(), 0)
         else:
             self.vss = None
 
@@ -133,6 +128,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.bogus_category = self.tr("Bogus")
         self.missing_category = self.tr("Missing")
         self.scan_results = {}
+        self.undoables = {}
 
         self.ui.spinBoxDifference.valueChanged.connect(self.on_spinbox_difference_changed)
         self.ui.doubleSpinBoxRatio.valueChanged.connect(self.on_spinbox_ratio_changed)
@@ -156,15 +152,12 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.actionApply_suggestion.setParent(self.right_click_widget)
         self.ui.actionApply_suggestions_category.setParent(self.right_click_widget)
         self.ui.actionApply_all_suggestions.setParent(self.right_click_widget)
-        self.right_click_menu = QtGui.QMenu("Menu", self)
-        self.right_click_menu.addAction(self.ui.actionApply_suggestion)
-        self.right_click_menu.addAction(self.ui.actionApply_suggestions_category)
-        self.right_click_menu.addAction(self.ui.actionApply_all_suggestions)
 
         self.ui.treeWidget.itemSelectionChanged.connect(self.on_selection_changed)
         self.ui.actionApply_suggestion.triggered.connect(self.on_apply_suggestion)
         self.ui.actionApply_suggestions_category.triggered.connect(self.on_apply_suggestions_category)
         self.ui.actionApply_all_suggestions.triggered.connect(self.on_apply_all_suggestions)
+        self.ui.actionUndo_suggestion.triggered.connect(self.on_undo_suggestion)
 
     def closeEvent(self, event=None):
         if self.job is not None:
@@ -387,6 +380,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def reset_tree(self):
         self.count = 0
         self.scan_results.clear()
+        self.undoables.clear()
         self.ui.treeWidget.clear()
         if self.scan_bogus:
             self.bogus_root = self.create_root(self.bogus_category)
@@ -417,33 +411,62 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.scan_results[id(item)] = ScanResult(item, category, sc_time)
 
     def remove_item(self, item):
+        self.undoables[id(item)] = self.scan_results[id(item)]
         del self.scan_results[id(item)]
-        item.parent().removeChild(item)
+        #item.parent().removeChild(item)
+        font = QtGui.QFont()
+        font.setStrikeOut(True)
+        item.setFont(0, font)
+
+    def undo_remove_item(self, item):
+        self.scan_results[id(item)] = self.undoables[id(item)]
+        del self.undoables[id(item)]
+        font = QtGui.QFont()
+        font.setStrikeOut(False)
+        item.setFont(0, font)
 
     def on_context(self, point):
+        undo = False
         if self.vss:
             if self.selection:
                 if id(self.selection) in self.scan_results:
                     self.ui.actionApply_suggestion.setEnabled(True)
+                    self.ui.actionUndo_suggestion.setEnabled(False)
+                    self.ui.actionApply_suggestions_category.setEnabled(True)
+                elif id(self.selection) in self.undoables:
+                    undo = True
+                    self.ui.actionApply_suggestion.setEnabled(False)
+                    self.ui.actionUndo_suggestion.setEnabled(True)
                     self.ui.actionApply_suggestions_category.setEnabled(True)
                 else:
                     category = self.selection.text(0)
                     non_empty = any(r.category == category for r in self.scan_results.values())
                     self.ui.actionApply_suggestion.setEnabled(False)
+                    self.ui.actionUndo_suggestion.setEnabled(False)
                     self.ui.actionApply_suggestions_category.setEnabled(non_empty)
             else:
                 self.ui.actionApply_suggestion.setEnabled(False)
+                self.ui.actionUndo_suggestion.setEnabled(False)
                 self.ui.actionApply_suggestions_category.setEnabled(False)
             self.ui.actionApply_all_suggestions.setEnabled(len(self.scan_results))
         else:
             self.ui.actionApply_suggestion.setEnabled(False)
+            self.ui.actionUndo_suggestion.setEnabled(False)
             self.ui.actionApply_suggestions_category.setEnabled(False)
             self.ui.actionApply_all_suggestions.setEnabled(False)
     
         global_point = self.ui.treeWidget.mapToGlobal(point)
         if not self.ui.treeWidget.isHeaderHidden():
             global_point.setY(global_point.y() + self.ui.treeWidget.header().height())
-        self.right_click_menu.exec(global_point)
+
+        menu = QtGui.QMenu("Menu", self)
+        if undo:
+            menu.addAction(self.ui.actionUndo_suggestion)
+        else:
+            menu.addAction(self.ui.actionApply_suggestion)
+        menu.addAction(self.ui.actionApply_suggestions_category)
+        menu.addAction(self.ui.actionApply_all_suggestions)
+        menu.exec(global_point)
     
     @property
     def selection(self):
@@ -452,11 +475,14 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         return self.ui.treeWidget.selectedItems()[0]
 
     def on_selection_changed(self):
-        if id(self.selection) not in self.scan_results:
+        if id(self.selection) in self.scan_results:
+            result = self.scan_results[id(self.selection)]
+        elif id(self.selection) in self.undoables:
+            result = self.undoables[id(self.selection)]
+        else:
             return
-        result = self.scan_results[id(self.selection)]
         win32gui.PostMessage(self.vss, WM_APP_SET_POSITION, result.timecode, 0)
-    
+
     def apply_suggestions(self, results):
         for result in results:
             if result.category == self.bogus_category:
@@ -465,6 +491,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             elif result.category == self.missing_category:
                 win32gui.PostMessage(self.vss, WM_APP_INSERT_SC, result.timecode, 0)
                 self.remove_item(result.item)
+
+    def undo_suggestions(self, results):
+        for result in results:
+            if result.category == self.bogus_category:
+                win32gui.PostMessage(self.vss, WM_APP_INSERT_SC, result.timecode, 0)
+                self.undo_remove_item(result.item)
+            elif result.category == self.missing_category:
+                win32gui.PostMessage(self.vss, WM_APP_DELETE_SC, result.timecode, 0)
+                self.undo_remove_item(result.item)
 
     def on_apply_suggestion(self, checked=False):
         if id(self.selection) not in self.scan_results:
@@ -483,6 +518,13 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def on_apply_all_suggestions(self, checked=False):
         results = list(self.scan_results.values())
         self.apply_suggestions(results)
+    
+    def on_undo_suggestion(self, checked=False):
+        if id(self.selection) not in self.undoables:
+            return
+        results = [self.undoables[id(self.selection)]]
+        self.undo_suggestions(results)
+
 
 def parse_args():
     parser = argparse.ArgumentParser("Scan for scene changes")

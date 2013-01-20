@@ -390,6 +390,11 @@ p, li { white-space: pre-wrap; }
     <string>Apply all suggestions</string>
    </property>
   </action>
+  <action name="actionUndo_suggestion">
+   <property name="text">
+    <string>Undo suggestion</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>tabWidget</tabstop>
