@@ -4,7 +4,9 @@
 """
 
 import argparse
+import builtins
 import os
+import io
 import sys
 import threading
 from collections import namedtuple
@@ -26,6 +28,8 @@ import common
 getOpenFileName = QtGui.QFileDialog.getOpenFileNameAndFilter
 Signal = QtCore.pyqtSignal
 Slot = QtCore.pyqtSlot
+
+DEBUG = True
 
 VIDEO_EXTS = [
     ".avi",
@@ -85,6 +89,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     cancel_missing_event = None
     state = None
     executor = futures.ThreadPoolExecutor(1)
+    debug_print_signal = Signal(str)
+
 
     def __init__(self, args, parent=None):
         super().__init__(parent)
@@ -92,6 +98,21 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         # self.ui.show()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        if args.debug or DEBUG:        
+            self.ui.tab_Log = QtGui.QWidget()
+            self.ui.tab_Log.setObjectName("tab_Log")
+            self.ui.gridLayoutDebug = QtGui.QGridLayout(self.ui.tab_Log)
+            self.ui.gridLayoutDebug.setObjectName("gridLayoutDebug")
+            self.ui.plainTextEdit_Log = QtGui.QPlainTextEdit(self.ui.tab_Log)
+            self.ui.plainTextEdit_Log.setObjectName("plainTextEdit_Log")
+            self.ui.gridLayoutDebug.addWidget(self.ui.plainTextEdit_Log, 0, 0, 1, 1)
+            self.ui.tabWidget.addTab(self.ui.tab_Log, self.tr("Log"))
+            self.ui.plainTextEdit_Log.setReadOnly(True)
+            self.debug_print = self._debug_print
+            self.error_print = self._error_print
+            self.debug_print_signal.connect(self.on_debug_print)
+            self.debug_print("build date:", common.BUILD_DATE)
 
         if args.vss:
             self.vss = args.vss
@@ -154,10 +175,36 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.actionApply_all_suggestions.setParent(self.right_click_widget)
 
         self.ui.treeWidget.itemSelectionChanged.connect(self.on_selection_changed)
+        self.ui.treeWidget.itemDoubleClicked.connect(self.on_double_click)
         self.ui.actionApply_suggestion.triggered.connect(self.on_apply_suggestion)
         self.ui.actionApply_suggestions_category.triggered.connect(self.on_apply_suggestions_category)
         self.ui.actionApply_all_suggestions.triggered.connect(self.on_apply_all_suggestions)
         self.ui.actionUndo_suggestion.triggered.connect(self.on_undo_suggestion)
+
+    def debug_print(self, *args, **kwargs):
+        builtins.print(file=sys.stderr, *args, **kwargs)
+
+    def error_print(self, e):
+        _exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]      
+        msg = "{},{}: {!r}".format(fname, exc_tb.tb_lineno, exc_obj) 
+        builtins.print(msg, file=sys.stderr)
+
+    def _debug_print(self, *args, **kwargs):
+        ss = io.StringIO()
+        builtins.print(file=ss, *args, **kwargs)
+        self.debug_print_signal.emit(ss.getvalue().rstrip())
+
+    def _error_print(self, e):
+        ss = io.StringIO()
+        _exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]      
+        msg = "{},{}: {!r}".format(fname, exc_tb.tb_lineno, exc_obj) 
+        builtins.print(msg, file=ss)
+        self.debug_print_signal.emit(ss.getvalue().rstrip())
+
+    def on_debug_print(self, message):
+        self.ui.plainTextEdit_Log.appendPlainText(message)
 
     def closeEvent(self, event=None):
         if self.job is not None:
@@ -318,28 +365,32 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
                     self.missing_root.setExpanded(True)
 
     def scan_thread(self, cancel_bogus_event, cancel_missing_event):
-        vsource = common.get_video_source(self.video_file)
-        sc_file = self.load_sc_file(vsource)
-        sub_file = sublib.old.SubRipFile(self.sub_file)
-        timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
-
-        if self.scan_bogus:
-            for sc_time, diff_pct in sc_file.scan_bogus(vsource, timings, self.diff_pct, cancel_event=cancel_bogus_event):
-                self.bogus_scene_change_found.emit(sc_time, diff_pct)
-                self.count += 1
-        
-        self.bogus_scan_done.emit()
-
-        if self.scan_missing:
-            fps = common.get_fps(vsource)
-            for sc_time, diff_pct, ratio in sc_file.scan_missing(vsource, timings, self.diff_pct, self.ratio, cancel_event=cancel_missing_event):
-                sc_time = common.round_timing(sc_time, fps)
-                self.missing_scene_change_found.emit(sc_time, diff_pct, ratio)
-                self.count += 1
-
-        self.job = None
-        #self.missing_scan_done.emit()
-        self.scan_done.emit()
+        try:
+            vsource = common.get_video_source(self.video_file)
+            sc_file = self.load_sc_file(vsource)
+            sub_file = sublib.old.SubRipFile(self.sub_file)
+            timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
+    
+            if self.scan_bogus:
+                for sc_time, diff_pct in sc_file.scan_bogus(vsource, timings, self.diff_pct, cancel_event=cancel_bogus_event):
+                    self.bogus_scene_change_found.emit(sc_time, diff_pct)
+                    self.count += 1
+            
+            self.bogus_scan_done.emit()
+    
+            if self.scan_missing:
+                fps = common.get_fps(vsource)
+                for sc_time, diff_pct, ratio in sc_file.scan_missing(vsource, timings, self.diff_pct, self.ratio, cancel_event=cancel_missing_event):
+                    sc_time = common.round_timing(sc_time, fps)
+                    self.missing_scene_change_found.emit(sc_time, diff_pct, ratio)
+                    self.count += 1
+    
+            self.job = None
+            #self.missing_scan_done.emit()
+        except Exception as e:
+            self.error_print(e)
+        finally:
+            self.scan_done.emit()
 
     def on_bogus_scan_done(self):
         self.ui.checkBoxBogus.setEnabled(False)
@@ -483,6 +534,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             return
         win32gui.PostMessage(self.vss, WM_APP_SET_POSITION, result.timecode, 0)
 
+    def on_double_click(self, item, column):
+        item_id = id(item)
+        if item_id in self.scan_results:
+            results = [self.scan_results[item_id]]
+            self.apply_suggestions(results)
+        elif item_id in self.undoables:
+            results = [self.undoables[item_id]]
+            self.undo_suggestions(results)
+
     def apply_suggestions(self, results):
         for result in results:
             if result.category == self.bogus_category:
@@ -508,10 +568,12 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.apply_suggestions(results)
 
     def on_apply_suggestions_category(self, checked=False):
-        if id(self.selection) not in self.scan_results:
-            category = self.selection.text(0)
-        else:
+        if id(self.selection) in self.scan_results:
             category = self.scan_results[id(self.selection)].category
+        elif id(self.selection) in self.undoables:
+            category = self.undoables[id(self.selection)].category
+        else:
+            category = self.selection.text(0)
         results = [r for r in self.scan_results.values() if r.category == category]
         self.apply_suggestions(results)
 
@@ -534,6 +596,8 @@ def parse_args():
                         help="subtitle filename")
     parser.add_argument("--vss", type=int,
                         help="VisualSubSync hWnd")
+    parser.add_argument("--debug", action="store_true",
+                        help="Debug mode")
     return parser.parse_args()
 
 
