@@ -406,7 +406,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             scannable = self.ui.checkBoxBogus.isChecked() or self.ui.checkBoxMissing.isChecked()
             self.ui.toolButtonScan.setEnabled(scannable)
             self.set_enabled_parameters(True)
-            self.ui.statusbar.showMessage(self.tr("%n results(s)", "", self.count))
+            self.ui.statusbar.showMessage(self.tr("%n result(s)", "", self.count))
             app.restoreOverrideCursor()
             self.state = "ready"
 
