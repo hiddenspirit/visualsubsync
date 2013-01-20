@@ -1079,9 +1079,18 @@ begin
         WAVDisplayer.Selection.StopTime := Msg.wParam +
             ConfigObject.SceneChangeStopOffset;
         WAVDisplayer.ZoomAndSelectRange(WAVDisplayer.Selection);
-        WAVDisplayer.SetCursorPos(Msg.wParam);
-        if VideoRenderer.IsOpen then
-          VideoRenderer.ShowImageAt(Msg.wParam);
+        
+        if WAVDisplayer.IsPlaying then
+        begin
+          WAVDisplayer.AutoScrolling := False;
+          WAVDisplayer.PlayRange(WAVDisplayer.Selection, True);
+        end
+        else
+        begin
+          WAVDisplayer.SetCursorPos(Msg.wParam);
+          if VideoRenderer.IsOpen then
+            VideoRenderer.ShowImageAt(Msg.wParam);
+        end;
         Handled := True;
       end;
       WM_APP_INSERT_SC: begin
@@ -3349,6 +3358,8 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
+var wndpl : TWindowPlacement;
+    vleft, vtop, vright, vbottom, minWidth, minHeight : integer;
 begin
   if (not VideoRenderer.IsOpen) and (not ShowingVideo) then
   begin
@@ -3361,7 +3372,23 @@ begin
   if MenuItemDetachVideoWindow.Checked then
   begin
     if ShowingVideo then
-      ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
+      //ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
+      wndpl.Length := SizeOf(wndpl);
+      GetWindowPlacement(DetachedVideoForm.Handle, @wndpl) ;
+      with wndpl.rcNormalPosition do
+      begin
+        minWidth := 320;
+        minHeight := 240;
+        vleft := max(left, 0);
+        vtop := max(top, 0);
+        vright := min(max(right, vleft + minWidth), Screen.Width);
+        vbottom := min(max(bottom, vtop + minHeight), Screen.Height);
+        if (vright - vleft < minWidth) then
+          vleft := vright - minWidth;
+        if (vbottom - vtop < minHeight) then
+          vtop := vbottom - minHeight;
+        SetWindowPos(DetachedVideoForm.Handle, HWND_TOPMOST, vleft, vtop, vright - vleft, vbottom - vtop, SWP_NOACTIVATE);
+      end;
     DetachedVideoForm.Visible := ShowingVideo;
   end
   else
