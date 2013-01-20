@@ -236,7 +236,7 @@ class SceneChangeFile(SortedSet):
             if (sc_time is not None and sc_time - end_time <= offset):
                 sc_set.add(sc_time)
 
-        sc_positions = [frame_time_to_position(vsource, t)
+        sc_positions = [frame_time_to_nearest_position(vsource, t)
                         for t in sorted(sc_set)]
         if sc_positions and not sc_positions[0]:
             del sc_positions[0]
@@ -262,12 +262,18 @@ def get_scene_changes(vsource):
 
 
 def frame_time_to_position(vsource, time):
-    return bisect.bisect(vsource.track.timecodes, time) - 1
+    pos = bisect.bisect(vsource.track.timecodes, time)
+    return pos - 1 if pos > 0 else pos
 
+def frame_time_to_nearest_position(vsource, time):
+    pos = bisect.bisect(vsource.track.timecodes, time)
+    if (pos == 0 or abs(vsource.track.timecodes[pos] - time) <
+            abs(vsource.track.timecodes[pos-1] - time)):
+        return pos
+    return pos - 1
 
 def frame_position_to_time(vsource, frame):
     return vsource.track.timecodes[frame]
-
 
 def get_fps(vsource):
     return Fraction(vsource.properties.FPSNumerator,
