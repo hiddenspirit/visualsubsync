@@ -129,6 +129,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         if args.debug or DEBUG:
+            self.debug = True
             self.ui.tab_Log = QtGui.QWidget()
             self.ui.tab_Log.setObjectName("tab_Log")
             self.ui.gridLayoutDebug = QtGui.QGridLayout(self.ui.tab_Log)
@@ -140,6 +141,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.ui.textEdit_Log.setReadOnly(True)
             sys.stdout = sys.stderr = EmittingStream(
                 text_written=self.on_log_written)
+        else:
+            self.debug = False
 
         print("build date:", common.BUILD_DATE)
 
@@ -245,6 +248,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             common.get_video_source(self.video_file)
         except Exception:
             print_error()
+            if self.debug:
+                self.ui.tabWidget.setCurrentIndex(2)
         finally:
             self.index_created.emit()
 
@@ -430,6 +435,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             #self.missing_scan_done.emit()
         except Exception:
             print_error()
+            if self.debug:
+                self.ui.tabWidget.setCurrentIndex(2)
         finally:
             self.scan_done.emit()
 
