@@ -743,6 +743,8 @@ type
 
     procedure ShowColumn(Column : TVirtualTreeColumn; Show : Boolean = True; FromUser : Boolean = False);
 
+    procedure ShowDetachedVideoForm;
+
   public
     { Public declarations }
     procedure ShowStatusBarMessage(const Text : WideString; const Duration : Integer = 4000);
@@ -1074,12 +1076,9 @@ begin
         Handled := True;
       end;
       WM_APP_SET_POSITION: begin
-        WAVDisplayer.Selection.StartTime := Max(Msg.wParam -
-            ConfigObject.SceneChangeStartOffset, 0);
-        WAVDisplayer.Selection.StopTime := Msg.wParam +
-            ConfigObject.SceneChangeStopOffset;
-        WAVDisplayer.ZoomAndSelectRange(WAVDisplayer.Selection);
-        
+        SetSelection(Max(Msg.wParam - ConfigObject.SceneChangeStartOffset, 0),
+                     Msg.wParam + ConfigObject.SceneChangeStopOffset);
+
         if WAVDisplayer.IsPlaying then
         begin
           WAVDisplayer.AutoScrolling := False;
@@ -1088,8 +1087,14 @@ begin
         else
         begin
           WAVDisplayer.SetCursorPos(Msg.wParam);
-          if VideoRenderer.IsOpen then
-            VideoRenderer.ShowImageAt(Msg.wParam);
+          if Assigned(VideoRenderer) then
+          begin
+            if MenuItemDetachVideoWindow.Checked then
+              begin
+                ShowDetachedVideoForm;
+              end;
+            VideoRenderer.ShowImageAt(WAVDisplayer.GetCursorPos);
+          end;
         end;
         Handled := True;
       end;
@@ -1107,6 +1112,32 @@ begin
   end;
   { For all other messages, Handled remains False }
   { so that other message handlers can respond. }
+end;
+
+//------------------------------------------------------------------------------
+
+// To make sure the detached video form is visible.
+procedure TMainForm.ShowDetachedVideoForm;
+const MinWidth = 320;
+      MinHeight = 240;
+var WindowPlacement : TWindowPlacement;
+    vleft, vtop, vright, vbottom : Integer;
+begin
+  WindowPlacement.Length := SizeOf(WindowPlacement);
+  GetWindowPlacement(DetachedVideoForm.Handle, @WindowPlacement) ;
+  with WindowPlacement.rcNormalPosition do
+  begin
+    vleft := max(left, 0);
+    vtop := max(top, 0);
+    vright := min(max(right, vleft + MinWidth), Screen.Width);
+    vbottom := min(max(bottom, vtop + MinHeight), Screen.Height);
+    if (vright - vleft < MinWidth) then
+      vleft := vright - MinWidth;
+    if (vbottom - vtop < MinHeight) then
+      vtop := vbottom - MinHeight;
+    SetWindowPos(DetachedVideoForm.Handle, HWND_TOPMOST, vleft, vtop,
+                 vright - vleft, vbottom - vtop, SWP_NOACTIVATE);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -3358,8 +3389,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TMainForm.ActionShowHideVideoExecute(Sender: TObject);
-var wndpl : TWindowPlacement;
-    vleft, vtop, vright, vbottom, minWidth, minHeight : integer;
 begin
   if (not VideoRenderer.IsOpen) and (not ShowingVideo) then
   begin
@@ -3372,23 +3401,10 @@ begin
   if MenuItemDetachVideoWindow.Checked then
   begin
     if ShowingVideo then
+    begin
       //ShowWindow(DetachedVideoForm.Handle, SW_SHOWNOACTIVATE); // Don't give focus
-      wndpl.Length := SizeOf(wndpl);
-      GetWindowPlacement(DetachedVideoForm.Handle, @wndpl) ;
-      with wndpl.rcNormalPosition do
-      begin
-        minWidth := 320;
-        minHeight := 240;
-        vleft := max(left, 0);
-        vtop := max(top, 0);
-        vright := min(max(right, vleft + minWidth), Screen.Width);
-        vbottom := min(max(bottom, vtop + minHeight), Screen.Height);
-        if (vright - vleft < minWidth) then
-          vleft := vright - minWidth;
-        if (vbottom - vtop < minHeight) then
-          vtop := vbottom - minHeight;
-        SetWindowPos(DetachedVideoForm.Handle, HWND_TOPMOST, vleft, vtop, vright - vleft, vbottom - vtop, SWP_NOACTIVATE);
-      end;
+      ShowDetachedVideoForm;
+    end;
     DetachedVideoForm.Visible := ShowingVideo;
   end
   else
