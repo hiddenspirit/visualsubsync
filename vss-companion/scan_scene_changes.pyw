@@ -80,10 +80,12 @@ class ScanSceneChangeApplication(QtGui.QApplication):
         if self._memory.attach():
             self.running = True
         else:
-            self.running = False
-            if not self._memory.create(1):
-                raise RuntimeError(
-                    self._memory.errorString().toLocal8Bit().data())
+            if self._memory.create(1):
+                self.running = False
+            elif self._memory.attach():
+                self.running = True
+            else:
+                raise RuntimeError(self._memory.errorString())
 
     @property
     def name(self):
