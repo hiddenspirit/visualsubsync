@@ -4,9 +4,7 @@
 """
 
 import argparse
-import builtins
 import os
-import io
 import sys
 import threading
 from collections import namedtuple
@@ -60,6 +58,20 @@ WM_APP_SUB_CHANGED = WM_APP + 0x103
 ScanResult = namedtuple("ScanResult", ("item", "category", "timecode"))
 
 
+def print_error():
+    _exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]      
+    msg = "{},{}: {!r}".format(fname, exc_tb.tb_lineno, exc_obj)
+    print(msg, file=sys.stderr)
+
+
+class EmittingStream(QtCore.QObject):
+    text_written = Signal(str)
+
+    def write(self, text):
+        self.text_written.emit(str(text))
+
+
 class ScanSceneChangeApplication(QtGui.QApplication):
     def winEventFilter(self, msg):
         if msg.message == WM_APP_EXIT:
@@ -89,7 +101,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     cancel_missing_event = None
     state = None
     executor = futures.ThreadPoolExecutor(1)
-    debug_print_signal = Signal(str)
 
 
     def __init__(self, args, parent=None):
@@ -104,20 +115,21 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.ui.tab_Log.setObjectName("tab_Log")
             self.ui.gridLayoutDebug = QtGui.QGridLayout(self.ui.tab_Log)
             self.ui.gridLayoutDebug.setObjectName("gridLayoutDebug")
-            self.ui.plainTextEdit_Log = QtGui.QPlainTextEdit(self.ui.tab_Log)
-            self.ui.plainTextEdit_Log.setObjectName("plainTextEdit_Log")
-            self.ui.gridLayoutDebug.addWidget(self.ui.plainTextEdit_Log, 0, 0, 1, 1)
+            self.ui.textEdit_Log = QtGui.QTextEdit(self.ui.tab_Log)
+            self.ui.textEdit_Log.setObjectName("textEdit_Log")
+            self.ui.gridLayoutDebug.addWidget(self.ui.textEdit_Log, 0, 0, 1, 1)
             self.ui.tabWidget.addTab(self.ui.tab_Log, self.tr("Log"))
-            self.ui.plainTextEdit_Log.setReadOnly(True)
-            self.debug_print = self._debug_print
-            self.error_print = self._error_print
-            self.debug_print_signal.connect(self.on_debug_print)
-            self.debug_print("build date:", common.BUILD_DATE)
+            self.ui.textEdit_Log.setReadOnly(True)
+            sys.stdout = sys.stderr = EmittingStream(
+                text_written=self.on_log_written)
+
+        print("build date:", common.BUILD_DATE)
 
         if args.vss:
             self.vss = args.vss
             self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
-            win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED, self.winId(), 0)
+            win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED,
+                                 self.winId(), 0)
         else:
             self.vss = None
 
@@ -151,16 +163,21 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.scan_results = {}
         self.undoables = {}
 
-        self.ui.spinBoxDifference.valueChanged.connect(self.on_spinbox_difference_changed)
-        self.ui.doubleSpinBoxRatio.valueChanged.connect(self.on_spinbox_ratio_changed)
-        self.ui.horizontalSliderRatio.valueChanged.connect(self.on_slider_ratio_changed)
+        self.ui.spinBoxDifference.valueChanged.connect(
+            self.on_spinbox_difference_changed)
+        self.ui.doubleSpinBoxRatio.valueChanged.connect(
+            self.on_spinbox_ratio_changed)
+        self.ui.horizontalSliderRatio.valueChanged.connect(
+            self.on_slider_ratio_changed)
         self.ui.toolButtonDefaults.clicked.connect(self.on_defaults_clicked)
         self.ui.toolButtonScan.clicked.connect(self.on_scan_clicked)
         self.ui.toolButtonCancel.clicked.connect(self.on_cancel_clicked)
         self.ui.checkBoxBogus.stateChanged.connect(self.on_check_bogus_changed)
-        self.ui.checkBoxMissing.stateChanged.connect(self.on_check_missing_changed)
+        self.ui.checkBoxMissing.stateChanged.connect(
+            self.on_check_missing_changed)
         self.bogus_scene_change_found.connect(self.on_bogus_scene_change_found)
-        self.missing_scene_change_found.connect(self.on_missing_scene_change_found)
+        self.missing_scene_change_found.connect(
+            self.on_missing_scene_change_found)
         self.bogus_scan_done.connect(self.on_bogus_scan_done)
         self.missing_scan_done.connect(self.on_missing_scan_done)
         self.scan_done.connect(self.on_scan_done)
@@ -171,41 +188,29 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
         self.right_click_widget = QtGui.QWidget()
         self.ui.actionApply_suggestion.setParent(self.right_click_widget)
-        self.ui.actionApply_suggestions_category.setParent(self.right_click_widget)
+        self.ui.actionApply_suggestions_category.setParent(
+            self.right_click_widget)
         self.ui.actionApply_all_suggestions.setParent(self.right_click_widget)
         self.ui.actionUndo_suggestion.setParent(self.right_click_widget)
 
-        self.ui.treeWidget.itemSelectionChanged.connect(self.on_selection_changed)
+        self.ui.treeWidget.itemSelectionChanged.connect(
+            self.on_selection_changed)
         self.ui.treeWidget.itemDoubleClicked.connect(self.on_double_click)
-        self.ui.actionApply_suggestion.triggered.connect(self.on_apply_suggestion)
-        self.ui.actionApply_suggestions_category.triggered.connect(self.on_apply_suggestions_category)
-        self.ui.actionApply_all_suggestions.triggered.connect(self.on_apply_all_suggestions)
-        self.ui.actionUndo_suggestion.triggered.connect(self.on_undo_suggestion)
+        self.ui.actionApply_suggestion.triggered.connect(
+            self.on_apply_suggestion)
+        self.ui.actionApply_suggestions_category.triggered.connect(
+            self.on_apply_suggestions_category)
+        self.ui.actionApply_all_suggestions.triggered.connect(
+            self.on_apply_all_suggestions)
+        self.ui.actionUndo_suggestion.triggered.connect(
+            self.on_undo_suggestion)
 
-    def debug_print(self, *args, **kwargs):
-        builtins.print(file=sys.stderr, *args, **kwargs)
-
-    def error_print(self, e):
-        _exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]      
-        msg = "{},{}: {!r}".format(fname, exc_tb.tb_lineno, exc_obj) 
-        builtins.print(msg, file=sys.stderr)
-
-    def _debug_print(self, *args, **kwargs):
-        ss = io.StringIO()
-        builtins.print(file=ss, *args, **kwargs)
-        self.debug_print_signal.emit(ss.getvalue().rstrip())
-
-    def _error_print(self, e):
-        ss = io.StringIO()
-        _exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]      
-        msg = "{},{}: {!r}".format(fname, exc_tb.tb_lineno, exc_obj) 
-        builtins.print(msg, file=ss)
-        self.debug_print_signal.emit(ss.getvalue().rstrip())
-
-    def on_debug_print(self, message):
-        self.ui.plainTextEdit_Log.appendPlainText(message)
+    def on_log_written(self, text):
+        cursor = self.ui.textEdit_Log.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.insertText(text)
+        self.ui.textEdit_Log.setTextCursor(cursor)
+        self.ui.textEdit_Log.ensureCursorVisible()
 
     def closeEvent(self, event=None):
         if self.job is not None:
@@ -213,12 +218,17 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.cancel_missing_event.set()
             self.job.result()
         if self.vss:
-            win32gui.PostMessage(self.vss, WM_APP_COMPANION_CLOSED, self.winId(), 0)
+            win32gui.PostMessage(self.vss, WM_APP_COMPANION_CLOSED,
+                                 self.winId(), 0)
         app.exit(0)
 
     def create_index(self):
-        common.get_video_source(self.video_file)
-        self.index_created.emit()
+        try:
+            common.get_video_source(self.video_file)
+        except Exception:
+            print_error()
+        finally:
+            self.index_created.emit()
 
     @property
     def video_dialog_filter(self):
@@ -256,12 +266,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def on_spinbox_ratio_changed(self, value):
         self.ui.horizontalSliderRatio.setValue(int(value * 10))
         self.check_defaults()
-    
+
     def on_slider_ratio_changed(self, value):
         self.ui.doubleSpinBoxRatio.setValue(value / 10.0)
     
     def check_defaults(self):
-        non_defaults = (self.diff_pct != sublib.SceneChangeFile.DIFF_PCT_THRESHOLD or self.ratio != sublib.SceneChangeFile.RATIO_THRESHOLD)
+        non_defaults = (
+            self.diff_pct != sublib.SceneChangeFile.DIFF_PCT_THRESHOLD or
+            self.ratio != sublib.SceneChangeFile.RATIO_THRESHOLD
+        )
         self.ui.toolButtonDefaults.setEnabled(non_defaults)
 
     @property
@@ -328,7 +341,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.cancel_missing_event.set()
 
     def finalize_cancel(self):
-        scannable = self.ui.checkBoxBogus.isChecked() or self.ui.checkBoxMissing.isChecked()
+        scannable = (self.ui.checkBoxBogus.isChecked() or
+            self.ui.checkBoxMissing.isChecked())
         self.ui.toolButtonScan.setEnabled(scannable)
         self.set_enabled_parameters(True)
         self.ui.statusbar.showMessage(self.tr("Canceled"))
@@ -339,11 +353,13 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.reset_tree()
         self.cancel_bogus_event = threading.Event()
         self.cancel_missing_event = threading.Event()
-        self.job = self.executor.submit(self.scan_thread, self.cancel_bogus_event, self.cancel_missing_event)
+        self.job = self.executor.submit(self.scan_thread,
+            self.cancel_bogus_event, self.cancel_missing_event)
     
     def on_check_bogus_changed(self, state):
         if self.state == "ready":
-            scannable = self.ui.checkBoxBogus.isChecked() or self.ui.checkBoxMissing.isChecked()
+            scannable = (self.ui.checkBoxBogus.isChecked() or
+                self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
         elif self.state == "busy":
             if not state and self.cancel_bogus_event:
@@ -355,7 +371,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
     def on_check_missing_changed(self, state):
         if self.state == "ready":
-            scannable = self.ui.checkBoxBogus.isChecked() or self.ui.checkBoxMissing.isChecked()
+            scannable = (self.ui.checkBoxBogus.isChecked() or
+                self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
         elif self.state == "busy":
             if not state and self.cancel_missing_event:
@@ -373,7 +390,9 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     
             if self.scan_bogus:
-                for sc_time, diff_pct in sc_file.scan_bogus(vsource, timings, self.diff_pct, cancel_event=cancel_bogus_event):
+                for sc_time, diff_pct in sc_file.scan_bogus(
+                        vsource, timings, self.diff_pct,
+                        cancel_event=cancel_bogus_event):
                     self.bogus_scene_change_found.emit(sc_time, diff_pct)
                     self.count += 1
             
@@ -381,15 +400,18 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     
             if self.scan_missing:
                 fps = common.get_fps(vsource)
-                for sc_time, diff_pct, ratio in sc_file.scan_missing(vsource, timings, self.diff_pct, self.ratio, cancel_event=cancel_missing_event):
+                for sc_time, diff_pct, ratio in sc_file.scan_missing(
+                    vsource, timings, self.diff_pct, self.ratio,
+                    cancel_event=cancel_missing_event):
                     sc_time = common.round_timing(sc_time, fps)
-                    self.missing_scene_change_found.emit(sc_time, diff_pct, ratio)
+                    self.missing_scene_change_found.emit(sc_time, diff_pct,
+                                                         ratio)
                     self.count += 1
     
             self.job = None
             #self.missing_scan_done.emit()
-        except Exception as e:
-            self.error_print(e)
+        except Exception:
+            print_error()
         finally:
             self.scan_done.emit()
 
@@ -400,14 +422,17 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         pass
     
     def on_scan_done(self):
-        if not self.count and self.cancel_bogus_event.is_set() and self.cancel_missing_event.is_set():
+        if (not self.count and self.cancel_bogus_event.is_set() and
+                self.cancel_missing_event.is_set()):
             self.finalize_cancel()
         else:
             self.ui.toolButtonCancel.setEnabled(False)
-            scannable = self.ui.checkBoxBogus.isChecked() or self.ui.checkBoxMissing.isChecked()
+            scannable = (self.ui.checkBoxBogus.isChecked() or
+                self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
             self.set_enabled_parameters(True)
-            self.ui.statusbar.showMessage(self.tr("%n result(s)", "", self.count))
+            self.ui.statusbar.showMessage(
+                self.tr("%n result(s)", "", self.count))
             app.restoreOverrideCursor()
             self.state = "ready"
 
@@ -415,7 +440,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.add_item(self.bogus_root, self.bogus_category, sc_time, diff_pct)
 
     def on_missing_scene_change_found(self, sc_time, diff_pct, ratio):
-        self.add_item(self.missing_root, self.missing_category, sc_time, diff_pct, ratio)
+        self.add_item(self.missing_root, self.missing_category,
+                      sc_time, diff_pct, ratio)
 
     @classmethod
     def time_output(cls, t):
@@ -492,15 +518,18 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
                     self.ui.actionApply_suggestions_category.setEnabled(True)
                 else:
                     category = self.selection.text(0)
-                    non_empty = any(r.category == category for r in self.scan_results.values())
+                    non_empty = any(r.category == category
+                                    for r in self.scan_results.values())
                     self.ui.actionApply_suggestion.setEnabled(False)
                     self.ui.actionUndo_suggestion.setEnabled(False)
-                    self.ui.actionApply_suggestions_category.setEnabled(non_empty)
+                    self.ui.actionApply_suggestions_category.setEnabled(
+                        non_empty)
             else:
                 self.ui.actionApply_suggestion.setEnabled(False)
                 self.ui.actionUndo_suggestion.setEnabled(False)
                 self.ui.actionApply_suggestions_category.setEnabled(False)
-            self.ui.actionApply_all_suggestions.setEnabled(len(self.scan_results))
+            self.ui.actionApply_all_suggestions.setEnabled(
+                len(self.scan_results))
         else:
             self.ui.actionApply_suggestion.setEnabled(False)
             self.ui.actionUndo_suggestion.setEnabled(False)
@@ -509,7 +538,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     
         global_point = self.ui.treeWidget.mapToGlobal(point)
         if not self.ui.treeWidget.isHeaderHidden():
-            global_point.setY(global_point.y() + self.ui.treeWidget.header().height())
+            global_point.setY(global_point.y() +
+                              self.ui.treeWidget.header().height())
 
         menu = QtGui.QMenu("Menu", self)
         if undo:
@@ -547,19 +577,23 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def apply_suggestions(self, results):
         for result in results:
             if result.category == self.bogus_category:
-                win32gui.PostMessage(self.vss, WM_APP_DELETE_SC, result.timecode, 0)
+                win32gui.PostMessage(self.vss, WM_APP_DELETE_SC,
+                                     result.timecode, 0)
                 self.remove_item(result.item)
             elif result.category == self.missing_category:
-                win32gui.PostMessage(self.vss, WM_APP_INSERT_SC, result.timecode, 0)
+                win32gui.PostMessage(self.vss, WM_APP_INSERT_SC,
+                                     result.timecode, 0)
                 self.remove_item(result.item)
 
     def undo_suggestions(self, results):
         for result in results:
             if result.category == self.bogus_category:
-                win32gui.PostMessage(self.vss, WM_APP_INSERT_SC, result.timecode, 0)
+                win32gui.PostMessage(self.vss, WM_APP_INSERT_SC,
+                                     result.timecode, 0)
                 self.undo_remove_item(result.item)
             elif result.category == self.missing_category:
-                win32gui.PostMessage(self.vss, WM_APP_DELETE_SC, result.timecode, 0)
+                win32gui.PostMessage(self.vss, WM_APP_DELETE_SC,
+                                     result.timecode, 0)
                 self.undo_remove_item(result.item)
 
     def on_apply_suggestion(self, checked=False):
@@ -575,7 +609,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             category = self.undoables[id(self.selection)].category
         else:
             category = self.selection.text(0)
-        results = [r for r in self.scan_results.values() if r.category == category]
+        results = [r for r in self.scan_results.values()
+                   if r.category == category]
         self.apply_suggestions(results)
 
     def on_apply_all_suggestions(self, checked=False):
