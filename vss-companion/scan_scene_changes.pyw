@@ -173,6 +173,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.actionApply_suggestion.setParent(self.right_click_widget)
         self.ui.actionApply_suggestions_category.setParent(self.right_click_widget)
         self.ui.actionApply_all_suggestions.setParent(self.right_click_widget)
+        self.ui.actionUndo_suggestion.setParent(self.right_click_widget)
 
         self.ui.treeWidget.itemSelectionChanged.connect(self.on_selection_changed)
         self.ui.treeWidget.itemDoubleClicked.connect(self.on_double_click)
