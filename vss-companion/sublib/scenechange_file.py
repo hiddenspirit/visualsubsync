@@ -116,7 +116,7 @@ class SceneChangeFile(SortedSet):
                 else next_)
 
     def contains(self, start_time, end_time):
-        pos = self.bisect_right(start_time)
+        pos = self.bisect_left(start_time)
         return pos < len(self) and self[pos] <= end_time
 
     @classmethod
