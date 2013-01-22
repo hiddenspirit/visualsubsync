@@ -19,6 +19,7 @@ from PyQt4.QtCore import Qt
 
 from scan_scene_changes_window import Ui_MainWindow
 
+import ffms
 import sublib.old
 import common
 
@@ -145,6 +146,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.debug = False
 
         print("build date:", common.BUILD_DATE)
+        print("FFMS v{}".format(ffms.get_version()))
+        print(ffms.libffms2.lib._name)
 
         if args.vss:
             self.vss = args.vss
