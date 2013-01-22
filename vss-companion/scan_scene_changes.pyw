@@ -330,11 +330,13 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         if enabled:
             self.ui.checkBoxBogus.setEnabled(enabled)
             self.ui.checkBoxMissing.setEnabled(enabled)
+            self.check_defaults()
+        else:
+            self.ui.toolButtonDefaults.setEnabled(enabled)
         self.ui.spinBoxDifference.setEnabled(enabled)
         self.ui.horizontalSliderDifference.setEnabled(enabled)
         self.ui.doubleSpinBoxRatio.setEnabled(enabled)
         self.ui.horizontalSliderRatio.setEnabled(enabled)
-        self.ui.toolButtonDefaults.setEnabled(enabled)
 
     @property
     def scan_bogus(self):
