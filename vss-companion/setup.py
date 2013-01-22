@@ -12,8 +12,8 @@ from cx_Freeze import setup, Executable
 path = sys.path + []
 
 # options d'inclusion/exclusion des modules
-includes = ["sip"]
-excludes = []
+includes = []
+excludes = ["tkinter"]
 packages = []
 
 # copier les fichiers et/ou répertoires et leur contenu
@@ -34,6 +34,7 @@ options = {
     "include_files": includefiles,
     "bin_path_includes": binpathincludes,
     "optimize": 2,
+    "replace_paths": [("*", "")],
 }
 
 #############################################################################

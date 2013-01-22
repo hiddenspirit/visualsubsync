@@ -73,7 +73,7 @@ def main():
             args.filter_offset):
         sc_time = common.round_timing(sc_time, fps)
         print("{}\t{:.1%}\t{:.2f}".format(time_output(sc_time),
-                                              diff_pct, ratio))
+                                          diff_pct, ratio))
         missing_list.append(sc_time)
 
     if args.apply:

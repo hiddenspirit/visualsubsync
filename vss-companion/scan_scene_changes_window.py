@@ -234,4 +234,3 @@ class Ui_MainWindow(object):
         self.actionApply_suggestions_category.setText(_translate("MainWindow", "Apply suggestions in this category", None))
         self.actionApply_all_suggestions.setText(_translate("MainWindow", "Apply all suggestions", None))
         self.actionUndo_suggestion.setText(_translate("MainWindow", "Undo suggestion", None))
-

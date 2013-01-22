@@ -208,7 +208,7 @@ class SceneChangeFile(SortedSet):
                         if ratio >= ratio_threshold:
                             pos = diffs.argmax() + scan_start
                             sc_time = frame_position_to_time(vsource, pos)
-                            yield sc_time, diff_pct, ratio                    
+                            yield sc_time, diff_pct, ratio
 
     def scan_bogus(self, vsource, timings,
                    diff_pct_threshold=DIFF_PCT_THRESHOLD, filter_offset=None,
@@ -265,6 +265,7 @@ def frame_time_to_position(vsource, time):
     pos = bisect.bisect(vsource.track.timecodes, time)
     return pos - 1 if pos > 0 else pos
 
+
 def frame_time_to_nearest_position(vsource, time):
     pos = bisect.bisect(vsource.track.timecodes, time)
     if (pos == 0 or abs(vsource.track.timecodes[pos] - time) <
@@ -272,8 +273,10 @@ def frame_time_to_nearest_position(vsource, time):
         return pos
     return pos - 1
 
+
 def frame_position_to_time(vsource, frame):
     return vsource.track.timecodes[frame]
+
 
 def get_fps(vsource):
     return Fraction(vsource.properties.FPSNumerator,
