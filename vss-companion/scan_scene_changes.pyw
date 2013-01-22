@@ -121,7 +121,6 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     state = None
     executor = futures.ThreadPoolExecutor(1)
 
-
     def __init__(self, args, parent=None):
         super().__init__(parent)
         # self.ui = uic.loadUi("scan_scene_changes_window.ui")
@@ -259,12 +258,12 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     @property
     def video_dialog_filter(self):
         return "{} ({})".format(self.tr("Video files"),
-            " ".join("*" + ext for ext in VIDEO_EXTS))
+                                " ".join("*" + ext for ext in VIDEO_EXTS))
 
     @property
     def sub_dialog_filter(self):
         return "{} ({})".format(self.tr("Subtitle files"),
-            " ".join("*" + ext for ext in SUB_EXTS))
+                                " ".join("*" + ext for ext in SUB_EXTS))
 
     def get_open_filename(self, title=None, dialog_filter=None):
         star_filter = "{} (*.*)".format(self.tr("All files"))
@@ -370,7 +369,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
     def finalize_cancel(self):
         scannable = (self.ui.checkBoxBogus.isChecked() or
-            self.ui.checkBoxMissing.isChecked())
+                     self.ui.checkBoxMissing.isChecked())
         self.ui.toolButtonScan.setEnabled(scannable)
         self.set_enabled_parameters(True)
         self.ui.statusbar.showMessage(self.tr("Canceled"))
@@ -381,13 +380,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.reset_tree()
         self.cancel_bogus_event = threading.Event()
         self.cancel_missing_event = threading.Event()
-        self.job = self.executor.submit(self.scan_thread,
-            self.cancel_bogus_event, self.cancel_missing_event)
+        self.job = self.executor.submit(
+            self.scan_thread,
+            self.cancel_bogus_event, self.cancel_missing_event
+        )
 
     def on_check_bogus_changed(self, state):
         if self.state == "ready":
             scannable = (self.ui.checkBoxBogus.isChecked() or
-                self.ui.checkBoxMissing.isChecked())
+                         self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
         elif self.state == "busy":
             if not state and self.cancel_bogus_event:
@@ -400,7 +401,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def on_check_missing_changed(self, state):
         if self.state == "ready":
             scannable = (self.ui.checkBoxBogus.isChecked() or
-                self.ui.checkBoxMissing.isChecked())
+                         self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
         elif self.state == "busy":
             if not state and self.cancel_missing_event:
@@ -429,8 +430,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             if self.scan_missing:
                 fps = common.get_fps(vsource)
                 for sc_time, diff_pct, ratio in sc_file.scan_missing(
-                    vsource, timings, self.diff_pct, self.ratio,
-                    cancel_event=cancel_missing_event):
+                        vsource, timings, self.diff_pct, self.ratio,
+                        cancel_event=cancel_missing_event):
                     sc_time = common.round_timing(sc_time, fps)
                     self.missing_scene_change_found.emit(sc_time, diff_pct,
                                                          ratio)
@@ -458,7 +459,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         else:
             self.ui.toolButtonCancel.setEnabled(False)
             scannable = (self.ui.checkBoxBogus.isChecked() or
-                self.ui.checkBoxMissing.isChecked())
+                         self.ui.checkBoxMissing.isChecked())
             self.ui.toolButtonScan.setEnabled(scannable)
             self.set_enabled_parameters(True)
             self.ui.statusbar.showMessage(

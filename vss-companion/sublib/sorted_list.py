@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 
+import copy
 import sys
 
 from bisect import bisect_left, bisect_right, insort_right
-from collections import MutableSet, Sequence#, Sized
-from functools import total_ordering#, partial
+from collections import MutableSet, Sequence
+from functools import total_ordering
 
 
 @total_ordering
@@ -29,9 +30,9 @@ class SortedList(Sequence, MutableSet):
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            o = self.__new__(self.__class__)
-            o.__init__(self.data[index])
-            return o
+            sliced = copy.copy(self)
+            sliced.data = self.data[index]
+            return sliced
         return self.data[index]
 
     def __delitem__(self, index):
