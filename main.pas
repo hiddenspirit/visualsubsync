@@ -3540,11 +3540,12 @@ procedure TMainForm.ActionProjectPropertiesExecute(Sender: TObject);
 var ProjectHasChanged, VideoHasChanged, SubtitleFileHasChanged : Boolean;
     PreviousSubtitlesFile : WideString;
 begin
-  // TODO : test this more
   if (CompanionHandle <> 0) then
     PostMessage(CompanionHandle, WM_APP_EXIT, 0, 0);
+  // TODO : test this more
 
   ProjectForm.ConfigureInModifyProjectMode(CurrentProject);
+
   if (ProjectForm.ShowModal = mrOK) then
   begin
     g_WebRWSynchro.BeginWrite;
@@ -3714,6 +3715,12 @@ begin
     vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
     vtvSubsList.Repaint;
   end;
+
+  if (ProjectForm.needUpdateSC) then
+  begin
+    LoadVideoSceneChange;
+  end;
+
 end;
 
 //------------------------------------------------------------------------------
