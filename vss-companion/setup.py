@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import sys
-#import os
+import os
 from cx_Freeze import setup, Executable
 
 #############################################################################
 # préparation des options
 
 # chemins de recherche des modules
-path = sys.path + []
+path = sys.path + ["generate_scenechange_file"]
 
 # options d'inclusion/exclusion des modules
 includes = []
@@ -18,12 +18,15 @@ packages = []
 
 # copier les fichiers et/ou répertoires et leur contenu
 includefiles = ["ffms2.dll"]
+includefiles_generate_scenechange_file = [
+    "avs2yuv.exe", "mvtools2.dll", "avisynth.dll", "devil.dll",
+    "generate_scenechange_file_presets.ini",
+    "generate_scenechange_file_fr.qm",
+    "generate_scenechange_file_debug.cmd",
+]
 
-# inclusion éventuelle de bibliothèques supplémentaires
-binpathincludes = []
-if sys.platform.startswith("linux"):
-    # pour que les bibliothèques de /usr/lib soient copiées aussi
-    binpathincludes += ["/usr/lib"]
+for f in includefiles_generate_scenechange_file:
+    includefiles.append((os.path.join("generate_scenechange_file", f), ""))
 
 # construction du dictionnaire des options
 options = {
@@ -32,17 +35,13 @@ options = {
     "excludes": excludes,
     "packages": packages,
     "include_files": includefiles,
-    "bin_path_includes": binpathincludes,
+    "bin_path_includes": [],
     "optimize": 2,
     "replace_paths": [("*", "")],
 }
 
 #############################################################################
 # préparation des cibles
-base = None
-# if sys.platform == "win32":
-    # base = "Win32GUI"
-
 exe_list = [
     Executable(
         script="find_scenechange.py",
@@ -69,9 +68,16 @@ exe_list = [
         base="Win32GUI",
         compress=True,
     ),
+    Executable(
+        script="generate_scenechange_file/generate_scenechange_file.pyw",
+        base="Win32GUI",
+        compress=True,
+        icon="generate_scenechange_file/sc.ico",
+    ),
 ]
 
 #############################################################################
+
 # création du setup
 setup(
     name="vss-companion",
