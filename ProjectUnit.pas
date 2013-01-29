@@ -127,6 +127,7 @@ type
     procedure UpdateColor;
   public
     { Public declarations }
+    needUpdateSC : Boolean;
     procedure Clear;
     procedure ConfigureInNewProjectMode;
     procedure ConfigureInModifyProjectMode(Project : TVSSProject);
@@ -541,6 +542,7 @@ end;
 procedure TProjectForm.bttGenerateSceneChangeFileClick(Sender: TObject);
 begin
   GenerateSceneChangeFile(EditVideoFilename.Text);
+  needUpdateSC := True;
 end;
 
 //------------------------------------------------------------------------------
@@ -596,6 +598,7 @@ begin
   WAVSelectMode(Project.WAVMode);
   chkSaveAsUTF8.Checked := Project.IsUTF8;
   UpdateFormatCombobox;
+  needUpdateSC := False;
 end;
 
 //------------------------------------------------------------------------------
