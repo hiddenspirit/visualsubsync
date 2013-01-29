@@ -530,7 +530,7 @@ begin
   SubListFont := 'Arial,8,0,0,clWindowText';
   SubTextFont := 'Arial,10,1,0,clWindowText';
   // WAV Display
-  ShowSceneChange := False;
+  ShowSceneChange := True;
   SceneChangeStartOffset := 130;
   SceneChangeStopOffset := 130;
   ShowTextInWAVDisplay := True;
