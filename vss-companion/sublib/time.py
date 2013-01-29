@@ -10,6 +10,7 @@ ONE_MINUTE = ONE_SECOND * 60
 ONE_HOUR = ONE_MINUTE * 60
 
 
+#TODO: maybe it should be float.
 @total_ordering
 class Time(int):
     FORMAT = "{h:02d}:{min:02d}:{s:06.3f}"
