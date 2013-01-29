@@ -7,11 +7,10 @@
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFilters "LAVFilters-0.55.2"
-#define Win7DSFilterTweaker "Win7DSFilterTweaker_5.7"
+#define LAVFilters "LAV Filters 0.55.2"
+#define LAVFiltersInstaller "LAVFilters-0.55.2.exe"
+#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
 #define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
-#define LAVFiltersInstaller LAVFilters + ".exe"
-#define Win7DSFilterTweakerExeName Win7DSFilterTweaker + ".exe"
 #define VCRedistInstaller "vcredist_x86.exe"
 
 [Setup]
@@ -29,7 +28,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
-InfoBeforeFile=..\Copying.txt
+;InfoBeforeFile=..\Copying.txt
 OutputBaseFilename=VisualSubSync-{#MyAppVersion}-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -43,12 +42,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
 AdditionalSoftware=Additional software:
-InstallSoftware=Install %1
-CleanInstall=Clear the installation directory before installing
-AssociateExtension=Associate %1 files
+InstallSoftware=Install%1
+CleanInstall=Clear previous installation files and settings
+AssociateExtension=Associate%1 files
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
+Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
 Name: "lav_filters"; Description: "{cm:InstallSoftware, {#LAVFilters}}"; GroupDescription: {cm:AdditionalSoftware}
@@ -74,9 +73,9 @@ Source: ".\setup\{#VCRedistInstaller}"; DestDir: "{app}\setup"; Flags: ignorever
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 ;Name: "{group}\Help"; Filename: "{app}\help\index.html"
-Name: "{group}\Website"; Filename: "https://bitbucket.org/spirit/visualsubsync"
+Name: "{group}\Website"; Filename: "{#MyAppURL}"
 ;Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktop_icon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
@@ -101,3 +100,19 @@ Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppNa
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  originalVSSUninstaller: String;
+  resultCode: Integer;
+begin
+  if CurStep = ssInstall then
+  begin
+    originalVSSUninstaller := WizardDirValue() + '\VisualSubSync-uninstall.exe';
+    if FileExists(originalVSSUninstaller) then
+    begin
+      Exec(originalVSSUninstaller, '/S', '', SW_SHOW, ewWaitUntilTerminated, resultCode);
+    end;
+  end;
+end;
