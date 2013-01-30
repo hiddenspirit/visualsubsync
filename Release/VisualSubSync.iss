@@ -2,14 +2,17 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "VisualSubSync"
-#define MyAppVersion "2013-01-29"
+#define MyAppVersion "2013-01-30"
 #define MyAppPublisher "Subfactory.fr"
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFilters "LAV Filters 0.55.2"
+#define LAVFiltersVersion "0.55.2"
 #define LAVFiltersInstaller "LAVFilters-0.55.2.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
+
+#define LAVFilters "LAV Filters"
+#define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
 #define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
 #define VCRedistInstaller "vcredist_x86.exe"
 
@@ -18,6 +21,7 @@
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{8087A396-8AF5-448F-B781-07DEEF71492E}
+;AppId={#MyAppName}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -45,12 +49,13 @@ AdditionalSoftware=Additional software:
 InstallSoftware=Install%1
 CleanInstall=Clear previous installation files and settings
 AssociateExtension=Associate%1 files
+OriginalVSS=Original VisualSubSync was found at the specified location and will be uninstalled.
 
 [Tasks]
 Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
-Name: "lav_filters"; Description: "{cm:InstallSoftware, {#LAVFilters}}"; GroupDescription: {cm:AdditionalSoftware}
+Name: "lav_filters"; Description: "{cm:InstallSoftware, {#LAVFIltersVerName}}"; GroupDescription: {cm:AdditionalSoftware}
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
@@ -97,22 +102,90 @@ Root: HKCR; Subkey: "VisualSubSync.Document\shell\open\command"; ValueType: stri
 Type: filesandordirs; Name: "{app}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files (x86)\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppName}"; Tasks: clean_install
+Type: filesandordirs; Name: "{group}"; Tasks: clean_install
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
 [Code]
+const
+  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}';
+  CleanInstallTaskIndex = 3;
+  VCRedistTaskIndex = 6;
+
+var
+  OriginalVSSUninstaller: String;
+  OriginalVSSInstalled: Boolean;  
+  VCRedistCheckDone : Boolean;
+
+function InitializeSetup(): Boolean;
+begin
+  VCRedistCheckDone := False;
+  Result := True;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  if CurPageID = wpSelectDir then
+  begin
+    OriginalVSSUninstaller := WizardDirValue() + '\VisualSubSync-uninstall.exe';
+    if FileExists(OriginalVSSUninstaller) then
+    begin
+      OriginalVSSInstalled := True;
+      MsgBox(CustomMessage('OriginalVSS'), mbInformation, MB_OK);
+    end
+    else
+    begin
+      OriginalVSSInstalled := False;
+    end;
+  end;
+  Result := True;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpSelectTasks then
+  begin
+    if OriginalVSSInstalled then
+    begin
+      WizardForm.TasksList.ItemEnabled[CleanInstallTaskIndex] := False;
+      WizardForm.TasksList.Checked[CleanInstallTaskIndex] := True;
+    end
+    else if DirExists(WizardDirValue()) then
+    begin
+      WizardForm.TasksList.ItemEnabled[CleanInstallTaskIndex] := True;
+    end
+    else
+    begin
+      WizardForm.TasksList.ItemEnabled[CleanInstallTaskIndex] := False;
+      WizardForm.TasksList.Checked[CleanInstallTaskIndex] := False;
+    end;
+
+    if not VCRedistCheckDone then
+    begin
+      if RegKeyExists(HKEY_LOCAL_MACHINE, VCRedistKey) then
+      begin
+        WizardForm.TasksList.Checked[VCRedistTaskIndex] := False;
+      end
+      else
+      begin
+        WizardForm.TasksList.ItemEnabled[VCRedistTaskIndex] := False;
+        WizardForm.TasksList.Checked[VCRedistTaskIndex] := True;
+      end;
+      VCRedistCheckDone := True;
+    end;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  originalVSSUninstaller: String;
-  resultCode: Integer;
+  ResultCode: Integer;
 begin
   if CurStep = ssInstall then
   begin
-    originalVSSUninstaller := WizardDirValue() + '\VisualSubSync-uninstall.exe';
-    if FileExists(originalVSSUninstaller) then
+    if OriginalVSSInstalled then
     begin
-      Exec(originalVSSUninstaller, '/S', '', SW_SHOW, ewWaitUntilTerminated, resultCode);
+      Exec(OriginalVSSUninstaller, '/S', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
     end;
   end;
 end;
