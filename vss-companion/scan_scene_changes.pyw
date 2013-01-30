@@ -208,6 +208,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
         self.ui.treeWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.treeWidget.customContextMenuRequested.connect(self.on_context)
+        self.ui.treeWidget.keyPressEvent = self.tree_key_press_event
 
         self.right_click_widget = QtGui.QWidget()
         self.ui.actionApply_suggestion.setParent(self.right_click_widget)
@@ -535,26 +536,23 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         item.setFont(0, font)
 
     def on_context(self, point):
-        undo = False
         if self.vss:
             if self.selection:
                 if id(self.selection) in self.scan_results:
                     self.ui.actionApply_suggestion.setEnabled(True)
                     self.ui.actionUndo_suggestion.setEnabled(False)
-                    self.ui.actionApply_suggestions_category.setEnabled(True)
+                    category = self.scan_results[id(self.selection)].category
                 elif id(self.selection) in self.undoables:
-                    undo = True
                     self.ui.actionApply_suggestion.setEnabled(False)
                     self.ui.actionUndo_suggestion.setEnabled(True)
-                    self.ui.actionApply_suggestions_category.setEnabled(True)
+                    category = self.undoables[id(self.selection)].category
                 else:
-                    category = self.selection.text(0)
-                    non_empty = any(r.category == category
-                                    for r in self.scan_results.values())
                     self.ui.actionApply_suggestion.setEnabled(False)
                     self.ui.actionUndo_suggestion.setEnabled(False)
-                    self.ui.actionApply_suggestions_category.setEnabled(
-                        non_empty)
+                    category = self.selection.text(0)
+                non_empty = any(r.category == category
+                                for r in self.scan_results.values())
+                self.ui.actionApply_suggestions_category.setEnabled(non_empty)
             else:
                 self.ui.actionApply_suggestion.setEnabled(False)
                 self.ui.actionUndo_suggestion.setEnabled(False)
@@ -573,12 +571,11 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
                               self.ui.treeWidget.header().height())
 
         menu = QtGui.QMenu("Menu", self)
-        if undo:
-            menu.addAction(self.ui.actionUndo_suggestion)
-        else:
-            menu.addAction(self.ui.actionApply_suggestion)
+        menu.addAction(self.ui.actionApply_suggestion)
         menu.addAction(self.ui.actionApply_suggestions_category)
         menu.addAction(self.ui.actionApply_all_suggestions)
+        menu.addSeparator()
+        menu.addAction(self.ui.actionUndo_suggestion)
         menu.exec(global_point)
 
     @property
@@ -597,6 +594,14 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         win32gui.PostMessage(self.vss, WM_APP_SET_POSITION, result.timecode, 0)
 
     def on_double_click(self, item, column):
+        self.toggle_item(item)
+
+    def tree_key_press_event(self, event=None):
+        super(QtGui.QTreeWidget, self.ui.treeWidget).keyPressEvent(event)
+        if event.key() in [QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter]:
+            self.toggle_item(self.selection)
+
+    def toggle_item(self, item):
         item_id = id(item)
         if item_id in self.scan_results:
             results = [self.scan_results[item_id]]

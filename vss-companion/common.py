@@ -13,7 +13,7 @@ from util.media_hash import MediaHash
 
 
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-01-29 10:17:56"
+BUILD_DATE = "2013-01-30 14:09:37"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
