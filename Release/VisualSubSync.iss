@@ -132,7 +132,10 @@ begin
     if FileExists(OriginalVSSUninstaller) then
     begin
       OriginalVSSInstalled := True;
-      MsgBox(CustomMessage('OriginalVSS'), mbInformation, MB_OK);
+      if not WizardSilent() then
+      begin
+        MsgBox(CustomMessage('OriginalVSS'), mbInformation, MB_OK);
+      end;
     end
     else
     begin
