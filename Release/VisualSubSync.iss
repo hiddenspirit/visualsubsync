@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "VisualSubSync"
-#define MyAppVersion "2013-01-30"
+#define MyAppVersion "2013-01-31"
 #define MyAppPublisher "Subfactory.fr"
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
