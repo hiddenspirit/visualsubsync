@@ -13,7 +13,13 @@ path = sys.path + ["generate_scenechange_file"]
 
 # options d'inclusion/exclusion des modules
 includes = []
-excludes = ["tkinter"]
+excludes = [
+    "tkinter", "bz2", "lzma", "ssl", "pyexpat", "unicodedata",
+    "curses", "distutils", "email", "html", "lib2to3",
+    "xml", "xmlrpc", "zipfile", "pdb", "ftplib",
+    "pydoc_data", "http", "urllib", "inspect",
+    "win32pdh",
+]
 packages = []
 
 # copier les fichiers et/ou répertoires et leur contenu
@@ -48,21 +54,21 @@ exe_list = [
         base=None,
         compress=True,
     ),
-    Executable(
-        script="make_scenechange_file.py",
-        base=None,
-        compress=True,
-    ),
-    Executable(
-        script="scan_missing_scene_changes.py",
-        base=None,
-        compress=True,
-    ),
-    Executable(
-        script="scan_bogus_scene_changes.py",
-        base=None,
-        compress=True,
-    ),
+    # Executable(
+        # script="make_scenechange_file.py",
+        # base=None,
+        # compress=True,
+    # ),
+    # Executable(
+        # script="scan_missing_scene_changes.py",
+        # base=None,
+        # compress=True,
+    # ),
+    # Executable(
+        # script="scan_bogus_scene_changes.py",
+        # base=None,
+        # compress=True,
+    # ),
     Executable(
         script="scan_scene_changes.pyw",
         base="Win32GUI",
