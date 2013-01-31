@@ -59,20 +59,20 @@ Name: "lav_filters"; Description: "{cm:InstallSoftware, {#LAVFIltersVerName}}"; 
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
-Source: ".\VisualSubSync.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\js3215R.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\libhunspell.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\VSSCustomVSFilter.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\WavWriter.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\dict\*"; DestDir: "{app}\dict"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\help\*"; DestDir: "{app}\help"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\jsplugin\*"; DestDir: "{app}\jsplugin"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\presets\*"; DestDir: "{app}\presets"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: ".\setup\{#LAVFiltersInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
-Source: ".\setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters; MinVersion: 6.1
-Source: ".\setup\{#VCRedistInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
+Source: "VisualSubSync.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "js3215R.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "libhunspell.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "VSSCustomVSFilter.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "WavWriter.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dict\*"; DestDir: "{app}\dict"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "help\*"; DestDir: "{app}\help"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "jsplugin\*"; DestDir: "{app}\jsplugin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "presets\*"; DestDir: "{app}\presets"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "setup\{#LAVFiltersInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
+Source: "setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters; MinVersion: 6.1
+Source: "setup\{#VCRedistInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
