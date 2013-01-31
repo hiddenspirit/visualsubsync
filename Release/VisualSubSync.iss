@@ -84,18 +84,18 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-Filename: "{app}\setup\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: lav_filters 
+Filename: "{app}\setup\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: lav_filters
 Filename: "{app}\setup\{#Win7DSFilterTweakerExeName}"; Parameters: "/silent /h264_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /xvid_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /aac_x86={{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}}"; Tasks: lav_filters; MinVersion: 6.1
-Filename: "{app}\setup\{#VCRedistInstaller}"; Parameters: "/passive /showfinalerror"; Tasks: vc_redist 
+Filename: "{app}\setup\{#VCRedistInstaller}"; Parameters: "/passive /showfinalerror"; Tasks: vc_redist
 
 [Dirs]
 Name: "{app}\setup"; Flags: deleteafterinstall
 ;Name: "{app}"; Permissions: users-modify
 
 [Registry]
-Root: HKCR; Subkey: ".vssprj"; ValueType: string; ValueName: ""; ValueData: "VisualSubSync.Document"; Flags: uninsdeletevalue; Tasks: associate_vssprj 
-Root: HKCR; Subkey: "VisualSubSync.Document"; ValueType: string; ValueName: ""; ValueData: "VisualSubSync Project"; Flags: uninsdeletekey; Tasks: associate_vssprj 
-Root: HKCR; Subkey: "VisualSubSync.Document\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},1"; Tasks: associate_vssprj 
+Root: HKCR; Subkey: ".vssprj"; ValueType: string; ValueName: ""; ValueData: "VisualSubSync.Document"; Flags: uninsdeletevalue; Tasks: associate_vssprj
+Root: HKCR; Subkey: "VisualSubSync.Document"; ValueType: string; ValueName: ""; ValueData: "VisualSubSync Project"; Flags: uninsdeletekey; Tasks: associate_vssprj
+Root: HKCR; Subkey: "VisualSubSync.Document\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},1"; Tasks: associate_vssprj
 Root: HKCR; Subkey: "VisualSubSync.Document\shell\open\command"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName} ""%1"""; Tasks: associate_vssprj
 
 [InstallDelete]
@@ -103,6 +103,8 @@ Type: filesandordirs; Name: "{app}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files (x86)\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{group}"; Tasks: clean_install
+Type: files; Name: "{commondesktop}\{#MyAppName}.lnk"; Tasks: clean_install
+Type: files; Name: "{userdesktop}\{#MyAppName}.lnk"; Tasks: clean_install
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
@@ -115,7 +117,7 @@ const
 
 var
   OriginalVSSUninstaller: String;
-  OriginalVSSInstalled: Boolean;  
+  OriginalVSSInstalled: Boolean;
   VCRedistCheckDone : Boolean;
 
 function InitializeSetup(): Boolean;
