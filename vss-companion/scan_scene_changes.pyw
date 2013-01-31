@@ -216,6 +216,9 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.right_click_widget)
         self.ui.actionApply_all_suggestions.setParent(self.right_click_widget)
         self.ui.actionUndo_suggestion.setParent(self.right_click_widget)
+        self.ui.actionUndo_suggestions_category.setParent(
+            self.right_click_widget)
+        self.ui.actionUndo_all_suggestions.setParent(self.right_click_widget)
 
         self.ui.treeWidget.itemSelectionChanged.connect(
             self.on_selection_changed)
@@ -228,6 +231,20 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.on_apply_all_suggestions)
         self.ui.actionUndo_suggestion.triggered.connect(
             self.on_undo_suggestion)
+        self.ui.actionUndo_suggestions_category.triggered.connect(
+            self.on_undo_suggestions_category)
+        self.ui.actionUndo_all_suggestions.triggered.connect(
+            self.on_undo_all_suggestions)
+
+        menu = QtGui.QMenu("Right-click menu", self)
+        menu.addAction(self.ui.actionApply_suggestion)
+        menu.addAction(self.ui.actionApply_suggestions_category)
+        menu.addAction(self.ui.actionApply_all_suggestions)
+        menu.addSeparator()
+        menu.addAction(self.ui.actionUndo_suggestion)
+        menu.addAction(self.ui.actionUndo_suggestions_category)
+        menu.addAction(self.ui.actionUndo_all_suggestions)
+        self.right_click_menu = menu
 
     def on_log_written(self, text):
         cursor = self.ui.textEdit_Log.textCursor()
@@ -538,14 +555,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def on_context(self, point):
         if self.vss:
             if self.selection:
-                if id(self.selection) in self.scan_results:
+                key = id(self.selection)
+                if key in self.scan_results:
                     self.ui.actionApply_suggestion.setEnabled(True)
                     self.ui.actionUndo_suggestion.setEnabled(False)
-                    category = self.scan_results[id(self.selection)].category
-                elif id(self.selection) in self.undoables:
+                    category = self.scan_results[key].category
+                elif key in self.undoables:
                     self.ui.actionApply_suggestion.setEnabled(False)
                     self.ui.actionUndo_suggestion.setEnabled(True)
-                    category = self.undoables[id(self.selection)].category
+                    category = self.undoables[key].category
                 else:
                     self.ui.actionApply_suggestion.setEnabled(False)
                     self.ui.actionUndo_suggestion.setEnabled(False)
@@ -553,30 +571,31 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
                 non_empty = any(r.category == category
                                 for r in self.scan_results.values())
                 self.ui.actionApply_suggestions_category.setEnabled(non_empty)
+                non_empty = any(r.category == category
+                                for r in self.undoables.values())
+                self.ui.actionUndo_suggestions_category.setEnabled(non_empty)
             else:
                 self.ui.actionApply_suggestion.setEnabled(False)
                 self.ui.actionUndo_suggestion.setEnabled(False)
                 self.ui.actionApply_suggestions_category.setEnabled(False)
+                self.ui.actionUndo_suggestions_category.setEnabled(False)
             self.ui.actionApply_all_suggestions.setEnabled(
                 len(self.scan_results))
+            self.ui.actionUndo_all_suggestions.setEnabled(len(self.undoables))
         else:
             self.ui.actionApply_suggestion.setEnabled(False)
-            self.ui.actionUndo_suggestion.setEnabled(False)
             self.ui.actionApply_suggestions_category.setEnabled(False)
             self.ui.actionApply_all_suggestions.setEnabled(False)
+            self.ui.actionUndo_suggestion.setEnabled(False)
+            self.ui.actionUndo_suggestions_category.setEnabled(False)
+            self.ui.actionUndo_all_suggestions.setEnabled(False)
 
         global_point = self.ui.treeWidget.mapToGlobal(point)
         if not self.ui.treeWidget.isHeaderHidden():
             global_point.setY(global_point.y() +
                               self.ui.treeWidget.header().height())
 
-        menu = QtGui.QMenu("Menu", self)
-        menu.addAction(self.ui.actionApply_suggestion)
-        menu.addAction(self.ui.actionApply_suggestions_category)
-        menu.addAction(self.ui.actionApply_all_suggestions)
-        menu.addSeparator()
-        menu.addAction(self.ui.actionUndo_suggestion)
-        menu.exec(global_point)
+        self.right_click_menu.exec(global_point)
 
     @property
     def selection(self):
@@ -599,7 +618,14 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
     def tree_key_press_event(self, event=None):
         super(QtGui.QTreeWidget, self.ui.treeWidget).keyPressEvent(event)
         if event.key() in [QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter]:
-            self.toggle_item(self.selection)
+            if self.selection is self.bogus_root:
+                self.bogus_root.setExpanded(
+                    not self.bogus_root.isExpanded())
+            elif self.selection is self.missing_root:
+                self.missing_root.setExpanded(
+                    not self.missing_root.isExpanded())
+            else:
+                self.toggle_item(self.selection)
 
     def toggle_item(self, item):
         item_id = id(item)
@@ -659,6 +685,20 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         results = [self.undoables[id(self.selection)]]
         self.undo_suggestions(results)
 
+    def on_undo_suggestions_category(self, checked=False):
+        if id(self.selection) in self.scan_results:
+            category = self.scan_results[id(self.selection)].category
+        elif id(self.selection) in self.undoables:
+            category = self.undoables[id(self.selection)].category
+        else:
+            category = self.selection.text(0)
+        results = [r for r in self.undoables.values()
+                   if r.category == category]
+        self.undo_suggestions(results)
+
+    def on_undo_all_suggestions(self, checked=False):
+        results = list(self.undoables.values())
+        self.undo_suggestions(results)
 
 def parse_args():
     parser = argparse.ArgumentParser("Scan for scene changes")
