@@ -225,6 +225,7 @@ object MainForm: TMainForm
       ParentFont = False
       PopupMenu = SubListPopupMenu
       TabOrder = 0
+      TreeOptions.PaintOptions = [toPopupMode, toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toThemeAware, toUseBlendedImages]
       OnBeforeCellPaint = vtvSubsListBeforeCellPaint
       OnCompareNodes = vtvSubsListCompareNodes
       OnDblClick = vtvSubsListDblClick
