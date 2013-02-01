@@ -5158,6 +5158,10 @@ begin
     if(SwapSizeAlso) then
       PanelBottom.Height := SavHeight2;
     StatusBarMainPanel.Top := MaxInt; // make sure status bar stay at bottom
+
+    bttPreviousSub.ShowHint := True;
+    bttNextSub.ShowHint := True;
+    bttPlayToEnd.ShowHint := True;
   end
   else
   begin
@@ -5177,6 +5181,10 @@ begin
     if(SwapSizeAlso) then
       PanelMiddle.Height := PanelMiddle.Height - SavHeight + SavHeight2;
     Splitter1.Top := MaxInt;
+
+    bttPreviousSub.ShowHint := False;
+    bttNextSub.ShowHint := False;
+    bttPlayToEnd.ShowHint := False;
   end;
   Swapped := not Swapped;
 end;
