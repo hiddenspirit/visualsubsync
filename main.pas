@@ -384,6 +384,7 @@ type
     MenuItemHelpCodecsInstallation: TTntMenuItem;
     ActionScanSceneChanges: TTntAction;
     bttScanSceneChanges: TTntSpeedButton;
+    Scanforscenechanges1: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure OnMessage(var Msg: TMsg; var Handled: Boolean);
 

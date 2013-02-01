@@ -1438,6 +1438,9 @@ object MainForm: TMainForm
         object MenuItemCheckErrors: TTntMenuItem
           Action = ActionCheckErrors
         end
+        object Scanforscenechanges1: TMenuItem
+          Action = ActionScanSceneChanges
+        end
         object MenuItemShowErrorReport: TTntMenuItem
           Action = ActionShowErrorReport
         end
