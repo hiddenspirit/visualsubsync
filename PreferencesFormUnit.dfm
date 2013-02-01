@@ -527,6 +527,7 @@ object PreferencesForm: TPreferencesForm
         Header.MainColumn = 1
         Header.Options = [hoAutoResize, hoColumnResize, hoVisible, hoAutoSpring]
         Header.Style = hsPlates
+        HintAnimation = hatNone
         HintMode = hmHint
         ParentShowHint = False
         ShowHint = True
