@@ -78,7 +78,7 @@ Source: "setup\{#VCRedistInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversi
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 ;Name: "{group}\Help"; Filename: "{app}\help\index.html"
-Name: "{group}\Website"; Filename: "{#MyAppURL}"
+Name: "{group}\{#MyAppName} on Bitbucket"; Filename: "{#MyAppURL}"
 ;Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktop_icon
 
