@@ -107,7 +107,7 @@ Root: HKCR; Subkey: "VisualSubSync.Document\shell\open\command"; ValueType: stri
 Type: filesandordirs; Name: "{app}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files (x86)\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppName}"; Tasks: clean_install
-Type: filesandordirs; Name: "{group}"; Tasks: clean_install
+Type: filesandordirs; Name: "{group}"
 Type: files; Name: "{commondesktop}\{#MyAppName}.lnk"; Tasks: clean_install
 Type: files; Name: "{userdesktop}\{#MyAppName}.lnk"; Tasks: clean_install
 
