@@ -58,7 +58,7 @@ OriginalVSS=Original VisualSubSync was found at the specified location and will 
 Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
-Name: "lav_filters"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}, {#Haali}}"; GroupDescription: {cm:AdditionalSoftware}
+Name: "codecs"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}, {#Haali}}"; GroupDescription: {cm:AdditionalSoftware}
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
@@ -73,9 +73,9 @@ Source: "Release\jsplugin\*"; DestDir: "{app}\jsplugin"; Flags: ignoreversion re
 Source: "Release\presets\*"; DestDir: "{app}\presets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "Release\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "Release\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "setup\{#LAVFiltersInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
-Source: "setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters; MinVersion: 6.1
-Source: "setup\{#HaaliInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
+Source: "setup\{#LAVFiltersInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
+Source: "setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs; MinVersion: 6.1
+Source: "setup\{#HaaliInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
 Source: "setup\{#VCRedistInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -88,9 +88,9 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-Filename: "{tmp}\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: lav_filters
-Filename: "{tmp}\{#Win7DSFilterTweakerExeName}"; Parameters: "/silent /h264_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /xvid_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /aac_x86={{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}}"; Tasks: lav_filters; MinVersion: 6.1
-Filename: "{tmp}\{#HaaliInstaller}"; Parameters: "/S"; Tasks: lav_filters
+Filename: "{tmp}\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: codecs
+Filename: "{tmp}\{#Win7DSFilterTweakerExeName}"; Parameters: "/silent /h264_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /xvid_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /aac_x86={{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}}"; Tasks: codecs; MinVersion: 6.1
+Filename: "{tmp}\{#HaaliInstaller}"; Parameters: "/S"; Tasks: codecs
 Filename: "{tmp}\{#VCRedistInstaller}"; Parameters: "/passive /showfinalerror"; Tasks: vc_redist
 
 [Dirs]
