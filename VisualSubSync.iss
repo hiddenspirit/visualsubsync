@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "VisualSubSync"
-#define MyAppVersion "2013-02-01"
+#define MyAppVersion "2013-02-07"
 #define MyAppPublisher "Subfactory.fr"
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
@@ -11,6 +11,8 @@
 #define LAVFiltersInstaller "LAVFilters-0.55.2.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
 
+#define Haali "Haali Media Splitter"
+#define HaaliInstaller "MatroskaSplitter.exe"
 #define LAVFilters "LAV Filters"
 #define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
 #define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
@@ -47,6 +49,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 AdditionalSoftware=Additional software:
 InstallSoftware=Install%1
+InstallCodecs=Install%1 and%2
 CleanInstall=Clear previous installation files and settings
 AssociateExtension=Associate%1 files
 OriginalVSS=Original VisualSubSync was found at the specified location and will be uninstalled.
@@ -55,7 +58,7 @@ OriginalVSS=Original VisualSubSync was found at the specified location and will 
 Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
-Name: "lav_filters"; Description: "{cm:InstallSoftware, {#LAVFIltersVerName}}"; GroupDescription: {cm:AdditionalSoftware}
+Name: "lav_filters"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}, {#Haali}}"; GroupDescription: {cm:AdditionalSoftware}
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
@@ -72,6 +75,7 @@ Source: "Release\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignore
 Source: "Release\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "setup\{#LAVFiltersInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
 Source: "setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters; MinVersion: 6.1
+Source: "setup\{#HaaliInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: lav_filters
 Source: "setup\{#VCRedistInstaller}"; DestDir: "{app}\setup"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -86,6 +90,7 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 Filename: "{app}\setup\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: lav_filters
 Filename: "{app}\setup\{#Win7DSFilterTweakerExeName}"; Parameters: "/silent /h264_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /xvid_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /aac_x86={{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}}"; Tasks: lav_filters; MinVersion: 6.1
+Filename: "{app}\setup\{#HaaliInstaller}"; Parameters: "/S"; Tasks: lav_filters
 Filename: "{app}\setup\{#VCRedistInstaller}"; Parameters: "/passive /showfinalerror"; Tasks: vc_redist
 
 [Dirs]
