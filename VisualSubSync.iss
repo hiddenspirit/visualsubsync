@@ -7,8 +7,8 @@
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFiltersVersion "0.55.2"
-#define LAVFiltersInstaller "LAVFilters-0.55.2.exe"
+#define LAVFiltersVersion "0.55.3"
+#define LAVFiltersInstaller "LAVFilters-0.55.3.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
 
 #define Haali "Haali Media Splitter"
