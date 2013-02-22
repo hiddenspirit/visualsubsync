@@ -62,16 +62,21 @@ def main():
             sc_file = sublib.SceneChangeFile.from_source(vsource)
 
     sub_file = sublib.old.SubRipFile(args.sub_file)
-    fps = common.get_fps(vsource)
     missing_list = []
     timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
 
+    if "matroska" in common.get_format_name(args.video_file).split(","):
+        fps = common.get_fps(vsource)
+        get_timing = lambda t: common.round_timing(t, fps)
+    else:
+        get_timing = lambda t: t
+
     for sc_time, diff_pct, ratio in sc_file.scan_missing(
             vsource, timings, args.diff_pct_threshold, args.ratio_threshold,
             args.filter_offset):
-        sc_time = common.round_timing(sc_time, fps)
+        sc_time = get_timing(sc_time)
         print("{}\t{:.1%}\t{:.2f}".format(time_output(sc_time),
                                           diff_pct, ratio))
         missing_list.append(sc_time)

@@ -13,7 +13,7 @@ from util.media_hash import MediaHash
 
 
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-01-31 05:44:57"
+BUILD_DATE = "2013-02-22 17:54:17"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -25,6 +25,10 @@ def purge_old_ffindexes():
     data = sorted(data, key=operator.itemgetter(1))
     for path, atime in data[:len(data)-FFINDEX_MAX_FILES]:
         os.remove(path)
+
+
+def get_format_name(file_path):
+    return ffms.Indexer(file_path).format_name
 
 
 def get_video_source(file_path, num_threads=0):
