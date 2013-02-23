@@ -29,6 +29,7 @@ Signal = QtCore.pyqtSignal
 Slot = QtCore.pyqtSlot
 
 DEBUG = True
+common.VERBOSE = True
 
 VIDEO_EXTS = [
     ".avi",
@@ -446,16 +447,9 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.bogus_scan_done.emit()
 
             if self.scan_missing:
-                if "matroska" in \
-                        common.get_format_name(self.video_file).split(","):
-                    fps = common.get_fps(vsource)
-                    get_timing = lambda t: common.round_timing(t, fps)
-                else:
-                    get_timing = lambda t: t
                 for sc_time, diff_pct, ratio in sc_file.scan_missing(
                         vsource, timings, self.diff_pct, self.ratio,
                         cancel_event=cancel_missing_event):
-                    sc_time = get_timing(sc_time)
                     self.missing_scene_change_found.emit(sc_time, diff_pct,
                                                          ratio)
                     self.count += 1

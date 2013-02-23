@@ -47,10 +47,6 @@ def main():
     sc_time = sublib.SceneChangeFile.find(vsource,
                                           args.start_time, args.end_time)
 
-    if "matroska" in common.get_format_name(args.video_file).split(","):
-        fps = common.get_fps(vsource)
-        sc_time = common.round_timing(sc_time, fps)
-
     print(int(sc_time))
 
 
