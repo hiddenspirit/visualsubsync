@@ -64,6 +64,8 @@ type
     Sync : Boolean;
     DecodingTime : UInt64;
     CompositionTime : UInt64;
+    DecodeDelta : UInt64;
+    CompositionOffset : UInt64;
   end;
 
   TMP4StscEntry = record
@@ -83,7 +85,7 @@ type
 
   TMP4Elst = record
     segment_duration : UInt64;
-    media_time : UInt64;
+    media_time : Int64;
     media_rate_integer : Word;
     media_rate_fraction : Word;
   end;
@@ -384,25 +386,35 @@ begin
     for j := 0 to stts[i].sample_count - 1 do
     begin
       samples[k].DecodingTime := accuOffset;
+      samples[k].DecodeDelta := stts[i].sample_delta;
       Inc(accuOffset, stts[i].sample_delta);
       Inc(k);
     end;
   end;
 
   // Fill composition time
-  accuOffset := 0;
   k := 0;
   for i :=0 to Length(ctts) - 1 do
   begin
     for j := 0 to ctts[i].sample_count - 1 do
     begin
-      samples[k].CompositionTime := samples[k].DecodingTime + accuOffset;
-      Inc(accuOffset, ctts[i].sample_offset);
+      samples[k].CompositionTime := samples[k].DecodingTime + ctts[i].sample_offset;
+      samples[k].CompositionOffset := ctts[i].sample_offset;
       Inc(k);
     end;
   end;
 
-  // TODO : edit list
+  // Some very basic edit list support
+  if Length(edts) > 0 then
+  begin
+    if (edts[0].media_time <> 0) and (edts[0].media_rate_integer = 1) then
+    begin
+      for i := 0 to Length(samples) - 1 do
+      begin
+        samples[i].CompositionTime := samples[i].CompositionTime - edts[0].media_time;
+      end;
+    end;
+  end;
 
   Result := True;
 end;
@@ -445,15 +457,16 @@ end;
 
 function TMP4File.Parse : Boolean;
 var MP4Box : TMP4Box;
-    trackIdx : integer;
+    i, trackIdx : integer;
     track : TMP4Track;
-    //sampleIdx : integer;
-    //sample : TMP4Sample;
-    //NALULen : Cardinal;
-    //nal_ref_idc, nal_unit_type, first_mb_in_slice, slice_type : Byte;
-    //buff : array of Byte;
-    //bs : TBitStream;
-    //kframe : Boolean;
+    sampleIdx : integer;
+    sample : TMP4Sample;
+    NALULen : Cardinal;
+    nal_ref_idc, nal_unit_type, first_mb_in_slice, slice_type : Byte;
+    buff : array of Byte;
+    bs : TBitStream;
+    kframe : Boolean;
+    elst : TMP4Elst;
 begin
   FLogWriter.AddTextLine('----- Parsing start:');
   MP4Box := TMP4Box.Create(Self);
@@ -480,8 +493,15 @@ begin
     track.buildSamplesTable; 
     FLogWriter.AddTextLine(Format('track: %d, type: %s,  timescale: %d, duration: %d',
       [trackIdx, track.handlerType, track.timescale, track.duration]));
-  end;
 
+    for i := 0 to Length(track.edts) - 1 do
+    begin
+      elst := track.edts[i];
+      FLogWriter.AddTextLine(Format('  edit list [%d] segment_duration: %d, media_time: %d,  media_rate_integer: %d, media_rate_fraction: %d',
+        [i, elst.segment_duration, elst.media_time, elst.media_rate_integer, elst.media_rate_fraction]));
+    end;
+  end;
+  {
   FLogWriter.AddTextLine('');
   FLogWriter.AddTextLine('----- Video track details:');
 
@@ -492,7 +512,6 @@ begin
     if track.handlerType = 'vide' then
     begin
 
-      {
       // Show sync point
       for sampleIdx := 0 to Length(track.samples)-1 do
       begin
@@ -503,11 +522,11 @@ begin
               TimeMsToString(ConvertTS(sample.DecodingTime, track.timescale), '.')
               ]));
       end;
-      }
+      
 
-      {
       // Parse frame data to extract the frame type
-      for sampleIdx := 0 to Length(track.samples)-1 do
+      //for sampleIdx := 0 to Length(track.samples)-1 do
+      for sampleIdx := 0 to 300 do
       begin
         sample := track.samples[sampleIdx];
         FFileReader.Seek(sample.Position, soBeginning);
@@ -535,23 +554,29 @@ begin
           else kframe := False;
           end;
 
-          if kframe then
+        end
+        else
+        begin
+          first_mb_in_slice := 0;
+          slice_type := 0;
+        end;
+
+          //if kframe then
           begin
-            FLogWriter.AddTextLine(Format('%d %6d %10d %7d %5s %d %d %d %d %6d %6d %s',
-              [trackIdx, sampleIdx + 1, sample.Position, sample.Len, BoolToStr(sample.Sync, True),
-              nal_ref_idc, nal_unit_type, first_mb_in_slice, slice_type, sample.DecodingTime, sample.CompositionTime,
+            FLogWriter.AddTextLine(Format('%d %6d %10d %7d %5s / %d %d %d %d / %6d %6d / %6d %6d / %s',
+              [trackIdx, sampleIdx, sample.Position, sample.Len, BoolToStr(sample.Sync, True),
+              nal_ref_idc, nal_unit_type, first_mb_in_slice, slice_type,
+              sample.DecodeDelta, sample.CompositionOffset, sample.DecodingTime, sample.CompositionTime,
               TimeMsToString(
-                ConvertTS(sample.DecodingTime, track.timescale), '.')
+                ConvertTS(sample.CompositionTime, track.timescale), '.')
                 ]));
           end;
 
         end;
-
       end;
-      }
-    end;
   end;
-
+  }
+  
   Result := True;
 end;
 
@@ -900,7 +925,8 @@ function TMP4File.ParseEdts : Boolean;
 var MP4Box : TMP4Box;
     version : Byte;
     i, entry_count : Cardinal;
-    segment_duration, media_time : UInt64;
+    segment_duration : UInt64;
+    media_time : Int64;
     media_rate_integer, media_rate_fraction : Word;
 begin
   FLogWriter.AddTextLine('>>');
@@ -919,12 +945,12 @@ begin
         if (version = 0) then
         begin
           segment_duration := MP4Box.ReadUINT32('elst.segment_duration');
-          media_time := MP4Box.ReadUINT32('elst.media_time');
+          media_time := Integer(MP4Box.ReadUINT32('elst.media_time'));
         end
         else if (version = 1) then
         begin
           segment_duration := MP4Box.ReadUINT64('elst.segment_duration');
-          media_time := MP4Box.ReadUINT64('elst.media_time');
+          media_time := Int64(MP4Box.ReadUINT64('elst.media_time'));
         end
         else
         begin
