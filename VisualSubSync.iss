@@ -2,15 +2,17 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "VisualSubSync"
-#define MyAppVersion "2013-02-23"
 #define MyAppPublisher "Subfactory.fr"
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFiltersVersion "0.55.3"
 #define LAVFiltersInstaller "LAVFilters-0.55.3.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
 
+#define ReleaseDir = "Release"
+#define SetupDir = "setup"
+#define MyAppVersion GetFileVersion(AddBackslash(ReleaseDir) + MyAppExeName)
+#define LAVFiltersVersion GetFileVersion(AddBackslash(SetupDir) + LAVFiltersInstaller)
 #define Haali "Haali Media Splitter"
 #define HaaliInstaller "MatroskaSplitter.exe"
 #define LAVFilters "LAV Filters"
@@ -62,21 +64,21 @@ Name: "codecs"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}, {#Haali}}
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
-Source: "Release\VisualSubSync.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Release\js3215R.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Release\libhunspell.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Release\VSSCustomVSFilter.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Release\WavWriter.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Release\dict\*"; DestDir: "{app}\dict"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Release\help\*"; DestDir: "{app}\help"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Release\jsplugin\*"; DestDir: "{app}\jsplugin"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Release\presets\*"; DestDir: "{app}\presets"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Release\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Release\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "setup\{#LAVFiltersInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
-Source: "setup\{#Win7DSFilterTweakerExeName}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs; MinVersion: 6.1
-Source: "setup\{#HaaliInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
-Source: "setup\{#VCRedistInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
+Source: "{#ReleaseDir}\VisualSubSync.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleaseDir}\js3215R.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleaseDir}\libhunspell.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleaseDir}\VSSCustomVSFilter.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleaseDir}\WavWriter.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleaseDir}\dict\*"; DestDir: "{app}\dict"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ReleaseDir}\help\*"; DestDir: "{app}\help"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ReleaseDir}\jsplugin\*"; DestDir: "{app}\jsplugin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ReleaseDir}\presets\*"; DestDir: "{app}\presets"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ReleaseDir}\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ReleaseDir}\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SetupDir}\{#LAVFiltersInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
+Source: "{#SetupDir}\{#Win7DSFilterTweakerExeName}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs; MinVersion: 6.1
+Source: "{#SetupDir}\{#HaaliInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
+Source: "{#SetupDir}\{#VCRedistInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
@@ -116,13 +118,88 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 const
   VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}';
+  LavFiltersKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\lavfilters_is1';
   CleanInstallTaskIndex = 3;
+  LavFiltersTaskIndex = 5;
   VCRedistTaskIndex = 6;
 
 var
   OriginalVSSUninstaller: String;
   OriginalVSSInstalled: Boolean;
   VCRedistCheckDone : Boolean;
+
+// http://www.lextm.com/2007/08/inno-setup-script-sample-for-version.html
+function GetNumber(var temp: String): Integer;
+var
+  part: String;
+  pos1: Integer;
+begin
+  if Length(temp) = 0 then
+  begin
+    Result := -1;
+    Exit;
+  end;
+    pos1 := Pos('.', temp);
+    if (pos1 = 0) then
+    begin
+      Result := StrToInt(temp);
+    temp := '';
+    end
+    else
+    begin
+    part := Copy(temp, 1, pos1 - 1);
+      temp := Copy(temp, pos1 + 1, Length(temp));
+      Result := StrToInt(part);
+    end;
+end;
+
+function CompareInner(var temp1, temp2: String): Integer;
+var
+  num1, num2: Integer;
+begin
+    num1 := GetNumber(temp1);
+  num2 := GetNumber(temp2);
+  if (num1 = -1) or (num2 = -1) then
+  begin
+    Result := 0;
+    Exit;
+  end;
+      if (num1 > num2) then
+      begin
+        Result := 1;
+      end
+      else if (num1 < num2) then
+      begin
+        Result := -1;
+      end
+      else
+      begin
+        Result := CompareInner(temp1, temp2);
+      end;
+end;
+
+function CompareVersion(str1, str2: String): Integer;
+var
+  temp1, temp2: String;
+begin
+    temp1 := str1;
+    temp2 := str2;
+    Result := CompareInner(temp1, temp2);
+end;
+
+function HasTweakedAAC(): Boolean;
+var
+  AACAudioKey: String;
+begin
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'SOFTWARE\Microsoft\DirectShow\Preferred', '{000000FF-0000-0010-8000-00AA00389B71}', AACAudioKey) then
+  begin
+    Result := not (AACAudioKey = '{E1F1A0B8-BEEE-490D-BA7C-066C40B5E2B9}');
+  end
+  else
+  begin
+    Result := False;
+  end;
+end;
 
 function InitializeSetup(): Boolean;
 begin
@@ -152,6 +229,8 @@ begin
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
+var
+  LavFiltersDisplayVersion: String;
 begin
   if CurPageID = wpSelectTasks then
   begin
@@ -168,6 +247,15 @@ begin
     begin
       WizardForm.TasksList.ItemEnabled[CleanInstallTaskIndex] := False;
       WizardForm.TasksList.Checked[CleanInstallTaskIndex] := False;
+    end;
+
+    if not HasTweakedAAC() then
+    begin
+      WizardForm.TasksList.Checked[LavFiltersTaskIndex] := True;
+    end
+    else if RegQueryStringValue(HKEY_LOCAL_MACHINE, LavFiltersKey, 'DisplayVersion', LavFiltersDisplayVersion) then
+    begin
+      WizardForm.TasksList.Checked[LavFiltersTaskIndex] := CompareVersion(LavFiltersDisplayVersion, '{#LAVFiltersVersion}') < 0;
     end;
 
     if not VCRedistCheckDone then
