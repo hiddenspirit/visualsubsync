@@ -126,7 +126,7 @@ const
 var
   OriginalVSSUninstaller: String;
   OriginalVSSInstalled: Boolean;
-  VCRedistCheckDone : Boolean;
+  CheckTasksDone : Boolean;
 
 // http://www.lextm.com/2007/08/inno-setup-script-sample-for-version.html
 function GetNumber(var temp: String): Integer;
@@ -203,7 +203,7 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-  VCRedistCheckDone := False;
+  CheckTasksDone := False;
   Result := True;
 end;
 
@@ -249,17 +249,17 @@ begin
       WizardForm.TasksList.Checked[CleanInstallTaskIndex] := False;
     end;
 
-    if not HasTweakedAAC() then
+    if not CheckTasksDone then
     begin
-      WizardForm.TasksList.Checked[LavFiltersTaskIndex] := True;
-    end
-    else if RegQueryStringValue(HKEY_LOCAL_MACHINE, LavFiltersKey, 'DisplayVersion', LavFiltersDisplayVersion) then
-    begin
-      WizardForm.TasksList.Checked[LavFiltersTaskIndex] := CompareVersion(LavFiltersDisplayVersion, '{#LAVFiltersVersion}') < 0;
-    end;
+      if not HasTweakedAAC() then
+      begin
+        WizardForm.TasksList.Checked[LavFiltersTaskIndex] := True;
+      end
+      else if RegQueryStringValue(HKEY_LOCAL_MACHINE, LavFiltersKey, 'DisplayVersion', LavFiltersDisplayVersion) then
+      begin
+        WizardForm.TasksList.Checked[LavFiltersTaskIndex] := CompareVersion(LavFiltersDisplayVersion, '{#LAVFiltersVersion}') < 0;
+      end;
 
-    if not VCRedistCheckDone then
-    begin
       if RegKeyExists(HKEY_LOCAL_MACHINE, VCRedistKey) then
       begin
         WizardForm.TasksList.Checked[VCRedistTaskIndex] := False;
@@ -269,7 +269,8 @@ begin
         WizardForm.TasksList.ItemEnabled[VCRedistTaskIndex] := False;
         WizardForm.TasksList.Checked[VCRedistTaskIndex] := True;
       end;
-      VCRedistCheckDone := True;
+
+      CheckTasksDone := True;
     end;
   end;
 end;
