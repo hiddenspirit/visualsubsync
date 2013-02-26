@@ -2,23 +2,24 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "VisualSubSync"
+#define MyAppVersion "2013-02-23"
 #define MyAppPublisher "Subfactory.fr"
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
 #define LAVFiltersInstaller "LAVFilters-0.55.3.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
+#define HaaliInstaller "MatroskaSplitter.exe"
+#define VCRedistInstaller "vcredist_x86.exe"
 
 #define ReleaseDir = "Release"
 #define SetupDir = "setup"
-#define MyAppVersion GetFileVersion(AddBackslash(ReleaseDir) + MyAppExeName)
+; #define MyAppVersion GetFileVersion(AddBackslash(ReleaseDir) + MyAppExeName)
 #define LAVFiltersVersion GetFileVersion(AddBackslash(SetupDir) + LAVFiltersInstaller)
 #define Haali "Haali Media Splitter"
-#define HaaliInstaller "MatroskaSplitter.exe"
 #define LAVFilters "LAV Filters"
 #define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
 #define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
-#define VCRedistInstaller "vcredist_x86.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
