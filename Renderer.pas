@@ -1336,6 +1336,7 @@ var
   PinInfo : TPinInfo;
   EnumPins : IEnumPins;
   ul: ULONG;
+  Count: Cardinal;
 begin
   Result := False;
   if (FHWavWriterInst = 0) then
@@ -1363,13 +1364,16 @@ begin
   // Try to render all pins on the filter
   OutputDebugStringW('TDSWavExtractor.Open: Rendering all source filter pins');
   Filter.EnumPins(EnumPins);
-  while (FLastResult = S_OK) and (EnumPins.Next(1,Pin1, @ul) = S_OK) do
+  Count := 0;
+  while EnumPins.Next(1,Pin1, @ul) = S_OK do
   begin
     FLastResult := FGraphBuilder.Render(Pin1);
+    if FLastResult = S_OK then Inc(Count) else break;
     Pin1 := nil;
   end;
   EnumPins := nil;
-  if Failed(FLastResult) then Exit;
+  // Abort if no pin could be rendered
+  if Count = 0 then Exit;
 
   // Get the duration
   OutputDebugStringW('TDSWavExtractor.Open: Getting duration');
