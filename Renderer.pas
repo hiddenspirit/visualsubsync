@@ -184,6 +184,7 @@ uses ActiveX, MMSystem, SysUtils, Types, MiscToolsUnit, Math, TntSysUtils;
 const
   CLSID_WavWriter : TGUID = '{F3AFF1C3-ABBB-41f9-9521-988881D9D640}';
   IID_IWavWriter : TGUID = '{3B7A03CE-3D3B-4fef-8CDE-3D6C2709AFF1}';
+  MEDIATYPE_Subtitle : TGUID = '{E487EB08-6B26-4be9-9DD3-993434D313FD}';
 
 //==============================================================================
 
@@ -313,7 +314,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-function IsAudioPin(Pin : IPin) : Boolean;
+function IsPinOfMajorMediaType(Pin : IPin; RequestedMT : TGUID) : Boolean;
 var
   EnumMT : IEnumMediaTypes;
   ul : ULONG;
@@ -323,7 +324,7 @@ begin
   Pin.EnumMediaTypes(EnumMT);
   while (EnumMT.Next(1,pMT,@ul) = S_OK) do
   begin
-    if IsEqualGUID(pMT.majortype, MEDIATYPE_Audio) then
+    if IsEqualGUID(pMT.majortype, RequestedMT) then
     begin
       Result := True;
       DeleteMediaType(pMT);
@@ -333,6 +334,13 @@ begin
       DeleteMediaType(pMT);
   end;
   EnumMT := nil;
+end;
+
+//------------------------------------------------------------------------------
+
+function IsAudioPin(Pin : IPin) : Boolean;
+begin
+  Result := IsPinOfMajorMediaType(Pin, MEDIATYPE_Audio);
 end;
 
 //------------------------------------------------------------------------------
@@ -585,6 +593,8 @@ begin
   if (FLastResult <> S_OK) then Exit;
   FLastResult := FGraphBuilder.QueryInterface(IID_IMediaEventEx, FMediaEventEx);
   if (FLastResult <> S_OK) then Exit;
+
+  // TODO : For audio only graph we could avoid building the video or subtitle part from start.
 
   FCustomVSFilterIntallOk := False;
   if (FAutoInsertCustomVSFilter) then
@@ -1361,19 +1371,28 @@ begin
   FLastResult := FGraphBuilder.AddSourceFilter(@Filename[1],nil,Filter);
   if (FLastResult <> S_OK) then Exit;
 
-  // Try to render all pins on the filter
+  // Try to render pins on the source filter to get audio data
   OutputDebugStringW('TDSWavExtractor.Open: Rendering all source filter pins');
   Filter.EnumPins(EnumPins);
   Count := 0;
   while EnumPins.Next(1,Pin1, @ul) = S_OK do
   begin
-    FLastResult := FGraphBuilder.Render(Pin1);
-    if FLastResult = S_OK then Inc(Count) else break;
+    // We are only interested in audio or data stream (containing audio) pin here.
+    // To be safe just don't try to render video or subtitles 
+    if (not IsPinOfMajorMediaType(Pin1, MEDIATYPE_Video)) and
+       (not IsPinOfMajorMediaType(Pin1, MEDIATYPE_Text)) and
+       (not IsPinOfMajorMediaType(Pin1, MEDIATYPE_Subtitle)) then
+    begin
+      FLastResult := FGraphBuilder.Render(Pin1);
+      if FLastResult = S_OK then
+        Inc(Count)
+    end;
     Pin1 := nil;
   end;
   EnumPins := nil;
   // Abort if no pin could be rendered
-  if Count = 0 then Exit;
+  if Count = 0 then
+    Exit;
 
   // Get the duration
   OutputDebugStringW('TDSWavExtractor.Open: Getting duration');
