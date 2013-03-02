@@ -76,11 +76,15 @@ type
     EnableMouseAntiOverlapping : Boolean;
     EnableMouseSnapping : Boolean;
     SpaceKeyModifyTiming : Boolean;
+    SpaceKeyRSTargetIndex : Integer;
     SpaceKeyCPSTarget : Integer;
     SpaceKeyMinimalDuration : Integer;
     SpaceKeyBlankBetweenSubtitles : Integer;
     MaximumSubtitleDuration : Integer;
     LoadMostRecentProjectOnStartup : Boolean;
+    AlwaysGenerateSceneChangeFile : Boolean;
+    // General
+    Dictionary : WideString;
     // Hotkeys
     ListHotkeys : TList;
     ListDefaultHotkeys : TList;
@@ -102,7 +106,7 @@ type
     ShowSceneChange : Boolean;
     SceneChangeStartOffset : Integer;
     SceneChangeStopOffset : Integer;
-    SceneChangeFilterOffset : Integer; 
+    SceneChangeFilterOffset : Integer;
     ShowTextInWAVDisplay : Boolean;
 
     constructor Create;
@@ -210,6 +214,8 @@ type
     UpDownBlankBetweenSub: TTntUpDown;
     TntLabel13: TTntLabel;
     TntLabel2: TTntLabel;
+    TntLabel15: TTntLabel;
+    ComboBoxRSTarget: TTntComboBox;
     EditCPSTarget: TTntEdit;
     UpDownCPSTarget: TTntUpDown;
     TntLabel7: TTntLabel;
@@ -237,6 +243,7 @@ type
     chkAssociateExtSSA: TCheckBox;
     chkAssociateExtASS: TCheckBox;
     chkLoadMostRecentProjectOnStartup: TCheckBox;
+    chkAlwaysGenerateSceneChangeFile: TCheckBox;
     plHotkeysButtons: TPanel;
     plHotkeysEdit: TPanel;
     procedure FormCreate(Sender: TObject);
@@ -498,11 +505,13 @@ begin
   EnableMouseAntiOverlapping := False;
   EnableMouseSnapping := True;
   SpaceKeyModifyTiming := True;
+  SpaceKeyRSTargetIndex := 0;
   SpaceKeyCPSTarget := 18;
   SpaceKeyMinimalDuration := 1000;
   SpaceKeyBlankBetweenSubtitles := 120;
   MaximumSubtitleDuration := 6000;
   LoadMostRecentProjectOnStartup := False;
+  AlwaysGenerateSceneChangeFile := False;
   // Web server
   ServerPort := 80;
   EnableCompression := False; // Some IE version doesn't support deflate but say they does :p
@@ -521,7 +530,7 @@ begin
   SubListFont := 'Arial,8,0,0,clWindowText';
   SubTextFont := 'Arial,10,1,0,clWindowText';
   // WAV Display
-  ShowSceneChange := False;
+  ShowSceneChange := True;
   SceneChangeStartOffset := 130;
   SceneChangeStopOffset := 130;
   ShowTextInWAVDisplay := True;
@@ -622,6 +631,7 @@ begin
   IniFile.WriteBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   IniFile.WriteBool('Misc','EnableToggleCreation',EnableToggleCreation);
   IniFile.WriteBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  IniFile.WriteInteger('Misc','SpaceKeyRSTargetIndex',SpaceKeyRSTargetIndex);
   IniFile.WriteInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   IniFile.WriteInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   IniFile.WriteBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
@@ -629,6 +639,7 @@ begin
   IniFile.WriteInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   IniFile.WriteInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
   IniFile.WriteBool('Misc','LoadMostRecentProjectOnStartup',LoadMostRecentProjectOnStartup);
+  IniFile.WriteBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
 
   // Web server
   IniFile.WriteInteger('WebServer','Port',ServerPort);
@@ -703,6 +714,7 @@ begin
   DisableSubtitleEdition := IniFile.ReadBool('Misc','DisableSubtitleEdition',DisableSubtitleEdition);
   EnableToggleCreation := IniFile.ReadBool('Misc','EnableToggleCreation',EnableToggleCreation);
   SpaceKeyModifyTiming := IniFile.ReadBool('Misc','SpaceKeyModifyTiming',SpaceKeyModifyTiming);
+  SpaceKeyRSTargetIndex := IniFile.ReadInteger('Misc','SpaceKeyRSTargetIndex',SpaceKeyRSTargetIndex);
   SpaceKeyCPSTarget := IniFile.ReadInteger('Misc','SpaceKeyCPSTarget',SpaceKeyCPSTarget);
   SpaceKeyMinimalDuration := IniFile.ReadInteger('Misc','SpaceKeyMinimalDuration',SpaceKeyMinimalDuration);
   EnableMouseAntiOverlapping := IniFile.ReadBool('Misc','EnableMouseAntiOverlapping',EnableMouseAntiOverlapping);
@@ -710,6 +722,10 @@ begin
   SpaceKeyBlankBetweenSubtitles := IniFile.ReadInteger('Misc','SpaceKeyBlankBetweenSubtitles',SpaceKeyBlankBetweenSubtitles);
   MaximumSubtitleDuration := IniFile.ReadInteger('Misc','MaximumSubtitleDuration',MaximumSubtitleDuration);
   LoadMostRecentProjectOnStartup := IniFile.ReadBool('Misc','LoadMostRecentProjectOnStartup',LoadMostRecentProjectOnStartup);
+  AlwaysGenerateSceneChangeFile := IniFile.ReadBool('Misc','AlwaysGenerateSceneChangeFile',AlwaysGenerateSceneChangeFile);
+
+  // General
+  Dictionary := IniFile.ReadString('General','Dictionary','');
 
   // Web server
   if (not IsPresets) then
@@ -741,7 +757,7 @@ begin
     for i:=0 to ListHotkeys.Count-1 do
     begin
       HLID := ListHotkeys[i];
-      
+
       KeyName := HLID.Action.Name + '[Normal]';
       if IniFile.ValueExists('Hotkeys', KeyName) then
       begin
@@ -874,11 +890,13 @@ begin
   chkEnableMouseAntiOverlapping.Checked := Config.EnableMouseAntiOverlapping;
   chkEnableMouseSnapping.Checked := Config.EnableMouseSnapping;
   chkSpaceKeyModifyTiming.Checked := Config.SpaceKeyModifyTiming;
+  ComboBoxRSTarget.ItemIndex := Config.SpaceKeyRSTargetIndex;
   UpDownCPSTarget.Position := Config.SpaceKeyCPSTarget;
   UpDownMinimalDuration.Position := Config.SpaceKeyMinimalDuration;
   UpDownBlankBetweenSub.Position := Config.SpaceKeyBlankBetweenSubtitles;
   UpDownMaximumDuration.Position := Config.MaximumSubtitleDuration;
   chkLoadMostRecentProjectOnStartup.Checked := Config.LoadMostRecentProjectOnStartup;
+  chkAlwaysGenerateSceneChangeFile.Checked := Config.AlwaysGenerateSceneChangeFile;
 
   // Web server
   UpDownServerPort.Position := Config.ServerPort;
@@ -896,7 +914,7 @@ begin
     ListErrorChecking.AddItem(JSPluginInfoDst.Name, JSPluginInfoDst);
   end;
   ListErrorChecking.Sorted := False;
-  // Do the checking now cause sorting would have messed up the order 
+  // Do the checking now cause sorting would have messed up the order
   for i:=0 to ListErrorChecking.Items.Count-1 do
   begin
     JSPluginInfoSrc := TJSPluginInfo(ListErrorChecking.Items.Objects[i]);
@@ -965,11 +983,13 @@ begin
   Config.EnableMouseAntiOverlapping := chkEnableMouseAntiOverlapping.Checked;
   Config.EnableMouseSnapping := chkEnableMouseSnapping.Checked;
   Config.SpaceKeyModifyTiming := chkSpaceKeyModifyTiming.Checked;
+  Config.SpaceKeyRSTargetIndex := ComboBoxRSTarget.ItemIndex;
   Config.SpaceKeyCPSTarget := UpDownCPSTarget.Position;
   Config.SpaceKeyMinimalDuration := UpDownMinimalDuration.Position;
   Config.SpaceKeyBlankBetweenSubtitles := UpDownBlankBetweenSub.Position;
   Config.MaximumSubtitleDuration := UpDownMaximumDuration.Position;
   Config.LoadMostRecentProjectOnStartup := chkLoadMostRecentProjectOnStartup.Checked;
+  Config.AlwaysGenerateSceneChangeFile := chkAlwaysGenerateSceneChangeFile.Checked;
 
   // Web server
   Config.ServerPort := UpDownServerPort.Position;
@@ -1605,7 +1625,7 @@ procedure TPreferencesForm.chkAssociateExtASSClick(Sender: TObject);
 begin
   if not CheckRegistryAccess then
     Exit;
-    
+
   if chkAssociateExtASS.Checked then
   begin
     ShellRegisterExtension('ass', ApplicationName, 'Document.ass', Application.ExeName, ASS_ICON_INDEX);
@@ -1630,4 +1650,3 @@ end;
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
-
