@@ -114,6 +114,41 @@ begin
   AVIFileExit;
 end;
 
+function GetFirstTrackNumber(MatroskaReader : TMatroskaReader; TrackType : TMatroskaTrackType) : Cardinal;
+var I : Integer;
+    TrackEntry : PMatroskaTrackEntry;
+begin
+  Result := 0;
+  for I := 0 to MatroskaReader.TrackList.Count-1 do
+  begin
+    TrackEntry := PMatroskaTrackEntry(MatroskaReader.TrackList[i]);
+    if TrackEntry.TrackType = TrackType then
+    begin
+      Result := TrackEntry.TrackNumber;
+      Break;
+    end;
+  end;
+end;
+
+function IsCuePointOnTrack(CuePoint : PMatroskaCuePoint; TrackNumber : Cardinal) : Boolean;
+var I : Integer;
+    pCueTrackPosition : PMatroskaCueTrackPosition;
+begin
+  if Assigned(CuePoint.CueTrackPositions) then
+  begin
+    for I := 0 to CuePoint.CueTrackPositions.Count-1 do
+    begin
+      pCueTrackPosition := PMatroskaCueTrackPosition(CuePoint.CueTrackPositions[i]);
+      if pCueTrackPosition.CueTrack = TrackNumber then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+  Result := False;
+end;
+
 procedure ExtractKeyFramesMKV(Filename : WideString; var KFArray : TIntegerDynArray);
 var MatroskaReader : TMatroskaReader;
     FileReader : TFileReader;
@@ -121,6 +156,7 @@ var MatroskaReader : TMatroskaReader;
     ParseResult : Boolean;
     I : Integer;
     CuePoint : PMatroskaCuePoint;
+    FirstVideoTrackNumber : Cardinal;
 begin
   LogWriterNull := TLogWriterNull.Create;
   FileReader := TFileReader.Create(Filename);
@@ -137,12 +173,16 @@ begin
   end;
   if ParseResult then
   begin
+    FirstVideoTrackNumber := GetFirstTrackNumber(MatroskaReader,  mttVideo);
     for I := 0 to MatroskaReader.Cues.Count-1 do
     begin
       CuePoint := PMatroskaCuePoint(MatroskaReader.Cues[I]);
-      SetLength(KFArray, Length(KFArray) + 1);
-      KFArray[Length(KFArray) - 1] := Trunc((CuePoint.CueTime *
-        MatroskaReader.SegmentInfo.TimecodeScale) / 1000000);
+      if IsCuePointOnTrack(CuePoint, FirstVideoTrackNumber) then
+      begin
+        SetLength(KFArray, Length(KFArray) + 1);
+        KFArray[Length(KFArray) - 1] := Trunc((CuePoint.CueTime *
+          MatroskaReader.SegmentInfo.TimecodeScale) / 1000000);
+      end;
     end;
   end;
   MatroskaReader.Free;
@@ -187,7 +227,7 @@ begin
           if sample.Sync then
           begin
             SetLength(KFArray, Length(KFArray) + 1);
-            ts := Int64(sample.DecodingTime);
+            ts := Int64(sample.CompositionTime);
             ts := ts / Int64(track.timescale);
             ts := ts * 1000.0;
             KFArray[Length(KFArray) - 1] := Trunc(ts);
