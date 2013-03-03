@@ -211,9 +211,15 @@ type
     SimpleTags : TList;
   end;
 
+  PMatroskaCueTrackPosition = ^TMatroskaCueTrackPosition;
+  TMatroskaCueTrackPosition = record
+    CueTrack : Cardinal;
+  end;
+
   PMatroskaCuePoint = ^TMatroskaCuePoint;
   TMatroskaCuePoint = record
     CueTime : Int64;
+    CueTrackPositions : TList;
   end;
 
   TMatroskaReader = class
@@ -238,6 +244,7 @@ type
     procedure FixChaptersTiming;
     function ReadCues : Boolean;
     function ReadCuePoint : Boolean;
+    function ReadCueTrackPosition(pCuePoint : PMatroskaCuePoint) : Boolean;
     function ReadTags : Boolean;
     function ReadTag : Boolean;
     function ReadTagTargets(pTag : PMatroskaTag) : Boolean;
@@ -396,7 +403,7 @@ const MATROSKA_ID0_Segment = $18538067;
       MATROSKA_ID2_CuePoint = $BB;
       MATROSKA_ID3_CueTime = $B3;
       MATROSKA_ID3_CueTrackPosition = $B7;
-      MATROSKA_ID4_CueTrack = $F1;
+      MATROSKA_ID4_CueTrack = $F7;
       MATROSKA_ID4_CueBlockNumber = $5378;
 
 // =============================================================================
@@ -846,6 +853,20 @@ end;
 
 // -----------------------------------------------------------------------------
 
+procedure FreeCuePoint(pCuePoint : PMatroskaCuePoint);
+var i : integer;
+begin
+  if Assigned(pCuePoint.CueTrackPositions) then
+  begin
+    for i:=0 to pCuePoint.CueTrackPositions.Count-1 do
+      Dispose(pCuePoint.CueTrackPositions[i]);
+    FreeAndNil(pCuePoint.CueTrackPositions);
+  end;
+  Dispose(pCuePoint);
+end;
+
+// -----------------------------------------------------------------------------
+
 constructor TMatroskaReader.Create(FileReader : TFileReader; LogWriter : TLogWriterIntf);
 begin
   FEbmlReader := TEbmlReader.Create(FileReader, LogWriter);
@@ -898,7 +919,7 @@ begin
   Tags.Clear;
 
   for i:=0 to Cues.Count-1 do
-    Dispose(PMatroskaCuePoint(Cues[i]));
+    FreeCuePoint(PMatroskaCuePoint(Cues[i]));
   Cues.Clear;
 end;
 
@@ -2027,6 +2048,14 @@ begin
         begin
           pCuePoint.CueTime := Level3Elem.ReadValueUINT('CueTime');
         end;
+      MATROSKA_ID3_CueTrackPosition:
+        begin
+          FEbmlReader.AddLog('CueTrackPosition :');
+          FEbmlReader.IncLevel(Level3Elem);
+          if ReadCueTrackPosition(pCuePoint) = False then
+            Break;
+          FEbmlReader.DecLevel;
+        end;
       else begin
         Level3Elem.Skip;
       end;
@@ -2037,8 +2066,47 @@ begin
   if (Result) then
     Cues.Add(pCuePoint)
   else
-    Dispose(pCuePoint);
+    FreeCuePoint(pCuePoint);
   Level3Elem.Free;
+end;
+
+// -----------------------------------------------------------------------------
+
+function TMatroskaReader.ReadCueTrackPosition(pCuePoint : PMatroskaCuePoint) : Boolean;
+var Level4Elem : TEbmlElement;
+    pCueTrackPosition : PMatroskaCueTrackPosition;
+begin
+  Level4Elem := TEbmlElement.Create(FEbmlReader);
+
+  pCueTrackPosition := New(PMatroskaCueTrackPosition);
+  ZeroMemory(pCueTrackPosition, SizeOf(PCueTrackPosition));
+
+  while FEbmlReader.HasMoreElement do
+  begin
+    if Level4Elem.ReadIDAndDataLen = 0 then
+      Break;
+
+    case Level4Elem.ID of
+      MATROSKA_ID4_CueTrack:
+        begin
+          pCueTrackPosition.CueTrack := Level4Elem.ReadValueUINT('CueTrack');
+        end;
+      else begin
+        Level4Elem.Skip;
+      end;
+    end;
+  end;
+
+  Result := (FEbmlReader.HasMoreElement = False);
+  if (Result) then
+  begin
+    if not Assigned(pCuePoint.CueTrackPositions) then
+      pCuePoint.CueTrackPositions := TList.Create;
+    pCuePoint.CueTrackPositions.Add(pCueTrackPosition);
+  end
+  else
+    Dispose(pCueTrackPosition);
+  Level4Elem.Free;
 end;
 
 // -----------------------------------------------------------------------------
