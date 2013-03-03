@@ -131,7 +131,7 @@ type
     destructor Destroy; override;
 
     function Parse : Boolean;
-    
+
     procedure IncLevel(MP4Box : TMP4Box);
     procedure DecLevel;
     procedure ClearLevel(const UpToID : Int64 = 0);
@@ -270,7 +270,7 @@ begin
     // box extends to end of file.
     Len := FMP4File.FFileReader.Size - Position;
   end;
-  
+
   DataLen := Len - 8;
   DataLeft := DataLen;
   Result := True;
@@ -337,7 +337,7 @@ begin
   begin
     samples[stss[i] - 1].Sync := True;
   end;
-  
+
   if (Length(stsc) = 1) and (stsc[0].samples_per_chunk = 1) then
   begin
     // 1 sample per chunk in all chunks
@@ -360,7 +360,7 @@ begin
         chunkSPC[k] := samplesPerChunk;
         Inc(k);
       end;
-    end;   
+    end;
     chunkSPC[k] := stsc[i - 1].samples_per_chunk;
 
     // Calculate position of each samples
@@ -490,7 +490,7 @@ begin
   for trackIdx := 0 to FTracks.Count-1 do
   begin
     track := FTracks.Items[trackIdx];
-    track.buildSamplesTable; 
+    track.buildSamplesTable;
     FLogWriter.AddTextLine(Format('track: %d, type: %s,  timescale: %d, duration: %d',
       [trackIdx, track.handlerType, track.timescale, track.duration]));
 
@@ -508,7 +508,7 @@ begin
   for trackIdx := 0 to FTracks.Count-1 do
   begin
     track := FTracks.Items[trackIdx];
-    
+
     if track.handlerType = 'vide' then
     begin
 
@@ -522,7 +522,7 @@ begin
               TimeMsToString(ConvertTS(sample.DecodingTime, track.timescale), '.')
               ]));
       end;
-      
+
 
       // Parse frame data to extract the frame type
       //for sampleIdx := 0 to Length(track.samples)-1 do
@@ -576,7 +576,7 @@ begin
       end;
   end;
   }
-  
+
   Result := True;
 end;
 
@@ -998,7 +998,7 @@ begin
     MP4Box := FLevelList;
     FLevelList := MP4Box.Next;
     MP4Box.Free;
-    Dec(FLevelCount);    
+    Dec(FLevelCount);
   end;
 end;
 
