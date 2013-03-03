@@ -147,7 +147,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
         print("build date:", common.BUILD_DATE)
         print("FFMS v{}".format(ffms.get_version()))
-        print(ffms.libffms2.lib._name)
+        #print(ffms.libffms2.lib._name)
 
         if args.vss:
             self.vss = args.vss
