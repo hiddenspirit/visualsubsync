@@ -25,8 +25,8 @@ object PreferencesForm: TPreferencesForm
   object PageControlPreferences: TTntPageControl
     Left = 0
     Top = 0
-    Width = 584
-    Height = 354
+    Width = 576
+    Height = 350
     ActivePage = tsGeneral
     Align = alClient
     TabOrder = 0
@@ -36,7 +36,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel2: TBevel
         Left = 0
         Top = 49
-        Width = 568
+        Width = 560
         Height = 4
         Align = alTop
         Shape = bsSpacer
@@ -44,7 +44,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel3: TBevel
         Left = 0
         Top = 140
-        Width = 568
+        Width = 560
         Height = 4
         Align = alTop
         Shape = bsSpacer
@@ -52,7 +52,7 @@ object PreferencesForm: TPreferencesForm
       object GroupBoxWebServer: TTntGroupBox
         Left = 0
         Top = 0
-        Width = 568
+        Width = 560
         Height = 49
         Align = alTop
         Caption = ' Web server : '
@@ -92,7 +92,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 121
           Height = 17
-          Hint = 
+          Hint =
             'Compress dynamic webpages for faster transmission (broken with I' +
             'E)'
           Caption = 'Enable compression'
@@ -104,8 +104,8 @@ object PreferencesForm: TPreferencesForm
       object GroupBoxMisc: TGroupBox
         Left = 0
         Top = 144
-        Width = 568
-        Height = 174
+        Width = 560
+        Height = 170
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -114,10 +114,10 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 440
           Height = 17
-          Hint = 
+          Hint =
             'Double click on a .vssprj file will automatically open the proje' +
             'ct in VisualSubSync'
-          Caption = 
+          Caption =
             'Associate project file (*.vssprj) with VisualSubSync (admin righ' +
             'ts required)'
           ParentShowHint = False
@@ -168,11 +168,21 @@ object PreferencesForm: TPreferencesForm
           Caption = 'Load most recent project on startup'
           TabOrder = 5
         end
+        object chkAlwaysGenerateSceneChangeFile: TCheckBox
+          Left = 16
+          Top = 120
+          Width = 440
+          Height = 17
+          Caption =
+            'Always generate scene change file instead of extracting keyframe' +
+            's'
+          TabOrder = 6
+        end
       end
       object GroupBoxBackup: TGroupBox
         Left = 0
         Top = 53
-        Width = 568
+        Width = 560
         Height = 87
         Align = alTop
         Caption = ' Backup : '
@@ -252,11 +262,11 @@ object PreferencesForm: TPreferencesForm
         Align = alClient
         TabOrder = 0
         DesignSize = (
-          576
-          326)
+          568
+          322)
         object TntLabel8: TTntLabel
           Left = 16
-          Top = 164
+          Top = 196
           Width = 140
           Height = 13
           Caption = 'Blank between subtitles (ms) :'
@@ -264,85 +274,92 @@ object PreferencesForm: TPreferencesForm
         object TntLabel13: TTntLabel
           Left = 8
           Top = 16
-          Width = 559
+          Width = 543
           Height = 33
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
-          Caption = 
+          Caption =
             'Common settings used when editing subtitles in normal or timing ' +
             'mode, and possibly when fixing error with JavaScript plug-ins.'
           WordWrap = True
         end
         object TntLabel2: TTntLabel
           Left = 16
-          Top = 68
+          Top = 100
           Width = 143
           Height = 13
           Caption = 'Characters per second target :'
         end
         object TntLabel7: TTntLabel
           Left = 16
-          Top = 100
+          Top = 132
           Width = 146
           Height = 13
           Caption = 'Minimum subtitle duration (ms) :'
         end
         object TntLabel14: TTntLabel
           Left = 16
-          Top = 132
+          Top = 164
           Width = 149
           Height = 13
           Caption = 'Maximum subtitle duration (ms) :'
         end
+        object TntLabel15: TTntLabel
+          Left = 16
+          Top = 68
+          Width = 143
+          Height = 13
+          Caption = 'Reading speed target :'
+        end
         object EditBlankBetweenSub: TTntEdit
           Left = 176
-          Top = 160
+          Top = 192
           Width = 81
           Height = 21
-          TabOrder = 3
+          TabOrder = 4
           Text = '0'
         end
         object UpDownBlankBetweenSub: TTntUpDown
           Left = 257
-          Top = 160
+          Top = 192
           Width = 15
           Height = 21
           Associate = EditBlankBetweenSub
           Max = 500
           Increment = 10
-          TabOrder = 4
+          TabOrder = 5
         end
         object EditCPSTarget: TTntEdit
           Left = 176
-          Top = 64
+          Top = 96
           Width = 81
           Height = 21
-          TabOrder = 0
+          TabOrder = 1
           Text = '5'
         end
         object UpDownCPSTarget: TTntUpDown
           Left = 257
-          Top = 64
+          Top = 96
           Width = 15
           Height = 21
           Associate = EditCPSTarget
           Min = 5
           Max = 50
           Position = 5
-          TabOrder = 5
+          TabOrder = 6
           Thousands = False
         end
         object EditMinimalDuration: TTntEdit
           Left = 176
-          Top = 96
+          Top = 128
           Width = 81
           Height = 21
-          TabOrder = 1
+          TabOrder = 2
           Text = '500'
         end
         object UpDownMinimalDuration: TTntUpDown
           Left = 257
-          Top = 96
+          Top = 128
           Width = 15
           Height = 21
           Associate = EditMinimalDuration
@@ -350,20 +367,20 @@ object PreferencesForm: TPreferencesForm
           Max = 5000
           Increment = 100
           Position = 500
-          TabOrder = 6
+          TabOrder = 7
           Thousands = False
         end
         object EditMaximalDuration: TTntEdit
           Left = 176
-          Top = 128
+          Top = 160
           Width = 81
           Height = 21
-          TabOrder = 2
+          TabOrder = 3
           Text = '6000'
         end
         object UpDownMaximumDuration: TTntUpDown
           Left = 257
-          Top = 128
+          Top = 160
           Width = 16
           Height = 21
           Associate = EditMaximalDuration
@@ -371,8 +388,25 @@ object PreferencesForm: TPreferencesForm
           Max = 25000
           Increment = 100
           Position = 6000
-          TabOrder = 7
+          TabOrder = 8
           Thousands = False
+        end
+        object ComboBoxRSTarget: TTntComboBox
+          Left = 176
+          Top = 64
+          Width = 95
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          ItemIndex = 0
+          TabOrder = 0
+          Text = 'Perfect'
+          OnSelect = ComboHotkeyModeSelect
+          Items.Strings = (
+            'Perfect'
+            'Good'
+            'A bit fast'
+            'Fast, acceptable')
         end
       end
     end
@@ -381,7 +415,7 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Error checking'
       object Bevel7: TBevel
         Left = 0
-        Top = 202
+        Top = 198
         Width = 568
         Height = 4
         Align = alBottom
@@ -389,7 +423,7 @@ object PreferencesForm: TPreferencesForm
       end
       object Bevel8: TBevel
         Left = 0
-        Top = 110
+        Top = 106
         Width = 568
         Height = 4
         Align = alBottom
@@ -410,14 +444,14 @@ object PreferencesForm: TPreferencesForm
       end
       object Panel2: TPanel
         Left = 0
-        Top = 114
-        Width = 568
+        Top = 110
+        Width = 560
         Height = 88
         Align = alBottom
         BevelOuter = bvLowered
         TabOrder = 1
         DesignSize = (
-          568
+          560
           88)
         object TntLabel3: TTntLabel
           Left = 8
@@ -435,7 +469,7 @@ object PreferencesForm: TPreferencesForm
         object lbErrorDescription: TTntLabel
           Left = 8
           Top = 21
-          Width = 496
+          Width = 488
           Height = 59
           Anchors = [akLeft, akTop, akRight, akBottom]
           AutoSize = False
@@ -443,7 +477,7 @@ object PreferencesForm: TPreferencesForm
           WordWrap = True
         end
         object TntLabel4: TTntLabel
-          Left = 511
+          Left = 503
           Top = 4
           Width = 57
           Height = 13
@@ -460,7 +494,7 @@ object PreferencesForm: TPreferencesForm
           Transparent = True
         end
         object ShapeErrorColor: TShape
-          Left = 527
+          Left = 519
           Top = 24
           Width = 25
           Height = 25
@@ -468,7 +502,7 @@ object PreferencesForm: TPreferencesForm
           Shape = stCircle
         end
         object Bevel1: TBevel
-          Left = 503
+          Left = 495
           Top = 8
           Width = 9
           Height = 72
@@ -478,14 +512,13 @@ object PreferencesForm: TPreferencesForm
       end
       object ListPluginParam: TVirtualStringTree
         Left = 0
-        Top = 206
-        Width = 568
+        Top = 202
+        Width = 560
         Height = 112
         Align = alBottom
         AnimationDuration = 1
         EditDelay = 40
         Header.AutoSizeIndex = 1
-        Header.DefaultHeight = 17
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
         Header.Font.Height = -11
@@ -494,6 +527,7 @@ object PreferencesForm: TPreferencesForm
         Header.MainColumn = 1
         Header.Options = [hoAutoResize, hoColumnResize, hoVisible, hoAutoSpring]
         Header.Style = hsPlates
+        HintAnimation = hatNone
         HintMode = hmHint
         ParentShowHint = False
         ShowHint = True
@@ -517,7 +551,7 @@ object PreferencesForm: TPreferencesForm
           item
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAutoSpring]
             Position = 1
-            Width = 200
+            Width = 196
             WideText = 'Value'
           end
           item
@@ -533,8 +567,8 @@ object PreferencesForm: TPreferencesForm
       Caption = 'Hotkeys'
       object Bevel9: TBevel
         Left = 0
-        Top = 272
-        Width = 568
+        Top = 268
+        Width = 560
         Height = 4
         Align = alBottom
         Shape = bsSpacer
@@ -542,8 +576,8 @@ object PreferencesForm: TPreferencesForm
       object ListHotkeys: TTntListView
         Left = 0
         Top = 0
-        Width = 568
-        Height = 272
+        Width = 560
+        Height = 268
         Align = alClient
         Columns = <
           item
@@ -570,14 +604,14 @@ object PreferencesForm: TPreferencesForm
       end
       object plHotkeysCtrl: TPanel
         Left = 0
-        Top = 276
-        Width = 568
+        Top = 272
+        Width = 560
         Height = 42
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 1
         object plHotkeysButtons: TPanel
-          Left = 488
+          Left = 480
           Top = 0
           Width = 80
           Height = 42
@@ -615,7 +649,7 @@ object PreferencesForm: TPreferencesForm
         object plHotkeysEdit: TPanel
           Left = 0
           Top = 0
-          Width = 488
+          Width = 480
           Height = 42
           Align = alClient
           BevelOuter = bvNone
@@ -669,7 +703,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel4: TBevel
         Left = 0
         Top = 121
-        Width = 568
+        Width = 560
         Height = 4
         Align = alTop
         Shape = bsSpacer
@@ -677,7 +711,7 @@ object PreferencesForm: TPreferencesForm
       object GroupBox2: TGroupBox
         Left = 0
         Top = 0
-        Width = 568
+        Width = 560
         Height = 121
         Align = alTop
         Caption = ' Mouse wheel control : '
@@ -797,8 +831,8 @@ object PreferencesForm: TPreferencesForm
       object GroupBox3: TGroupBox
         Left = 0
         Top = 125
-        Width = 568
-        Height = 193
+        Width = 560
+        Height = 189
         Align = alClient
         Caption = ' Misc : '
         TabOrder = 1
@@ -807,7 +841,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 400
           Height = 17
-          Caption = 
+          Caption =
             'Left/right mouse button set start/stop time in Timing Mode (SSA ' +
             'mouse mode)'
           TabOrder = 0
@@ -850,12 +884,12 @@ object PreferencesForm: TPreferencesForm
         Caption = ' Subtitles list : '
         TabOrder = 0
         DesignSize = (
-          568
+          560
           81)
         object EditSubListFont: TTntEdit
           Left = 16
           Top = 24
-          Width = 495
+          Width = 479
           Height = 41
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
@@ -864,7 +898,7 @@ object PreferencesForm: TPreferencesForm
           Text = 'ABCabc 123'
         end
         object bttSubListFont: TTntButton
-          Left = 518
+          Left = 502
           Top = 24
           Width = 33
           Height = 25
@@ -877,18 +911,18 @@ object PreferencesForm: TPreferencesForm
       object TntGroupBox3: TTntGroupBox
         Left = 0
         Top = 85
-        Width = 568
-        Height = 233
+        Width = 560
+        Height = 229
         Align = alClient
         Caption = ' Subtitles text : '
         TabOrder = 1
         DesignSize = (
-          568
-          233)
+          560
+          229)
         object EditSubTextFont: TTntEdit
           Left = 16
           Top = 24
-          Width = 495
+          Width = 487
           Height = 41
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
@@ -897,7 +931,7 @@ object PreferencesForm: TPreferencesForm
           Text = 'ABCabc 123'
         end
         object bttSubTextFont: TTntButton
-          Left = 518
+          Left = 510
           Top = 24
           Width = 33
           Height = 25
@@ -1090,14 +1124,14 @@ object PreferencesForm: TPreferencesForm
   end
   object Panel1: TPanel
     Left = 0
-    Top = 354
-    Width = 584
+    Top = 350
+    Width = 576
     Height = 36
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
     object TntPanel1: TTntPanel
-      Left = 420
+      Left = 412
       Top = 0
       Width = 164
       Height = 36

@@ -154,6 +154,7 @@ begin
   DSWavExtractor := TDSWavExtractor.Create;
   MemoVideoInfo.Lines.Add('Opening and analyzing file :');
   MemoVideoInfo.Lines.Add(VideoFilename);
+  MemoVideoInfo.Lines.Add('In case of problems first check : http://www.visualsubsync.org/tutorials/codecs');
   MemoVideoInfo.Lines.Add('Please wait...');
   Application.ProcessMessages;
   DSWavExtractor.Open(VideoFilename);
