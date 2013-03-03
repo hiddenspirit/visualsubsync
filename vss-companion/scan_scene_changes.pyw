@@ -166,6 +166,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.video_file = self.get_open_filename(self.tr("Video file"),
                                                      self.video_dialog_filter)
 
+        print("video: {}".format(os.path.basename(self.video_file)))
+
         index_path = common.get_index_path(self.video_file)
         if os.path.isfile(index_path):
             self.enable_scan()

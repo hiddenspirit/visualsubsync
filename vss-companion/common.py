@@ -14,7 +14,7 @@ from util.media_hash import MediaHash
 
 VERBOSE = False
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-02-23 00:36:19"
+BUILD_DATE = "2013-03-03 01:30:06"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -39,7 +39,7 @@ def get_video_source(file_path, num_threads=0):
                 index = ffms.Index.make(file_path)
                 index.write(ffindex_filepath)
                 print("Index remade: {}".format(ffms_error), file=sys.stderr)
-            except Exception as e:
+            except Exception:
                 raise ffms_error
     else:
         index = ffms.Index.make(file_path)

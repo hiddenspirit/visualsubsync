@@ -159,9 +159,12 @@ class SceneChangeFile(SortedSet):
                      filter_offset=None, cancel_event=_cancel_event):
         if not timings:
             raise ValueError("empty timings")
+        first_time = int(vsource.properties.FirstTime * 1000)
         last_time = int(vsource.properties.LastTime * 1000)
-        if timings[0][0] < 0 or timings[-1][1] > last_time:
-            raise ValueError("out of range timings")
+        get_bounded_timing = lambda t: min(max(t, first_time), last_time)
+        get_bounded_timings = \
+            lambda t: (get_bounded_timing(t[0]), get_bounded_timing(t[1]))
+        timings = [get_bounded_timings(t) for t in timings]
 
         if filter_offset is None:
             filter_offset = self.FILTER_OFFSETS.get(
@@ -170,7 +173,7 @@ class SceneChangeFile(SortedSet):
         offset = filter_offset // 2
         filter_offset += 1
         den = numpy.log1p(255)
-        sc_time = 0
+        sc_time = first_time
 
         with vsource.output_format(*self.OUTPUT_FORMAT):
             for start_time, end_time in timings:
