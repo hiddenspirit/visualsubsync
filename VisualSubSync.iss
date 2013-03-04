@@ -104,6 +104,8 @@ Root: HKCR; Subkey: ".vssprj"; ValueType: string; ValueName: ""; ValueData: "Vis
 Root: HKCR; Subkey: "VisualSubSync.Document"; ValueType: string; ValueName: ""; ValueData: "VisualSubSync Project"; Flags: uninsdeletekey; Tasks: associate_vssprj
 Root: HKCR; Subkey: "VisualSubSync.Document\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},1"; Tasks: associate_vssprj
 Root: HKCR; Subkey: "VisualSubSync.Document\shell\open\command"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName} ""%1"""; Tasks: associate_vssprj
+Root: HKCU; Subkey: "Software\LAV\Audio"; ValueType: dword; ValueName: "DRCEnabled"; ValueData: 1; Tasks: codecs
+Root: HKCU; Subkey: "Software\LAV\Audio"; ValueType: dword; ValueName: "Mixing"; ValueData: 1; Tasks: codecs
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}"; Tasks: clean_install
