@@ -3,37 +3,45 @@
 http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
 """
 import os
-import struct
+import numpy
+
+
+# Workaround for an OSError on win32 after seeking from offset 0x7ffff000
+# Tested with numpy 1.7.0
+if os.name == "nt":
+    def array_from_file(file, dtype=numpy.float, count=-1, sep=""):
+        """Construct an array from data in a text or binary file.
+        """
+        item_size = numpy.dtype(dtype).itemsize
+        try:
+            if count < 0:
+                buf = file.read()
+                buf = buf[:len(buf) // item_size * item_size]
+            else:
+                buf = file.read(count * item_size)
+        except AttributeError:
+            return numpy.fromfile(file, dtype, count, sep)
+        return numpy.frombuffer(buf, dtype)
+else:
+    array_from_file = numpy.fromfile
 
 
 class MediaHash:
+    BLOCK_SIZE = 0x10000
+    DIGEST_TYPE = numpy.uint64
+    NUM_ITEMS = BLOCK_SIZE // numpy.dtype(DIGEST_TYPE).itemsize
+
     def __init__(self, path):
-        # long long
-        longlongformat = 'q'
-        bytesize = struct.calcsize(longlongformat)
-
+        file_size = os.path.getsize(path)
+        h = self.DIGEST_TYPE(file_size)
         with open(path, "rb") as f:
-            filesize = os.path.getsize(path)
-            hash = filesize #@ReservedAssignment
-
-            if filesize < 65536 * 2:
-                raise NotImplementedError("File too small")
-
-            for x in range(65536 // bytesize):
-                    buffer = f.read(bytesize)
-                    (l_value,) = struct.unpack(longlongformat, buffer)
-                    hash += l_value
-                    # to remain as 64bit number
-                    hash = hash & 0xFFFFFFFFFFFFFFFF #@ReservedAssignment
-
-            f.seek(max(0, filesize - 65536), 0)
-            for x in range(65536 // bytesize):
-                    buffer = f.read(bytesize)
-                    (l_value,) = struct.unpack(longlongformat, buffer)
-                    hash += l_value
-                    hash = hash & 0xFFFFFFFFFFFFFFFF #@ReservedAssignment
-
-        self.digest = hash
+            for pos in [0, file_size - self.BLOCK_SIZE]:
+                if pos < 0:
+                    break
+                f.seek(pos)
+                v = array_from_file(f, self.DIGEST_TYPE, self.NUM_ITEMS).sum()
+                h = h.__add__(v)  # Prevent overflow RuntimeWarning.
+        self.digest = int(h)
 
     @property
     def hex_digest(self):
