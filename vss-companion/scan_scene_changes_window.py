@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'scan_scene_changes_window.ui'
 #
-# Created: Thu Jan 31 06:13:12 2013
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Fri Mar  8 19:04:29 2013
+#      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -230,8 +230,8 @@ class Ui_MainWindow(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\" bgcolor=\"#eeeeee\">\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Difference (0%–100%):<br /></span><span style=\" font-size:9pt;\">Scene changes that have a difference percentage (compared to previous frames) below this threshold will be reported as bogus.</span></p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Ratio (×1.0–×20.0):<br /></span><span style=\" font-size:9pt;\">Each subtitle starting and ending zone will be scanned for a missing scene change. A missing scene change will be reported if </span><span style=\" font-size:9pt; font-style:italic;\">highest </span><span style=\" font-size:8pt;\"> ÷ </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is greater or equal to this threshold, where </span><span style=\" font-size:9pt; font-style:italic;\">highest</span><span style=\" font-size:9pt;\"> is the frame that has the highest difference in the zone, and </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is the median of the differences in the zone.</span></p></body></html>", None))
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Difference (0%-100%):<br /></span><span style=\" font-size:9pt;\">Scene changes that have a difference percentage (compared to previous frames) below this threshold will be reported as bogus.</span></p>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:9pt; font-weight:600;\">Ratio (x1.0-x20.0):<br /></span><span style=\" font-size:9pt;\">Each subtitle starting and ending zone will be scanned for a missing scene change. A missing scene change will be reported if </span><span style=\" font-size:9pt; font-style:italic;\">highest </span><span style=\" font-size:8pt;\"> / </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is greater or equal to this threshold, where </span><span style=\" font-size:9pt; font-style:italic;\">highest</span><span style=\" font-size:9pt;\"> is the frame that has the highest difference in the zone, and </span><span style=\" font-size:9pt; font-style:italic;\">median</span><span style=\" font-size:9pt;\"> is the median of the differences in the zone.</span></p></body></html>", None))
         self.toolButtonDefaults.setText(_translate("MainWindow", "Defaults", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabParameters), _translate("MainWindow", "Parameters", None))
         self.actionApply_suggestion.setText(_translate("MainWindow", "Apply suggestion", None))

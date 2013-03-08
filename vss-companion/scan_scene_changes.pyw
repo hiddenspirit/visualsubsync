@@ -173,7 +173,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.enable_scan()
         else:
             app.setOverrideCursor(QtGui.QCursor(Qt.BusyCursor))
-            self.ui.statusbar.showMessage(self.tr("Indexing…"))
+            self.ui.statusbar.showMessage(self.tr("Indexing..."))
             self.index_created.connect(self.on_index_created)
             self.executor.submit(self.create_index)
 
@@ -372,7 +372,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.toolButtonScan.setEnabled(False)
         self.ui.toolButtonCancel.setEnabled(True)
         self.set_enabled_parameters(False)
-        self.ui.statusbar.showMessage(self.tr("Scanning…"))
+        self.ui.statusbar.showMessage(self.tr("Scanning..."))
         self.job = None
         if self.vss:
             win32gui.PostMessage(self.vss, WM_APP_SAVE, self.winId(), 0)
@@ -716,7 +716,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    QtCore.QTextCodec.setCodecForTr(QtCore.QTextCodec.codecForName("utf-8"))
     app = ScanSceneChangeApplication(sys.argv)
     if app.running:
         print("{} is already running.".format(app.name), file=sys.stderr)
