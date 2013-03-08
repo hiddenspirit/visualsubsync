@@ -4,6 +4,7 @@
 import sys
 import os
 from cx_Freeze import setup, Executable
+from PyQt4.QtCore import QT_VERSION
 
 #############################################################################
 # préparation des options
@@ -28,11 +29,16 @@ includefiles_generate_scenechange_file = [
     "avs2yuv.exe", "mvtools2.dll", "avisynth.dll", "devil.dll",
     "generate_scenechange_file_presets.ini",
     "generate_scenechange_file_fr.qm",
-    "generate_scenechange_file_debug.cmd",
 ]
 
 for f in includefiles_generate_scenechange_file:
     includefiles.append((os.path.join("generate_scenechange_file", f), ""))
+
+if QT_VERSION >= 0x50000:
+    includefiles += [
+        "qt.conf",
+        "plugins/platforms/qwindows.dll",
+    ]
 
 # construction du dictionnaire des options
 options = {
