@@ -31,19 +31,6 @@ Slot = QtCore.pyqtSlot
 DEBUG = True
 common.VERBOSE = True
 
-VIDEO_EXTS = [
-    ".avi",
-    ".mkv",
-    ".mp4",
-    ".mpg",
-    ".ts",
-    ".wmv",
-]
-
-SUB_EXTS = [
-    ".srt",
-]
-
 WM_APP_COMPANION_CLOSED = WM_APP + 0x00
 WM_APP_COMPANION_OPENED = WM_APP + 0x01
 
@@ -278,13 +265,15 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
     @property
     def video_dialog_filter(self):
-        return "{} ({})".format(self.tr("Video files"),
-                                " ".join("*" + ext for ext in VIDEO_EXTS))
+        return "{} ({})".format(
+            self.tr("Video files"),
+            " ".join("*" + ext for ext in common.VIDEO_EXTS)
+        )
 
     @property
     def sub_dialog_filter(self):
         return "{} ({})".format(self.tr("Subtitle files"),
-                                " ".join("*" + ext for ext in SUB_EXTS))
+                                " ".join("*" + ext for ext in common.SUB_EXTS))
 
     def get_open_filename(self, title=None, dialog_filter=None):
         star_filter = "{} (*.*)".format(self.tr("All files"))

@@ -19,6 +19,24 @@ BUILD_DATE = "2013-03-08 18:04:57"
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
 
+VIDEO_EXTS = [
+    ".avi",
+    ".flv",
+    ".mkv",
+    ".mp4",
+    ".mpg",
+    ".ogg",
+    ".ogm",
+    ".ogv",
+    ".ts",
+    ".webm",
+    ".wmv",
+]
+
+SUB_EXTS = [
+    ".srt",
+]
+
 
 def purge_old_ffindexes():
     paths = glob.glob(os.path.join(APP_DATA_DIR, "*" + ffms.FFINDEX_EXT))
