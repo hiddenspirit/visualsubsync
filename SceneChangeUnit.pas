@@ -301,6 +301,8 @@ var Cmd : WideString;
     BytesRead : DWord;
     AppRunning : DWord;
     ExitCode: DWord;
+    ShortFilename : WideString;
+    ShortPathNameLen : Cardinal;
 begin
   Result := -1;
   with Security do
@@ -319,8 +321,15 @@ begin
     StartInfo.hStdError := WritePipe;
     StartInfo.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
     StartInfo.wShowWindow := SW_HIDE;
+    SetLength(ShortFilename, MAX_PATH);
+    ShortPathNameLen := GetShortPathNameW(
+      PWideChar(Filename),
+      PWideChar(ShortFilename),
+      MAX_PATH - 1
+    );
+    SetLength(ShortFilename, ShortPathNameLen);
     Cmd := '"' + ExtractFilePath(ParamStr(0)) +
-           'vss-companion\find_scenechange.exe" "' + Filename +
+           'vss-companion\find_scenechange.exe" "' + ShortFilename +
            '" --start-time ' + IntToStr(Start) +
            ' --end-time ' + IntToStr(Stop);
     if CreateProcessW(nil, PWideChar(Cmd), @Security, @Security, true,

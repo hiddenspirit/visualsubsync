@@ -10125,14 +10125,33 @@ end;
 procedure TMainForm.ActionScanSceneChangesExecute(Sender: TObject);
 var Cmd : WideString;
     Params : WideString;
+    ShortVideoSource, ShortSubtitlesFile : WideString;
+    ShortPathNameLen : Cardinal;
 begin
   if (CompanionHandle <> 0) or (CurrentProject.VideoSource = '') or
      (CurrentProject.SubtitlesFile = '') then
     Exit;
+
+  SetLength(ShortVideoSource, MAX_PATH);
+  ShortPathNameLen := GetShortPathNameW(
+    PWideChar(CurrentProject.VideoSource),
+    PWideChar(ShortVideoSource),
+    MAX_PATH - 1
+  );
+  SetLength(ShortVideoSource, ShortPathNameLen);
+
+  SetLength(ShortSubtitlesFile, MAX_PATH);
+  ShortPathNameLen := GetShortPathNameW(
+    PWideChar(CurrentProject.SubtitlesFile),
+    PWideChar(ShortSubtitlesFile),
+    MAX_PATH - 1
+  );
+  SetLength(ShortSubtitlesFile, ShortPathNameLen);
+
   Cmd := '"' + ExtractFilePath(ParamStr(0)) +
     'vss-companion\scan_scene_changes.exe"';
-  Params := '--video "' + CurrentProject.VideoSource +
-    '" --sub "' + CurrentProject.SubtitlesFile +
+  Params := '--video "' + ShortVideoSource +
+    '" --sub "' + ShortSubtitlesFile +
     '" --vss ' + IntToStr(Application.Handle);
   if ShellExecuteW(Handle, 'open', PWideChar(Cmd), PWideChar(Params), nil,
                    SW_SHOWNORMAL) <= 32 then
