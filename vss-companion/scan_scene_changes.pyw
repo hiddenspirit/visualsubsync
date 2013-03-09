@@ -11,6 +11,7 @@ from collections import namedtuple
 from concurrent import futures
 
 import win32gui
+import win32api
 from win32con import WM_APP
 
 from PyQt4 import QtCore, QtGui
@@ -147,7 +148,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.show()
 
         if args.video_file:
-            self.video_file = args.video_file
+            self.video_file = win32api.GetLongPathName(args.video_file)
         else:
             self.model = False
             self.video_file = self.get_open_filename(self.tr("Video file"),
