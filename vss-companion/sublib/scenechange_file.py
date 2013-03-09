@@ -259,8 +259,8 @@ class SceneChangeFile(SortedSet):
 
 def get_scene_changes(vsource):
     sc_list = [int(tc) for tc in vsource.track.keyframes_as_timecodes]
-    if sc_list and not sc_list[0]:
-        sc_list = sc_list[1:]
+    #if sc_list and not sc_list[0]:
+        #sc_list = sc_list[1:]
     return sc_list
 
 
