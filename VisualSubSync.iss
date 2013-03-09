@@ -9,14 +9,12 @@
 
 #define LAVFiltersInstaller "LAVFilters-0.55.3.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
-#define HaaliInstaller "MatroskaSplitter.exe"
 #define VCRedistInstaller "vcredist_x86.exe"
 
 #define ReleaseDir = "Release"
 #define SetupDir = "setup"
 ; #define MyAppVersion GetFileVersion(AddBackslash(ReleaseDir) + MyAppExeName)
 #define LAVFiltersVersion GetFileVersion(AddBackslash(SetupDir) + LAVFiltersInstaller)
-#define Haali "Haali Media Splitter"
 #define LAVFilters "LAV Filters"
 #define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
 #define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
@@ -52,7 +50,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 AdditionalSoftware=Additional software:
 InstallSoftware=Install%1
-InstallCodecs=Install%1 and%2
+InstallCodecs=Install%1
 CleanInstall=Clear previous installation files and settings
 AssociateExtension=Associate%1 files
 OriginalVSS=Original VisualSubSync was found at the specified location and will be uninstalled.
@@ -61,7 +59,7 @@ OriginalVSS=Original VisualSubSync was found at the specified location and will 
 Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
-Name: "codecs"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}, {#Haali}}"; GroupDescription: {cm:AdditionalSoftware}
+Name: "codecs"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}}"; GroupDescription: {cm:AdditionalSoftware}
 Name: "vc_redist"; Description: "{cm:InstallSoftware, {#VCRedist}}"; GroupDescription: {cm:AdditionalSoftware}; Flags: checkedonce
 
 [Files]
@@ -78,7 +76,6 @@ Source: "{#ReleaseDir}\vss-companion\*"; DestDir: "{app}\vss-companion"; Flags: 
 Source: "{#ReleaseDir}\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SetupDir}\{#LAVFiltersInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
 Source: "{#SetupDir}\{#Win7DSFilterTweakerExeName}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs; MinVersion: 6.1
-Source: "{#SetupDir}\{#HaaliInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: codecs
 Source: "{#SetupDir}\{#VCRedistInstaller}"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Tasks: vc_redist
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -93,7 +90,6 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 Filename: "{tmp}\{#LAVFiltersInstaller}"; Parameters: "/silent"; Tasks: codecs
 Filename: "{tmp}\{#Win7DSFilterTweakerExeName}"; Parameters: "/silent /h264_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /xvid_x86={{EE30215D-164F-4A92-A4EB-9D4C13390F9F}} /aac_x86={{E8E73B6B-4CB3-44A4-BE99-4F7BCB96E491}}"; Tasks: codecs; MinVersion: 6.1
-Filename: "{tmp}\{#HaaliInstaller}"; Parameters: "/S"; Tasks: codecs
 Filename: "{tmp}\{#VCRedistInstaller}"; Parameters: "/passive /showfinalerror"; Tasks: vc_redist
 
 [Dirs]
@@ -108,6 +104,7 @@ Root: HKCU; Subkey: "Software\LAV\Audio"; ValueType: dword; ValueName: "DRCEnabl
 Root: HKCU; Subkey: "Software\LAV\Audio"; ValueType: dword; ValueName: "Mixing"; ValueData: 1; Tasks: codecs
 
 [InstallDelete]
+Type: filesandordirs; Name: "{app}\vss-companion"
 Type: filesandordirs; Name: "{app}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files (x86)\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppName}"; Tasks: clean_install
