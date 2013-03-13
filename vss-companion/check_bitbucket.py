@@ -57,16 +57,16 @@ def main():
                    rb"-(\d+)-(\d+)-(\d+)-Setup\.exe")
         match = re.search(pattern, data)
         if not match:
-            raise ValueError("can't find setup on downlaod page")
-        bitbucket_date = Date(*(int(s) for s in match.groups()))
-        if bitbucket_date <= vss_date:
+            raise ValueError("can't find setup on download page")
+        setup_date = Date(*(int(s) for s in match.groups()))
+        if setup_date <= vss_date:
             msg = ("Current version: {}\n\nNo update is available."
                    .format(vss_date))
             win32ui.MessageBox(msg, APP_NAME,
                                win32con.MB_ICONINFORMATION)
             return
         msg = ("Current version: {}\nNew version: {}\n\nGo to download page?"
-               .format(vss_date, bitbucket_date))
+               .format(vss_date, setup_date))
         r = win32ui.MessageBox(msg, APP_NAME,
                                win32con.MB_ICONINFORMATION | win32con.MB_YESNO)
         if r == win32con.IDYES:
