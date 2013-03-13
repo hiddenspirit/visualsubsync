@@ -10166,7 +10166,8 @@ end;
 procedure TMainForm.MenuItemUpdateClick(Sender: TObject);
 var Cmd : WideString;
 begin
-  Cmd := 'vss-companion\check_bitbucket.exe';
+  Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+         'vss-companion\check_bitbucket.exe"';
   ShellExecuteW(Handle, 'open', PWideChar(Cmd), nil, nil, SW_SHOWNORMAL);
 end;
 
