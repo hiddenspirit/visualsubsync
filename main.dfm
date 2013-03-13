@@ -1663,6 +1663,10 @@ object MainForm: TMainForm
       object N8: TTntMenuItem
         Caption = '-'
       end
+      object MenuItemUpdate: TMenuItem
+        Caption = 'Check for update'
+        OnClick = MenuItemUpdateClick
+      end
       object MenuItemAbout: TTntMenuItem
         Caption = 'About'
         OnClick = MenuItemAboutClick

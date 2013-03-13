@@ -385,6 +385,7 @@ type
     ActionScanSceneChanges: TTntAction;
     bttScanSceneChanges: TTntSpeedButton;
     Scanforscenechanges1: TMenuItem;
+    MenuItemUpdate: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure OnMessage(var Msg: TMsg; var Handled: Boolean);
 
@@ -577,6 +578,7 @@ type
     procedure ActionTranslationTemplateExecute(Sender: TObject);
     procedure MenuItemHelpCodecsInstallationClick(Sender: TObject);
     procedure ActionScanSceneChangesExecute(Sender: TObject);
+    procedure MenuItemUpdateClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -10160,6 +10162,13 @@ begin
   end;
 end;
 
+
+procedure TMainForm.MenuItemUpdateClick(Sender: TObject);
+var Cmd : WideString;
+begin
+  Cmd := 'vss-companion\check_bitbucket.exe';
+  ShellExecuteW(Handle, 'open', PWideChar(Cmd), nil, nil, SW_SHOWNORMAL);
+end;
 
 end.
 //------------------------------------------------------------------------------

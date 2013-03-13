@@ -15,11 +15,10 @@ path = sys.path + ["generate_scenechange_file"]
 # options d'inclusion/exclusion des modules
 includes = []
 excludes = [
-    "tkinter", "bz2", "lzma", "ssl", "pyexpat", "unicodedata",
-    "curses", "distutils", "email", "html", "lib2to3",
+    "tkinter", "bz2", "lzma", "pyexpat",
+    "curses", "distutils", "html", "lib2to3",
     "xml", "xmlrpc", "zipfile", "pdb", "ftplib",
-    "pydoc_data", "http", "urllib", "inspect",
-    "win32pdh",
+    "pydoc_data", "inspect", "win32pdh",
 ]
 packages = []
 
@@ -58,6 +57,11 @@ exe_list = [
     Executable(
         script="find_scenechange.py",
         base=None,
+        compress=True,
+    ),
+    Executable(
+        script="check_bitbucket.py",
+        base="Win32GUI",
         compress=True,
     ),
     # Executable(
