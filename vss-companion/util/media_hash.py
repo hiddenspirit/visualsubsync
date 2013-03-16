@@ -3,12 +3,13 @@
 http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
 """
 import os
+import sys
 import numpy
 
 
-# Workaround for an OSError on win32 after seeking from offset 0x7ffff000
-# Tested with numpy 1.7.0
-if os.name == "nt":
+# Workaround for an OSError after seeking from offset 0x7ffff000/0x7fffffff
+# Error occurs with numpy 1.7.0 on Python 3.3.0 (32 bit).
+if sys.maxsize == 0x7fffffff:
     def array_from_file(file, dtype=numpy.float, count=-1, sep=""):
         """Construct an array from data in a text or binary file.
         """
