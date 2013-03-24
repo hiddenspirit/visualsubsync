@@ -63,6 +63,7 @@ exe_list = [
         script="check_bitbucket.py",
         base="Win32GUI",
         compress=True,
+        icon="../Resources/VSS.ico",
     ),
     # Executable(
         # script="make_scenechange_file.py",
