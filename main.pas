@@ -2693,7 +2693,7 @@ begin
         begin
           GetNextWordPos(Offset, TextToSpell, WordInfo);
           AWord := Copy(TextToSpell, WordInfo.Position, WordInfo.Length);
-          SpellOk := ContainDigit(AWord) or IsUpperCase(AWord) or FSpellChecker.Spell(AWord);
+          SpellOk := ContainDigit(AWord) or FSpellChecker.Spell(AWord);
           if (not SpellOk) then
           begin
             SetRESelection(RichEdit, j + WordInfo.Position - 1, WordInfo.Length);
