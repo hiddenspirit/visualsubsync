@@ -155,7 +155,7 @@ begin
           end
           else
           begin
-            SpellOk := ContainDigit(CurrentWord) or IsUpperCase(CurrentWord)
+            SpellOk := ContainDigit(CurrentWord)
               or MainForm.GetSpellChecker.Spell(CurrentWord);
             if (not SpellOk) then
             begin
