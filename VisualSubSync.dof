@@ -113,7 +113,7 @@ AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=2013
-Build=411
+Build=413
 Debug=0
 PreRelease=0
 Special=0
@@ -124,7 +124,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.0.2013.411
+FileVersion=1.0.2013.413
 InternalName=
 LegalCopyright=
 LegalTrademarks=
