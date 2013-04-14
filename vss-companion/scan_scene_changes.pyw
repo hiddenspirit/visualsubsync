@@ -139,7 +139,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
         if args.vss:
             self.vss = args.vss
-            self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
+            # self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
+            self.setWindowFlags(Qt.WindowStaysOnTopHint)
             win32gui.PostMessage(self.vss, WM_APP_COMPANION_OPENED,
                                  self.winId(), 0)
         else:
