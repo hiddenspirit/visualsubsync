@@ -210,6 +210,7 @@ type
     FWavFormat : TWaveFormatEx;
 
     FWheelTimeScroll, FWheelVZoom, FWheelHZoom : TMouseWheelModifier;
+    FWheelTimeScrollDenominator : Integer;
     FMouseIsDown : Boolean; // this fix WAVDisplay refresh bug when double clicking title bar
 
     FDisplayRuler : Boolean;
@@ -287,7 +288,7 @@ type
     function FindCorrectedSnappingPoint(PosMs : Integer; ARangeList : TRangeList) : Integer;
 
     procedure SetLengthMs(LenghtMs : Integer);
-        
+
   protected
     procedure DblClick; override;
     procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
@@ -349,7 +350,7 @@ type
 
     procedure ClearPeakData;
     function IsPeakDataLoaded : Boolean;
-    procedure ShowVO(Show : Boolean);      
+    procedure ShowVO(Show : Boolean);
 
     property RangeList : TRangeList read FRangeList;
     property RangeListVO : TRangeList read FRangeListVO;
@@ -393,6 +394,7 @@ type
     property VerticalScaling : Integer read FVerticalScaling write SetVerticalScaling;
     property Visible;
     property WheelTimeScroll : TMouseWheelModifier read FWheelTimeScroll write FWheelTimeScroll default mwmNone;
+    property WheelTimeScrollDenominator : Integer read FWheelTimeScrollDenominator write FWheelTimeScrollDenominator default 16;
     property WheelVZoom : TMouseWheelModifier read FWheelVZoom write FWheelVZoom default mwmShift;
     property WheelHZoom : TMouseWheelModifier read FWheelHZoom write FWheelHZoom default mwmCtrl;
     property SceneChangeEnabled : Boolean read FSceneChangeEnabled write FSceneChangeEnabled;
@@ -401,7 +403,7 @@ type
     property SceneChangeFilterOffset : Integer read FSceneChangeFilterOffset write FSceneChangeFilterOffset;
     property ShowMinimumBlank : Boolean read FShowMinimumBlank write FShowMinimumBlank;
     property SnappingEnabled : Boolean read FSnappingEnabled write FSnappingEnabled;
-    property RulerHeight : Integer read FDisplayRulerHeight; 
+    property RulerHeight : Integer read FDisplayRulerHeight;
   end;
 
 function CompareRanges(R1, R2: TRange): Integer;
@@ -923,7 +925,7 @@ begin
   Min := 0;
   Max := FList.Count-1;
   Mid := (Max+Min) div 2;
-  
+
   while (Min <= Max) do
   begin
     RangeCursor := TRange(FList[Mid]);
@@ -939,7 +941,7 @@ begin
     end;
     Mid := (Max+Min) div 2;
   end;
-  
+
   Result := Min;
 end;
 
@@ -998,7 +1000,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TRangeList.Delete(const Index : Integer);
-var Range : TRange; 
+var Range : TRange;
 begin
   if (Index >= 0) and (Index < FList.Count) then
   begin
@@ -1087,7 +1089,7 @@ begin
 
   TabStop := True;
   FSelectionOrigin := -1;
-  FScrollOrigin := -1;  
+  FScrollOrigin := -1;
   FDynamicEditMode := demNone;
   FDynamicSelRange := nil;
   FDynamicSelRangeOld := nil;
@@ -1098,7 +1100,7 @@ begin
   FMaxSelTime := -1;
 
   FRenderer := nil;
-  
+
   FOffscreen := TBitmap.Create;
   FOffscreen.PixelFormat := pf32bit; // for faster drawing
   FOffscreenWAV := TBitmap.Create;
@@ -1125,7 +1127,7 @@ begin
   FMinBlankInfo2 := TMinBlankInfo.Create;
   FSnappingEnabled := True;
   FEnableMouseAntiOverlapping := False;
-  
+
   FUpdateCursorTimer := TTimer.Create(nil);
   FUpdateCursorTimer.Enabled := False;
   FUpdateCursorTimer.Interval := 40;
@@ -1137,6 +1139,7 @@ begin
   FDisplayRulerHeight := 20;
 
   FWheelTimeScroll := mwmNone;
+  FWheelTimeScrollDenominator := 16;
   FWheelVZoom := mwmShift;
   FWheelHZoom := mwmCtrl;
 
@@ -1459,7 +1462,7 @@ begin
   CanvasHeightDiv10 := (rangeBottom - rangeTop) div 10;
   y1 := rangeTop + CanvasHeightDiv10;
   y2 := rangeBottom - CanvasHeightDiv10;
-  
+
   // TODO improvement : this is very slow when lot's of range are on screen
   // We should do this in 2 pass to group ranges, and use another color
 
@@ -1556,7 +1559,7 @@ begin
         CustomDrawRect.Bottom := y2;
         FOnCustomDrawRange(Self, ACanvas, r, CustomDrawRect);
       end;
-      
+
       // Karaoke
       if (System.Length(r.SubTime) > 0) then
       begin
@@ -1721,7 +1724,7 @@ begin
   end;
 
   PaintSelection(ACanvas);
-  
+
   PaintCursor(ACanvas);
   PaintPlayCursor(ACanvas);
 end;
@@ -1745,7 +1748,7 @@ begin
     ACanvas.FillRect(PosRect);
 
     // Draw horizontal line at top and bottom
-    ACanvas.Pen.Mode := pmCopy;  
+    ACanvas.Pen.Mode := pmCopy;
     ACanvas.Pen.Style := psSolid;
     ACanvas.Pen.Color := RULER_TOP_BOTTOM_LINE_COLOR;
     ACanvas.MoveTo(0, PosRect.Top);
@@ -2521,7 +2524,7 @@ begin
         begin
           Constrain(X, 0, Width);
           NewCursorPos := PixelToTime(X) + FPositionMs;
-          
+
           // Snapping
           if (not (ssCtrl in Shift)) and (FSnappingEnabled) then
           begin
@@ -2620,7 +2623,7 @@ begin
           Exit;
       end;
     end;
-    
+
     if SetMinBlankAt(CursorPosMs, ARangeList) then
     begin
       Include(UpdateFlags, uvfRange);
@@ -3125,7 +3128,7 @@ begin
       Result := False;
       Exit;
     end;
-      
+
     LengthMs := WAVFile.Duration;
     FWavFormat := WAVFile.GetWaveFormatEx^;
     // Create the "peak" file
@@ -3135,7 +3138,7 @@ begin
     WAVFile.Close;
     WAVFile.Free;
   end;
-  
+
   SetLengthMs(LengthMs);
   FPeakDataLoaded := True;
 
@@ -3211,7 +3214,7 @@ begin
     FScrollBar.Max := FLengthMs;
     FScrollBar.Position := 0;
     FScrollBar.PageSize := FLengthMs;
-    FScrollBar.OnChange := OnScrollBarChange;    
+    FScrollBar.OnChange := OnScrollBarChange;
   end;
 end;
 
@@ -3303,7 +3306,7 @@ begin
     FPositionMs := NewPosition;
     UpdateView(UpdateFlags);
     if Assigned(FOnViewChange) then
-      FOnViewChange(Self);    
+      FOnViewChange(Self);
   end;
 end;
 
@@ -3366,7 +3369,7 @@ begin
   Range.StartTime := FPositionMs - FPageSizeMs;
   Range.StopTime := FPositionMs + (FPageSizeMs * 2);
   ZoomRange(Range);
-  Range.Free;  
+  Range.Free;
 end;
 
 //------------------------------------------------------------------------------
@@ -3390,7 +3393,7 @@ begin
   RelativePos := ScreenToClient(MousePos);
   if not InRange(RelativePos.X, 0, Width) then Exit;
 
-  // default:  
+  // default:
   // Ctrl + Wheel  = Horizontal Zoom
   // Shift + Wheel = Vertical Zoom
   // Wheel only    = Time scrolling
@@ -3415,7 +3418,7 @@ begin
   end
   else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
   begin
-    ScrollAmount := Round(FPageSizeMs / 4); // scroll amount = 1/4 of visible interval
+    ScrollAmount := Round(FPageSizeMs / FWheelTimeScrollDenominator); // scroll amount = 1/FWheelTimeScrollDenominator of visible interval
     if (ScrollAmount = 0) then ScrollAmount := 1;
     SetPositionMs(FPositionMs - ScrollAmount);
   end
@@ -3467,13 +3470,13 @@ begin
   end
   else if ((FWheelTimeScroll = mwmNone) and NoKeyModifierIn(Shift)) or (Ord(FWheelTimeScroll) in bShift) then
   begin
-    ScrollAmount := Round(FPageSizeMs / 4); // scroll amount = 1/4 of visible interval
+    ScrollAmount := Round(FPageSizeMs / FWheelTimeScrollDenominator); // scroll amount = 1/FWheelTimeScrollDenominator of visible interval
     if (ScrollAmount = 0) then ScrollAmount := 1;
     SetPositionMs(FPositionMs + ScrollAmount);
   end
   else
     Exit;
-    
+
   UpdateView([uvfPageSize]); // Refresh waveform
 end;
 
@@ -3562,7 +3565,7 @@ end;
 
 function TWAVDisplayer.SelectionIsEmpty : Boolean;
 begin
-  Result := (FSelection.StopTime = 0);  
+  Result := (FSelection.StopTime = 0);
 end;
 
 //------------------------------------------------------------------------------
@@ -3707,7 +3710,7 @@ begin
     FSelection.StartTime := 0;
     FSelection.StopTime := 0;
   end;
-  
+
   if (FSelectedRange <> Value) then
   begin
     FSelectedRange := Value;
@@ -3718,7 +3721,7 @@ begin
       // TODO : VO
       SetMinBlankAt(FSelectedRange.StartTime, FRangeList);
     end;
-    
+
     if UpdateDisplay then
       UpdateView([uvfSelection, uvfRange]);
     if Assigned(FOnSelectionChange) then
@@ -4059,7 +4062,7 @@ begin
     FScrollBar.Max := LenghtMs;
     FScrollBar.PageSize := FPageSizeMs;
     FScrollBar.Position := FPositionMs;
-    
+
     UpdateView([uvfPageSize]);
     if Assigned(FOnSelectionChange) then
       FOnSelectionChange(Self);
@@ -4104,4 +4107,3 @@ end;
 //------------------------------------------------------------------------------
 end.
 //------------------------------------------------------------------------------
-

@@ -5812,6 +5812,7 @@ end;
 procedure TMainForm.ApplyMouseSettings;
 begin
   WAVDisplayer.WheelTimeScroll := ConfigObject.MouseWheelTimeScrollModifier;
+  WAVDisplayer.WheelTimeScrollDenominator := ConfigObject.MouseWheelTimeScrollDenominator;
   WAVDisplayer.WheelVZoom := ConfigObject.MouseWheelVZoomModifier;
   WAVDisplayer.WheelHZoom := ConfigObject.MouseWheelHZoomModifier;
   if IsTimingMode then
