@@ -93,6 +93,7 @@ type
     MouseWheelVZoomModifier : TMouseWheelModifier;
     MouseWheelHZoomModifier : TMouseWheelModifier;
     MouseEnableSSATimingMode : Boolean;
+    MouseWheelTimeScrollDenominator : Integer;
     // Backup
     EnableBackup : Boolean;
     AutoBackupEvery : Integer;
@@ -522,6 +523,7 @@ begin
   MouseWheelVZoomModifier := mwmShift;
   MouseWheelHZoomModifier := mwmCtrl;
   MouseEnableSSATimingMode := False;
+  MouseWheelTimeScrollDenominator := 16;
   // Backup
   EnableBackup := True;
   AutoBackupEvery := 0;
@@ -682,6 +684,7 @@ begin
   IniFile.WriteInteger('Mouse','WheelVZoomModifier',Ord(MouseWheelVZoomModifier));
   IniFile.WriteInteger('Mouse','WheelHZoomModifier',Ord(MouseWheelHZoomModifier));
   IniFile.WriteBool('Mouse','EnableSSATimingMode',MouseEnableSSATimingMode);
+  IniFile.WriteInteger('Mouse','WheelTimeScrollDenominator',MouseWheelTimeScrollDenominator);
 
   // Backup
   IniFile.WriteBool('Backup','EnableBackup',EnableBackup);
@@ -803,6 +806,8 @@ begin
     'WheelHZoomModifier',Ord(MouseWheelHZoomModifier)));
   MouseEnableSSATimingMode := IniFile.ReadBool('Mouse',
     'EnableSSATimingMode',MouseEnableSSATimingMode);
+  MouseWheelTimeScrollDenominator := IniFile.ReadInteger('Mouse',
+    'WheelTimeScrollDenominator',MouseWheelTimeScrollDenominator);
 
   if (not IsPresets) then
   begin
