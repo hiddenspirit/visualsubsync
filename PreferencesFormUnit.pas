@@ -518,9 +518,9 @@ begin
   // Error
   UpdatePluginList;
   // Mouse
-  MouseWheelTimeScrollModifier := mwmCtrl;
+  MouseWheelTimeScrollModifier := mwmNone;
   MouseWheelVZoomModifier := mwmShift;
-  MouseWheelHZoomModifier := mwmNone;
+  MouseWheelHZoomModifier := mwmCtrl;
   MouseEnableSSATimingMode := False;
   // Backup
   EnableBackup := True;
