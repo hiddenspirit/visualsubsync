@@ -7,8 +7,8 @@
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFiltersInstaller "LAVFilters-0.56.1.exe"
-#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.7.exe"
+#define LAVFiltersInstaller "LAVFilters-0.56.2.exe"
+#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.8.exe"
 #define VCRedistInstaller "vcredist_x86.exe"
 
 #define ReleaseDir = "Release"
