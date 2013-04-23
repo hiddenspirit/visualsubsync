@@ -25,7 +25,7 @@ packages = []
 # copier les fichiers et/ou répertoires et leur contenu
 includefiles = ["ffms2.dll"]
 includefiles_generate_scenechange_file = [
-    "avs2yuv.exe", "mvtools2.dll", "avisynth.dll",
+    "avs2yuv.exe", "mvtools2.dll", "avisynth.dll", "devil.dll",
     "generate_scenechange_file_presets.ini",
     "generate_scenechange_file_fr.qm",
 ]
