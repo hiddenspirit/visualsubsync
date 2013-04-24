@@ -126,7 +126,7 @@ type
     FPopupTrackbar : TPopupTrackbar;
     FPrimaryColor, FSecondaryColor, FOutlineColor, FBackColor : TColor;
     FHue, FSaturation, FLuminance : Double;
-    
+
     procedure ShowSelection;
     procedure ClearForm;
     procedure ClearList;
@@ -280,7 +280,7 @@ begin
   GetLocaleFormatSettings(0,ssaFormat);
   ssaFormat.DecimalSeparator := '.';
 
-  // Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+  // Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
   // Style: *Default,Arial,28,&H00FFFFFF,&H00400040,&H00C0C0C0,&H82C0C0C0,0,0,0,0,100,100,0,0,0,0,0,5,15,15,15,0
   Result := Format('Style: %s,%s,%d,%s,%s,%s,%s,%d,%d,%d,%d,%s,%s,%s,%s,%d,%s,%s,%d,%d,%d,%d,%d',
     [name, fontname, Round(fontsize), ABGRColor2AssColorString(primaryColor),
@@ -467,7 +467,7 @@ var newFontStyles : TFontStyles;
 begin
   GetLocaleFormatSettings(0,ssaFormat);
   ssaFormat.DecimalSeparator := '.';
-  
+
   edStyleName.Text := style.name;
   stFontPreview.Font.Name := style.fontname;
   stFontPreview.Font.Size := Round(style.fontsize);
@@ -586,7 +586,7 @@ begin
     style.strikeout := -1
   else
     style.strikeout := 0;
-      
+
   case rgHAlignment.ItemIndex of
     0: case rgVAlignment.ItemIndex of
           0: style.alignment := Ord(alassTopLeft);
