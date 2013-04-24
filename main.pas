@@ -6979,7 +6979,7 @@ begin
   // Write Styles
   WriteStringLnStream('', FS);
   WriteStringLnStream('[v4+ Styles]', FS);
-  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic,  Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
+  WriteStringLnStream('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding', FS);
   for i:=0 to StyleFormInstance.GetCount-1 do
   begin
     style := StyleFormInstance.GetStyleAt(i);
