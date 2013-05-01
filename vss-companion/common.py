@@ -14,7 +14,7 @@ from util.media_hash import MediaHash
 
 VERBOSE = False
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-04-23 03:21:50"
+BUILD_DATE = "2013-05-01 19:51:28"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -143,13 +143,16 @@ class MP4VideoTrack(ffms.VideoTrack):
         """List of timecodes
         """
         if self._timecodes is None:
-            vprops = self._vprops
-            if (vprops.FirstTime == 0.14675 and
-                    vprops.fps == Fraction(24000, 1001)):
-                original = super().timecodes
-                time_base = self.time_base
-                num, den = time_base.numerator, time_base.denominator
-                self._timecodes = [(frame_info.PTS - 1520) * num / den
+            original = super().timecodes
+            first_pts = self.frame_info_list[0].PTS
+            frame_duration = ((self.frame_info_list[1].PTS - first_pts) *
+                              self.time_base)
+            first_time = first_pts * self.time_base
+            if (first_time > 2 * frame_duration and
+                    (first_time / frame_duration).denominator != 1):
+                delta = int(first_pts - 2 * frame_duration / self.time_base)
+                num, den = self.time_base.numerator, self.time_base.denominator
+                self._timecodes = [(frame_info.PTS - delta) * num / den
                                    for frame_info in self.frame_info_list]
                 if VERBOSE:
                     print("fixed timecodes for {!r}:\n{!r}\n{!r}".format(
@@ -157,5 +160,5 @@ class MP4VideoTrack(ffms.VideoTrack):
                           original[:10], self._timecodes[:10],
                           file=sys.stderr))
             else:
-                self._timecodes = super().timecodes
+                self._timecodes = original
         return self._timecodes
