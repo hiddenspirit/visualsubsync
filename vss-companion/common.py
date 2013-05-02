@@ -14,7 +14,7 @@ from util.media_hash import MediaHash
 
 VERBOSE = False
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-05-01 19:51:28"
+BUILD_DATE = "2013-05-02 00:40:43"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -105,37 +105,44 @@ class VideoSource(ffms.VideoSource):
                 if "matroska" in format_names:
                     self._track = MKVVideoTrack(
                         ffms.FFMS_GetTrackFromVideo(self._source),
-                        self.track_number, self.index)
+                        self.track_number, self.index, self.properties.fps)
                 elif "mp4" in format_names:
                     self._track = MP4VideoTrack(
                         ffms.FFMS_GetTrackFromVideo(self._source),
                         self.track_number, self.index)
                 else:
                     self._track = super().track
-                self._track._vprops = self.properties
             return self._track
 
 
 class MKVVideoTrack(ffms.VideoTrack):
+    def __init__(self, track, number, index, fps):
+        super().__init__(track, number, index)
+        self._fps = fps
+
     @property
     def timecodes(self):
         """List of timecodes
         """
         if self._timecodes is None:
             original = super().timecodes
-            self._timecodes = [self._round_timing(t)
-                               for t in super().timecodes]
-            if VERBOSE:
-                print("fixed timecodes for {!r}:\n{!r}\n{!r}".format(
-                      self.index.source_file,
-                      original[:10], self._timecodes[:10],
-                      file=sys.stderr))
+            if self._fps.denominator == 1001:
+                self._timecodes = [self._round_timing(t) for t in original]
+                if VERBOSE:
+                    print("fixed timecodes for {!r}:\n{!r}\n{!r}".format(
+                          self.index.source_file,
+                          original[:5], self._timecodes[:5],
+                          file=sys.stderr))
+            else:
+                self._timecodes = original
         return self._timecodes
 
     def _round_timing(self, timing):
-        num, den = self._vprops.fps.numerator, self._vprops.fps.denominator
+        num, den = self._fps.numerator, self._fps.denominator
         return round(timing * num / den / 1000) * 1000 * den / num
 
+
+# Workaround for https://code.google.com/p/ffmpegsource/issues/detail?id=109
 
 class MP4VideoTrack(ffms.VideoTrack):
     @property
@@ -157,7 +164,7 @@ class MP4VideoTrack(ffms.VideoTrack):
                 if VERBOSE:
                     print("fixed timecodes for {!r}:\n{!r}\n{!r}".format(
                           self.index.source_file,
-                          original[:10], self._timecodes[:10],
+                          original[:5], self._timecodes[:5],
                           file=sys.stderr))
             else:
                 self._timecodes = original
