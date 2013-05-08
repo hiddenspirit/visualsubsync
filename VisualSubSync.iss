@@ -8,7 +8,7 @@
 #define MyAppExeName "VisualSubSync.exe"
 
 #define LAVFiltersInstaller "LAVFilters-0.56.2.exe"
-#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.8.exe"
+#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_5.9.exe"
 #define VCRedistInstaller "vcredist_x86.exe"
 
 #define ReleaseDir = "Release"
