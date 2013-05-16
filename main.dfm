@@ -1664,7 +1664,7 @@ object MainForm: TMainForm
         Caption = '-'
       end
       object MenuItemUpdate: TMenuItem
-        Caption = 'Check for update'
+        Caption = 'Check for updates'
         OnClick = MenuItemUpdateClick
       end
       object MenuItemAbout: TTntMenuItem

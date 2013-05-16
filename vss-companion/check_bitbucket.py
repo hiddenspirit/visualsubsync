@@ -60,7 +60,7 @@ def main():
             raise ValueError("can't find setup on download page")
         setup_date = Date(*(int(s) for s in match.groups()))
         if setup_date <= vss_date:
-            msg = ("Current version: {}\n\nNo update is available."
+            msg = ("Current version: {}\n\nNo updates available."
                    .format(vss_date))
             win32ui.MessageBox(msg, APP_NAME,
                                win32con.MB_ICONINFORMATION)
