@@ -14,7 +14,7 @@ from util.media_hash import MediaHash
 
 VERBOSE = False
 FFINDEX_MAX_FILES = 24
-BUILD_DATE = "2013-05-02 00:40:43"
+BUILD_DATE = "2013-07-09 01:47:36"
 
 APP_NAME = "VisualSubSync-Companion"
 APP_DATA_DIR = os.path.join(get_app_data_dir(), APP_NAME)
@@ -50,6 +50,7 @@ def get_video_source(file_path, num_threads=0):
     ffindex_filepath = get_index_path(file_path)
     if os.path.isfile(ffindex_filepath):
         try:
+            #FIXME: this can hang with truncated index files.
             index = ffms.Index.read(ffindex_filepath, file_path)
         except ffms.Error as ffms_error:
             try:
