@@ -23,18 +23,22 @@ excludes = [
 packages = []
 
 # copier les fichiers et/ou répertoires et leur contenu
-includefiles = ["ffms2.dll"]
+include_files = ["ffms2.dll"]
 includefiles_generate_scenechange_file = [
     "avs2yuv.exe", "mvtools2.dll", "avisynth.dll", "devil.dll",
     "generate_scenechange_file_presets.ini",
     "generate_scenechange_file_fr.qm",
 ]
 
+bin_excludes = [
+    "mfc100u.dll",
+]
+
 for f in includefiles_generate_scenechange_file:
-    includefiles.append((os.path.join("generate_scenechange_file", f), ""))
+    include_files.append((os.path.join("generate_scenechange_file", f), ""))
 
 if QT_VERSION >= 0x50000:
-    includefiles += [
+    include_files += [
         "qt.conf",
         "plugins/platforms/qwindows.dll",
     ]
@@ -45,7 +49,8 @@ options = {
     "includes": includes,
     "excludes": excludes,
     "packages": packages,
-    "include_files": includefiles,
+    "include_files": include_files,
+    "bin_excludes": bin_excludes,
     "bin_path_includes": [],
     "optimize": 2,
     "replace_paths": [("*", "")],
