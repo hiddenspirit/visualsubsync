@@ -83,7 +83,7 @@ initialization
   g_GlobalContext := TGlobalContext.Create;
   g_WebRWSynchro := TMultiReadExclusiveWriteSynchronizer.Create;
   g_ApplicationPath := WideIncludeTrailingBackslash(WideExtractFilePath(TntApplication.ExeName));
-  g_BackupDirectory := g_ApplicationPath + 'Backup\';
+  g_BackupDirectory := GetEnvironmentVariable('APPDATA') + '\' + ApplicationName + '\Backup\';
   CheckBackupDirectory;
   g_PluginPath := g_ApplicationPath + 'jsplugin\';
   g_PresetsPath := g_ApplicationPath + 'presets\';
