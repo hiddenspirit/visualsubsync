@@ -56,7 +56,7 @@ AssociateExtension=Associate%1 files
 OriginalVSS=Original VisualSubSync was found at the specified location and will be completely uninstalled. ALL FILES WILL BE DELETED.
 
 [Tasks]
-Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked
+Name: "desktop_icon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{#MyAppName}:"; Flags: checkedonce
 Name: "associate_vssprj"; Description: "{cm:AssociateExtension, .vssprj}"; GroupDescription: "{#MyAppName}:"
 Name: "clean_install"; Description: "{cm:CleanInstall}"; GroupDescription: "{#MyAppName}:"; Flags: unchecked checkedonce
 Name: "codecs"; Description: "{cm:InstallCodecs, {#LAVFIltersVerName}}"; GroupDescription: {cm:AdditionalSoftware}
