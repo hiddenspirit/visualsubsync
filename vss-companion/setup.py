@@ -4,7 +4,6 @@
 import sys
 import os
 from cx_Freeze import setup, Executable
-from PyQt4.QtCore import QT_VERSION
 
 #############################################################################
 # préparation des options
@@ -24,7 +23,7 @@ packages = []
 
 # copier les fichiers et/ou répertoires et leur contenu
 include_files = ["ffms2.dll"]
-includefiles_generate_scenechange_file = [
+include_files_generate_scenechange_file = [
     "avs2yuv.exe", "mvtools2.dll", "avisynth.dll", "devil.dll",
     "generate_scenechange_file_presets.ini",
     "generate_scenechange_file_fr.qm",
@@ -34,14 +33,20 @@ bin_excludes = [
     "mfc100u.dll",
 ]
 
-for f in includefiles_generate_scenechange_file:
-    include_files.append((os.path.join("generate_scenechange_file", f), ""))
-
-if QT_VERSION >= 0x50000:
-    include_files += [
-        "qt.conf",
-        "plugins/platforms/qwindows.dll",
+try:
+    from PyQt5.QtCore import PYQT_VERSION, QT_VERSION
+    includes += [
+        "PyQt5.QtCore",
+        "PyQt5.QtGui",
+        "PyQt5.QtWidgets",
+        "PyQt5.QtNetwork",
     ]
+except ImportError:
+    from PyQt4.QtCore import PYQT_VERSION, QT_VERSION
+
+
+for f in include_files_generate_scenechange_file:
+    include_files.append((os.path.join("generate_scenechange_file", f), ""))
 
 # construction du dictionnaire des options
 options = {
