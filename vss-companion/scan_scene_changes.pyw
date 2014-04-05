@@ -14,9 +14,16 @@ import win32gui
 import win32api
 from win32con import WM_APP
 
-from PyQt4 import QtCore, QtGui
-#from PyQt4 import uic
-from PyQt4.QtCore import Qt
+try:
+    from PyQt5 import QtCore, QtGui, QtWidgets
+    from PyQt5.QtCore import Qt
+except ImportError:
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtCore import Qt
+    QtWidgets = QtMultimedia = QtGui
+    QtGui.QFileDialog.getOpenFileName = QtGui.QFileDialog.getOpenFileNameAndFilter
+    QtCore.QStandardPaths = QtGui.QDesktopServices
+    QtCore.QStandardPaths.writableLocation = QtGui.QDesktopServices.storageLocation
 
 from scan_scene_changes_window import Ui_MainWindow
 
@@ -25,7 +32,6 @@ import sublib.old
 import common
 
 
-getOpenFileName = QtGui.QFileDialog.getOpenFileNameAndFilter
 Signal = QtCore.pyqtSignal
 Slot = QtCore.pyqtSlot
 
@@ -62,7 +68,7 @@ class EmittingStream(QtCore.QObject):
         self.text_written.emit(str(text))
 
 
-class ScanSceneChangeApplication(QtGui.QApplication):
+class ScanSceneChangeApplication(QtWidgets.QApplication):
     def __init__(self, argv):
         super().__init__(argv)
         self._memory = QtCore.QSharedMemory(self)
@@ -97,7 +103,7 @@ class ScanSceneChangeApplication(QtGui.QApplication):
         return False, id(msg)
 
 
-class ScanSceneChangeForm(QtGui.QMainWindow):
+class ScanSceneChangeForm(QtWidgets.QMainWindow):
     index_created = Signal()
     bogus_scene_change_found = Signal(int, float)
     missing_scene_change_found = Signal(int, float, float)
@@ -119,11 +125,11 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
 
         if args.debug or DEBUG:
             self.debug = True
-            self.ui.tab_Log = QtGui.QWidget()
+            self.ui.tab_Log = QtWidgets.QWidget()
             self.ui.tab_Log.setObjectName("tab_Log")
-            self.ui.gridLayoutDebug = QtGui.QGridLayout(self.ui.tab_Log)
+            self.ui.gridLayoutDebug = QtWidgets.QGridLayout(self.ui.tab_Log)
             self.ui.gridLayoutDebug.setObjectName("gridLayoutDebug")
-            self.ui.textEdit_Log = QtGui.QTextEdit(self.ui.tab_Log)
+            self.ui.textEdit_Log = QtWidgets.QTextEdit(self.ui.tab_Log)
             self.ui.textEdit_Log.setObjectName("textEdit_Log")
             self.ui.gridLayoutDebug.addWidget(self.ui.textEdit_Log, 0, 0, 1, 1)
             self.ui.tabWidget.addTab(self.ui.tab_Log, self.tr("Log"))
@@ -134,6 +140,8 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.debug = False
 
         print("build date:", common.BUILD_DATE)
+        print("PyQt v{}, Qt v{}".format(QtCore.PYQT_VERSION_STR,
+                                        QtCore.QT_VERSION_STR))
         print("FFMS v{}".format(ffms.get_version()))
         #print(ffms.libffms2.lib._name)
 
@@ -202,7 +210,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.treeWidget.customContextMenuRequested.connect(self.on_context)
         self.ui.treeWidget.keyPressEvent = self.tree_key_press_event
 
-        self.right_click_widget = QtGui.QWidget()
+        self.right_click_widget = QtWidgets.QWidget()
         self.ui.actionApply_suggestion.setParent(self.right_click_widget)
         self.ui.actionApply_suggestions_category.setParent(
             self.right_click_widget)
@@ -228,7 +236,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.ui.actionUndo_all_suggestions.triggered.connect(
             self.on_undo_all_suggestions)
 
-        menu = QtGui.QMenu("Right-click menu", self)
+        menu = QtWidgets.QMenu("Right-click menu", self)
         menu.addAction(self.ui.actionApply_suggestion)
         menu.addAction(self.ui.actionApply_suggestions_category)
         menu.addAction(self.ui.actionApply_all_suggestions)
@@ -283,7 +291,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             dialog_filter += ";;" + star_filter
         else:
             dialog_filter = star_filter
-        filename = getOpenFileName(self, title, ".", dialog_filter)[0]
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, title, ".", dialog_filter)[0]
         if os.path.isfile(filename):
             return filename
         raise ValueError("invalid file: {!r}".format(filename))
@@ -513,12 +521,12 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
             self.missing_root = None
 
     def create_root(self, name):
-        item = QtGui.QTreeWidgetItem(self.ui.treeWidget)
+        item = QtWidgets.QTreeWidgetItem(self.ui.treeWidget)
         item.setText(0, name)
         return item
 
     def add_item(self, parent, category, sc_time, diff=None, ratio=None):
-        item = QtGui.QTreeWidgetItem()
+        item = QtWidgets.QTreeWidgetItem()
         item.setText(0, self.time_output(sc_time))
         if diff is not None:
             item.setText(1, "{:.1%}".format(diff))
@@ -608,7 +616,7 @@ class ScanSceneChangeForm(QtGui.QMainWindow):
         self.toggle_item(item)
 
     def tree_key_press_event(self, event=None):
-        super(QtGui.QTreeWidget, self.ui.treeWidget).keyPressEvent(event)
+        super(QtWidgets.QTreeWidget, self.ui.treeWidget).keyPressEvent(event)
         if event.key() in [QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter]:
             if self.selection is self.bogus_root:
                 self.bogus_root.setExpanded(
