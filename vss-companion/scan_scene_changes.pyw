@@ -13,6 +13,7 @@ from concurrent import futures
 import win32gui
 import win32api
 from win32con import WM_APP
+from ctypes import wintypes
 
 try:
     from PyQt5 import QtCore, QtGui, QtWidgets
@@ -87,20 +88,31 @@ class ScanSceneChangeApplication(QtWidgets.QApplication):
     def name(self):
         return self.__class__.__name__
 
-    def winEventFilter(self, msg):
-        if msg.message == WM_APP_EXIT:
-            form.closeEvent()
-            return True, id(msg)
-        elif msg.message == WM_APP_SAVE_DONE:
-            form.saved_event()
-            return True, id(msg)
-        elif msg.message == WM_APP_VIDEO_CHANGED:
-            form.closeEvent()
-            return True, id(msg)
-        elif msg.message == WM_APP_SUB_CHANGED:
-            form.closeEvent()
-            return True, id(msg)
-        return False, id(msg)
+
+class NativeEventFilter(QtCore.QAbstractNativeEventFilter):
+    def __init__(self, form):
+        self.form = form
+        self.form_hWnd = form.winId().__int__()
+        return super().__init__()
+
+    def nativeEventFilter(self, event_type, message):
+        filter = False
+        if event_type == b"windows_generic_MSG":
+            msg = wintypes.MSG.from_address(message.__int__())
+            if self.form_hWnd == msg.hWnd and msg.message >= WM_APP_EXIT:
+                if msg.message == WM_APP_EXIT:
+                    self.form.closeEvent()
+                    filter = True
+                elif msg.message == WM_APP_SAVE_DONE:
+                    self.form.saved_event()
+                    filter = True
+                elif msg.message == WM_APP_VIDEO_CHANGED:
+                    self.form.closeEvent()
+                    filter = True
+                elif msg.message == WM_APP_SUB_CHANGED:
+                    self.form.closeEvent()
+                    filter = True
+        return filter, id(message)
 
 
 class ScanSceneChangeForm(QtWidgets.QMainWindow):
@@ -720,4 +732,7 @@ if __name__ == "__main__":
         print("{} is already running.".format(app.name), file=sys.stderr)
         sys.exit(1)
     form = ScanSceneChangeForm(parse_args())
+    native_event_filter = NativeEventFilter(form)
+    app.installNativeEventFilter(native_event_filter)
+
     sys.exit(app.exec())
