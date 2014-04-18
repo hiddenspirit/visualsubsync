@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Subtitle Library (Python 3)
 """
+import os
 import re
 import codecs
 import itertools
@@ -78,8 +79,8 @@ class Subtitle(object):
 
 
 class SubRipSubtitle(Subtitle):
-    time_str = r"(-?\d+):(-?\d+):(-?\d+)[,.](-?\d+)"
-    time_pair_pattern = re.compile(time_str + r"\D+" + time_str)
+    time_str = r"(?:(-?\d+):)?(-?\d+):(-?\d+)[.,](-?\d+)"
+    time_pair_pattern = re.compile(time_str + r"\s*-->\s*" + time_str)
     time_format = "%02d:%02d:%02d,%03d"
     time_pair_format = time_format + " --> " + time_format
 
@@ -119,8 +120,9 @@ class SubRipSubtitle(Subtitle):
     def time_pair_to_start_stop(cls, time_pair):
         match = cls.time_pair_pattern.match(time_pair)
         if not match:
-            raise RuntimeError("Can't interpret time pair: " + time_pair)
-        bh, bm, bs, bms, eh, em, es, ems = [int(e) for e in match.groups()]
+            raise NotTimePairError
+        bh, bm, bs, bms, eh, em, es, ems = [0 if e is None else int(e)
+                                            for e in match.groups()]
         start = bh * 3600000 + bm * 60000 + bs * 1000 + bms
         stop = eh * 3600000 + em * 60000 + es * 1000 + ems
         return start, stop
@@ -154,8 +156,12 @@ class AssSubtitle(Subtitle):
 class SubtitleFile(object):
     def detect_encoding(self):
         with open(self.file_path, "rb") as f:
-            data = f.read()
-        return "utf-8-sig" if data.startswith(codecs.BOM_UTF8) else ENCODING
+            data = f.read(6)
+        if data.startswith(codecs.BOM_UTF8):
+            return "utf-8-sig"
+        if data.upper().startswith(b"WEBVTT"):
+            return "utf-8"
+        return ENCODING
 
 
 class SubRipFile(SubtitleFile):
@@ -181,50 +187,32 @@ class SubRipFile(SubtitleFile):
 
     def read(self, file_path):
         self.sub_list = []
-        with codecs.open(file_path, "r", self.encoding) as in_file:
-            entry = 0
-            index = 0
-            start, stop = 0, 0
-            lines = []
-            first_line = True
+        index = 0
+        found_cue = False
+        with open(file_path, "r", encoding=self.encoding) as in_file:
             for line in in_file:
-                if first_line:
-                    if line.startswith("\xef\xbb\xbf"):
-                        line = line[3]
-                    first_line = False
                 line = line.strip()
-                if entry == 0:
-                    if line.isdigit():
-                        index = int(line)
-                        entry += 1
-                elif entry == 1:
+                if found_cue:
                     if line:
-                        try:
-                            start, stop = (
-                                SubRipSubtitle.
-                                time_pair_to_start_stop(line)
-                            )
-                        except RuntimeError as e:
-                            print(index, e)
-                            entry = 0
-                        else:
-                            entry += 1
-                elif line == "":
-                    srt = SubRipSubtitle(
-                        index, start, stop,
-                        NEWLINE.join(lines)
-                    )
-                    self.sub_list.append(srt)
-                    entry = 0
-                    index = 0
-                    start, stop = 0, 0
-                    lines = []
+                        lines.append(line)
+                    else:
+                        srt = SubRipSubtitle(index, start, stop,
+                                             NEWLINE.join(lines))
+                        self.sub_list.append(srt)
+                        found_cue = False
                 else:
-                    lines.append(line)
-            if entry:
-                self.sub_list.append(
-                    SubRipSubtitle(index, start, stop, NEWLINE.join(lines))
-                )
+                    try:
+                        start, stop = (SubRipSubtitle
+                                       .time_pair_to_start_stop(line))
+                    except NotTimePairError:
+                        continue
+                    found_cue = True
+                    index += 1
+                    lines = []
+        if found_cue:
+            srt = SubRipSubtitle(index, start, stop, NEWLINE.join(lines))
+            self.sub_list.append(srt)
+
 
     def write(self, file_path=None, encoding=None):
         if file_path is None:
@@ -238,6 +226,10 @@ class SubRipFile(SubtitleFile):
         self.sub_list.sort()
         for index, subtitle in zip(itertools.count(1), self.sub_list):
             subtitle.index = index
+
+
+class NotTimePairError(Exception):
+    pass
 
 
 class AssFile(SubtitleFile):
