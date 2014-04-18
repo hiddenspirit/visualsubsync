@@ -2091,6 +2091,7 @@ begin
   UpdateStylesComboBox;
 
   EnableStyleControls(EnableStyle);
+  g_VSSCoreWrapper.SetIsUnicode(IsUTF8);
 end;
 
 //------------------------------------------------------------------------------
@@ -3393,6 +3394,7 @@ begin
     // Load the project
     LoadProject(ProjectForm.EditProjectFilename.Text);
     CurrentProject.IsUTF8 := ProjectForm.chkSaveAsUTF8.Checked;
+    g_VSSCoreWrapper.SetIsUnicode(CurrentProject.IsUTF8);
     // TODO : Maybe create an empty file to keep UTF8 info if we quit
   end;
 end;
@@ -3469,6 +3471,7 @@ begin
         ' the file will be saved in Unicode UTF-8 starting from now.')),
         PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
       CurrentProject.IsUTF8 := True;
+      g_VSSCoreWrapper.SetIsUnicode(CurrentProject.IsUTF8);
     end;
     SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False, nil);
     if VideoRenderer.IsOpen then
@@ -3591,6 +3594,7 @@ begin
                 ' the file will be saved in Unicode UTF-8 starting from now.')),
                 PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
               CurrentProject.IsUTF8 := True;
+              g_VSSCoreWrapper.SetIsUnicode(CurrentProject.IsUTF8);
             end;
             SaveSubtitles(CurrentProject.SubtitlesFile, PreviousSubtitlesFile,
               CurrentProject.IsUTF8, False, nil);
@@ -3695,6 +3699,7 @@ begin
       if (CurrentProject.IsUTF8 <> ProjectForm.chkSaveAsUTF8.Checked) then
       begin
         CurrentProject.IsUTF8 := ProjectForm.chkSaveAsUTF8.Checked;
+        g_VSSCoreWrapper.SetIsUnicode(CurrentProject.IsUTF8);
         ProjectHasChanged := True;
       end;
 
