@@ -133,9 +133,28 @@ end;
 
 function TSRTParser.Load(Filename : WideString) : Integer;
 var Source : TTntStringList;
+    Line : String;
+    f : Text;
 begin
   Source := MyTTntStringList.Create;
-  Source.LoadFromFile(Filename);
+  AssignFile(f, Filename);
+  Reset(f);
+  ReadLn(f, Line);
+  // WebVTT is always UTF-8, even without a BOM.
+  if (UpperCase(Line) = 'WEBVTT') then
+  begin
+    while not Eof(f) do
+    begin
+        ReadLn(f, Line);
+        Source.Add(UTF8Decode(Line));
+    end;
+    CloseFile(f);
+  end
+  else
+  begin
+    CloseFile(f);
+    Source.LoadFromFile(Filename);
+  end;
   Result := Load(Source);
   Source.Free;
 end;

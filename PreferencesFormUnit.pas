@@ -241,6 +241,7 @@ type
     UpDownMaximumDuration: TTntUpDown;
     TntLabel14: TTntLabel;
     chkAssociateExtSRT: TCheckBox;
+    chkAssociateExtVTT: TCheckBox;
     chkAssociateExtSSA: TCheckBox;
     chkAssociateExtASS: TCheckBox;
     chkLoadMostRecentProjectOnStartup: TCheckBox;
@@ -280,6 +281,7 @@ type
     procedure pmiSelectAllClick(Sender: TObject);
     procedure pmiUnselectAllClick(Sender: TObject);
     procedure chkAssociateExtSRTClick(Sender: TObject);
+    procedure chkAssociateExtVTTClick(Sender: TObject);
     procedure chkAssociateExtSSAClick(Sender: TObject);
     procedure chkAssociateExtASSClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
@@ -856,6 +858,9 @@ begin
 
   IsExtReged := ShellIsExtensionRegistered('srt', ApplicationName, 'Document.srt', Application.ExeName);
   SetCheckedState(chkAssociateExtSRT, IsExtReged);
+
+  IsExtReged := ShellIsExtensionRegistered('vtt', ApplicationName, 'Document.vtt', Application.ExeName);
+  SetCheckedState(chkAssociateExtVTT, IsExtReged);
 
   IsExtReged := ShellIsExtensionRegistered('ssa', ApplicationName, 'Document.ssa', Application.ExeName);
   SetCheckedState(chkAssociateExtSSA, IsExtReged);
@@ -1604,6 +1609,23 @@ begin
   else
   begin
     ShellUnRegisterExtension('srt', ApplicationName, 'Document', Application.ExeName);
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TPreferencesForm.chkAssociateExtVTTClick(Sender: TObject);
+begin
+  if not CheckRegistryAccess then
+    Exit;
+
+  if chkAssociateExtVTT.Checked then
+  begin
+    ShellRegisterExtension('vtt', ApplicationName, 'Document.vtt', Application.ExeName, SRT_ICON_INDEX);
+  end
+  else
+  begin
+    ShellUnRegisterExtension('vtt', ApplicationName, 'Document', Application.ExeName);
   end;
 end;
 

@@ -1,6 +1,6 @@
 object PreferencesForm: TPreferencesForm
-  Left = 254
-  Top = 141
+  Left = 255
+  Top = 143
   Width = 600
   Height = 432
   BorderWidth = 4
@@ -92,7 +92,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 121
           Height = 17
-          Hint =
+          Hint = 
             'Compress dynamic webpages for faster transmission (broken with I' +
             'E)'
           Caption = 'Enable compression'
@@ -114,10 +114,10 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 440
           Height = 17
-          Hint =
+          Hint = 
             'Double click on a .vssprj file will automatically open the proje' +
             'ct in VisualSubSync'
-          Caption =
+          Caption = 
             'Associate project file (*.vssprj) with VisualSubSync (admin righ' +
             'ts required)'
           ParentShowHint = False
@@ -127,7 +127,7 @@ object PreferencesForm: TPreferencesForm
         end
         object chkSwapSubList: TCheckBox
           Left = 16
-          Top = 88
+          Top = 104
           Width = 440
           Height = 17
           Caption = 'Swap subtitles list'
@@ -142,41 +142,50 @@ object PreferencesForm: TPreferencesForm
           TabOrder = 2
           OnClick = chkAssociateExtSRTClick
         end
-        object chkAssociateExtSSA: TCheckBox
+        object chkAssociateExtVTT: TCheckBox
           Left = 16
           Top = 56
           Width = 440
           Height = 17
-          Caption = 'Associate .SSA file with VisualSubSync (admin rights required)'
+          Caption = 'Associate .VTT file with VisualSubSync (admin rights required)'
           TabOrder = 3
-          OnClick = chkAssociateExtSSAClick
+          OnClick = chkAssociateExtVTTClick
         end
-        object chkAssociateExtASS: TCheckBox
+        object chkAssociateExtSSA: TCheckBox
           Left = 16
           Top = 72
           Width = 440
           Height = 17
-          Caption = 'Associate .ASS file with VisualSubSync (admin rights required)'
+          Caption = 'Associate .SSA file with VisualSubSync (admin rights required)'
           TabOrder = 4
+          OnClick = chkAssociateExtSSAClick
+        end
+        object chkAssociateExtASS: TCheckBox
+          Left = 16
+          Top = 88
+          Width = 440
+          Height = 17
+          Caption = 'Associate .ASS file with VisualSubSync (admin rights required)'
+          TabOrder = 5
           OnClick = chkAssociateExtASSClick
         end
         object chkLoadMostRecentProjectOnStartup: TCheckBox
           Left = 16
-          Top = 104
-          Width = 440
-          Height = 17
-          Caption = 'Load most recent project on startup'
-          TabOrder = 5
-        end
-        object chkAlwaysGenerateSceneChangeFile: TCheckBox
-          Left = 16
           Top = 120
           Width = 440
           Height = 17
-          Caption =
+          Caption = 'Load most recent project on startup'
+          TabOrder = 6
+        end
+        object chkAlwaysGenerateSceneChangeFile: TCheckBox
+          Left = 16
+          Top = 136
+          Width = 440
+          Height = 17
+          Caption = 
             'Always generate scene change file instead of extracting keyframe' +
             's'
-          TabOrder = 6
+          TabOrder = 7
         end
       end
       object GroupBoxBackup: TGroupBox
@@ -257,8 +266,8 @@ object PreferencesForm: TPreferencesForm
       object TntGroupBox1: TTntGroupBox
         Left = 0
         Top = 0
-        Width = 576
-        Height = 326
+        Width = 568
+        Height = 322
         Align = alClient
         TabOrder = 0
         DesignSize = (
@@ -278,7 +287,7 @@ object PreferencesForm: TPreferencesForm
           Height = 33
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
-          Caption =
+          Caption = 
             'Common settings used when editing subtitles in normal or timing ' +
             'mode, and possibly when fixing error with JavaScript plug-ins.'
           WordWrap = True
@@ -307,7 +316,7 @@ object PreferencesForm: TPreferencesForm
         object TntLabel15: TTntLabel
           Left = 16
           Top = 68
-          Width = 143
+          Width = 108
           Height = 13
           Caption = 'Reading speed target :'
         end
@@ -416,7 +425,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel7: TBevel
         Left = 0
         Top = 198
-        Width = 568
+        Width = 560
         Height = 4
         Align = alBottom
         Shape = bsSpacer
@@ -424,7 +433,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel8: TBevel
         Left = 0
         Top = 106
-        Width = 568
+        Width = 560
         Height = 4
         Align = alBottom
         Shape = bsSpacer
@@ -432,8 +441,8 @@ object PreferencesForm: TPreferencesForm
       object ListErrorChecking: TTntCheckListBox
         Left = 0
         Top = 0
-        Width = 568
-        Height = 110
+        Width = 560
+        Height = 106
         OnClickCheck = ListErrorCheckingClickCheck
         Align = alClient
         ItemHeight = 13
@@ -841,7 +850,7 @@ object PreferencesForm: TPreferencesForm
           Top = 24
           Width = 400
           Height = 17
-          Caption =
+          Caption = 
             'Left/right mouse button set start/stop time in Timing Mode (SSA ' +
             'mouse mode)'
           TabOrder = 0
@@ -870,7 +879,7 @@ object PreferencesForm: TPreferencesForm
       object Bevel5: TBevel
         Left = 0
         Top = 81
-        Width = 568
+        Width = 560
         Height = 4
         Align = alTop
         Shape = bsSpacer
@@ -878,7 +887,7 @@ object PreferencesForm: TPreferencesForm
       object TntGroupBox2: TTntGroupBox
         Left = 0
         Top = 0
-        Width = 568
+        Width = 560
         Height = 81
         Align = alTop
         Caption = ' Subtitles list : '
@@ -889,7 +898,7 @@ object PreferencesForm: TPreferencesForm
         object EditSubListFont: TTntEdit
           Left = 16
           Top = 24
-          Width = 479
+          Width = 455
           Height = 41
           Anchors = [akLeft, akTop, akRight]
           AutoSize = False
@@ -898,7 +907,7 @@ object PreferencesForm: TPreferencesForm
           Text = 'ABCabc 123'
         end
         object bttSubListFont: TTntButton
-          Left = 502
+          Left = 478
           Top = 24
           Width = 33
           Height = 25

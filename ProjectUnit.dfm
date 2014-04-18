@@ -203,6 +203,7 @@ object ProjectForm: TProjectForm
       OnChange = cbSubtitleFormatChange
       Items.Strings = (
         'SRT'
+        'VTT'
         'SSA'
         'ASS')
     end
