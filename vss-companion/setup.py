@@ -42,7 +42,8 @@ try:
         "PyQt5.QtNetwork",
     ]
 except ImportError:
-    from PyQt4.QtCore import PYQT_VERSION, QT_VERSION
+    raise
+    # from PyQt4.QtCore import PYQT_VERSION, QT_VERSION
 
 
 for f in include_files_generate_scenechange_file:
