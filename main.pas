@@ -675,6 +675,7 @@ type
       SubtitleRange : TSubtitleRange; NewValue : WideString);
 
     procedure SaveSubtitlesAsSRT(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
+    procedure SaveSubtitlesAsVTT(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
     procedure SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
     procedure SaveSubtitlesAsASS(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
     procedure SaveSubtitlesAsCUE(Filename: WideString);
@@ -2051,7 +2052,12 @@ begin
   try
     vtvSubsList.BeginUpdate;
     Ext := WideLowerCase(WideExtractFileExt(Filename));
-    if (Ext = '.srt') then
+    if (Ext = '.vtt') then
+    begin
+      LoadSRT(Filename, IsUTF8);
+      ShowColumn(StyleColumn, False);
+    end
+    else if (Ext = '.srt') then
     begin
       LoadSRT(Filename, IsUTF8);
       ShowColumn(StyleColumn, False);
@@ -2167,7 +2173,7 @@ begin
   end;
 
   Ext := WideLowerCase(WideExtractFileExt(Filename));
-  if (Ext = '.srt') then
+  if (Ext = '.vtt') or (Ext = '.srt') then
   begin
     SRTParser := TSRTParser.Create;
     SRTParser.Load(Filename);
@@ -2850,7 +2856,9 @@ begin
   if BackupOnly and (Ext = '.bak') then
     Ext := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
   PreviousExt := WideLowerCase(WideExtractFileExt(PreviousFilename));
-  if (Ext = '.srt') then
+  if (Ext = '.vtt') then
+    SaveSubtitlesAsVTT(Filename, PreviousExt, InUTF8, InternalTranslator)
+  else if (Ext = '.srt') then
     SaveSubtitlesAsSRT(Filename, PreviousExt, InUTF8, InternalTranslator)
   else if (Ext = '.ass') then
     SaveSubtitlesAsASS(Filename, PreviousExt, InUTF8, InternalTranslator)
@@ -3479,6 +3487,7 @@ begin
   TntSaveDialog1.Filter :=
     'SRT files (*.srt)|*.SRT' + '|' +
     'SRT files stripped of text (*.srt)|*.SRT' + '|' +
+    'WebVT files (*.vtt)|*.VTT' + '|' +
     'SSA files (*.ssa)|*.SSA' + '|' +
     'ASS files (*.ass)|*.ASS' + '|' +
     'CUE files (*.cue)|*.CUE' + '|' +
@@ -3490,12 +3499,14 @@ begin
   InputExt := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
   if (InputExt = '.srt') then
     TntSaveDialog1.FilterIndex := 1
-  else if (InputExt = '.ssa') then
+  else if (InputExt = '.vtt') then
     TntSaveDialog1.FilterIndex := 3
-  else if (InputExt = '.ass') then
+  else if (InputExt = '.ssa') then
     TntSaveDialog1.FilterIndex := 4
+  else if (InputExt = '.ass') then
+    TntSaveDialog1.FilterIndex := 5
   else
-    TntSaveDialog1.FilterIndex := 7;
+    TntSaveDialog1.FilterIndex := 8;
 
   if TntSaveDialog1.Execute then
   begin
@@ -3504,11 +3515,12 @@ begin
     case TntSaveDialog1.FilterIndex of
       1 : NewExt := '.srt';
       2 : NewExt := '.srt';
-      3 : NewExt := '.ssa';
-      4 : NewExt := '.ass';
-      5 : NewExt := '.cue';
-      6 : NewExt := '.txt';
-      7 : NewExt := '.csv';
+      3 : NewExt := '.vtt';
+      4 : NewExt := '.ssa';
+      5 : NewExt := '.ass';
+      6 : NewExt := '.cue';
+      7 : NewExt := '.txt';
+      8 : NewExt := '.csv';
     end;
     if NewExt <> '' then
       TntSaveDialog1.FileName := WideChangeFileExt(TntSaveDialog1.FileName, NewExt);
@@ -5036,7 +5048,7 @@ var
 begin
 
   TntOpenDialog1.Filter := 'Text files|*.TXT' + '|' +
-    'Subtitle files (*.srt)|*.SRT' + '|' +
+    'Subtitle files (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
     'All files (*.*)|*.*';
   TntOpenDialog1.Options := TntOpenDialog1.Options + [ofAllowMultiSelect];
   if not TntOpenDialog1.Execute then
@@ -5056,7 +5068,7 @@ begin
 
       // TODO : insert SSA/ASS file
       Ext := WideLowerCase(WideExtractFileExt(TntOpenDialog1.FileName));
-      if (Ext = '.srt') then
+      if (Ext = '.vtt') or (Ext = '.srt') then
       begin
         SubList := TList.Create;
         SRTParser := TSRTParser.Create;
@@ -5659,8 +5671,8 @@ begin
   TntOpenDialog1.Filter :=
     'Text files (*.txt)|*.TXT' + '|' +
     'RTF files (*.rtf)|*.RTF' + '|' +
-    'Subtitle files (*.srt)|*.SRT' + '|' +
-    'Subtitle files stripped of timings (*.srt)|*.SRT' + '|' +
+    'Subtitle files (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
+    'Subtitle files stripped of timings (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
   begin
@@ -6814,6 +6826,52 @@ end;
 
 //------------------------------------------------------------------------------
 
+procedure TMainForm.SaveSubtitlesAsVTT(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
+var i : integer;
+    Subrange : TSubtitleRange;
+    FS : TTntFileStream;
+    ConvertFunc : function(Src : WideString) : WideString;
+    SubText : WideString;
+
+    procedure WriteStringLnStream(s : string; Stream : TStream);
+    begin
+      s := s + #13#10;
+      Stream.Write(s[1],Length(s));
+    end;
+begin
+  FS := TTntFileStream.Create(Filename, fmCreate);
+  { if InUTF8 then
+  begin }
+    FS.Write(UTF8BOM[0],Length(UTF8BOM));
+  { end; }
+  WriteStringLnStream('WEBVTT', FS);
+  WriteStringLnStream('', FS);
+
+  if (PreviousExt = '.ass') or (PreviousExt = '.ssa') then
+    ConvertFunc := @ConvertSSAToSRT
+  else
+    ConvertFunc := @ConvertNull;
+
+  for i:=0 to WAVDisplayer.RangeList.Count-1 do
+  begin
+    SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
+    { WriteStringLnStream(IntToStr(i+1), FS); }
+    WriteStringLnStream(TimeMsToString(SubRange.StartTime,'.') + ' --> ' +
+      TimeMsToString(SubRange.StopTime,'.'), FS);
+    SubText := Translator.Translate(Subrange.Text);
+    SubText := ConvertFunc(SubText);
+    { if InUTF8 then }
+      WriteStringLnStream(UTF8Encode(SubText), FS);
+    { else
+      WriteStringLnStream(WC2MB(SubText), FS); }
+    WriteStringLnStream('', FS);
+  end;
+  FS.Free;
+end;
+
+
+//------------------------------------------------------------------------------
+
 procedure TMainForm.SaveSubtitlesAsSSA(Filename, PreviousExt: WideString; InUTF8 : Boolean; Translator : TTranslator);
 var i : integer;
     Subrange : TSubtitleRange;
@@ -6835,7 +6893,7 @@ begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
 
-  if (PreviousExt = '.srt') then
+  if (PreviousExt = '.vtt') or (PreviousExt = '.srt') then
     ConvertFunc := @ConvertSRTToSSA
   else
     ConvertFunc := @ConvertNull;
@@ -6941,7 +6999,7 @@ begin
     FS.Write(UTF8BOM[0],Length(UTF8BOM));
   end;
 
-  if (PreviousExt = '.srt') then
+  if (PreviousExt = '.vtt') or (PreviousExt = '.srt') then
     ConvertFunc := @ConvertSRTToSSA
   else
     ConvertFunc := @ConvertNull;
@@ -7807,6 +7865,7 @@ end;
 procedure TMainForm.UpdateSubtitleForPreview(ForceUpdate : Boolean);
 var TmpDstFilename : WideString;
     StartTime : Cardinal;
+    Ext : WideString;
 begin
   // TODO : Clean old files in temp directory
 
@@ -7837,6 +7896,12 @@ begin
   begin
     if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused or ForceUpdate) then
     begin
+      // The video renderer doesn't support WebVTT, so we save as SRT instead.
+      Ext := WideLowerCase(WideExtractFileExt(TmpDstFilename));
+      if (Ext = '.vtt') then
+      begin
+        TmpDstFilename := TmpDstFilename + '.srt';
+      end;
       SaveSubtitles(TmpDstFilename, '', CurrentProject.IsUTF8, True, nil);
       VideoRenderer.SetSubtitleFilename(TmpDstFilename);
       if VideoRenderer.IsPaused then
@@ -8058,7 +8123,7 @@ begin
     begin
       MainForm.LoadProject(ArgFilename);
     end
-    else if (Ext = '.srt') or (Ext = '.ssa') or (Ext = '.ass') then
+    else if (Ext = '.vtt') or (Ext = '.srt') or (Ext = '.ssa') or (Ext = '.ass') then
     begin
       // First search if there is not a project with the same name
       NewProjectName := WideChangeFileExt(ArgFilename, '.vssprj');
@@ -8844,7 +8909,7 @@ begin
   // {\pos  ...
 
   Ext := WideLowerCase(WideExtractFileExt(CurrentProject.SubtitlesFile));
-  if (Ext = '.srt') then
+  if (Ext = '.vtt') or (Ext = '.srt') then
   begin
     case TagType of
     ttItalic: TagText('<i>','</i>');
@@ -9902,7 +9967,7 @@ begin
     if WAVDisplayer.RangeListVO.Count <= 0 then
     begin
       TntOpenDialog1.FileName := CurrentProject.SubtitlesVO;
-      TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+      TntOpenDialog1.Filter := 'SRT/VTT files (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
         'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
         'All files (*.*)|*.*';
       if TntOpenDialog1.Execute then

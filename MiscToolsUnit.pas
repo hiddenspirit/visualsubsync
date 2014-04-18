@@ -187,22 +187,44 @@ begin
   // 00:50:06,969 or
   // 00:50:06.969
   // 123456789012
+
   if Length(Time) < 8 then
     Exit;
-  if (Time[3] <> ':') or (Time[6] <> ':') then
+    
+  if (Time[3] <> ':') then
     Exit;
-  h := StrToIntDef(Copy(Time, 1,2),-1);
-  if (h = -1) then
-    Exit;
-  m := StrToIntDef(Copy(Time, 4,2),-1);
-  if (m = -1) then
-    Exit;
-  s := StrToIntDef(Copy(Time, 7,2),-1);
-  if (s = -1) then
-    Exit;
-  ms := StrToIntDef(Copy(Time, 10,3),-1);
-  if (ms = -1) then
-    Exit;
+
+  if (Time[6] <> ':') then
+  begin
+    // short format without hours (optional timecode hours in WebVTT)
+    h := 0;
+    m := StrToIntDef(Copy(Time, 1,2),-1);
+    if (m = -1) then
+      Exit;
+    s := StrToIntDef(Copy(Time, 4,2),-1);
+    if (s = -1) then
+      Exit;
+    ms := StrToIntDef(Copy(Time, 7,3),-1);
+    if (ms = -1) then
+      Exit;
+  end
+  else
+  begin  
+    // long format with hours
+    h := StrToIntDef(Copy(Time, 1,2),-1);
+    if (h = -1) then
+      Exit;
+    m := StrToIntDef(Copy(Time, 4,2),-1);
+    if (m = -1) then
+      Exit;
+    s := StrToIntDef(Copy(Time, 7,2),-1);
+    if (s = -1) then
+      Exit;
+    ms := StrToIntDef(Copy(Time, 10,3),-1);
+    if (ms = -1) then
+      Exit;
+  end;
+
   Result := h * 3600000 + m * 60000 + s * 1000 + ms;
 end;
 

@@ -268,7 +268,7 @@ begin
   // We need a valid extension subtitle filename
   Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
   if (Trim(EditSubtitleFilename.Text) <> '') and
-    (Ext <> '.srt') and (Ext <> '.ass') and (Ext <> '.ssa') then
+    (Ext <> '.vtt') and (Ext <> '.srt') and (Ext <> '.ass') and (Ext <> '.ssa') then
   begin
     MessageBoxW(Handle, PWideChar(WideString('Invalid file extension.')),
       PWideChar(WideString('Error')), MB_OK or MB_ICONERROR);
@@ -443,12 +443,12 @@ procedure TProjectForm.bttBrowseSubtitleFileClick(Sender: TObject);
 var Ext : WideString;
 begin
   TntOpenDialog1.FileName := EditSubtitleFilename.Text;
-  TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+  TntOpenDialog1.Filter := 'SRT/VTT files (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
     'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
     'All files (*.*)|*.*';
 
   Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
-  if (Ext = '.srt') then
+  if (Ext = '.srt') or (Ext = '.vtt') then
     TntOpenDialog1.FilterIndex := 1
   else if (Ext = '.ssa') or (Ext = '.ass') then
     TntOpenDialog1.FilterIndex := 2
@@ -484,7 +484,7 @@ end;
 procedure TProjectForm.bttBrowseVOFileClick(Sender: TObject);
 begin
   TntOpenDialog1.FileName := EditSubtitleVO.Text;
-  TntOpenDialog1.Filter := 'SRT files (*.srt)|*.SRT' + '|' +
+  TntOpenDialog1.Filter := 'SRT/VTT files (*.srt,*.vtt)|*.SRT;*.VTT' + '|' +
     'SSA/ASS files (*.ssa,*.ass)|*.SSA;*.ASS' + '|' +
     'All files (*.*)|*.*';
   if TntOpenDialog1.Execute then
@@ -687,14 +687,25 @@ end;
 
 procedure TProjectForm.cbSubtitleFormatChange(Sender: TObject);
 begin
+  // Change subtitle format
+  case cbSubtitleFormat.ItemIndex of
+  1: begin
+    chkSaveAsUTF8.Enabled := False;
+    chkSaveAsUTF8.Checked := True;
+  end;
+  else
+    chkSaveAsUTF8.Enabled := True;
+  end;
+
   if Length(EditSubtitleFilename.Text) <= 0 then
     Exit;
 
   // Change subtitle format
   case cbSubtitleFormat.ItemIndex of
   0: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.srt');
-  1: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ssa');
-  2: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ass');
+  1: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.vtt');
+  2: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ssa');
+  3: EditSubtitleFilename.Text := WideChangeFileExt(EditSubtitleFilename.Text,'.ass');
   end;
 end;
 
@@ -703,13 +714,20 @@ end;
 procedure TProjectForm.UpdateFormatCombobox;
 var Ext : WideString;
 begin
+  chkSaveAsUTF8.Enabled := True;
   Ext := WideLowerCase(WideExtractFileExt(EditSubtitleFilename.Text));
   if (Ext = '.srt') then
     cbSubtitleFormat.ItemIndex := 0
+  else if (Ext = '.vtt') then
+  begin
+    chkSaveAsUTF8.Enabled := False;
+    chkSaveAsUTF8.Checked := True;
+    cbSubtitleFormat.ItemIndex := 1;
+  end
   else if (Ext = '.ssa') then
-    cbSubtitleFormat.ItemIndex := 1
+    cbSubtitleFormat.ItemIndex := 2
   else if (Ext = '.ass') then
-    cbSubtitleFormat.ItemIndex := 2;
+    cbSubtitleFormat.ItemIndex := 3;
 end;
 
 //------------------------------------------------------------------------------
