@@ -113,6 +113,7 @@ type
 
     FVideoWidth : Integer;
     FVideoHeight : Integer;
+    FIsUnicode : Boolean;
 
     FSubRangeWrapperPool : array[0..9] of TSubtitleRangeJSWrapper;
     FSubRangeWrapperPoolIndex : Integer;
@@ -145,6 +146,7 @@ type
 
     procedure SetVideoWidth(Value : Integer);
     procedure SetVideoHeight(Value : Integer);
+    procedure SetIsUnicode(Value : Boolean);
 
     procedure RegisterJS(JSParent : TJSObject);
 
@@ -197,6 +199,7 @@ type
 
     property VideoWidth : Integer read FVideoWidth;
     property VideoHeight : Integer read FVideoHeight;
+    property IsUnicode : Boolean read FIsUnicode;
   end;
 
 {$TYPEINFO OFF}
@@ -1806,6 +1809,11 @@ end;
 procedure TVSSCoreWrapper.SetVideoHeight(Value : Integer);
 begin
   FVideoHeight := Value;
+end;
+
+procedure TVSSCoreWrapper.SetIsUnicode(Value : Boolean);
+begin
+  FIsUnicode := Value;
 end;
 
 procedure TVSSCoreWrapper.RegisterJS(JSParent : TJSObject);
