@@ -3492,7 +3492,7 @@ begin
   TntSaveDialog1.Filter :=
     'SRT files (*.srt)|*.SRT' + '|' +
     'SRT files stripped of text (*.srt)|*.SRT' + '|' +
-    'WebVT files (*.vtt)|*.VTT' + '|' +
+    'WebVTT files (*.vtt)|*.VTT' + '|' +
     'SSA files (*.ssa)|*.SSA' + '|' +
     'ASS files (*.ass)|*.ASS' + '|' +
     'CUE files (*.cue)|*.CUE' + '|' +
@@ -6862,7 +6862,7 @@ begin
   for i:=0 to WAVDisplayer.RangeList.Count-1 do
   begin
     SubRange := TSubtitleRange(WAVDisplayer.RangeList[i]);
-    { WriteStringLnStream(IntToStr(i+1), FS); }
+    WriteStringLnStream(IntToStr(i+1), FS);
     WriteStringLnStream(TimeMsToString(SubRange.StartTime,'.') + ' --> ' +
       TimeMsToString(SubRange.StopTime,'.'), FS);
     SubText := Translator.Translate(Subrange.Text);
