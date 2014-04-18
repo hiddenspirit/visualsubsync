@@ -19,12 +19,13 @@ try:
     from PyQt5 import QtCore, QtGui, QtWidgets
     from PyQt5.QtCore import Qt
 except ImportError:
-    from PyQt4 import QtCore, QtGui
-    from PyQt4.QtCore import Qt
-    QtWidgets = QtMultimedia = QtGui
-    QtGui.QFileDialog.getOpenFileName = QtGui.QFileDialog.getOpenFileNameAndFilter
-    QtCore.QStandardPaths = QtGui.QDesktopServices
-    QtCore.QStandardPaths.writableLocation = QtGui.QDesktopServices.storageLocation
+    raise
+    # from PyQt4 import QtCore, QtGui
+    # from PyQt4.QtCore import Qt
+    # QtWidgets = QtMultimedia = QtGui
+    # QtGui.QFileDialog.getOpenFileName = QtGui.QFileDialog.getOpenFileNameAndFilter
+    # QtCore.QStandardPaths = QtGui.QDesktopServices
+    # QtCore.QStandardPaths.writableLocation = QtGui.QDesktopServices.storageLocation
 
 from scan_scene_changes_window import Ui_MainWindow
 
