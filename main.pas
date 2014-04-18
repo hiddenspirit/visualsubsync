@@ -692,6 +692,8 @@ type
     procedure UpdateStylesComboBox;
     procedure UpdateVolume;
     procedure UpdateSubtitleForPreview(ForceUpdate: Boolean);
+    procedure SetSubtitleFilename(Filename: WideString);
+    function GetTmpDstFilename() : WideString;
     procedure SetSubtitleStartTime(SetStopTime : Boolean);
     procedure Merge(MergeType : TMergeType; MergeRange : TMergeRange);
 
@@ -3102,7 +3104,7 @@ begin
       if (CurrentProject.ShowVideo <> ShowingVideo) then
         ActionShowHideVideoExecute(nil);
       UpdateVideoRendererWindow;
-      VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+      SetSubtitleFilename(CurrentProject.SubtitlesFile);
       LoadVideoSceneChange;
       DetachedVideoForm.SetNormalPos(CurrentProject.VideoWindowNormalLeft,
         CurrentProject.VideoWindowNormalTop, CurrentProject.VideoWindowNormalWidth,
@@ -3475,7 +3477,7 @@ begin
     end;
     SaveSubtitles(CurrentProject.SubtitlesFile, '', CurrentProject.IsUTF8, False, nil);
     if VideoRenderer.IsOpen then
-      VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+      SetSubtitleFilename(CurrentProject.SubtitlesFile);
   end;
   SaveProject(CurrentProject, False);
 end;
@@ -3715,7 +3717,7 @@ begin
 
       if (VideoHasChanged or SubtitleFileHasChanged) and (VideoRenderer.IsOpen) then
       begin
-        VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+        SetSubtitleFilename(CurrentProject.SubtitlesFile);
       end;
 
       // Hide the video
@@ -7869,8 +7871,8 @@ end;
 
 procedure TMainForm.UpdateSubtitleForPreview(ForceUpdate : Boolean);
 var TmpDstFilename : WideString;
-    StartTime : Cardinal;
     Ext : WideString;
+    StartTime : Cardinal;
 begin
   // TODO : Clean old files in temp directory
 
@@ -7881,26 +7883,13 @@ begin
     Exit;
   end;
 
-  // Save current file as tmp file, reload subtitle if loaded
-  StartTime := GetTickCount;
-  TmpDstFilename := GetTemporaryFolder;
-  if (Length(TmpDstFilename) > 0) then
-  begin
-    TmpDstFilename := TmpDstFilename + 'VisualSubSync\';
-    // Create directory
-    if not WideDirectoryExists(TmpDstFilename) then
-      WideCreateDir(TmpDstFilename);
-    TmpDstFilename := TmpDstFilename + WideExtractFileName(CurrentProject.SubtitlesFile);
-  end
-  else
-  begin
-    TmpDstFilename := WideExtractFilePath(CurrentProject.SubtitlesFile) + '~' +
-      WideExtractFileName(CurrentProject.SubtitlesFile);
-  end;
   if ShowingVideo then
   begin
+    // Save current file as tmp file, reload subtitle if loaded
     if (VideoRenderer.IsPlaying or VideoRenderer.IsPaused or ForceUpdate) then
     begin
+      //StartTime := GetTickCount;
+      TmpDstFilename := GetTmpDstFilename;
       // The video renderer doesn't support WebVTT, so we save as SRT instead.
       Ext := WideLowerCase(WideExtractFileExt(TmpDstFilename));
       if (Ext = '.vtt') then
@@ -7915,12 +7904,47 @@ begin
       end;
       VideoPreviewNeedSubtitleUpdate := False;
       //LogForm.SilentLogMsg('Save took ' + IntToStr(GetTickCount - StartTime) +' ms');
-    end
+    end;
   end
   else
   begin
     VideoPreviewNeedSubtitleUpdate := True;
   end
+end;
+
+procedure TMainForm.SetSubtitleFilename(Filename: WideString);
+var Ext : WideString;
+begin
+  // The video renderer doesn't support WebVTT, so we save as SRT instead.
+  Ext := WideLowerCase(WideExtractFileExt(Filename));
+  if (Ext = '.vtt') then
+  begin
+    Filename := GetTmpDstFilename + '.srt';
+    SaveSubtitles(Filename, '', CurrentProject.IsUTF8, True, nil);
+  end;
+  VideoRenderer.SetSubtitleFilename(Filename);
+end;
+
+//------------------------------------------------------------------------------
+
+function TMainForm.GetTmpDstFilename() : WideString;
+var TmpDstFilename : WideString;
+begin
+  TmpDstFilename := GetTemporaryFolder;
+  if (Length(TmpDstFilename) > 0) then
+  begin
+    TmpDstFilename := TmpDstFilename + 'VisualSubSync\';
+    // Create directory
+    if not WideDirectoryExists(TmpDstFilename) then
+      WideCreateDir(TmpDstFilename);
+    TmpDstFilename := TmpDstFilename + WideExtractFileName(CurrentProject.SubtitlesFile);
+  end
+  else
+  begin
+    TmpDstFilename := WideExtractFilePath(CurrentProject.SubtitlesFile) + '~' +
+      WideExtractFileName(CurrentProject.SubtitlesFile);
+  end;
+  Result := TmpDstFilename;
 end;
 
 //------------------------------------------------------------------------------
@@ -10117,7 +10141,7 @@ begin
       LoadVO(CurrentProject.SubtitlesVO);
 
       if (VideoRenderer.IsOpen) then
-        VideoRenderer.SetSubtitleFilename(CurrentProject.SubtitlesFile);
+        SetSubtitleFilename(CurrentProject.SubtitlesFile);
 
       SelectNode(vtvSubsList.GetFirst);
 
