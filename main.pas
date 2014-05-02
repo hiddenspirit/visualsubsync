@@ -6811,6 +6811,8 @@ begin
 
   if (PreviousExt = '.ass') or (PreviousExt = '.ssa') then
     ConvertFunc := @ConvertSSAToSRT
+  else if (PreviousExt = '.vtt') then
+    ConvertFunc := @ConvertVTTToSRT
   else
     ConvertFunc := @ConvertNull;
 
@@ -7871,6 +7873,7 @@ end;
 
 procedure TMainForm.UpdateSubtitleForPreview(ForceUpdate : Boolean);
 var TmpDstFilename : WideString;
+    PreviousFilename : WideString;
     Ext : WideString;
     StartTime : Cardinal;
 begin
@@ -7894,9 +7897,14 @@ begin
       Ext := WideLowerCase(WideExtractFileExt(TmpDstFilename));
       if (Ext = '.vtt') then
       begin
+        PreviousFilename := TmpDstFilename;
         TmpDstFilename := TmpDstFilename + '.srt';
+      end
+      else
+      begin
+        PreviousFilename := '';
       end;
-      SaveSubtitles(TmpDstFilename, '', CurrentProject.IsUTF8, True, nil);
+      SaveSubtitles(TmpDstFilename, PreviousFilename, CurrentProject.IsUTF8, True, nil);
       VideoRenderer.SetSubtitleFilename(TmpDstFilename);
       if VideoRenderer.IsPaused then
       begin
@@ -7914,15 +7922,16 @@ end;
 
 procedure TMainForm.SetSubtitleFilename(Filename: WideString);
 var Ext : WideString;
+    SavedFilename : WideString;
 begin
   // The video renderer doesn't support WebVTT, so we save as SRT instead.
   Ext := WideLowerCase(WideExtractFileExt(Filename));
   if (Ext = '.vtt') then
   begin
-    Filename := GetTmpDstFilename + '.srt';
-    SaveSubtitles(Filename, '', CurrentProject.IsUTF8, True, nil);
+    SavedFilename := GetTmpDstFilename + '.srt';
+    SaveSubtitles(SavedFilename, Filename, CurrentProject.IsUTF8, True, nil);
   end;
-  VideoRenderer.SetSubtitleFilename(Filename);
+  VideoRenderer.SetSubtitleFilename(SavedFilename);
 end;
 
 //------------------------------------------------------------------------------
