@@ -246,7 +246,7 @@ object ProjectForm: TProjectForm
     Top = 239
     Width = 92
     Height = 17
-    Caption = 'Save as UTF8'
+    Caption = 'Save as UTF-8'
     TabOrder = 7
   end
   object gbVO: TTntGroupBox
