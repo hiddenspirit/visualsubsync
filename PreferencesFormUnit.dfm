@@ -112,13 +112,13 @@ object PreferencesForm: TPreferencesForm
         object chkAssociateExtVSSPRJ: TCheckBox
           Left = 16
           Top = 24
-          Width = 440
+          Width = 529
           Height = 17
           Hint = 
             'Double click on a .vssprj file will automatically open the proje' +
             'ct in VisualSubSync'
           Caption = 
-            'Associate project file (*.vssprj) with VisualSubSync (admin righ' +
+            'Associate VSS project files (*.vssprj) with VisualSubSync (admin righ' +
             'ts required)'
           ParentShowHint = False
           ShowHint = True
@@ -128,7 +128,7 @@ object PreferencesForm: TPreferencesForm
         object chkSwapSubList: TCheckBox
           Left = 16
           Top = 104
-          Width = 440
+          Width = 529
           Height = 17
           Caption = 'Swap subtitles list'
           TabOrder = 1
@@ -136,43 +136,43 @@ object PreferencesForm: TPreferencesForm
         object chkAssociateExtSRT: TCheckBox
           Left = 16
           Top = 40
-          Width = 440
+          Width = 529
           Height = 17
-          Caption = 'Associate .SRT file with VisualSubSync (admin rights required)'
+          Caption = 'Associate SubRip files (*.srt) with VisualSubSync (admin rights required)'
           TabOrder = 2
           OnClick = chkAssociateExtSRTClick
         end
         object chkAssociateExtVTT: TCheckBox
           Left = 16
           Top = 56
-          Width = 440
+          Width = 529
           Height = 17
-          Caption = 'Associate .VTT file with VisualSubSync (admin rights required)'
+          Caption = 'Associate WebVTT files (*.vtt) with VisualSubSync (admin rights required)'
           TabOrder = 3
           OnClick = chkAssociateExtVTTClick
         end
         object chkAssociateExtSSA: TCheckBox
           Left = 16
           Top = 72
-          Width = 440
+          Width = 529
           Height = 17
-          Caption = 'Associate .SSA file with VisualSubSync (admin rights required)'
+          Caption = 'Associate SubStation Alpha files (*.ssa) with VisualSubSync (admin rights required)'
           TabOrder = 4
           OnClick = chkAssociateExtSSAClick
         end
         object chkAssociateExtASS: TCheckBox
           Left = 16
           Top = 88
-          Width = 440
+          Width = 529
           Height = 17
-          Caption = 'Associate .ASS file with VisualSubSync (admin rights required)'
+          Caption = 'Associate Advanced SubStation Alpha files (*.ass) with VisualSubSync (admin rights required)'
           TabOrder = 5
           OnClick = chkAssociateExtASSClick
         end
         object chkLoadMostRecentProjectOnStartup: TCheckBox
           Left = 16
           Top = 120
-          Width = 440
+          Width = 529
           Height = 17
           Caption = 'Load most recent project on startup'
           TabOrder = 6
@@ -180,7 +180,7 @@ object PreferencesForm: TPreferencesForm
         object chkAlwaysGenerateSceneChangeFile: TCheckBox
           Left = 16
           Top = 136
-          Width = 440
+          Width = 529
           Height = 17
           Caption = 
             'Always generate scene change file instead of extracting keyframe' +
