@@ -23,7 +23,7 @@ unit MiscToolsUnit;
 
 interface
 
-uses Classes, Graphics, Types, Richedit, TntComCtrls, TntClasses, StdCtrls, TntStdCtrls;
+uses Classes, Graphics, Types, Richedit, TntComCtrls, TntClasses, StdCtrls, TntStdCtrls, RegExpr;
 
 type
   TFileVersion = class
@@ -1306,9 +1306,14 @@ end;
 
 function ConvertVTTToSRT(Src : WideString) : WideString;
 begin
-  // Superscript
-  Result := Tnt_WideStringReplace(Src, '<sup>', '', [rfReplaceAll]);
-  Result := Tnt_WideStringReplace(Result, '</sup>', '', [rfReplaceAll]);
+  Result := ReplaceRegExpr('</?sup>', Src, '');
+  Result := ReplaceRegExpr('</?a\b.*?>(.*)</a>', Result, '<u>$1</u>', True);
+  Result := ReplaceRegExpr('</?c\b.*?>', Result, '');
+  Result := ReplaceRegExpr('</?v\b.*?>', Result, '');
+  Result := ReplaceRegExpr('</?lang\b.*?>', Result, '');
+  Result := ReplaceRegExpr('<rt>.*?</rt>', Result, '');
+  Result := ReplaceRegExpr('</?ruby\b.*?>', Result, '');
+  Result := ReplaceRegExpr('<(\d+:)?\d+:\d+(\.\d+)?>', Result, '');
 end;
 
 function ConvertNull(Src : WideString) : WideString;
