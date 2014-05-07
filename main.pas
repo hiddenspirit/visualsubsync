@@ -7930,9 +7930,14 @@ begin
   begin
     SavedFilename := GetTmpDstFilename + '.srt';
     SaveSubtitles(SavedFilename, Filename, CurrentProject.IsUTF8, True, nil);
+  end
+  else
+  begin
+    SavedFilename := Filename;
   end;
   VideoRenderer.SetSubtitleFilename(SavedFilename);
 end;
+
 
 //------------------------------------------------------------------------------
 
