@@ -1429,6 +1429,10 @@ begin
 
   // VO textbox
   MemoSubtitleVO.Width := IniFile.ReadInteger('Windows', 'MemoSubtitleVO_Width', 400);
+  if (MemoSubtitleVO.Width > Screen.Width) then
+    MemoSubtitleVO.Width := 400;
+  begin
+  end;
 
   // Text pipe
   if IniFile.ReadBool('TextPipe', 'ShowTextPipe', False) then
@@ -9183,6 +9187,7 @@ var UndoableInsertSceneChange : TUndoableInsertSceneChange;
     CM : ICursorManager;
 begin
   CM := TCursorManager.Create(crHourGlass);
+  WAVDisplayer.Stop;
   CursorPos := FindSceneChange(
     CurrentProject.VideoSource,
     WAVDisplayer.Selection.StartTime,
