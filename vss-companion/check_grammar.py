@@ -8,6 +8,7 @@ import sys
 import time
 import winreg
 
+import win32api
 import win32gui
 import pywintypes
 
@@ -114,8 +115,10 @@ def parse_args():
 
 def main():
     args = parse_args()
-    ts_path = os.path.abspath(os.path.splitext(args.subtitle_file)[0] + ".txt")
-    sub_file = sublib.SubtitleFile.load(args.subtitle_file)
+    subtitle_file = os.path.abspath(
+        win32api.GetLongPathNameW(args.subtitle_file))
+    ts_path = os.path.splitext(subtitle_file)[0] + ".txt"
+    sub_file = sublib.SubtitleFile.load(subtitle_file)
 
     msg = None
     with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
@@ -136,16 +139,16 @@ def main():
             transcript = f.read()
 
         if transcript != sub_file.transcript:
-            sub_file.transcript = transcript
+            changes = sub_file.update_transcript(transcript)
             sub_file.save()
-            msg = "saved"
+            msg = "{} updated cues".format(changes)
             return 0
         else:
             msg = "no changes"
             return 1
     finally:
         os.remove(ts_path)
-        print("{}: {}".format(sub_file.file, msg))
+        print("{}: {}".format(os.path.basename(sub_file.file), msg))
 
 
 if __name__ == "__main__":
