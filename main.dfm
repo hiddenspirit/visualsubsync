@@ -24,7 +24,7 @@ object MainForm: TMainForm
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 511
+    Top = 512
     Width = 969
     Height = 4
     Cursor = crVSplit
@@ -125,7 +125,7 @@ object MainForm: TMainForm
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 515
+    Top = 516
     Width = 969
     Height = 65
     Align = alBottom
@@ -197,7 +197,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 229
     Width = 969
-    Height = 282
+    Height = 283
     Align = alClient
     BevelOuter = bvNone
     FullRepaint = False
@@ -206,7 +206,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 70
       Width = 969
-      Height = 212
+      Height = 213
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -1305,7 +1305,7 @@ object MainForm: TMainForm
   end
   object StatusBarMainPanel: TPanel
     Left = 0
-    Top = 580
+    Top = 581
     Width = 969
     Height = 19
     Align = alBottom
@@ -1481,6 +1481,9 @@ object MainForm: TMainForm
           Caption = 'Get more dictionaries'
           OnClick = MenuItemGetMoreDictionariesClick
         end
+      end
+      object Grammarcheck1: TMenuItem
+        Action = ActionGrammarCheck
       end
       object MenuItemDelay: TTntMenuItem
         Action = ActionDelay
@@ -2377,6 +2380,11 @@ object MainForm: TMainForm
     object ActionTranslationTemplate: TTntAction
       Caption = 'Translate'
       OnExecute = ActionTranslationTemplateExecute
+    end
+    object ActionGrammarCheck: TTntAction
+      Tag = 1
+      Caption = 'Grammar check'
+      OnExecute = ActionGrammarCheckExecute
     end
   end
   object ImageList1: TImageList
