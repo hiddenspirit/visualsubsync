@@ -40,6 +40,8 @@ try:
         "PyQt5.QtGui",
         "PyQt5.QtWidgets",
         "PyQt5.QtNetwork",
+        "guess_language.data.models.en",
+        "guess_language.data.models.fr",
     ]
 except ImportError:
     raise
@@ -101,6 +103,11 @@ exe_list = [
         base="Win32GUI",
         compress=True,
         icon="generate_scenechange_file/sc.ico",
+    ),
+    Executable(
+        script="check_grammar.py",
+        base=None,
+        compress=True,
     ),
 ]
 
