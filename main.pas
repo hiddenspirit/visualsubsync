@@ -386,6 +386,8 @@ type
     bttScanSceneChanges: TTntSpeedButton;
     Scanforscenechanges1: TMenuItem;
     MenuItemUpdate: TMenuItem;
+    Grammarcheck1: TMenuItem;
+    ActionGrammarCheck: TTntAction;
     procedure FormCreate(Sender: TObject);
     procedure OnMessage(var Msg: TMsg; var Handled: Boolean);
 
@@ -579,6 +581,7 @@ type
     procedure MenuItemHelpCodecsInstallationClick(Sender: TObject);
     procedure ActionScanSceneChangesExecute(Sender: TObject);
     procedure MenuItemUpdateClick(Sender: TObject);
+    procedure ActionGrammarCheckExecute(Sender: TObject);
 
   private
     { Private declarations }
@@ -10283,6 +10286,94 @@ begin
   Cmd := '"' + ExtractFilePath(ParamStr(0)) +
          'vss-companion\check_bitbucket.exe"';
   ShellExecuteW(Handle, 'open', PWideChar(Cmd), nil, nil, SW_SHOWNORMAL);
+end;
+
+procedure TMainForm.ActionGrammarCheckExecute(Sender: TObject);
+const
+  ReadBuffer = 2400;
+var Cmd : WideString;
+    Security : TSecurityAttributes;
+    ReadPipe, WritePipe : THandle;
+    StartInfo : TStartupInfoW;
+    ProcInfo : TProcessInformation;
+    Buffer : Pchar;
+    BytesRead : DWord;
+    AppRunning : DWord;
+    ExitCode: DWord;
+    ShortSubtitlesFile : WideString;
+    ShortPathNameLen : Cardinal;
+begin
+  ActionSaveExecute(nil);
+  LogForm.Hide;
+  ErrorReportForm.Hide;
+
+  with Security do
+  begin
+    nlength := SizeOf(TSecurityAttributes);
+    binherithandle := true;
+    lpsecuritydescriptor := nil;
+  end;
+  if CreatePipe(ReadPipe, WritePipe, @Security, 0) then
+  begin
+    Buffer := AllocMem(ReadBuffer + 1) ;
+    FillChar(StartInfo, SizeOf(StartInfo), #0);
+    StartInfo.cb := SizeOf(StartInfo) ;
+    StartInfo.hStdInput := ReadPipe;
+    StartInfo.hStdOutput := WritePipe;
+    StartInfo.hStdError := WritePipe;
+    StartInfo.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
+    StartInfo.wShowWindow := SW_HIDE;
+    
+    SetLength(ShortSubtitlesFile, MAX_PATH);
+    ShortPathNameLen := GetShortPathNameW(
+      PWideChar(CurrentProject.SubtitlesFile),
+      PWideChar(ShortSubtitlesFile),
+      MAX_PATH - 1
+    );
+    SetLength(ShortSubtitlesFile, ShortPathNameLen);
+
+    Cmd := '"' + ExtractFilePath(ParamStr(0)) +
+           'vss-companion\check_grammar.exe" "' + ShortSubtitlesFile;
+
+    if CreateProcessW(nil, PWideChar(Cmd), @Security, @Security, true,
+              NORMAL_PRIORITY_CLASS, nil, nil, StartInfo, ProcInfo) then
+    begin
+      repeat
+        Apprunning := WaitForSingleObject(ProcInfo.hProcess, 500);
+      until (Apprunning <> WAIT_TIMEOUT);
+      GetExitCodeProcess(ProcInfo.hProcess, ExitCode);
+      LogForm.LogMsg('Grammar check:');
+      repeat
+        BytesRead := 0;
+        ReadFile(ReadPipe, Buffer[0], ReadBuffer, BytesRead, nil);
+        Buffer[BytesRead] := #0;
+      until (BytesRead < ReadBuffer);
+      if (ExitCode = 0) then
+      begin
+        ShowStatusBarMessage('Reloading subtitles...');
+        LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+        ShowStatusBarMessage('Subtitles updated');
+      end
+      else
+      begin
+      end;
+      LogForm.LogMsg(String(Buffer));
+      CloseHandle(ProcInfo.hProcess);
+      CloseHandle(ProcInfo.hThread);
+      CloseHandle(ReadPipe);
+      CloseHandle(WritePipe);
+    end
+    else
+    begin
+      MessageBox(0, 'Couldn''t start check_grammar.exe.', 'Error', MB_ICONERROR);
+    end;
+    FreeMem(Buffer);
+  end
+  else
+  begin
+    MessageBox(0, 'Couldn''t create pipe for check_grammar.exe.', 'Error', MB_ICONERROR);
+  end;
+  { MessageBox(0, pChar(IntToStr(Result)), 'Error', MB_ICONERROR); }
 end;
 
 end.

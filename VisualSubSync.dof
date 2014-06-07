@@ -113,7 +113,7 @@ AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=2014
-Build=507
+Build=607
 Debug=0
 PreRelease=0
 Special=0
@@ -124,7 +124,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.0.2014.507
+FileVersion=1.0.2014.607
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -132,6 +132,8 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=spirit's custom build
+[Excluded Packages]
+C:\Program Files (x86)\Borland\Delphi7\Projects\Bpl\JvControlsDesign70.bpl=JVCL Visual Controls
 [HistoryLists\hlDebugSourcePath]
 Count=1
 Item0=.\ThirdParty;.\ThirdParty\DirectX;.\ThirdParty\jsbridge;.\ThirdParty\WinSock2;.\ThirdParty\FastMM
