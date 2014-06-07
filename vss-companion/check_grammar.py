@@ -19,15 +19,6 @@ import sublib
 import common
 
 
-REQUIRES_ACTIVE_POLL_APPS = {
-    "antidote",
-}
-
-
-def requires_active_poll(path):
-    return get_name(path).lower() in REQUIRES_ACTIVE_POLL_APPS
-
-
 def get_name(path):
     return os.path.splitext(os.path.basename(path))[0]
 
@@ -64,6 +55,28 @@ def poll_window(path, timeout=60):
         time.sleep(0.5)
 
 
+def has_antidote_agent():
+    class AgentSearch:
+        def __init__(self):
+            self.found = False
+
+    agent_search = AgentSearch()
+
+    def enum_window_proc(hwnd, agent_search):
+        if win32gui.GetWindowText(hwnd) == "AgentAntidote":
+            agent_search.found = True
+            return False
+        return True
+
+    try:
+        win32gui.EnumWindows(enum_window_proc, agent_search)
+    except pywintypes.error as e:
+        if e.winerror:
+            raise
+
+    return agent_search.found
+
+
 def get_grammar_checker(language):
     GRAMMAR_CHECKERS = {
         "Antidote": (
@@ -94,14 +107,14 @@ def get_grammar_checker(language):
 
     for checker_name in preferred_checkers:
         try:
-            grammar_checker = get_path(checker_name)
+            name, grammar_checker = checker_name, get_path(checker_name)
         except FileNotFoundError:
             continue
         break
     else:
         raise FileNotFoundError("can't find {}".format(preferred_checkers[0]))
 
-    return grammar_checker
+    return name, grammar_checker
 
 
 def parse_args():
@@ -123,17 +136,29 @@ def main():
     msg = None
     with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
         f.write(sub_file.transcript)
-    
-    try:
-        if args.grammar_checker:
-            grammar_checker = args.grammar_checker
-        else:
-            language = sub_file.guess_language()
-            grammar_checker = get_grammar_checker(language)
 
-        subprocess.call([grammar_checker, ts_path])
-        if requires_active_poll(grammar_checker):
-            poll_window(ts_path)
+    try:
+        try:
+            if args.grammar_checker:
+                grammar_checker = args.grammar_checker
+                name = get_name(grammar_checker)
+                if not os.path.isfile(grammar_checker):
+                    raise FileNotFoundError(
+                        "can't find {!r}".format(grammar_checker))
+            else:
+                language = sub_file.guess_language()
+                name, grammar_checker = get_grammar_checker(language)
+        except FileNotFoundError as e:
+            print(e)
+            return 2
+
+        if name.lower() == "antidote":
+            has_agent = has_antidote_agent()
+            subprocess.call([grammar_checker, ts_path])
+            if has_agent:
+                poll_window(ts_path)
+        else:
+            subprocess.call([grammar_checker, ts_path])
 
         with open(ts_path, "r", encoding="utf-8-sig") as f:
             transcript = f.read()
@@ -148,7 +173,8 @@ def main():
             return 1
     finally:
         os.remove(ts_path)
-        print("{}: {}".format(os.path.basename(sub_file.file), msg))
+        if msg:
+            print("{}: {}".format(os.path.basename(sub_file.file), msg))
 
 
 if __name__ == "__main__":
