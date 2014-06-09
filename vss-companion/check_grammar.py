@@ -174,7 +174,7 @@ def update_transcript_old_antidote(sub_file, value):
     old_len = len(sub_file.transcript.split("\n"))
     value = value.split("\n")
     if old_len != len(value):
-        raise ValueError("number of lines has changed: {}, {}"
+        raise ValueError("number of lines mismatch: {}, {}"
                          .format(old_len, len(value)))
     n = 0
     changes = 0
@@ -219,7 +219,7 @@ def main():
     except FileNotFoundError as e:
         print("{} ({}): {}"
               .format(os.path.basename(sub_file.file), language, e))
-        return 2
+        return 127
 
     with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
         f.write(sub_file.transcript)
@@ -240,10 +240,15 @@ def main():
         transcript = re.sub(r"\r\n|\r", "\n", buf.decode(encoding))
 
         if transcript != sub_file.transcript:
-            if encoding.startswith("utf"):
-                changes = sub_file.update_transcript(transcript)
-            else:
-                changes = update_transcript_old_antidote(sub_file, transcript)
+            try:
+                if encoding.startswith("utf"):
+                    changes = sub_file.update_transcript(transcript)
+                else:
+                    changes = update_transcript_old_antidote(
+                        sub_file, transcript)
+            except ValueError as e:
+                msg = e.args[0]
+                return 2
             sub_file.save()
             msg = "{} updated cue{}".format(
                 changes, "s" if changes != 1 else "")
