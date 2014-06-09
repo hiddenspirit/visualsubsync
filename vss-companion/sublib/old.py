@@ -213,7 +213,6 @@ class SubRipFile(SubtitleFile):
             srt = SubRipSubtitle(index, start, stop, NEWLINE.join(lines))
             self.sub_list.append(srt)
 
-
     def write(self, file_path=None, encoding=None):
         if file_path is None:
             file_path = self.file_path

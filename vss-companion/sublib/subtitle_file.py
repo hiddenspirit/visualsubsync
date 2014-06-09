@@ -1,5 +1,4 @@
 import bisect
-#import collections
 import io
 import os
 import re
@@ -225,7 +224,7 @@ class SubtitleFile(SortedList):
     @transcript.setter
     def transcript(self, value):
         self._update_transcript(value)
-    
+
     def update_transcript(self, value):
         value = value.split("\n")
         old_len = len(self.transcript.split("\n"))
@@ -242,5 +241,5 @@ class SubtitleFile(SortedList):
                 subtitle.plain_text_no_dialog = new_text
                 changes += 1
             n += num_lines
-        
+
         return changes

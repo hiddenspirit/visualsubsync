@@ -64,8 +64,9 @@ class Subtitle:
                               d["text"])
 
     def __repr__(self):
-        return "{}({!r}, {!r}, {!r}, {!r})".format(self.__class__.__name__,
-             self.start_frame, self.end_frame, self.text, self.style_index)
+        return "{}({!r}, {!r}, {!r}, {!r})".format(
+            self.__class__.__name__, self.start_frame, self.end_frame,
+            self.text, self.style_index)
 
     def __str__(self):
         index = self._index
@@ -196,7 +197,7 @@ class Subtitle:
             num_lines = len(plain_lines)
             self._char_amount = (
                 sum([len(plain_line) for plain_line in plain_lines]) +
-               (num_lines - 1) * 2) if num_lines else 0
+                (num_lines - 1) * 2) if num_lines else 0
         return self._char_amount
 
     @property
@@ -205,11 +206,11 @@ class Subtitle:
         style = self.style
         return {
             "chars": get_text_width_chars(plain_text),
-            "pixels": get_text_width_pixels(plain_text, style.font_name,
-                                     style.font_size, style.font_bold),
+            "pixels": get_text_width_pixels(
+                plain_text, style.font_name, style.font_size, style.font_bold),
             # TODO: Deprecate pixel width as calculated from VSS plugins?
-            "pixels_arial18bold": get_text_width_pixels(plain_text,
-                                                        "Arial", 18, True),
+            "pixels_arial18bold": get_text_width_pixels(
+                plain_text, "Arial", 18, True),
             }
 
     @property
@@ -278,8 +279,8 @@ class Subtitle:
 
     def set_plain_line_no_dialog(self, index, line):
         lines = self.plain_lines_no_dialog
-        self.plain_lines_no_dialog = lines[:index] + (line,) + \
-                                     lines[index + 1:]
+        self.plain_lines_no_dialog = (lines[:index] + (line,) +
+                                      lines[index + 1:])
 
     @property
     def text_as_one_line(self):
@@ -295,8 +296,8 @@ class Subtitle:
 
     @plain_text_as_one_line.setter
     def plain_text_as_one_line(self, value):
-        self.plain_text = self._update_text(self.plain_text,
-                                         self.plain_text_as_one_line, value)
+        self.plain_text = self._update_text(
+            self.plain_text, self.plain_text_as_one_line, value)
 
     @property
     def cps(self):

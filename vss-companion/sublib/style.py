@@ -12,8 +12,7 @@ class Style:
     def __init__(self, name="Default",
                  font_name=DEFAULT_FONT_NAME,
                  font_size=DEFAULT_FONT_SIZE,
-                 font_bold=DEFAULT_FONT_BOLD,
-                ):
+                 font_bold=DEFAULT_FONT_BOLD):
         self.name = name
         self.font_name = font_name
         self.font_size = font_size
@@ -46,10 +45,11 @@ class Style:
         return "&H{:02X}{:02X}{:02X}{:02X}&".format(a, b, g, r)
 
     def __repr__(self):
-        return "{}({!r}, {!r}, {!r}, {!r})".format(self.__class__.__name__,
-             self.name, self.font_name, self.font_size, self.font_bold)
+        return "{}({!r}, {!r}, {!r}, {!r})".format(
+            self.__class__.__name__, self.name, self.font_name, self.font_size,
+            self.font_bold)
 
     def __str__(self):
-        return self.STYLE_FORMAT.format(name=self.name,
-            font_name=self.font_name, font_size=self.font_size,
+        return self.STYLE_FORMAT.format(
+            name=self.name, font_name=self.font_name, font_size=self.font_size,
             font_bold=(-1 if self.font_bold else 0))
