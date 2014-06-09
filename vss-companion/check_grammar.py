@@ -2,6 +2,8 @@
 """Check grammar
 """
 import argparse
+import glob
+import itertools
 import os
 import subprocess
 import sys
@@ -78,27 +80,72 @@ def has_antidote_agent():
 
 
 def get_grammar_checker(language):
-    GRAMMAR_CHECKERS = {
-        "Antidote": (
-            r"SOFTWARE\Druide informatique inc.\Antidote",
-            "DossierAntidote",
-            "Antidote.exe",
-        ),
-        "LibreOffice": (
-            r"SOFTWARE\LibreOffice\UNO\InstallPath",
-            None,
-            "swriter.exe",
-        ),
-    }
+    def get_antidote():
+        antidote_key = r"Software\Druide informatique inc.\Antidote"
+        value = "DossierAntidote"
+        name = "Antidote.exe"
 
-    def get_path(checker_name):
-        sub_key, value, name = GRAMMAR_CHECKERS[checker_name]
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_key) as k:
-            grammar_checker_dir = winreg.QueryValueEx(k, value)[0]
-        grammar_checker = os.path.join(grammar_checker_dir, name)
-        if not os.path.isfile(grammar_checker):
-            raise FileNotFoundError("can't find {}".format(checker_name))
-        return grammar_checker
+        latest_sub_key = None
+        try:
+            with winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, antidote_key) as k:
+                try:
+                    for n in itertools.count():
+                        sub_key = winreg.EnumKey(k, n)
+                        if sub_key[0].isdigit():
+                            latest_sub_key = sub_key
+                except OSError:
+                    pass
+            if latest_sub_key:
+                sub_key = r"{}\{}\Installation".format(antidote_key,
+                                                       latest_sub_key)
+                with winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, sub_key) as k:
+                    directory = winreg.QueryValueEx(k, value)[0]
+                path = os.path.join(directory, name)
+                if os.path.isfile(path):
+                    return path
+        except FileNotFoundError:
+            pass
+
+        try:
+            return get_path_from_registry(
+                winreg.HKEY_LOCAL_MACHINE, antidote_key, value, name)
+        except FileNotFoundError:
+            pass
+
+        for env in ["PROGRAMFILES", "PROGRAMW6432"]:
+            try:
+                program_files = os.environ[env]
+            except KeyError:
+                continue
+            path = os.path.join(program_files, r"Druide\Antidote*\Programmes*",
+                                name)
+            paths = glob.glob(path)
+            if paths:
+                return sorted(paths)[-1]
+
+        raise FileNotFoundError("can't find Antidote")
+
+    def get_libre_office():
+        key = winreg.HKEY_LOCAL_MACHINE
+        sub_key = r"SOFTWARE\LibreOffice\UNO\InstallPath"
+        value = None
+        name = "swriter.exe"
+        return get_path_from_registry(key, sub_key, value, name)
+
+    def get_path_from_registry(key, sub_key, value, name):
+        with winreg.OpenKey(key, sub_key) as k:
+            directory = winreg.QueryValueEx(k, value)[0]
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(
+                "can't find in registry: {}, {}, {}, {}"
+                .format(key, sub_key, value, name))
+        return path
+
+    GRAMMAR_CHECKERS = {
+        "Antidote": get_antidote,
+        "LibreOffice": get_libre_office,
+    }
 
     preferred_checkers = ["LibreOffice"]
 
@@ -107,7 +154,8 @@ def get_grammar_checker(language):
 
     for checker_name in preferred_checkers:
         try:
-            name, grammar_checker = checker_name, get_path(checker_name)
+            name, grammar_checker = \
+                checker_name, GRAMMAR_CHECKERS[checker_name]()
         except FileNotFoundError:
             continue
         break
