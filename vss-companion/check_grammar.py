@@ -6,6 +6,7 @@ import glob
 import itertools
 import os
 import subprocess
+import re
 import sys
 import time
 import winreg
@@ -65,7 +66,7 @@ def has_antidote_agent():
     agent_search = AgentSearch()
 
     def enum_window_proc(hwnd, agent_search):
-        if win32gui.GetWindowText(hwnd) == "AgentAntidote":
+        if win32gui.GetWindowText(hwnd).lower() == "agentantidote":
             agent_search.found = True
             return False
         return True
@@ -83,45 +84,49 @@ def get_grammar_checker(language):
     def get_antidote():
         antidote_key = r"Software\Druide informatique inc.\Antidote"
         value = "DossierAntidote"
-        name = "Antidote.exe"
+        names = ["Antidote.exe", "antido32.exe"]
 
-        latest_sub_key = None
-        try:
-            with winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, antidote_key) as k:
-                try:
-                    for n in itertools.count():
-                        sub_key = winreg.EnumKey(k, n)
-                        if sub_key[0].isdigit():
-                            latest_sub_key = sub_key
-                except OSError:
-                    pass
-            if latest_sub_key:
-                sub_key = r"{}\{}\Installation".format(antidote_key,
-                                                       latest_sub_key)
-                with winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, sub_key) as k:
-                    directory = winreg.QueryValueEx(k, value)[0]
-                path = os.path.join(directory, name)
-                if os.path.isfile(path):
-                    return path
-        except FileNotFoundError:
-            pass
-
-        try:
-            return get_path_from_registry(
-                winreg.HKEY_LOCAL_MACHINE, antidote_key, value, name)
-        except FileNotFoundError:
-            pass
-
-        for env in ["PROGRAMFILES", "PROGRAMW6432"]:
+        for name in names:
+            latest_sub_key = None
             try:
-                program_files = os.environ[env]
-            except KeyError:
-                continue
-            path = os.path.join(program_files, r"Druide\Antidote*\Programmes*",
-                                name)
-            paths = glob.glob(path)
-            if paths:
-                return sorted(paths)[-1]
+                with winreg.OpenKeyEx(
+                        winreg.HKEY_CURRENT_USER, antidote_key) as k:
+                    try:
+                        for n in itertools.count():
+                            sub_key = winreg.EnumKey(k, n)
+                            if sub_key[0].isdigit():
+                                latest_sub_key = sub_key
+                    except OSError:
+                        pass
+                if latest_sub_key:
+                    sub_key = r"{}\{}\Installation".format(antidote_key,
+                                                           latest_sub_key)
+                    with winreg.OpenKeyEx(
+                            winreg.HKEY_CURRENT_USER, sub_key) as k:
+                        directory = winreg.QueryValueEx(k, value)[0]
+                    path = os.path.join(directory, name)
+                    if os.path.isfile(path):
+                        return path
+            except FileNotFoundError:
+                pass
+
+            try:
+                return get_path_from_registry(
+                    winreg.HKEY_LOCAL_MACHINE, antidote_key, value, name)
+            except FileNotFoundError:
+                pass
+
+            for env in ["PROGRAMFILES", "PROGRAMW6432"]:
+                try:
+                    program_files = os.environ[env]
+                except KeyError:
+                    continue
+                for antidote_dir in [
+                        r"Druide\Antidote*\Programmes*", r"Druide\Antidote*"]:
+                    path = os.path.join(program_files, antidote_dir, name)
+                    paths = glob.glob(path)
+                    if paths:
+                        return sorted(paths)[-1]
 
         raise FileNotFoundError("can't find Antidote")
 
@@ -165,6 +170,26 @@ def get_grammar_checker(language):
     return name, grammar_checker
 
 
+def update_transcript_old_antidote(sub_file, value):
+    old_len = len(sub_file.transcript.split("\n"))
+    value = value.split("\n")
+    if old_len != len(value):
+        raise ValueError("number of lines has changed: {}, {}"
+                         .format(old_len, len(value)))
+    n = 0
+    changes = 0
+    for subtitle in sub_file:
+        num_lines = len(subtitle.lines)
+        old_text = subtitle.plain_text_no_dialog
+        new_text = "\n".join(value[n:n+num_lines])
+        if old_text != new_text and old_text.replace("œ", "?") != new_text:
+            subtitle.plain_text_no_dialog = new_text
+            changes += 1
+        n += num_lines
+
+    return changes
+
+
 def parse_args():
     parser = argparse.ArgumentParser("Grammar checker")
     parser.add_argument("subtitle_file",
@@ -180,26 +205,27 @@ def main():
         win32api.GetLongPathNameW(args.subtitle_file))
     ts_path = os.path.splitext(subtitle_file)[0] + ".txt"
     sub_file = sublib.SubtitleFile.load(subtitle_file)
-
-    msg = None
-    with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
-        f.write(sub_file.transcript)
+    language = sub_file.guess_language()
 
     try:
-        try:
-            if args.grammar_checker:
-                grammar_checker = args.grammar_checker
-                name = get_name(grammar_checker)
-                if not os.path.isfile(grammar_checker):
-                    raise FileNotFoundError(
-                        "can't find {!r}".format(grammar_checker))
-            else:
-                language = sub_file.guess_language()
-                name, grammar_checker = get_grammar_checker(language)
-        except FileNotFoundError as e:
-            print(e)
-            return 2
+        if args.grammar_checker:
+            grammar_checker = args.grammar_checker
+            name = get_name(grammar_checker)
+            if not os.path.isfile(grammar_checker):
+                raise FileNotFoundError(
+                    "can't find {!r}".format(grammar_checker))
+        else:
+            name, grammar_checker = get_grammar_checker(language)
+    except FileNotFoundError as e:
+        print("{} ({}): {}"
+              .format(os.path.basename(sub_file.file), language, e))
+        return 2
 
+    with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
+        f.write(sub_file.transcript)
+    msg = None
+
+    try:
         if name.lower() == "antidote":
             has_agent = has_antidote_agent()
             subprocess.call([grammar_checker, ts_path])
@@ -208,21 +234,27 @@ def main():
         else:
             subprocess.call([grammar_checker, ts_path])
 
-        with open(ts_path, "r", encoding="utf-8-sig") as f:
-            transcript = f.read()
+        with open(ts_path, "rb") as f:
+            buf = f.read()
+        encoding = sub_file._detect_encoding(buf)
+        transcript = re.sub(r"\r\n|\r", "\n", buf.decode(encoding))
 
         if transcript != sub_file.transcript:
-            changes = sub_file.update_transcript(transcript)
+            if encoding.startswith("utf"):
+                changes = sub_file.update_transcript(transcript)
+            else:
+                changes = update_transcript_old_antidote(sub_file, transcript)
             sub_file.save()
-            msg = "{} updated cues".format(changes)
+            msg = "{} updated cue{}".format(
+                changes, "s" if changes != 1 else "")
             return 0
         else:
             msg = "no changes"
             return 1
     finally:
         os.remove(ts_path)
-        if msg:
-            print("{}: {}".format(os.path.basename(sub_file.file), msg))
+        print("{} ({}): {}"
+              .format(os.path.basename(sub_file.file), language, msg))
 
 
 if __name__ == "__main__":
