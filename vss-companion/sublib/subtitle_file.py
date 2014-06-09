@@ -226,8 +226,8 @@ class SubtitleFile(SortedList):
         self._update_transcript(value)
 
     def update_transcript(self, value):
-        value = value.split("\n")
         old_len = len(self.transcript.split("\n"))
+        value = value.split("\n")
         if old_len != len(value):
             raise ValueError("number of lines has changed: {}, {}"
                              .format(old_len, len(value)))
@@ -237,7 +237,7 @@ class SubtitleFile(SortedList):
             num_lines = len(subtitle.lines)
             old_text = subtitle.plain_text_no_dialog
             new_text = "\n".join(value[n:n+num_lines])
-            if (old_text != new_text):
+            if old_text != new_text:
                 subtitle.plain_text_no_dialog = new_text
                 changes += 1
             n += num_lines
