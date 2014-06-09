@@ -39,8 +39,8 @@ class PeakFile(Sequence):
 
     def __eq__(self, other):
         return (self.rate == other.rate and
-            len(self.data) == len(other.data) and
-            all(self.data.round(2) == other.data.round(2)))
+                len(self.data) == len(other.data) and
+                all(self.data.round(2) == other.data.round(2)))
 
     def __getitem__(self, key):
         return self.data[key]

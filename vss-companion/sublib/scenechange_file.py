@@ -5,7 +5,6 @@ import os
 import re
 import threading
 
-#from contextlib import contextmanager
 from fractions import Fraction
 
 import numpy

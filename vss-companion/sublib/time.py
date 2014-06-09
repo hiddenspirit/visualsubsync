@@ -13,7 +13,7 @@ ONE_HOUR = ONE_MINUTE * 60
 HoursMinutesSeconds = namedtuple("HoursMinutesSeconds", ("h", "min", "s"))
 
 
-#TODO: maybe it should be float.
+# TODO: maybe it should be float.
 @total_ordering
 class Time(int):
     FORMAT = "{h:02d}:{min:02d}:{s:06.3f}"
@@ -49,7 +49,6 @@ class Time(int):
         h, remainder = divmod(self, ONE_HOUR)
         min, ms = divmod(remainder, ONE_MINUTE) #@ReservedAssignment
         return HoursMinutesSeconds(h, min, ms / ONE_SECOND)
-
 
     def __add__(self, other):
         return Time(int(self) + other)
