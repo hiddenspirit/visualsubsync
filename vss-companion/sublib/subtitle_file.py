@@ -229,7 +229,7 @@ class SubtitleFile(SortedList):
         old_len = len(self.transcript.split("\n"))
         value = value.split("\n")
         if old_len != len(value):
-            raise ValueError("number of lines has changed: {}, {}"
+            raise ValueError("number of lines mismatch: {}, {}"
                              .format(old_len, len(value)))
         n = 0
         changes = 0
