@@ -87,10 +87,12 @@ class Subtitle:
 
     @classmethod
     def time_to_frame(cls, time):
+        # TODO: use ffms
         return round(time / cls.parent.frame_duration)
 
     @classmethod
     def frame_to_time(cls, frame):
+        # TODO: use ffms
         return int(frame * cls.parent.frame_duration)
 
     @property
