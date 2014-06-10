@@ -10342,6 +10342,7 @@ begin
         Apprunning := WaitForSingleObject(ProcInfo.hProcess, 500);
       until (Apprunning <> WAIT_TIMEOUT);
       GetExitCodeProcess(ProcInfo.hProcess, ExitCode);
+      LogForm.Clear;
       LogForm.LogMsg('Grammar check:');
       repeat
         BytesRead := 0;
