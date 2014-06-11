@@ -21,6 +21,9 @@ guess_language.use_enchant(False)
 import sublib
 import common
 
+from util.update_text import decompose_opcodes, undo_junk_changes
+from util.detect_encoding import detect_encoding
+
 
 def get_name(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -170,23 +173,34 @@ def get_grammar_checker(language):
     return name, grammar_checker
 
 
-def update_transcript_old_antidote(sub_file, value):
-    old_len = len(sub_file.transcript.split("\n"))
-    value = value.split("\n")
-    if old_len != len(value):
-        raise ValueError("number of lines mismatch: {}, {}"
-                         .format(old_len, len(value)))
-    n = 0
-    changes = 0
-    for subtitle in sub_file:
-        num_lines = len(subtitle.lines)
-        old_text = subtitle.plain_text_no_dialog
-        new_text = "\n".join(value[n:n+num_lines])
-        if old_text != new_text and old_text.replace("œ", "?") != new_text:
-            subtitle.plain_text_no_dialog = new_text
-            changes += 1
-        n += num_lines
+def update_transcript_non_unicode(sub_file, transcript, reformat=True):
+    def downgrade_to_encoding(text, encoding="latin1"):
+        return text.encode(encoding, "replace").decode(encoding)
 
+    def test(old_text, new_text):
+        return downgrade_to_encoding(old_text) != new_text
+
+    old_transcript = sub_file.transcript
+    if reformat:
+        transcript = undo_junk_changes(transcript, old_transcript,
+                                       lambda s: s == "\n")
+    changes = 0
+    if old_transcript != transcript:
+        old_transcript_lines = old_transcript.split("\n")
+        transcript_lines = transcript.split("\n")
+        if len(old_transcript_lines) != len(transcript_lines):
+            raise ValueError("number of lines mismatch: {}, {}"
+                             .format(len(old_transcript_lines),
+                                     len(transcript_lines)))
+        n = 0
+        for subtitle in sub_file:
+            num_lines = len(subtitle.lines)
+            old_text = subtitle.plain_text_no_dialog
+            new_text = "\n".join(transcript_lines[n:n+num_lines])
+            if old_text != new_text and test(old_text, new_text):
+                subtitle.plain_text_no_dialog = new_text
+                changes += 1
+            n += num_lines
     return changes
 
 
@@ -221,14 +235,17 @@ def main():
               .format(os.path.basename(sub_file.file), language, e))
         return 127
 
-    with open(ts_path, "w", encoding="utf-8-sig", newline="\n") as f:
-        f.write(sub_file.transcript)
     msg = None
+    old_transcript = sub_file.reformatted_transcript
+    with open(ts_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
+        f.write(old_transcript)
 
     try:
         if name.lower() == "antidote":
             has_agent = has_antidote_agent()
+            # start_time = time.time()
             subprocess.call([grammar_checker, ts_path])
+            # if time.time() - start_time < 0.25:
             if has_agent:
                 poll_window(ts_path)
         else:
@@ -236,25 +253,22 @@ def main():
 
         with open(ts_path, "rb") as f:
             buf = f.read()
-        encoding = sub_file._detect_encoding(buf)
+        encoding = detect_encoding(buf)
         transcript = re.sub(r"\r\n|\r", "\n", buf.decode(encoding))
 
-        if transcript != sub_file.transcript:
-            try:
-                if encoding.startswith("utf"):
-                    changes = sub_file.update_transcript(transcript)
-                else:
-                    changes = update_transcript_old_antidote(
-                        sub_file, transcript)
-            except ValueError as e:
-                msg = e.args[0]
-                return 2
+        try:
+            if encoding.startswith("utf"):
+                changes = sub_file.update_transcript(transcript)
+            else:
+                changes = update_transcript_non_unicode(sub_file, transcript)
+        except ValueError as e:
+            msg = e.args[0]
+            return 2
+        msg = "{} updated cue{}".format(changes, "s" if changes != 1 else "")
+        if changes:
             sub_file.save()
-            msg = "{} updated cue{}".format(
-                changes, "s" if changes != 1 else "")
             return 0
         else:
-            msg = "no changes"
             return 1
     finally:
         os.remove(ts_path)

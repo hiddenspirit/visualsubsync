@@ -10,7 +10,7 @@ from .time import Time, HALF_A_SECOND, ONE_SECOND
 
 
 PARSER = (r"^(?P<start_time>{time_pattern})\D+(?P<end_time>{time_pattern}).*$"
-          r"\n+(?P<text>[\s\S]*?)(?:\n\n|\n*\Z)")
+          r"\n(?P<text>[\s\S]*?)(?:\n\n|\n*\Z)")
 
 
 @functools.total_ordering

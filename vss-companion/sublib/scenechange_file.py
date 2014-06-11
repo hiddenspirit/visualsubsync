@@ -1,5 +1,4 @@
 import bisect
-import codecs
 import functools
 import os
 import re
@@ -12,6 +11,8 @@ import numpy
 import ffms
 from .time import Time
 from .sorted_list import SortedSet
+
+from util.detect_encoding import detect_encoding
 
 
 @functools.total_ordering
@@ -50,16 +51,7 @@ class SceneChangeFile(SortedSet):
     def load(cls, file):
         with open(file, "rb") as f:
             buf = f.read()
-        if buf.startswith(codecs.BOM_UTF8):
-            encoding = "utf-8-sig"
-        elif (buf.startswith(codecs.BOM_UTF32_LE) or
-              buf.startswith(codecs.BOM_UTF32_BE)):
-            encoding = "utf-32"
-        elif (buf.startswith(codecs.BOM_UTF16_LE) or
-              buf.startswith(codecs.BOM_UTF16_LE)):
-            encoding = "utf-16"
-        else:
-            encoding = cls.ENCODING
+        encoding = detect_encoding(buf, cls.ENCODING)
         text = buf.decode(encoding, "ignore")
         lines = text.splitlines()
         match = cls.VERSION_RE.match(lines[0])

@@ -10353,6 +10353,7 @@ begin
       begin
         ShowStatusBarMessage('Reloading subtitles...');
         LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
+        vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
         ShowStatusBarMessage('Subtitles updated');
       end
       else
