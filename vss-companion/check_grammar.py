@@ -30,7 +30,7 @@ def get_name(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def poll_window(path, timeout=60):
+def poll_window(path, timeout=30):
     class Checker:
         def __init__(self, filename):
             self.filename = filename
@@ -232,10 +232,10 @@ def main():
 
     try:
         if name.lower() == "antidote":
-            has_background = has_background_antidote()
+            has_background_proc = has_background_antidote()
             with subprocess.Popen([grammar_checker, ts_path]) as proc:
                 poll_window(ts_path)
-                if not has_background:
+                if not has_background_proc:
                     proc.terminate()
         else:
             subprocess.call([grammar_checker, ts_path])
