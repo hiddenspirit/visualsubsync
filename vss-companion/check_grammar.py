@@ -14,6 +14,7 @@ import winreg
 import win32api
 import win32gui
 import pywintypes
+import psutil
 
 import guess_language
 guess_language.use_enchant(False)
@@ -61,26 +62,15 @@ def poll_window(path, timeout=60):
         time.sleep(0.5)
 
 
-def has_antidote_agent():
-    class AgentSearch:
-        def __init__(self):
-            self.found = False
-
-    agent_search = AgentSearch()
-
-    def enum_window_proc(hwnd, agent_search):
-        if win32gui.GetWindowText(hwnd).lower() == "agentantidote":
-            agent_search.found = True
-            return False
-        return True
-
-    try:
-        win32gui.EnumWindows(enum_window_proc, agent_search)
-    except pywintypes.error as e:
-        if e.winerror:
-            raise
-
-    return agent_search.found
+def has_background_antidote():
+    for proc in psutil.process_iter():
+        try:
+            name = proc.name()
+        except psutil.AccessDenied:
+            continue
+        if name.lower() in {"antidote.exe", "antido32.exe"}:
+            return True
+    return False
 
 
 def get_grammar_checker(language):
@@ -242,12 +232,11 @@ def main():
 
     try:
         if name.lower() == "antidote":
-            has_agent = has_antidote_agent()
-            # start_time = time.time()
-            subprocess.call([grammar_checker, ts_path])
-            # if time.time() - start_time < 0.25:
-            if has_agent:
+            has_background = has_background_antidote()
+            with subprocess.Popen([grammar_checker, ts_path]) as proc:
                 poll_window(ts_path)
+                if not has_background:
+                    proc.terminate()
         else:
             subprocess.call([grammar_checker, ts_path])
 
