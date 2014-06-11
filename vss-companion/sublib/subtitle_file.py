@@ -1,12 +1,8 @@
-import bisect
-import io
 import os
 import re
 
-import codecs
-from collections import Sequence, MutableSet
 from fractions import Fraction
-from functools import total_ordering, partial
+from functools import partial
 
 try:
     from guess_language import guess_language
@@ -20,7 +16,8 @@ try:
     from util.guess_text import guess_text
 except ImportError:
     guess_text = None
-from util.update_text import update_text
+from util.update_text import decompose_opcodes, undo_junk_changes
+from util.detect_encoding import detect_encoding
 
 from .subtitle import Subtitle
 from .style import Style
@@ -79,23 +76,9 @@ class SubtitleFile(SortedList):
                 raise Error("'guess_text' module not available")
             return guess_text(buf, encoding, language)
         if not encoding:
-            encoding = cls._detect_encoding(buf)
+            encoding = detect_encoding(buf, cls.DEFAULT_ENCODING)
         text = buf.decode(encoding, "replace")
         return text, encoding, language
-
-    @classmethod
-    def _detect_encoding(cls, buf):
-        if buf.startswith(codecs.BOM_UTF8):
-            encoding = "utf-8-sig"
-        elif (buf.startswith(codecs.BOM_UTF32_LE) or
-              buf.startswith(codecs.BOM_UTF32_BE)):
-            encoding = "utf-32"
-        elif (buf.startswith(codecs.BOM_UTF16_LE) or
-              buf.startswith(codecs.BOM_UTF16_LE)):
-            encoding = "utf-16"
-        else:
-            encoding = cls.DEFAULT_ENCODING
-        return encoding
 
     def __repr__(self):
         return "{}({!r}, {!r}, {!r}, {!r}, {!r})".format(
@@ -178,6 +161,7 @@ class SubtitleFile(SortedList):
             subtitle.times = times
         self.is_sorted = True
 
+    # TODO: use ffms
     def _set_fps(self, value):
         self._frame_duration = (1 if not value else
                                 1000 * value.denominator / value.numerator)
@@ -223,23 +207,36 @@ class SubtitleFile(SortedList):
 
     @transcript.setter
     def transcript(self, value):
-        self._update_transcript(value)
+        self.update_transcript(value, False)
 
-    def update_transcript(self, value):
-        old_len = len(self.transcript.split("\n"))
-        value = value.split("\n")
-        if old_len != len(value):
-            raise ValueError("number of lines mismatch: {}, {}"
-                             .format(old_len, len(value)))
-        n = 0
+    @property
+    def reformatted_transcript(self):
+        # TODO
+        transcript = self.transcript
+        # transcript = re.sub(r"([^\.?!])\n", r"\1 ", transcript)
+        # transcript = re.sub(r"(…|\.{3})\n([\p{Ll}])", r"\1 \2", transcript)
+        return transcript
+
+    def update_transcript(self, transcript, reformat=True):
+        old_transcript = self.transcript
+        if reformat:
+            transcript = undo_junk_changes(transcript, old_transcript,
+                                           lambda s: s == "\n")
         changes = 0
-        for subtitle in self:
-            num_lines = len(subtitle.lines)
-            old_text = subtitle.plain_text_no_dialog
-            new_text = "\n".join(value[n:n+num_lines])
-            if old_text != new_text:
-                subtitle.plain_text_no_dialog = new_text
-                changes += 1
-            n += num_lines
-
+        if old_transcript != transcript:
+            old_transcript_lines = old_transcript.split("\n")
+            transcript_lines = transcript.split("\n")
+            if len(old_transcript_lines) != len(transcript_lines):
+                raise ValueError("number of lines mismatch: {}, {}"
+                                 .format(len(old_transcript_lines),
+                                         len(transcript_lines)))
+            n = 0
+            for subtitle in self:
+                num_lines = len(subtitle.lines)
+                old_text = subtitle.plain_text_no_dialog
+                new_text = "\n".join(transcript_lines[n:n+num_lines])
+                if old_text != new_text:
+                    subtitle.plain_text_no_dialog = new_text
+                    changes += 1
+                n += num_lines
         return changes

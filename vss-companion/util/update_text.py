@@ -25,6 +25,8 @@ else:
 
 
 def update_text(text, stripped_text, new_stripped_text):
+    """Update text.
+    """
     if text == stripped_text:
         return new_stripped_text
     elif stripped_text == new_stripped_text:
@@ -121,3 +123,25 @@ def decompose_opcodes(opcodes):
             raise ValueError("unexpected tag in opcode: {!r}".format(tag))
     return decomposed
 
+
+def undo_junk_changes(new_text, old_text, is_junk=lambda s: s.isspace()):
+    """Undo junk changes.
+    """
+    sm = difflib.SequenceMatcher(None, new_text, old_text)
+    opcodes = decompose_opcodes(sm.get_opcodes())
+    print_opcodes("junk opcodes", opcodes, new_text, old_text)
+    d = 0
+    text = list(new_text)
+    for tag, i1, i2, j1, j2 in opcodes:
+        if tag == "replace":
+            update = is_junk(new_text[i1:i2]) or is_junk(old_text[j1:j2])
+        elif tag == "delete":
+            update = is_junk(new_text[i1:i2])
+        elif tag == "insert":
+            update = is_junk(old_text[j1:j2])
+        else:
+            update = False
+        if update:
+            text[i1+d:i2+d] = old_text[j1:j2]
+            d += (j2 - j1) - (i2 - i1)
+    return "".join(text)
