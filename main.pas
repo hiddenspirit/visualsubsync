@@ -3476,8 +3476,8 @@ begin
     if (not CurrentProject.IsUTF8) and DetectCharsetDataLoss then
     begin
       MessageBoxW(Handle, PWideChar(WideString(
-        'Subtitles contain some characters that may not be saved correctly,' +
-        ' the file will be saved in Unicode UTF-8 starting from now.')),
+        'Subtitles contain some characters that may not be saved correctly.' +
+        ' The file will be saved as UTF-8 starting from now.')),
         PWideChar(WideString('Warning')), MB_OK or MB_ICONWARNING);
       CurrentProject.IsUTF8 := True;
       g_VSSCoreWrapper.SetIsUnicode(CurrentProject.IsUTF8);
