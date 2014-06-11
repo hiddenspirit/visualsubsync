@@ -49,7 +49,7 @@ def poll_window(path, timeout=60):
         try:
             win32gui.EnumWindows(enum_window_proc, checker)
         except pywintypes.error as e:
-            if e.winerror:
+            if e.funcname != "EnumWindows" or e.winerror not in [0, 1400]:
                 raise
         if checker.hwnd:
             break
@@ -260,7 +260,7 @@ def main():
             except UnicodeEncodeError:
                 old_encoding = sub_file.encoding
                 sub_file.save(encoding="utf-8-sig")
-                print("File converted from {} to UTF-8".format(old_encoding))
+                print("File converted from {} to utf-8".format(old_encoding))
             return 0
         else:
             return 1
