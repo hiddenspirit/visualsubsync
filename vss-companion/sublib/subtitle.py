@@ -199,7 +199,8 @@ class Subtitle:
             num_lines = len(plain_lines)
             self._char_amount = (
                 sum([len(plain_line) for plain_line in plain_lines]) +
-                (num_lines - 1) * 2) if num_lines else 0
+                (num_lines - 1) * 2
+            )
         return self._char_amount
 
     @property
@@ -249,7 +250,7 @@ class Subtitle:
 
     @property
     def lines(self):
-        return tuple(self._text.splitlines())
+        return tuple(self._text.split("\n"))
 
     @lines.setter
     def lines(self, value):
@@ -261,7 +262,7 @@ class Subtitle:
 
     @property
     def plain_lines(self):
-        return tuple(self.plain_text.splitlines())
+        return tuple(self.plain_text.split("\n"))
 
     @plain_lines.setter
     def plain_lines(self, value):
@@ -273,7 +274,7 @@ class Subtitle:
 
     @property
     def plain_lines_no_dialog(self):
-        return tuple(self.plain_text_no_dialog.splitlines())
+        return tuple(self.plain_text_no_dialog.split("\n"))
 
     @plain_lines_no_dialog.setter
     def plain_lines_no_dialog(self, value):
