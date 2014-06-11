@@ -9237,6 +9237,7 @@ begin
     ActionUndo.Enabled := False;
     ActionRedo.Enabled := False;
     CurrentProject.IsDirty := False;
+    ShowStatusBarMessage('Subtitles reloaded');
   end;
 end;
 
@@ -10351,10 +10352,7 @@ begin
       until (BytesRead < ReadBuffer);
       if (ExitCode = 0) then
       begin
-        ShowStatusBarMessage('Reloading subtitles...');
-        LoadSubtitles(CurrentProject.SubtitlesFile, CurrentProject.IsUTF8);
-        vtvSubsListFocusChanged(vtvSubsList, vtvSubsList.FocusedNode, 0);
-        ShowStatusBarMessage('Subtitles updated');
+        ActionReloadExecute(nil);
       end
       else
       begin
