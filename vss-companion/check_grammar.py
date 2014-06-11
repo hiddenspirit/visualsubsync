@@ -255,7 +255,12 @@ def main():
             return 2
         msg = "{} updated cue{}".format(changes, "s" if changes != 1 else "")
         if changes:
-            sub_file.save()
+            try:
+                sub_file.save()
+            except UnicodeEncodeError:
+                old_encoding = sub_file.encoding
+                sub_file.save(encoding="utf-8-sig")
+                print("File converted from {} to UTF-8".format(old_encoding))
             return 0
         else:
             return 1
