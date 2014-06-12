@@ -18,5 +18,5 @@ It should take care of everything, including codecs.
 * Basic [WebVTT](http://dev.w3.org/html5/webvtt/) support
 * Other improvements and bug fixes
 
-## Subfactory.fr ##
-Learn about the [Subfactory.fr fansubbing standards](http://www.subfactory.fr/forum.html#thread/31470/) (in French).
+## [Subfactory.fr](https://www.subfactory.fr/) ##
+Learn about the [Subfactory.fr fansubbing standards](https://www.subfactory.fr/forum.html#thread/31470/) (in French).
