@@ -6,7 +6,7 @@ It also provides some tools to help improving the quality of your subtitles.
 SRT/VTT and SSA/ASS subtitle formats are supported.
 
 ## Installation instructions ##
-Just use the all-inclusive installer available at the [download page](https://bitbucket.org/spirit/visualsubsync/downloads).
+Just use the latest all-inclusive installer available at the [download page](https://bitbucket.org/spirit/visualsubsync/downloads).
 It should take care of everything, including codecs.
 
 ## Added features ##
