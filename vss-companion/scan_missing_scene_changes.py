@@ -6,7 +6,6 @@ import os
 import sys
 
 import sublib
-import sublib.old
 import common
 
 
@@ -61,9 +60,9 @@ def main():
         else:
             sc_file = sublib.SceneChangeFile.from_source(vsource)
 
-    sub_file = sublib.old.SubRipFile(args.sub_file)
+    sub_file = sublib.SubtitleFile.load(args.sub_file)
     missing_list = []
-    timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
+    timings = [(sub.start_time, sub.end_time) for sub in sub_file]
     time_output = (int if args.milliseconds
                    else lambda t: sublib.Time.from_int(int(t)))
 
