@@ -13,7 +13,7 @@ from util.media_hash import MediaHash
 
 
 VERBOSE = False
-FFINDEX_MAX_FILES = 24
+FFINDEX_MAX_FILES = 32
 BUILD_DATE = "2014-06-11 18:30:39"
 
 APP_NAME = "VisualSubSync-Companion"
