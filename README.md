@@ -1,7 +1,7 @@
-# A Mod of [VisualSubSync](http://visualsubsync.org/) #
+# A Mod of [VisualSubSync] #
 
 ## Description ##
-This is a mod of [VisualSubSync](http://visualsubsync.org/), a subtitling software using audio waveform representation as its cornerstone.
+This is a mod of [VisualSubSync], a subtitling software using audio waveform representation as its cornerstone.
 It also provides some tools to help improving the quality of your subtitles.
 SRT/VTT and SSA/ASS subtitle formats are supported.
 
@@ -20,3 +20,5 @@ It should take care of everything, including codecs.
 
 ## [Subfactory.fr](https://www.subfactory.fr/) ##
 Learn about the [Subfactory.fr fansubbing standards](https://www.subfactory.fr/forum.html#thread/31470/) (in French).
+
+[VisualSubSync]: http://visualsubsync.org/
