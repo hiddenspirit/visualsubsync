@@ -30,7 +30,7 @@ except ImportError:
 from scan_scene_changes_window import Ui_MainWindow
 
 import ffms
-import sublib.old
+import sublib
 import common
 
 
@@ -448,8 +448,8 @@ class ScanSceneChangeForm(QtWidgets.QMainWindow):
         try:
             vsource = common.get_video_source(self.video_file)
             sc_file = self.load_sc_file(vsource)
-            sub_file = sublib.old.SubRipFile(self.sub_file)
-            timings = [(sub.start, sub.stop) for sub in sub_file.sub_list]
+            sub_file = sublib.SubtitleFile.load(self.sub_file)
+            timings = [(sub.start_time, sub.end_time) for sub in sub_file]
 
             if self.scan_bogus:
                 for sc_time, diff_pct in sc_file.scan_bogus(
