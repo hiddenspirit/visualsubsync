@@ -21,4 +21,4 @@ It should take care of everything, including codecs.
 ## [Subfactory.fr](https://www.subfactory.fr/) ##
 Learn about the [Subfactory.fr fansubbing standards](https://www.subfactory.fr/forum.html#thread/31470/) (in French).
 
-[VisualSubSync]: http://visualsubsync.org/
+[VisualSubSync]: http://www.visualsubsync.org/
