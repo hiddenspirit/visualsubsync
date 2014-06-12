@@ -19,6 +19,6 @@ It should take care of everything, including codecs.
 * Other improvements and bug fixes
 
 ## [Subfactory.fr](https://www.subfactory.fr/) ##
-Learn about the [Subfactory.fr fansubbing standards](https://www.subfactory.fr/forum.html#thread/31470/) (in French).
+Learn about the [Subfactory.fr fansubbing guidelines](https://www.subfactory.fr/forum.html#thread/31470/) (in French).
 
 [VisualSubSync]: http://www.visualsubsync.org/
