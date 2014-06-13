@@ -1,8 +1,8 @@
 # A Mod of [VisualSubSync] #
 
 ### Description ###
-This is a mod of [VisualSubSync], a subtitling software using audio waveform representation as its cornerstone.
-It also provides some tools to help improving the quality of your subtitles.
+This is a mod of [VisualSubSync], an open-source subtitling software using audio waveform representation as its cornerstone.
+It provides some tools to help improving the quality of your subtitles.
 SRT/VTT and SSA/ASS subtitle formats are supported.
 
 ### Installation instructions ###
