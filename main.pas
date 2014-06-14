@@ -9237,6 +9237,7 @@ begin
     ActionUndo.Enabled := False;
     ActionRedo.Enabled := False;
     CurrentProject.IsDirty := False;
+    UpdateSubtitleForPreview(True);
     ShowStatusBarMessage('Subtitles reloaded');
   end;
 end;
