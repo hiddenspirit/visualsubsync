@@ -10303,10 +10303,21 @@ var Cmd : WideString;
     ExitCode: DWord;
     ShortSubtitlesFile : WideString;
     ShortPathNameLen : Cardinal;
+    ShowingDetachedVideo : Boolean;
 begin
   ActionSaveExecute(nil);
   LogForm.Hide;
   ErrorReportForm.Hide;
+
+  if ShowingVideo and MenuItemDetachVideoWindow.Checked then
+  begin
+    ShowingDetachedVideo := True;
+    DetachedVideoForm.Visible := False;
+  end
+  else
+  begin
+    ShowingDetachedVideo := False;
+  end;
 
   with Security do
   begin
@@ -10324,7 +10335,7 @@ begin
     StartInfo.hStdError := WritePipe;
     StartInfo.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
     StartInfo.wShowWindow := SW_HIDE;
-    
+
     SetLength(ShortSubtitlesFile, MAX_PATH);
     ShortPathNameLen := GetShortPathNameW(
       PWideChar(CurrentProject.SubtitlesFile),
@@ -10343,6 +10354,10 @@ begin
         Apprunning := WaitForSingleObject(ProcInfo.hProcess, 500);
       until (Apprunning <> WAIT_TIMEOUT);
       GetExitCodeProcess(ProcInfo.hProcess, ExitCode);
+      if ShowingDetachedVideo then
+      begin
+        DetachedVideoForm.Visible := True;
+      end;
       LogForm.Clear;
       LogForm.LogMsg('Grammar check:');
       repeat
