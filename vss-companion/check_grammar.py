@@ -22,7 +22,7 @@ guess_language.use_enchant(False)
 import sublib
 import common
 
-from util.update_text import decompose_opcodes, undo_junk_changes
+from util.update_text import decompose_opcodes, undo_space_changes
 from util.detect_encoding import detect_encoding
 
 
@@ -172,8 +172,7 @@ def update_transcript_non_unicode(sub_file, transcript, reformat=True):
 
     old_transcript = sub_file.transcript
     if reformat:
-        transcript = undo_junk_changes(transcript, old_transcript,
-                                       lambda s: s == "\n")
+        transcript = undo_space_changes(transcript, old_transcript)
     changes = 0
     if old_transcript != transcript:
         old_transcript_lines = old_transcript.split("\n")
