@@ -124,9 +124,11 @@ def decompose_opcodes(opcodes):
     return decomposed
 
 
-def undo_junk_changes(new_text, old_text, is_junk=lambda s: s.isspace()):
-    """Undo junk changes.
+def undo_space_changes(new_text, old_text):
+    """Undo space changes.
     """
+    new_text = split(new_text)
+    old_text = split(old_text)
     sm = difflib.SequenceMatcher(None, new_text, old_text)
     opcodes = decompose_opcodes(sm.get_opcodes())
     print_opcodes("junk opcodes", opcodes, new_text, old_text)
@@ -134,14 +136,19 @@ def undo_junk_changes(new_text, old_text, is_junk=lambda s: s.isspace()):
     text = list(new_text)
     for tag, i1, i2, j1, j2 in opcodes:
         if tag == "replace":
-            update = is_junk(new_text[i1:i2]) or is_junk(old_text[j1:j2])
+            update = (new_text[i1] == "\n" and old_text[j1].isspace() or
+                      new_text[i1].isspace() and old_text[j1] == "\n")
         elif tag == "delete":
-            update = is_junk(new_text[i1:i2])
+            update = new_text[i1] == "\n"
         elif tag == "insert":
-            update = is_junk(old_text[j1:j2])
+            update = old_text[j1] == "\n"
         else:
             update = False
         if update:
             text[i1+d:i2+d] = old_text[j1:j2]
             d += (j2 - j1) - (i2 - i1)
     return "".join(text)
+
+
+def split(text, pattern=re.compile(r"(\W)")):
+    return pattern.split(text)

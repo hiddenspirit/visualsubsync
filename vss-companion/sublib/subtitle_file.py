@@ -16,7 +16,7 @@ try:
     from util.guess_text import guess_text
 except ImportError:
     guess_text = None
-from util.update_text import decompose_opcodes, undo_junk_changes
+from util.update_text import decompose_opcodes, undo_space_changes
 from util.detect_encoding import detect_encoding
 
 from .subtitle import Subtitle
@@ -213,15 +213,17 @@ class SubtitleFile(SortedList):
     def reformatted_transcript(self):
         # TODO
         transcript = self.transcript
-        # transcript = re.sub(r"([^\.?!])\n", r"\1 ", transcript)
+        transcript = re.sub(r"([^\.?!])\n", r"\1 ", transcript)
+        transcript = re.sub(r"(…|\.{3})\n([a-zß-öø-ÿœ])", r"\1 \2", transcript)
+        
+        # This requires regex.
         # transcript = re.sub(r"(…|\.{3})\n([\p{Ll}])", r"\1 \2", transcript)
         return transcript
 
     def update_transcript(self, transcript, reformat=True):
         old_transcript = self.transcript
         if reformat:
-            transcript = undo_junk_changes(transcript, old_transcript,
-                                           lambda s: s == "\n")
+            transcript = undo_space_changes(transcript, old_transcript)
         changes = 0
         if old_transcript != transcript:
             old_transcript_lines = old_transcript.split("\n")
