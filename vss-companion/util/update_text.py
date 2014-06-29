@@ -69,18 +69,12 @@ def update_text(text, stripped_text, new_stripped_text):
 
     # Apply new_opcodes to text.
     d = 0
-    text = list(text)
+    result = list(text)
     for t, i1, i2, j1, j2 in new_opcodes:
-        text[i1+d:i2+d] = new_stripped_text[j1:j2]
+        result[i1+d:i2+d] = new_stripped_text[j1:j2]
         d += (j2 - j1) - (i2 - i1)
 
-    text = "".join(text)
-
-    # Postprocessing
-    text = re.sub(r"(\w+)(<\w+?>)(\w+)", r"\2\1\3", text)
-    text = re.sub(r"(\w+)(</\w+?>)(\w+)", r"\1\3\2", text)
-
-    return text
+    return "".join(result)
 
 
 def decompose_opcodes(opcodes):
