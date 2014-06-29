@@ -397,6 +397,11 @@ class Subtitle:
     @staticmethod
     def _update_text(text, plain_text, new_plain_text):
         new_text = update_text(text, plain_text, new_plain_text)
+
+        # Postprocessing
+        new_text = re.sub(r"(\w+)(<\w+?>)(\w+)", r"\2\1\3", new_text)
+        new_text = re.sub(r"(\w+)(</\w+?>)(\w+)", r"\1\3\2", new_text)
         if text.startswith("{"):
             new_text = re.sub(r"^(.+?)(\{.*?\})", r"\2\1", new_text)
+
         return new_text
