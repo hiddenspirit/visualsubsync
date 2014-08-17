@@ -105,6 +105,7 @@ Root: HKCU; Subkey: "Software\LAV\Audio"; ValueType: dword; ValueName: "Mixing";
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\vss-companion"
+Type: filesandordirs; Name: "{userappdata}\VisualSubSync-Companion\*.ffindex"
 Type: filesandordirs; Name: "{app}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files (x86)\{#MyAppName}"; Tasks: clean_install
 Type: filesandordirs; Name: "{localappdata}\VirtualStore\Program Files\{#MyAppName}"; Tasks: clean_install
