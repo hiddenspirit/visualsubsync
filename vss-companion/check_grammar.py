@@ -30,19 +30,23 @@ def get_name(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def poll_window(path, timeout=30):
+def poll_window(path, app_name, timeout=30):
     class Checker:
-        def __init__(self, filename):
+        def __init__(self, filename, app_name):
             self.filename = filename
+            self.root_filename = os.path.splitext(filename)[0]
+            self.app_name = app_name
             self.hwnd = None
 
     def enum_window_proc(hwnd, checker):
-        if checker.filename in win32gui.GetWindowText(hwnd):
+        text = win32gui.GetWindowText(hwnd)
+        if (checker.filename in text or
+                checker.root_filename in text and checker.app_name in text):
             checker.hwnd = hwnd
             return False
         return True
 
-    checker = Checker(os.path.basename(path))
+    checker = Checker(os.path.basename(path), app_name)
     start_time = time.time()
 
     while True:
@@ -225,7 +229,7 @@ def main():
         return 127
 
     msg = None
-    old_transcript = sub_file.reformatted_transcript
+    old_transcript = sub_file.transcript ##
     with open(ts_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
         f.write(old_transcript)
 
@@ -233,7 +237,7 @@ def main():
         if name.lower() == "antidote":
             has_background_proc = has_background_antidote()
             with subprocess.Popen([grammar_checker, ts_path]) as proc:
-                poll_window(ts_path)
+                poll_window(ts_path, name)
                 if not has_background_proc:
                     proc.terminate()
         else:
