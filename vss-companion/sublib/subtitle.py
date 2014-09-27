@@ -20,7 +20,7 @@ class Subtitle:
     FORMAT = "{identifier}\n" + FORMAT_BASE
     PARSER = re.compile(PARSER.format(time_pattern=Time.PATTERN), re.MULTILINE)
 
-    TAG_RE = re.compile(r"<.*?>|\{.*?\}")
+    TAG_RE = re.compile(r"<.*?>|\{(.|\n)*?\}")
     STRIP_DIALOG_SUB = (re.compile(r"^[\-–—]\s", re.MULTILINE), "")
     ADD_DIALOG_SUB = (re.compile(r"^(?![\-–—]\s)", re.MULTILINE), "– ")
 
@@ -98,6 +98,10 @@ class Subtitle:
     @property
     def _index(self):
         return self.parent.get_index(self)
+
+    @property
+    def identifier(self):
+        return (self._index or 0) + 1
 
     @property
     def style(self):
