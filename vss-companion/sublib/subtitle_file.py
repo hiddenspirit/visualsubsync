@@ -8,15 +8,15 @@ try:
     from guess_language import guess_language
 except ImportError:
     guess_language = None
-try:
-    import translit
-except ImportError:
-    translit = None
+# try:
+    # import translit
+# except ImportError:
+    # translit = None
 try:
     from util.guess_text import guess_text
 except ImportError:
     guess_text = None
-from util.update_text import decompose_opcodes, undo_space_changes
+from util.update_text import undo_space_changes
 from util.detect_encoding import detect_encoding
 
 from .subtitle import Subtitle
@@ -190,11 +190,11 @@ class SubtitleFile(SortedList):
         for subtitle in self:
             subtitle.frames = [f + frames for f in subtitle.frames]
 
-    if translit:
-        def upgrade(self):
-            for subtitle in self:
-                t = translit.upgrade(subtitle.plain_text, self.language)
-                subtitle.plain_text = t
+    # if translit:
+        # def upgrade(self):
+            # for subtitle in self:
+                # t = translit.upgrade(subtitle.plain_text, self.language)
+                # subtitle.plain_text = t
 
     if guess_language:
         def guess_language(self):
@@ -213,12 +213,64 @@ class SubtitleFile(SortedList):
     def reformatted_transcript(self):
         # TODO
         transcript = self.transcript
-        transcript = re.sub(r"([^\.?!])\n", r"\1 ", transcript)
-        transcript = re.sub(r"(…|\.{3})\n([a-zß-öø-ÿœ])", r"\1 \2", transcript)
-        
-        # This requires regex.
-        # transcript = re.sub(r"(…|\.{3})\n([\p{Ll}])", r"\1 \2", transcript)
         return transcript
+
+        # transcript = self.transcript
+        # transcript = re.sub(r"([^\.?!])\n", r"\1 ", transcript)
+        # transcript = re.sub(r"(…|\.{3})\n([a-zß-öø-ÿœ])", r"\1 \2", transcript)
+
+        def no_quotes(text, chars="'\"‘’“”„‹›«»\xa0\u202f "):
+            return text.strip(chars)
+
+        def is_sentence_end(text, pattern=re.compile(r'[\.?!]$')):
+            return bool(pattern.search(no_quotes(text)))
+
+        # def is_sentence_start(text):
+            # return no_quotes(text)[0:1].isupper()
+
+        def is_stand_alone(text,
+                pattern=re.compile(r"(https?://)?(www\.)?\w+\.\w+")):
+            return bool(pattern.match(text)) or text.isupper()
+
+        def is_far_subtitle(subtitle, max_interval=2000):
+            return (subtitle.time_to_previous is not None and
+                    subtitle.time_to_previous > max_interval)
+
+        # def is_in_italics(text,
+                # pattern=re.compile(r"^(\{\.*?})?<i>.*</i>({\pub})?$", re.I):
+            # return pattern.match(text)
+
+        lines = []
+        current_line = []
+
+        def flush_lines():
+            lines.append(" ".join(current_line))
+            current_line.clear()
+
+        for subtitle in self:
+            for n, line in enumerate(subtitle.plain_lines_no_dialog):
+                if not line:
+                    continue
+                if n == 0 and is_far_subtitle(subtitle) and current_line:
+                    flush_lines()
+                if is_stand_alone(line):
+                    if current_line:
+                        flush_lines()
+                    lines.append(line)
+                else:
+                    current_line.append(line)
+                    if is_sentence_end(line):
+                        flush_lines()
+        if current_line:
+            flush_lines()
+
+        transcript = "\n".join(lines) + "\n"
+        transcript = re.sub(r"(…|\.{3})\n([a-zß-öø-ÿœ])", r"\1 \2", transcript)
+        return transcript
+
+    @reformatted_transcript.setter
+    def reformatted_transcript(self, value):
+        self.update_transcript(value, True)
 
     def update_transcript(self, transcript, reformat=True):
         old_transcript = self.transcript
