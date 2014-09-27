@@ -131,7 +131,8 @@ def undo_space_changes(new_text, old_text):
     for tag, i1, i2, j1, j2 in opcodes:
         if tag == "replace":
             update = (new_text[i1] == "\n" and old_text[j1].isspace() or
-                      new_text[i1].isspace() and old_text[j1] == "\n")
+                      new_text[i1].isspace() and old_text[j1] == "\n" or
+                      new_text[i1].isspace() and old_text[j1].isspace())
         elif tag == "delete":
             update = new_text[i1] == "\n"
         elif tag == "insert":
