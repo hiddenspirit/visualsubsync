@@ -420,6 +420,7 @@ var slst, slstCursor: PPAnsiChar;
 var i : Integer;
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Result := Hunspell_suggest(FHunspell, slst, PChar(WordEncoded));
   if (Result > 0) then
@@ -439,6 +440,7 @@ var slst, slstCursor: PPAnsiChar;
 var i : Integer;
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Result := Hunspell_analyze(FHunspell, slst, PChar(WordEncoded));
   if (Result > 0) then
@@ -458,6 +460,7 @@ var slst, slstCursor: PPAnsiChar;
 var i : Integer;
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Result := Hunspell_stem(FHunspell, slst, PChar(WordEncoded));
   if (Result > 0) then
@@ -475,6 +478,7 @@ end;
 procedure THunspellChecker.Add(Word : WideString);
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   FAddList.Add(Word);
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Hunspell_add(FHunspell, PChar(WordEncoded));
@@ -483,6 +487,7 @@ end;
 procedure THunspellChecker.Remove(Word : WideString);
 var WordEncoded : string;
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   WordEncoded := ConvertToHunspell(Word, FDictCodePage);
   Hunspell_remove(FHunspell, PChar(WordEncoded));
 end;
@@ -543,6 +548,7 @@ end;
 
 procedure THunspellChecker.Ignore(Word : WideString);
 begin
+  Word := Tnt_WideStringReplace(Word, #8217, #39, [rfReplaceAll]);  // typographic apostrophe to vertical apostrophe
   FIgnoreList.Add(Word);
 end;
 
