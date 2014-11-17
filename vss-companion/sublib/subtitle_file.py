@@ -8,10 +8,10 @@ try:
     from guess_language import guess_language
 except ImportError:
     guess_language = None
-# try:
-    # import translit
-# except ImportError:
-    # translit = None
+try:
+    import translit
+except ImportError:
+    translit = None
 try:
     from util.guess_text import guess_text
 except ImportError:
@@ -190,11 +190,11 @@ class SubtitleFile(SortedList):
         for subtitle in self:
             subtitle.frames = [f + frames for f in subtitle.frames]
 
-    # if translit:
-        # def upgrade(self):
-            # for subtitle in self:
-                # t = translit.upgrade(subtitle.plain_text, self.language)
-                # subtitle.plain_text = t
+    if translit:
+        def upgrade(self):
+            for subtitle in self:
+                t = translit.upgrade(subtitle.plain_text, self.language)
+                subtitle.plain_text = t
 
     if guess_language:
         def guess_language(self):
@@ -289,6 +289,12 @@ class SubtitleFile(SortedList):
                 num_lines = len(subtitle.lines)
                 old_text = subtitle.plain_text_no_dialog
                 new_text = "\n".join(transcript_lines[n:n+num_lines])
+                if old_text.strip() and not new_text.strip():
+                    raise ValueError(
+                        "change aborted: {}: {!r} -> {!r}".format(
+                            subtitle.identifier, old_text, new_text
+                        )
+                    )
                 if old_text != new_text:
                     subtitle.plain_text_no_dialog = new_text
                     changes += 1

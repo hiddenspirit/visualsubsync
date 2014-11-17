@@ -190,6 +190,12 @@ def update_transcript_non_unicode(sub_file, transcript, reformat=True):
             num_lines = len(subtitle.lines)
             old_text = subtitle.plain_text_no_dialog
             new_text = "\n".join(transcript_lines[n:n+num_lines])
+            if old_text.strip() and not new_text.strip():
+                raise ValueError(
+                    "change aborted: {}: {!r} -> {!r}".format(
+                        subtitle.identifier, old_text, new_text
+                    )
+                )
             if old_text != new_text and test(old_text, new_text):
                 subtitle.plain_text_no_dialog = new_text
                 changes += 1
