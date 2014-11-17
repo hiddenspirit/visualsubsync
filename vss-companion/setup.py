@@ -17,7 +17,7 @@ excludes = [
     "tkinter", "bz2", "lzma", "pyexpat",
     "curses", "distutils", "html", "lib2to3",
     "xml", "xmlrpc", "zipfile", "pdb", "ftplib",
-    "pydoc_data", "inspect", "win32pdh",
+    "pydoc_data", "inspect", "win32pdh", "enchant",
 ]
 packages = []
 
