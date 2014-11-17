@@ -101,7 +101,8 @@ class Subtitle:
 
     @property
     def identifier(self):
-        return (self._index or 0) + 1
+        i = self.parent.get_index(self) or 0
+        return i + 1
 
     @property
     def style(self):
