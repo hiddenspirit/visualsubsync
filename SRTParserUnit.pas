@@ -106,11 +106,11 @@ begin
     begin
       // Auto fix timestamp if this subtitle stop time is equal
       // to next subtitle start time
-      if (Stop = NextStart) then
+      { if (Stop = NextStart) then
       begin
         FAutoCorrectedFile := True;
         Dec(Stop);
-      end;
+      end; }
       // Remove the index line if any
       i := RPos(CRLF, SubText);
       if ((i > 0) and (StrToIntDef(Copy(SubText, i+2, MaxInt), -1) <> -1) and (lineIndex < Source.Count)) then
