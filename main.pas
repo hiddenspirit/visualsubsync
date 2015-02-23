@@ -10346,7 +10346,7 @@ begin
     SetLength(ShortSubtitlesFile, ShortPathNameLen);
 
     Cmd := '"' + ExtractFilePath(ParamStr(0)) +
-           'vss-companion\check_grammar.exe" "' + ShortSubtitlesFile;
+           'vss-companion\check_grammar.exe" "' + ShortSubtitlesFile + '"';
 
     if CreateProcessW(nil, PWideChar(Cmd), @Security, @Security, true,
               NORMAL_PRIORITY_CLASS, nil, nil, StartInfo, ProcInfo) then
