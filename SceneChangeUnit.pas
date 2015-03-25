@@ -267,14 +267,23 @@ procedure GenerateSceneChangeFile(Filename : WideString);
 var Cmd : WideString;
     StartInfo  : TStartupInfo;
     ProcInfo   : TProcessInformation;
+    ShortFilename : WideString;
+    ShortPathNameLen : Cardinal;
 begin
   ZeroMemory(@StartInfo, SizeOf(StartInfo));
   StartInfo.cb := SizeOf(StartInfo);
   StartInfo.dwFlags := STARTF_USESHOWWINDOW;
   StartInfo.wShowWindow := SW_SHOW;
+  SetLength(ShortFilename, MAX_PATH);
+  ShortPathNameLen := GetShortPathNameW(
+    PWideChar(Filename),
+    PWideChar(ShortFilename),
+    MAX_PATH - 1
+  );
+  SetLength(ShortFilename, ShortPathNameLen);
   Cmd := '"' + ExtractFilePath(ParamStr(0)) +
          'vss-companion\generate_scenechange_file.exe" "' +
-         Filename + '"';
+         ShortFilename + '"';
   if CreateProcessW(nil, PWideChar(Cmd), nil, nil, false,
             NORMAL_PRIORITY_CLASS, nil, nil,
             StartInfo, ProcInfo) then
