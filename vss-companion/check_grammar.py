@@ -220,6 +220,10 @@ def main():
     sub_file = sublib.SubtitleFile.load(subtitle_file)
     language = sub_file.guess_language()
 
+    old_transcript = sub_file.transcript ##
+    with open(ts_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
+        f.write(old_transcript)
+
     try:
         if args.grammar_checker:
             grammar_checker = args.grammar_checker
@@ -235,9 +239,7 @@ def main():
         return 127
 
     msg = None
-    old_transcript = sub_file.transcript ##
-    with open(ts_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
-        f.write(old_transcript)
+    assert os.path.isfile(ts_path) and os.path.getsize(ts_path)
 
     try:
         if name.lower() == "antidote":
