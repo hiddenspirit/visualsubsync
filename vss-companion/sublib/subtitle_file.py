@@ -286,7 +286,7 @@ class SubtitleFile(SortedList):
                                          len(transcript_lines)))
             n = 0
             for subtitle in self:
-                num_lines = len(subtitle.lines)
+                num_lines = len(subtitle.plain_lines)
                 old_text = subtitle.plain_text_no_dialog
                 new_text = "\n".join(transcript_lines[n:n+num_lines])
                 if old_text.strip() and not new_text.strip():
