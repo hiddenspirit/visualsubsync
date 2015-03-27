@@ -2,7 +2,7 @@ unit SRTParserUnit;
 
 interface
 
-uses Classes, Contnrs, TntClasses;
+uses Classes, Contnrs, TntClasses, Windows;
 
 type
   TSRTSubtitle = class
@@ -135,9 +135,19 @@ function TSRTParser.Load(Filename : WideString) : Integer;
 var Source : TTntStringList;
     Line : String;
     f : Text;
+    ShortFilename : WideString;
+    ShortPathNameLen : Cardinal;
 begin
+  SetLength(ShortFilename, MAX_PATH);
+  ShortPathNameLen := GetShortPathNameW(
+    PWideChar(Filename),
+    PWideChar(ShortFilename),
+    MAX_PATH - 1
+  );
+  SetLength(ShortFilename, ShortPathNameLen);
+
   Source := MyTTntStringList.Create;
-  AssignFile(f, Filename);
+  AssignFile(f, ShortFilename);
   Reset(f);
   ReadLn(f, Line);
   // WebVTT is always UTF-8, even without a BOM.
