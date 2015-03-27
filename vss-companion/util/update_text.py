@@ -17,7 +17,7 @@ if DEBUG:
                 continue
             seq.append((t, i1, i2, j1, j2) +
                        ("".join(a[i1:i2]), "".join(b[j1:j2])))
-        print(name, "=", repr(seq))
+        print(name, "=", ascii(seq))
 else:
     def dummy_print(*args, **kwargs):
         pass
@@ -146,4 +146,4 @@ def undo_space_changes(new_text, old_text):
 
 
 def split(text, pattern=re.compile(r"(\W)")):
-    return pattern.split(text)
+    return [e for e in pattern.split(text) if e]
