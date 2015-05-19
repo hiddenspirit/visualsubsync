@@ -1878,7 +1878,7 @@ begin
 
   SnappingDistanceTime := PixelToTime(SNAPPING_DISTANCE_PIXEL);
 
-  if (FMinimumBlank > 0) then
+  if (FMinimumBlank >= 0) then
   begin
     if (FMinBlankInfo1.Exists) then
     begin
