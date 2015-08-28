@@ -8163,7 +8163,7 @@ var Ext : WideString;
     ProjectFileIni : TTntIniFile;
     ArgFilename, TmpFilename, NewProjectName : WideString;
     I : Integer;
-const VideoExt : array[0..1] of string = ('.avi', '.mkv');
+const VideoExt : array[0..2] of string = ('.avi', '.mkv', '.mp4');
 begin
   if (WideParamCount = 1) then
   begin
