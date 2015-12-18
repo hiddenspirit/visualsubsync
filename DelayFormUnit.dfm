@@ -35,7 +35,7 @@ object DelayForm: TDelayForm
     Width = 193
     Height = 81
     Caption = ' Apply to '
-    ItemIndex = 0
+    ItemIndex = 2
     Items.Strings = (
       'All subtitles'
       'Selected subtitles'
