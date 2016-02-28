@@ -135,24 +135,28 @@ def get_grammar_checker(language):
         return get_path_from_registry(key, sub_key, value, name)
 
     def get_path_from_registry(key, sub_key, value, name):
-        with winreg.OpenKey(key, sub_key) as k:
-            directory = winreg.QueryValueEx(k, value)[0]
-        path = os.path.join(directory, name)
-        if not os.path.isfile(path):
-            raise FileNotFoundError(
-                "can't find in registry: {}, {}, {}, {}"
-                .format(key, sub_key, value, name))
-        return path
+        directory = None
+        for wow in [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]:
+            try:
+                with winreg.OpenKey(
+                        key, sub_key, access=winreg.KEY_READ | wow) as k:
+                    directory = winreg.QueryValueEx(k, value)[0]
+            except FileNotFoundError:
+                continue
+            else:
+                path = os.path.join(directory, name)
+                if os.path.isfile(path):
+                    return path
+        raise FileNotFoundError(
+            "can't find in registry: {}, {}, {}, {}"
+            .format(key, sub_key, value, name))
 
     GRAMMAR_CHECKERS = {
         "Antidote": get_antidote,
         "LibreOffice": get_libre_office,
     }
 
-    preferred_checkers = ["LibreOffice"]
-
-    if language == "fr":
-        preferred_checkers.insert(0, "Antidote")
+    preferred_checkers = ["Antidote", "LibreOffice"]
 
     for checker_name in preferred_checkers:
         try:
