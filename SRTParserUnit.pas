@@ -37,7 +37,7 @@ uses MiscToolsUnit, SysUtils, TntSysUtils;
 constructor TSRTParser.Create;
 begin
   FSubList := TObjectList.Create(True);
-  FIsUTF8 := False;
+  FIsUTF8 := True;
   FAutoCorrectedFile := False;
 end;
 
