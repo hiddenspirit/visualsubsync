@@ -2,6 +2,7 @@
 //  VisualSubSync
 // -----------------------------------------------------------------------------
 //  Copyright (C) 2003-2007 Christophe Paris
+//  Copyright (C) 2016 spirit <hiddenspirit@gmail.com>
 // -----------------------------------------------------------------------------
 //  This Program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
