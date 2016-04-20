@@ -171,6 +171,28 @@ object AboutForm: TAboutForm
     Font.Style = []
     ParentFont = False
   end
+  object TntLabel7: TTntLabel
+    Left = 8
+    Top = 88
+    Width = 81
+    Height = 14
+    Caption = 'Copyright 2016'
+  end
+  object TntLabel9: TTntLabel
+    Left = 128
+    Top = 88
+    Width = 135
+    Height = 14
+    Cursor = crHandPoint
+    Caption = 'hiddenspirit@gmail.com'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clBlue
+    Font.Height = -11
+    Font.Name = 'Arial'
+    Font.Style = [fsBold, fsUnderline]
+    ParentFont = False
+    OnClick = TntLabel3Click
+  end
   object bttOk: TTntButton
     Left = 8
     Top = 240
