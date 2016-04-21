@@ -116,7 +116,7 @@ object ProjectForm: TProjectForm
       Top = 76
       Width = 73
       Height = 17
-      Hint = 
+      Hint =
         'Use an external or extracted WAV file for waveform and audio onl' +
         'y preview.'
       Caption = 'WAV file :'
@@ -131,7 +131,7 @@ object ProjectForm: TProjectForm
       Top = 48
       Width = 73
       Height = 17
-      Hint = 
+      Hint =
         'Use the video file for audio preview and a created peak file for' +
         ' the waveform display.'
       Caption = 'Peak file :'
@@ -155,7 +155,7 @@ object ProjectForm: TProjectForm
       Top = 24
       Width = 129
       Height = 17
-      Hint = 
+      Hint =
         'If available the audio track of the video file will be used for ' +
         'preview but no waveform is displayed.'
       Caption = 'No waveform display'
@@ -247,8 +247,6 @@ object ProjectForm: TProjectForm
     Width = 92
     Height = 17
     Caption = 'Save as UTF-8'
-    Checked = True
-    State = cbChecked
     TabOrder = 7
   end
   object gbVO: TTntGroupBox
