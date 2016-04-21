@@ -553,7 +553,7 @@ begin
   EditSubtitleFilename.Text := '';
   EditSubtitleVO.Text := '';
   EditProjectFilename.Text := '';
-  chkSaveAsUTF8.Checked := True;
+  chkSaveAsUTF8.Checked := False;
   cbSubtitleFormat.ItemIndex := 0;
   bttExtractWAVFromVideo.Enabled := False;
   bttGenerateSceneChangeFile.Enabled := False;
