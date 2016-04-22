@@ -53,8 +53,8 @@ object AboutForm: TAboutForm
     Caption = 'Copyright 2003-2012'
   end
   object TntLabel3: TTntLabel
-    Left = 8
-    Top = 88
+    Left = 128
+    Top = 72
     Width = 152
     Height = 14
     Cursor = crHandPoint
