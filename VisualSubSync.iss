@@ -50,7 +50,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 AdditionalSoftware=Additional software:
 InstallSoftware=Install%1
-InstallCodecs=Install%1
+InstallCodecs=Install%1 and tweak preferred decoders
 CleanInstall=Clear previous installation files and settings
 AssociateExtension=Associate%1 files
 OriginalVSS=Original VisualSubSync was found at the specified location and will be completely uninstalled. ALL FILES WILL BE DELETED.
