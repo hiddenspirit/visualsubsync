@@ -41,7 +41,7 @@ class Time(int):
         return "{}({!r})".format(self.__class__.__name__, int(self))
 
     def __str__(self):
-        return self.FORMAT.format_map(self.to_h_min_s().__dict__)
+        return self.FORMAT.format_map(self.to_h_min_s()._asdict())
 
     def to_h_min_s(self):
         #if self < 0:
