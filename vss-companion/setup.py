@@ -12,14 +12,16 @@ from cx_Freeze import setup, Executable
 path = sys.path + ["generate_scenechange_file"]
 
 # options d'inclusion/exclusion des modules
-includes = []
+includes = [
+]
 excludes = [
     "tkinter", "bz2", "lzma", "pyexpat",
     "curses", "distutils", "html", "lib2to3",
     "xml", "xmlrpc", "zipfile", "pdb", "ftplib",
     "pydoc_data", "inspect", "win32pdh", "enchant",
 ]
-packages = []
+packages = [
+]
 
 # copier les fichiers et/ou répertoires et leur contenu
 include_files = ["ffms2.dll"]
@@ -30,7 +32,6 @@ include_files_generate_scenechange_file = [
 ]
 
 bin_excludes = [
-    "mfc100u.dll",
 ]
 
 try:
@@ -70,12 +71,12 @@ exe_list = [
     Executable(
         script="find_scenechange.py",
         base=None,
-        compress=True,
+        # compress=True,
     ),
     Executable(
         script="check_bitbucket.py",
         base="Win32GUI",
-        compress=True,
+        # compress=True,
         icon="../Resources/VSS.ico",
     ),
     # Executable(
@@ -96,18 +97,18 @@ exe_list = [
     Executable(
         script="scan_scene_changes.pyw",
         base="Win32GUI",
-        compress=True,
+        # compress=True,
     ),
     Executable(
         script="generate_scenechange_file/generate_scenechange_file.pyw",
         base="Win32GUI",
-        compress=True,
+        # compress=True,
         icon="generate_scenechange_file/sc.ico",
     ),
     Executable(
         script="check_grammar.py",
         base=None,
-        compress=True,
+        # compress=True,
     ),
 ]
 
