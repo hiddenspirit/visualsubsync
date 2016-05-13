@@ -52,7 +52,7 @@ def main():
         vss_version_info = get_file_version_info(vss_path)
         vss_date = Date.from_version_info(vss_version_info)
         with urllib.request.urlopen(DOWNLOAD_PAGE) as f:
-            data = f.readall()
+            data = f.read()
         pattern = (os.path.splitext(APP_EXE)[0].encode() +
                    rb"-(\d+)-(\d+)-(\d+)-Setup\.exe")
         match = re.search(pattern, data)
