@@ -9,7 +9,7 @@
 
 #define LAVFiltersInstaller "LAVFilters-0.68.1-Installer.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_6.0.exe"
-#define VCRedistInstaller "vcredist_x86.exe"
+#define VCRedistInstaller "vc_redist.x86.exe"
 
 #define ReleaseDir = "Release"
 #define SetupDir = "setup"
@@ -17,7 +17,7 @@
 #define LAVFiltersVersion GetFileVersion(AddBackslash(SetupDir) + LAVFiltersInstaller)
 #define LAVFilters "LAV Filters"
 #define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
-#define VCRedist "Microsoft Visual C++ 2010 SP1 Redistributable Package (x86)"
+#define VCRedist "Microsoft Visual C++ 2015 Update 1 Redistributable (x86)"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -118,7 +118,7 @@ Type: filesandordirs; Name: "{app}"
 
 [Code]
 const
-  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}';
+  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{23daf363-3020-4059-b3ae-dc4ad39fed19}';
   LavFiltersKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\lavfilters_is1';
   CleanInstallTaskIndex = 3;
   LavFiltersTaskIndex = 5;
