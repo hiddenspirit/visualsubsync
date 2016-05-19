@@ -9,7 +9,7 @@
 
 #define LAVFiltersInstaller "LAVFilters-0.68.1-Installer.exe"
 #define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_6.0.exe"
-#define VCRedistInstaller "vc_redist.x86.exe"
+#define VCRedistInstaller "VC_redist.x86.exe"
 
 #define ReleaseDir = "Release"
 #define SetupDir = "setup"
