@@ -17,7 +17,7 @@
 #define LAVFiltersVersion GetFileVersion(AddBackslash(SetupDir) + LAVFiltersInstaller)
 #define LAVFilters "LAV Filters"
 #define LAVFIltersVerName LAVFilters + " " + LAVFiltersVersion
-#define VCRedist "Microsoft Visual C++ 2015 Update 2 Redistributable (x86)"
+#define VCRedist "Microsoft Visual C++ 2015 Update 3 Redistributable (x86)"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -118,7 +118,7 @@ Type: filesandordirs; Name: "{app}"
 
 [Code]
 const
-  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8a225685-3b19-4387-b61b-830061421071}';
+  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{23658c02-145e-483d-ba6b-1eb82c580529}';
   LavFiltersKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\lavfilters_is1';
   CleanInstallTaskIndex = 3;
   LavFiltersTaskIndex = 5;
