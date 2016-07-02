@@ -8187,7 +8187,7 @@ begin
       // Make project with existing data and load it
       ProjectFileIni := TTntIniFile.Create(NewProjectName);
 
-      ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile', ArgFilename);
+      ProjectFileIni.WriteString('VisualSubsync','SubtitlesFile', WideExtractFileName(ArgFilename));
 
       // Search for a matching video file
       for I := Low(VideoExt) to High(VideoExt) do
