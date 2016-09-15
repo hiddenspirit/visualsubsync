@@ -95,7 +95,7 @@ end;
 procedure TAboutForm.TntLabel1Click(Sender: TObject);
 var s : string;
 begin
-  s := 'http://www.visualsubsync.org';
+  s := 'https://bitbucket.org/spirit/visualsubsync/';
   ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
 end;
 
