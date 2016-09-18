@@ -70,7 +70,7 @@ object AboutForm: TAboutForm
   object LabelVersion: TTntLabel
     Left = 8
     Top = 48
-    Width = 98
+    Width = 97
     Height = 19
     Caption = 'Version 0.0.0'
     Font.Charset = DEFAULT_CHARSET
@@ -191,7 +191,7 @@ object AboutForm: TAboutForm
     Font.Name = 'Arial'
     Font.Style = [fsBold, fsUnderline]
     ParentFont = False
-    OnClick = TntLabel3Click
+    OnClick = TntLabel9Click
   end
   object bttOk: TTntButton
     Left = 8

@@ -52,6 +52,7 @@ type
     procedure panelCrashTestClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure TntLabel9Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -85,6 +86,19 @@ begin
   s := 'mailto:' +
     'christophe.paris' +
     '@free.fr?' +
+    'subject=' +
+    ApplicationName +
+    ' ' +
+    LabelVersion.Caption;
+  ShellExecute(Handle, 'open', PAnsiChar(s), '', '', SW_SHOWNORMAL);
+end;
+
+procedure TAboutForm.TntLabel9Click(Sender: TObject);
+var s : string;
+begin
+  s := 'mailto:' +
+    'hiddenspirit' +
+    '@gmail.com?' +
     'subject=' +
     ApplicationName +
     ' ' +
