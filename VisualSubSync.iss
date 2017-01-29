@@ -7,8 +7,8 @@
 #define MyAppURL "https://bitbucket.org/spirit/visualsubsync"
 #define MyAppExeName "VisualSubSync.exe"
 
-#define LAVFiltersInstaller "LAVFilters-0.68.1-Installer.exe"
-#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_6.0.exe"
+#define LAVFiltersInstaller "LAVFilters-0.69-Installer.exe"
+#define Win7DSFilterTweakerExeName "Win7DSFilterTweaker_6.1.exe"
 #define VCRedistInstaller "vc_redist.x86.exe"
 
 #define ReleaseDir = "Release"
@@ -118,7 +118,7 @@ Type: filesandordirs; Name: "{app}"
 
 [Code]
 const
-  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{23658c02-145e-483d-ba6b-1eb82c580529}';
+  VCRedistKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{e2803110-78b3-4664-a479-3611a381656a}';
   LavFiltersKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\lavfilters_is1';
   CleanInstallTaskIndex = 3;
   LavFiltersTaskIndex = 5;
