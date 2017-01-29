@@ -9842,7 +9842,7 @@ end;
 procedure TMainForm.MenuItemGetMoreDictionariesClick(Sender: TObject);
 begin
   ShellExecute(Handle, 'open',
-    PAnsiChar('http://wiki.services.openoffice.org/wiki/Dictionaries'),
+    PAnsiChar('https://cgit.freedesktop.org/libreoffice/dictionaries/tree/'),
     '', '', SW_SHOWNORMAL);
 end;
 
