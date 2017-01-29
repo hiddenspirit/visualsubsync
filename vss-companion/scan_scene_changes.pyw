@@ -10,6 +10,7 @@ import threading
 from collections import namedtuple
 from concurrent import futures
 
+import pywintypes
 import win32gui
 import win32api
 from win32con import WM_APP

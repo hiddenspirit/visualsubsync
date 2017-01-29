@@ -11,9 +11,9 @@ import sys
 import time
 import winreg
 
+import pywintypes
 import win32api
 import win32gui
-import pywintypes
 import psutil
 
 import guess_language

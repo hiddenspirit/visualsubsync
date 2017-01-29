@@ -43,6 +43,8 @@ try:
         "PyQt5.QtNetwork",
         "guess_language.data.models.en",
         "guess_language.data.models.fr",
+        "numpy.core._methods",
+        "numpy.lib.format",
     ]
 except ImportError:
     raise
